@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+}
+
+body {
+  background: var(--background);
+  color: #171717;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: #d1fae5; }
