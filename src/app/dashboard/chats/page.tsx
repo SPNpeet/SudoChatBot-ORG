@@ -51,9 +51,9 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
   }
 
   return (
-    <div className="flex h-[calc(100vh-3.5rem)] gap-4">
+    <div className="flex h-[calc(100vh-8.5rem)] gap-4 md:h-[calc(100vh-3.5rem)]">
       {/* รายการสนทนา */}
-      <Card className="w-80 shrink-0 overflow-y-auto">
+      <Card className={cn("w-full shrink-0 overflow-y-auto md:w-80", selected ? "hidden md:block" : "block")}>
         <div className="border-b border-neutral-100 px-4 py-3">
           <h1 className="text-sm font-bold">แชททั้งหมด</h1>
         </div>
@@ -82,17 +82,20 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
       </Card>
 
       {/* หน้าต่างแชท */}
-      <Card className="flex flex-1 flex-col overflow-hidden">
+      <Card className={cn("flex-1 flex-col overflow-hidden", selected ? "flex" : "hidden md:flex")}>
         {!selected ? (
           <EmptyState title="เลือกบทสนทนาจากด้านซ้าย" />
         ) : (
           <>
             <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3">
-              <div>
+              <div className="flex items-center gap-2">
+                <Link href="/dashboard/chats" className="md:hidden text-neutral-400">&larr;</Link>
+                <div>
                 <p className="text-sm font-semibold">{selected.customers?.display_name ?? "ลูกค้า"}</p>
                 <p className="text-[11px] text-neutral-400">
                   {selected.channels?.page_name} · {selected.channels?.platform}
                 </p>
+                </div>
               </div>
               <form action={setMode}>
                 <input type="hidden" name="conversation_id" value={selected.id} />
