@@ -16,7 +16,7 @@ export default async function AdminBillingPage() {
   const [{ data: rev }, { data: pending }, { data: pf }] = await Promise.all([
     supabase.rpc("platform_revenue"),
     svc.from("topups").select("*, shops(name)").in("status", ["pending", "verifying"]).order("created_at", { ascending: false }).limit(30),
-    svc.from("platform_billing_settings").select("promptpay_id,account_name,slip_provider").eq("id", true).single(),
+    svc.from("platform_billing_settings").select("promptpay_id,account_name,slip_provider,payment_gateway,omise_public_key").eq("id", true).single(),
   ]);
   const r = (rev ?? {}) as Record<string, number>;
 
@@ -81,7 +81,22 @@ export default async function AdminBillingPage() {
               <div><Label>ชื่อบัญชี</Label><Input name="account_name" defaultValue={pf?.account_name ?? ""} /></div>
             </div>
             <div>
-              <Label>ตรวจสลิปเติมเงินอัตโนมัติ</Label>
+              <Label>ช่องทางรับเงินเติมเครดิต</Label>
+              <Select name="payment_gateway" defaultValue={pf?.payment_gateway ?? "promptpay_slip"}>
+                <option value="promptpay_slip">PromptPay + ตรวจสลิป (trust-based)</option>
+                <option value="omise">Omise — PromptPay ผ่าน gateway (auto settle, แนะนำ)</option>
+              </Select>
+            </div>
+            <div>
+              <Label>Omise (opn.ooo) — ใช้เมื่อเลือก gateway Omise</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Input name="omise_public_key" defaultValue={pf?.omise_public_key ?? ""} placeholder="Public key (pkey_...)" />
+                <Input name="omise_secret_key" type="password" placeholder="Secret key (skey_... กรอกเมื่อเปลี่ยน)" />
+              </div>
+              <p className="mt-1 text-[11px] text-neutral-400">Secret key เก็บใน Vault · ตั้ง webhook ใน Omise dashboard ไปที่ <span className="font-mono">/api/billing/omise/webhook</span></p>
+            </div>
+            <div>
+              <Label>ตรวจสลิปเติมเงินอัตโนมัติ (โหมด PromptPay+สลิป)</Label>
               <div className="grid grid-cols-2 gap-3">
                 <Select name="slip_provider" defaultValue={pf?.slip_provider ?? "manual"}>
                   <option value="manual">ยืนยันเอง (กดปุ่มข้างบน)</option>

@@ -1,26 +1,44 @@
 "use client";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge } from "@/components/ui";
 import { baht, cn } from "@/lib/utils";
-import { createTopup, changePlan } from "./actions";
+import { createTopup, createOmiseTopup, getTopupStatus, changePlan } from "./actions";
 import { Check, Wallet, Upload } from "lucide-react";
 
 interface Plan { code: string; name: string; price_monthly: number; included_replies: number; price_per_extra_reply: number; features: string[] }
+interface TopupState { topupId: string; qrUrl: string; promptpayId?: string; accountName?: string; amount: number; gateway?: "omise" }
 
 export default function BillingClient({
-  shopId, role, balance, currentPlan, plans,
-}: { shopId: string; role: string; balance: number; currentPlan: string; plans: Plan[] }) {
+  shopId, role, balance, currentPlan, plans, gateway = "promptpay_slip",
+}: { shopId: string; role: string; balance: number; currentPlan: string; plans: Plan[]; gateway?: "promptpay_slip" | "omise" }) {
   const isOwnerAdmin = role === "owner" || role === "admin";
   const [amount, setAmount] = useState(300);
-  const [topup, setTopup] = useState<{ topupId: string; qrUrl: string; promptpayId: string; accountName?: string; amount: number } | null>(null);
+  const [topup, setTopup] = useState<TopupState | null>(null);
   const [pending, start] = useTransition();
   const [slipMsg, setSlipMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [omisePaid, setOmisePaid] = useState(false);
+
+  // Omise: poll สถานะทุก 4 วิ หลังโชว์ QR — จ่ายสำเร็จแล้วรีโหลด
+  useEffect(() => {
+    if (!topup || topup.gateway !== "omise" || omisePaid) return;
+    const iv = setInterval(async () => {
+      try {
+        const status = await getTopupStatus(shopId, topup.topupId);
+        if (status === "paid") { setOmisePaid(true); setTimeout(() => location.reload(), 1500); }
+        if (status === "expired") { setTopup(null); setSlipMsg({ ok: false, text: "รายการหมดอายุ — สร้าง QR ใหม่อีกครั้ง" }); }
+      } catch { /* ลองใหม่รอบถัดไป */ }
+    }, 4000);
+    return () => clearInterval(iv);
+  }, [topup, omisePaid, shopId]);
 
   function makeQr() {
     start(async () => {
-      try { setTopup(await createTopup(shopId, amount)); setSlipMsg(null); }
-      catch (e) { alert((e as Error).message); }
+      try {
+        setOmisePaid(false);
+        setTopup(gateway === "omise" ? await createOmiseTopup(shopId, amount) : await createTopup(shopId, amount));
+        setSlipMsg(null);
+      } catch (e) { alert((e as Error).message); }
     });
   }
   async function uploadSlip(file: File) {
@@ -71,17 +89,28 @@ export default function BillingClient({
                 {topup.qrUrl
                   /* eslint-disable-next-line @next/next/no-img-element */
                   ? <img src={topup.qrUrl} alt="PromptPay QR" className="h-56 w-56" />
-                  : <p className="font-mono text-sm">พร้อมเพย์: {topup.promptpayId}</p>}
-                <p className="mt-2 text-[11px] text-neutral-400">{topup.accountName ?? "บัญชีแพลตฟอร์ม"} · พร้อมเพย์ {topup.promptpayId}</p>
+                  : <p className="font-mono text-sm">พร้อมเพย์: {topup.promptpayId ?? "-"}</p>}
+                <p className="mt-2 text-[11px] text-neutral-400">
+                  {topup.gateway === "omise" ? "ชำระผ่าน Omise · เครดิตเข้าอัตโนมัติทันทีที่จ่ายสำเร็จ" : `${topup.accountName ?? "บัญชีแพลตฟอร์ม"} · พร้อมเพย์ ${topup.promptpayId ?? "-"}`}
+                </p>
               </div>
-              <div className="rounded-xl bg-neutral-50 p-4">
-                <p className="mb-2 text-sm font-medium"><Upload className="mr-1 inline h-4 w-4" /> อัปโหลดสลิปเพื่อยืนยัน</p>
-                <input type="file" accept="image/*" disabled={uploading}
-                  onChange={(e) => e.target.files?.[0] && uploadSlip(e.target.files[0])}
-                  className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-xs file:text-white" />
-                {uploading && <p className="mt-2 text-xs text-neutral-400">กำลังตรวจสอบสลิป...</p>}
-                {slipMsg && <p className={cn("mt-2 text-xs", slipMsg.ok ? "text-emerald-600" : "text-red-600")}>{slipMsg.text}</p>}
-              </div>
+              {topup.gateway === "omise" ? (
+                <div className="rounded-xl bg-neutral-50 p-4 text-center">
+                  {omisePaid
+                    ? <p className="text-sm font-medium text-emerald-600">✓ ชำระเงินสำเร็จ! เครดิตเข้าแล้ว — กำลังรีเฟรช...</p>
+                    : <p className="text-xs text-neutral-500"><span className="mr-1 inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" /> กำลังรอการชำระเงิน — ไม่ต้องอัปโหลดสลิป ระบบยืนยันอัตโนมัติ</p>}
+                  {slipMsg && !slipMsg.ok && <p className="mt-2 text-xs text-red-600">{slipMsg.text}</p>}
+                </div>
+              ) : (
+                <div className="rounded-xl bg-neutral-50 p-4">
+                  <p className="mb-2 text-sm font-medium"><Upload className="mr-1 inline h-4 w-4" /> อัปโหลดสลิปเพื่อยืนยัน</p>
+                  <input type="file" accept="image/*" disabled={uploading}
+                    onChange={(e) => e.target.files?.[0] && uploadSlip(e.target.files[0])}
+                    className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-xs file:text-white" />
+                  {uploading && <p className="mt-2 text-xs text-neutral-400">กำลังตรวจสอบสลิป...</p>}
+                  {slipMsg && <p className={cn("mt-2 text-xs", slipMsg.ok ? "text-emerald-600" : "text-red-600")}>{slipMsg.text}</p>}
+                </div>
+              )}
               <button onClick={() => { setTopup(null); setSlipMsg(null); }} className="text-xs text-neutral-400 hover:text-neutral-700">← เติมจำนวนอื่น</button>
             </div>
           )}

@@ -12,11 +12,12 @@ export default async function BillingPage() {
   const { supabase, shop, role } = await getCurrentShop();
   const svc = createServiceClient();
 
-  const [{ data: summary }, { data: plans }, { data: txns }, { data: topups }] = await Promise.all([
+  const [{ data: summary }, { data: plans }, { data: txns }, { data: topups }, { data: pf }] = await Promise.all([
     supabase.rpc("billing_summary", { p_shop_id: shop.id }),
     svc.from("plans").select("*").eq("active", true).order("sort"),
     svc.from("wallet_transactions").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20),
     svc.from("topups").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(10),
+    svc.from("platform_billing_settings").select("payment_gateway").eq("id", true).maybeSingle(),
   ]);
 
   const s = (summary ?? {}) as { balance: number; plan: Plan; usage: { replies_count: number; billed_replies: number; billed_amount: number } };
@@ -71,6 +72,7 @@ export default async function BillingPage() {
         balance={balance}
         currentPlan={plan?.code ?? "free"}
         plans={(plans ?? []) as Plan[]}
+        gateway={(pf as { payment_gateway?: string } | null)?.payment_gateway === "omise" ? "omise" : "promptpay_slip"}
       />
 
       {/* ประวัติเติมเงิน */}

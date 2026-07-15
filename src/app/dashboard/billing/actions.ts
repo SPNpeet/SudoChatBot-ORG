@@ -50,6 +50,40 @@ export async function createTopup(shopId: string, amount: number) {
   return { topupId: topup.id, qrUrl, promptpayId: pf.promptpay_id, accountName: pf.account_name, amount };
 }
 
+/** สร้างรายการเติมเงินผ่าน Omise (PromptPay source — เครดิตอัตโนมัติเมื่อจ่ายสำเร็จ) */
+export async function createOmiseTopup(shopId: string, amount: number) {
+  await assertMember(shopId, ["owner", "admin"]);
+  if (amount < 20) throw new Error("ขั้นต่ำ 20 บาท");
+  const svc = createServiceClient();
+  const { getOmiseSecretKey, createPromptPayCharge } = await import("@/lib/omise");
+  const secretKey = await getOmiseSecretKey(svc);
+  if (!secretKey) throw new Error("แพลตฟอร์มยังไม่ได้ตั้งค่า Omise — ติดต่อผู้ดูแลระบบ");
+
+  const { data: topup, error } = await svc.from("topups").insert({
+    shop_id: shopId, amount, method: "promptpay", gateway: "omise", status: "pending",
+  }).select("id").single();
+  if (error) throw new Error(error.message);
+
+  try {
+    const charge = await createPromptPayCharge(secretKey, amount, topup.id, shopId);
+    await svc.from("topups").update({ charge_id: charge.id }).eq("id", topup.id);
+    const qrUrl = charge.source?.scannable_code?.image?.download_uri ?? "";
+    revalidatePath("/dashboard/billing");
+    return { topupId: topup.id, qrUrl, amount, gateway: "omise" as const };
+  } catch (e) {
+    await svc.from("topups").update({ status: "expired" }).eq("id", topup.id);
+    throw new Error(`สร้างรายการชำระเงินไม่สำเร็จ: ${(e as Error).message}`);
+  }
+}
+
+/** เช็กสถานะรายการเติมเงิน (ใช้ poll ฝั่ง client หลังสแกน QR) */
+export async function getTopupStatus(shopId: string, topupId: string) {
+  await assertMember(shopId, ["owner", "admin", "agent", "viewer"]);
+  const svc = createServiceClient();
+  const { data } = await svc.from("topups").select("status").eq("id", topupId).eq("shop_id", shopId).single();
+  return data?.status ?? "unknown";
+}
+
 export async function changePlan(shopId: string, planCode: string) {
   await assertMember(shopId, ["owner"]);
   const supabase = await createClient();

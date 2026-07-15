@@ -26,13 +26,18 @@ export async function savePlatformBilling(formData: FormData) {
     promptpay_id: String(formData.get("promptpay_id") ?? "").trim() || null,
     account_name: String(formData.get("account_name") ?? "").trim() || null,
     slip_provider: String(formData.get("slip_provider") ?? "manual"),
+    payment_gateway: formData.get("payment_gateway") === "omise" ? "omise" : "promptpay_slip",
+    omise_public_key: String(formData.get("omise_public_key") ?? "").trim() || null,
     updated_at: new Date().toISOString(),
   }).eq("id", true);
   if (error) throw new Error(error.message);
+  const supabase = await createClient();
   const slipKey = String(formData.get("slip_api_key") ?? "").trim();
-  if (slipKey) {
-    const supabase = await createClient();
-    await supabase.rpc("store_platform_slip_key", { p_key: slipKey });
+  if (slipKey) await supabase.rpc("store_platform_slip_key", { p_key: slipKey });
+  const omiseKey = String(formData.get("omise_secret_key") ?? "").trim();
+  if (omiseKey) {
+    const { error: keyErr } = await supabase.rpc("store_platform_omise_key", { p_key: omiseKey });
+    if (keyErr) throw new Error(`บันทึก Omise secret key ไม่สำเร็จ: ${keyErr.message}`);
   }
   revalidatePath("/dashboard/admin/billing");
 }
