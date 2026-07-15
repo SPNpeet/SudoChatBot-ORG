@@ -1,16 +1,17 @@
 import { getCurrentShop } from "@/lib/shop";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Select, Textarea } from "@/components/ui";
-import { saveBotSettings, savePaymentSettings, addMember, removeMember } from "../actions";
+import { saveBotSettings, savePaymentSettings, addMember, removeMember, saveTaxInfo } from "../actions";
 import type { BotSettings, ShopPaymentSettings } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const { supabase, shop } = await getCurrentShop();
-  const [{ data: bot }, { data: pay }, { data: members }] = await Promise.all([
+  const [{ data: bot }, { data: pay }, { data: members }, { data: taxInfo }] = await Promise.all([
     supabase.from("bot_settings").select("*").eq("shop_id", shop.id).maybeSingle(),
     supabase.from("shop_payment_settings").select("*").eq("shop_id", shop.id).maybeSingle(),
     supabase.from("shop_members").select("id, role, profiles(display_name, email)").eq("shop_id", shop.id),
+    supabase.from("shops").select("billing_name,billing_address,tax_id").eq("id", shop.id).maybeSingle(),
   ]);
   const b = (bot ?? {}) as Partial<BotSettings>;
   const p = (pay ?? {}) as Partial<ShopPaymentSettings>;
@@ -19,6 +20,7 @@ export default async function SettingsPage() {
   async function saveBot(fd: FormData) { "use server"; await saveBotSettings(String(fd.get("shop_id")), fd); }
   async function savePay(fd: FormData) { "use server"; await savePaymentSettings(String(fd.get("shop_id")), fd); }
   async function invite(fd: FormData) { "use server"; await addMember(String(fd.get("shop_id")), fd); }
+  async function saveTax(fd: FormData) { "use server"; await saveTaxInfo(String(fd.get("shop_id")), fd); }
   async function kick(fd: FormData) { "use server"; await removeMember(String(fd.get("member_id")), String(fd.get("shop_id"))); }
 
   return (
@@ -135,6 +137,23 @@ export default async function SettingsPage() {
               </div>
             </div>
             <Button size="sm">บันทึกการตั้งค่าการเงิน</Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* ===== ใบกำกับภาษี ===== */}
+      <Card>
+        <CardHeader><CardTitle>🧾 ข้อมูลใบกำกับภาษี</CardTitle></CardHeader>
+        <CardContent>
+          <form action={saveTax} className="space-y-3">
+            <input type="hidden" name="shop_id" value={shop.id} />
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>ชื่อผู้ซื้อ (บุคคล/นิติบุคคล)</Label><Input name="billing_name" defaultValue={taxInfo?.billing_name ?? ""} placeholder="บริษัท ตัวอย่าง จำกัด" /></div>
+              <div><Label>เลขประจำตัวผู้เสียภาษี 13 หลัก</Label><Input name="tax_id" defaultValue={taxInfo?.tax_id ?? ""} placeholder="0105561000000" maxLength={13} /></div>
+            </div>
+            <div><Label>ที่อยู่สำหรับออกใบกำกับภาษี</Label><Textarea name="billing_address" defaultValue={taxInfo?.billing_address ?? ""} placeholder="เลขที่ ถนน แขวง/ตำบล เขต/อำเภอ จังหวัด รหัสไปรษณีย์" /></div>
+            <p className="text-[11px] text-neutral-400">ข้อมูลนี้จะแสดงบนใบเสร็จ/ใบกำกับภาษีของการเติมเงินทุกครั้ง</p>
+            <Button size="sm">บันทึกข้อมูลใบกำกับภาษี</Button>
           </form>
         </CardContent>
       </Card>

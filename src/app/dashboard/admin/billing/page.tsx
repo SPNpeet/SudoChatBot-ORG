@@ -16,7 +16,7 @@ export default async function AdminBillingPage() {
   const [{ data: rev }, { data: pending }, { data: pf }] = await Promise.all([
     supabase.rpc("platform_revenue"),
     svc.from("topups").select("*, shops(name)").in("status", ["pending", "verifying"]).order("created_at", { ascending: false }).limit(30),
-    svc.from("platform_billing_settings").select("promptpay_id,account_name,slip_provider,payment_gateway,omise_public_key").eq("id", true).single(),
+    svc.from("platform_billing_settings").select("promptpay_id,account_name,slip_provider,payment_gateway,omise_public_key,company_name,company_address,tax_id,tax_branch,vat_registered").eq("id", true).single(),
   ]);
   const r = (rev ?? {}) as Record<string, number>;
 
@@ -104,6 +104,19 @@ export default async function AdminBillingPage() {
                   <option value="slipok">SlipOK — อัตโนมัติ</option>
                 </Select>
                 <Input name="slip_api_key" type="password" placeholder="API Key (กรอกเมื่อเปลี่ยน)" />
+              </div>
+            </div>
+            <div className="border-t border-neutral-100 pt-3">
+              <Label>ข้อมูลผู้ขายบนใบกำกับภาษี (VAT 7%)</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Input name="company_name" defaultValue={pf?.company_name ?? ""} placeholder="ชื่อบริษัท/ผู้ประกอบการ" />
+                <Input name="tax_id" defaultValue={pf?.tax_id ?? ""} placeholder="เลขประจำตัวผู้เสียภาษี 13 หลัก" maxLength={13} />
+                <Input name="company_address" defaultValue={pf?.company_address ?? ""} placeholder="ที่อยู่จดทะเบียน" className="col-span-2" />
+                <Input name="tax_branch" defaultValue={pf?.tax_branch ?? "สำนักงานใหญ่"} placeholder="สาขา" />
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="vat_registered" defaultChecked={pf?.vat_registered ?? false} className="h-4 w-4 accent-emerald-600" />
+                  จด VAT แล้ว — ออกใบกำกับภาษี (ราคารวม VAT)
+                </label>
               </div>
             </div>
             <Button size="sm">บันทึกบัญชีรับเงิน</Button>

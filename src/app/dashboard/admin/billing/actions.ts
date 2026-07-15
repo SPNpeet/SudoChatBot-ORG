@@ -28,6 +28,11 @@ export async function savePlatformBilling(formData: FormData) {
     slip_provider: String(formData.get("slip_provider") ?? "manual"),
     payment_gateway: formData.get("payment_gateway") === "omise" ? "omise" : "promptpay_slip",
     omise_public_key: String(formData.get("omise_public_key") ?? "").trim() || null,
+    company_name: String(formData.get("company_name") ?? "").trim() || null,
+    company_address: String(formData.get("company_address") ?? "").trim() || null,
+    tax_id: String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null,
+    tax_branch: String(formData.get("tax_branch") ?? "").trim() || "สำนักงานใหญ่",
+    vat_registered: formData.get("vat_registered") === "on",
     updated_at: new Date().toISOString(),
   }).eq("id", true);
   if (error) throw new Error(error.message);

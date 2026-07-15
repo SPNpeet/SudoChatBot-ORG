@@ -346,6 +346,19 @@ export async function removeMember(memberId: string, shopId: string) {
   revalidatePath("/dashboard/settings");
 }
 
+// ---------- ข้อมูลใบกำกับภาษีของร้าน ----------
+export async function saveTaxInfo(shopId: string, formData: FormData) {
+  await assertMember(shopId, ["owner", "admin"]);
+  const svc = createServiceClient();
+  const { error } = await svc.from("shops").update({
+    billing_name: String(formData.get("billing_name") ?? "").trim() || null,
+    billing_address: String(formData.get("billing_address") ?? "").trim() || null,
+    tax_id: String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null,
+  }).eq("id", shopId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard/settings");
+}
+
 // ---------- ยกเลิก/คืนเงินออเดอร์ (คืนสต๊อก) ----------
 export async function refundOrder(orderId: string, shopId: string, reason: string) {
   await assertMember(shopId, ["owner", "admin"]);
