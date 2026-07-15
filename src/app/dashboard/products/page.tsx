@@ -3,7 +3,7 @@ import { Badge, Card, CardContent, EmptyState, Table, Th, Td } from "@/component
 import { baht, dateTH } from "@/lib/utils";
 import { upsertProduct, archiveProduct } from "../actions";
 import ProductForm from "./product-form";
-import type { Product } from "@/lib/types/db";
+import type { Product, ProductVariant } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +13,15 @@ export default async function ProductsPage() {
     .select("*").eq("shop_id", shop.id).neq("status", "archived")
     .order("created_at", { ascending: false }).limit(200);
   const products = (data ?? []) as Product[];
+  const { data: variantRows } = await supabase.from("product_variants")
+    .select("id,product_id,name,sku,price,stock,status")
+    .in("product_id", products.map((p) => p.id)).neq("status", "archived").order("created_at");
+  const variantsByProduct = new Map<string, ProductVariant[]>();
+  for (const v of (variantRows ?? []) as ProductVariant[]) {
+    const list = variantsByProduct.get(v.product_id) ?? [];
+    list.push(v);
+    variantsByProduct.set(v.product_id, list);
+  }
 
   async function save(formData: FormData) {
     "use server";
@@ -41,31 +50,41 @@ export default async function ProductsPage() {
             <Table>
               <thead><tr><Th>สินค้า</Th><Th>SKU</Th><Th>ราคา</Th><Th>สต๊อก</Th><Th>สถานะ</Th><Th>เพิ่มเมื่อ</Th><Th /></tr></thead>
               <tbody>
-                {products.map((p) => (
-                  <tr key={p.id}>
-                    <Td>
-                      <p className="font-medium">{p.name}</p>
-                      {p.category && <p className="text-[11px] text-neutral-400">{p.category}</p>}
-                    </Td>
-                    <Td className="text-neutral-500">{p.sku ?? "-"}</Td>
-                    <Td className="font-semibold">{baht(p.price)}</Td>
-                    <Td>
-                      <span className={p.stock <= 3 ? "font-semibold text-red-600" : ""}>{p.track_stock ? p.stock : "∞"}</span>
-                    </Td>
-                    <Td><Badge tone={p.status === "active" ? "green" : "neutral"}>{p.status === "active" ? "ขายอยู่" : "ร่าง"}</Badge></Td>
-                    <Td className="text-neutral-400">{dateTH(p.created_at)}</Td>
-                    <Td>
-                      <div className="flex items-center justify-end gap-2">
-                        <ProductForm shopId={shop.id} action={save} product={p} />
-                        <form action={archive}>
-                          <input type="hidden" name="product_id" value={p.id} />
-                          <input type="hidden" name="shop_id" value={shop.id} />
-                          <button className="text-xs text-neutral-400 hover:text-red-600">เก็บเข้าคลัง</button>
-                        </form>
-                      </div>
-                    </Td>
-                  </tr>
-                ))}
+                {products.map((p) => {
+                  const pv = variantsByProduct.get(p.id) ?? [];
+                  return (
+                    <tr key={p.id}>
+                      <Td>
+                        <p className="font-medium">{p.name}</p>
+                        {p.category && <p className="text-[11px] text-neutral-400">{p.category}</p>}
+                        {pv.length > 0 && (
+                          <p className="mt-0.5 max-w-56 truncate text-[11px] text-sky-600">
+                            {pv.length} ตัวเลือก: {pv.map((v) => v.name).join(", ")}
+                          </p>
+                        )}
+                      </Td>
+                      <Td className="text-neutral-500">{p.sku ?? "-"}</Td>
+                      <Td className="font-semibold">{baht(p.price)}</Td>
+                      <Td>
+                        {pv.length > 0
+                          ? <span>{pv.reduce((s, v) => s + v.stock, 0)} <span className="text-[10px] text-neutral-400">(รวมตัวเลือก)</span></span>
+                          : <span className={p.stock <= 3 ? "font-semibold text-red-600" : ""}>{p.track_stock ? p.stock : "∞"}</span>}
+                      </Td>
+                      <Td><Badge tone={p.status === "active" ? "green" : "neutral"}>{p.status === "active" ? "ขายอยู่" : "ร่าง"}</Badge></Td>
+                      <Td className="text-neutral-400">{dateTH(p.created_at)}</Td>
+                      <Td>
+                        <div className="flex items-center justify-end gap-2">
+                          <ProductForm shopId={shop.id} action={save} product={p} variants={pv} />
+                          <form action={archive}>
+                            <input type="hidden" name="product_id" value={p.id} />
+                            <input type="hidden" name="shop_id" value={shop.id} />
+                            <button className="text-xs text-neutral-400 hover:text-red-600">เก็บเข้าคลัง</button>
+                          </form>
+                        </div>
+                      </Td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </Table>
           )}

@@ -29,6 +29,10 @@ export interface Product {
   category: string | null; price: number; compare_at_price: number | null;
   stock: number; track_stock: boolean; status: string; images: unknown[]; created_at: string;
 }
+export interface ProductVariant {
+  id: string; product_id: string; name: string; sku: string | null;
+  price: number | null; stock: number; status: string;
+}
 export interface Order {
   id: string; shop_id: string; order_number: string; status: string;
   subtotal: number; shipping_fee: number; total: number;

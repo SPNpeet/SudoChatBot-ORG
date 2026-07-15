@@ -158,6 +158,36 @@ export async function upsertProduct(shopId: string, formData: FormData) {
     productId = data.id;
   }
 
+  // ---- ตัวเลือกย่อย (variants): upsert ตาม JSON จากฟอร์ม ----
+  // แถวที่มี id = update, ไม่มี id = insert, id เดิมที่หายไป = archive (ห้ามลบ เพราะ order_items อ้างถึง)
+  const variantsJson = String(formData.get("variants_json") ?? "");
+  if (variantsJson && productId) {
+    let rows: { id?: string; name: string; sku?: string; price?: number | null; stock?: number }[] = [];
+    try { rows = JSON.parse(variantsJson); } catch { rows = []; }
+    rows = rows.filter((v) => v.name?.trim()).slice(0, 50);
+    const svc = createServiceClient();
+    const { data: existing } = await svc.from("product_variants").select("id").eq("product_id", productId).neq("status", "archived");
+    const keepIds = new Set(rows.map((v) => v.id).filter(Boolean));
+    for (const ex of existing ?? []) {
+      if (!keepIds.has(ex.id)) await svc.from("product_variants").update({ status: "archived" }).eq("id", ex.id).eq("product_id", productId);
+    }
+    for (const v of rows) {
+      const vRow = {
+        product_id: productId, shop_id: shopId,
+        name: v.name.trim(), sku: v.sku?.trim() || null,
+        price: v.price === null || v.price === undefined || Number.isNaN(Number(v.price)) ? null : Number(v.price),
+        stock: parseInt(String(v.stock ?? 0), 10) || 0, status: "active",
+      };
+      if (v.id) {
+        const { error } = await svc.from("product_variants").update(vRow).eq("id", v.id).eq("product_id", productId);
+        if (error) throw new Error(`บันทึกตัวเลือกย่อยไม่สำเร็จ: ${error.message}`);
+      } else {
+        const { error } = await svc.from("product_variants").insert(vRow);
+        if (error) throw new Error(`เพิ่มตัวเลือกย่อยไม่สำเร็จ: ${error.message}`);
+      }
+    }
+  }
+
   // สร้าง embedding สำหรับค้นหาเชิงความหมาย (ถ้ามี key — ไม่มีก็ข้าม ระบบยังทำงานได้)
   const gemKey = process.env.GEMINI_API_KEY;
   if (gemKey && productId) {
