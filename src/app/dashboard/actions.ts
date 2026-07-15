@@ -318,6 +318,28 @@ export async function connectLine(shopId: string, formData: FormData) {
   return ch.id;
 }
 
+// ---------- ช่องทาง: TikTok (ต้องได้รับอนุมัติ Business Messaging partner) ----------
+export async function connectTikTok(shopId: string, formData: FormData) {
+  await assertMember(shopId, ["owner", "admin"]);
+  const supabase = await createClient();
+  const businessId = String(formData.get("tiktok_business_id") ?? "").trim();
+  const clientSecret = String(formData.get("tiktok_client_secret") ?? "").trim();
+  const token = String(formData.get("tiktok_access_token") ?? "").trim();
+  const name = String(formData.get("tiktok_name") ?? "TikTok").trim();
+  if (!businessId || !clientSecret || !token) throw new Error("กรอกข้อมูล TikTok ให้ครบ");
+
+  const { data: ch, error } = await supabase.from("channels").upsert({
+    shop_id: shopId, platform: "tiktok", platform_page_id: businessId,
+    page_name: name, webhook_secret: clientSecret, status: "active",
+  }, { onConflict: "platform,platform_page_id" }).select("id").single();
+  if (error) throw new Error(error.message);
+
+  const svc = createServiceClient();
+  await svc.rpc("store_channel_token", { p_channel_id: ch.id, p_token: token });
+  revalidatePath("/dashboard/channels");
+  return ch.id;
+}
+
 export async function disconnectChannel(channelId: string, shopId: string) {
   await assertMember(shopId, ["owner", "admin"]);
   const supabase = await createClient();

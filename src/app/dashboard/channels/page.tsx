@@ -1,6 +1,6 @@
 import { getCurrentShop } from "@/lib/shop";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/components/ui";
-import { connectLine, disconnectChannel } from "../actions";
+import { connectLine, connectTikTok, disconnectChannel } from "../actions";
 import type { Channel } from "@/lib/types/db";
 import { Facebook, Instagram, MessageCircle, Music2 } from "lucide-react";
 
@@ -14,10 +14,15 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const lineChannels = channels.filter((c) => c.platform === "line" && c.status === "active");
+  const tiktokChannels = channels.filter((c) => c.platform === "tiktok" && c.status === "active");
 
   async function lineConnect(formData: FormData) {
     "use server";
     await connectLine(String(formData.get("shop_id")), formData);
+  }
+  async function tiktokConnect(formData: FormData) {
+    "use server";
+    await connectTikTok(String(formData.get("shop_id")), formData);
   }
   async function disconnect(formData: FormData) {
     "use server";
@@ -111,16 +116,33 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
         </Card>
       </div>
 
-      <Card className="opacity-60">
-        <CardContent className="flex items-center justify-between pt-5">
-          <div className="flex items-center gap-3">
-            <Music2 className="h-5 w-5" />
-            <div>
-              <p className="text-sm font-medium">TikTok</p>
-              <p className="text-[11px] text-neutral-400">กำลังจะมา — TikTok DM API ต้องได้รับอนุมัติ partner จาก TikTok</p>
+      {/* TikTok */}
+      <Card>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Music2 className="h-4 w-4" /> TikTok Business Messaging</CardTitle></CardHeader>
+        <CardContent>
+          <p className="mb-3 text-sm text-neutral-500">
+            ต้องได้รับอนุมัติ Business Messaging API จาก TikTok ก่อน (สมัครที่ developers.tiktok.com) — เมื่อได้ Business ID + Access Token แล้วกรอกด้านล่าง
+          </p>
+          <form action={tiktokConnect} className="space-y-3">
+            <input type="hidden" name="shop_id" value={shop.id} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><Label>ชื่อบัญชี</Label><Input name="tiktok_name" placeholder="@ร้านของฉัน" /></div>
+              <div><Label>Business ID</Label><Input name="tiktok_business_id" required placeholder="จาก TikTok for Business" /></div>
+              <div><Label>Client Secret (ตรวจลายเซ็น webhook)</Label><Input name="tiktok_client_secret" required type="password" /></div>
+              <div><Label>Access Token</Label><Input name="tiktok_access_token" required type="password" /></div>
             </div>
-          </div>
-          <Badge>เร็วๆ นี้</Badge>
+            <Button size="sm">เชื่อมต่อ TikTok</Button>
+          </form>
+          {tiktokChannels.length > 0 && (
+            <div className="mt-4 rounded-xl bg-emerald-50 p-3">
+              <p className="text-xs font-semibold text-emerald-800">นำ Webhook URL นี้ไปวางใน TikTok Developer Portal → Webhooks:</p>
+              {tiktokChannels.map((c) => (
+                <code key={c.id} className="mt-1 block break-all text-[11px] text-emerald-700">
+                  {supabaseUrl}/functions/v1/webhook-tiktok?channel={c.id}
+                </code>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

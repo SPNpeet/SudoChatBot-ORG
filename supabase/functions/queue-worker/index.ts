@@ -8,6 +8,7 @@ import { QueueIncoming, QueueOutbound, QueueSlip, OutMessage } from "../_shared/
 import { runSalesAgent, AgentContext } from "../_shared/ai.ts";
 import { metaSend, metaProfile } from "../_shared/meta.ts";
 import { lineSend, lineProfile } from "../_shared/line.ts";
+import { tiktokSend } from "../_shared/tiktok.ts";
 
 const MAX_READS = 4; // อ่านเกินนี้ = ย้ายเข้า archive กัน loop ไม่รู้จบ
 
@@ -18,6 +19,11 @@ async function sendToPlatform(
   const token = await getChannelToken(channelId);
   if (!token) return { ok: false, error: "no channel token" };
   if (platform === "line") return await lineSend(token, userId, messages, replyToken);
+  if (platform === "tiktok") {
+    const { data: ch } = await sb().from("channels").select("platform_page_id").eq("id", channelId).single();
+    if (!ch?.platform_page_id) return { ok: false, error: "no tiktok business id" };
+    return await tiktokSend(token, ch.platform_page_id, userId, messages);
+  }
   return await metaSend(token, userId, messages);
 }
 
