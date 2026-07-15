@@ -346,6 +346,14 @@ export async function removeMember(memberId: string, shopId: string) {
   revalidatePath("/dashboard/settings");
 }
 
+// ---------- แจ้งเตือน ----------
+export async function markNotificationRead(notificationId: string, shopId: string) {
+  await assertMember(shopId);
+  const supabase = await createClient();
+  await supabase.from("notifications").update({ read: true }).eq("id", notificationId).eq("shop_id", shopId);
+  revalidatePath("/dashboard", "layout");
+}
+
 // ---------- ข้อมูลใบกำกับภาษีของร้าน ----------
 export async function saveTaxInfo(shopId: string, formData: FormData) {
   await assertMember(shopId, ["owner", "admin"]);

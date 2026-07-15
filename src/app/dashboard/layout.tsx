@@ -7,6 +7,7 @@ import {
   BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet,
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
+import Notifications from "./notifications";
 
 const nav = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
@@ -66,7 +67,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </header>
 
       {/* เนื้อหา */}
-      <main className="px-4 py-5 pb-24 md:ml-56 md:px-8 md:py-7 md:pb-7">{children}</main>
+      <main className="px-4 py-5 pb-24 md:ml-56 md:px-8 md:py-7 md:pb-7">
+        <Notifications />
+        {children}
+      </main>
 
       {/* Bottom nav — มือถือ */}
       <MobileNav isAdmin={!!isAdmin} />

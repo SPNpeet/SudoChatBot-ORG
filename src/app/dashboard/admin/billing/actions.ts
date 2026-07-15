@@ -33,6 +33,8 @@ export async function savePlatformBilling(formData: FormData) {
     tax_id: String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null,
     tax_branch: String(formData.get("tax_branch") ?? "").trim() || "สำนักงานใหญ่",
     vat_registered: formData.get("vat_registered") === "on",
+    email_from: String(formData.get("email_from") ?? "").trim() || null,
+    low_credit_threshold: Math.max(0, Number(formData.get("low_credit_threshold") ?? 50) || 50),
     updated_at: new Date().toISOString(),
   }).eq("id", true);
   if (error) throw new Error(error.message);
@@ -43,6 +45,11 @@ export async function savePlatformBilling(formData: FormData) {
   if (omiseKey) {
     const { error: keyErr } = await supabase.rpc("store_platform_omise_key", { p_key: omiseKey });
     if (keyErr) throw new Error(`บันทึก Omise secret key ไม่สำเร็จ: ${keyErr.message}`);
+  }
+  const resendKey = String(formData.get("resend_api_key") ?? "").trim();
+  if (resendKey) {
+    const { error: keyErr } = await supabase.rpc("store_platform_resend_key", { p_key: resendKey });
+    if (keyErr) throw new Error(`บันทึก Resend API key ไม่สำเร็จ: ${keyErr.message}`);
   }
   revalidatePath("/dashboard/admin/billing");
 }

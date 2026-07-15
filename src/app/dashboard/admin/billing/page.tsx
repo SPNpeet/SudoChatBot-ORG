@@ -16,7 +16,7 @@ export default async function AdminBillingPage() {
   const [{ data: rev }, { data: pending }, { data: pf }] = await Promise.all([
     supabase.rpc("platform_revenue"),
     svc.from("topups").select("*, shops(name)").in("status", ["pending", "verifying"]).order("created_at", { ascending: false }).limit(30),
-    svc.from("platform_billing_settings").select("promptpay_id,account_name,slip_provider,payment_gateway,omise_public_key,company_name,company_address,tax_id,tax_branch,vat_registered").eq("id", true).single(),
+    svc.from("platform_billing_settings").select("promptpay_id,account_name,slip_provider,payment_gateway,omise_public_key,company_name,company_address,tax_id,tax_branch,vat_registered,email_from,low_credit_threshold").eq("id", true).single(),
   ]);
   const r = (rev ?? {}) as Record<string, number>;
 
@@ -105,6 +105,15 @@ export default async function AdminBillingPage() {
                 </Select>
                 <Input name="slip_api_key" type="password" placeholder="API Key (กรอกเมื่อเปลี่ยน)" />
               </div>
+            </div>
+            <div className="border-t border-neutral-100 pt-3">
+              <Label>อีเมลแจ้งเตือน (Resend) — เครดิตใกล้หมด / บอทหยุดเพราะเครดิตหมด</Label>
+              <div className="grid grid-cols-3 gap-3">
+                <Input name="resend_api_key" type="password" placeholder="Resend API Key (re_... กรอกเมื่อเปลี่ยน)" />
+                <Input name="email_from" defaultValue={pf?.email_from ?? ""} placeholder='ผู้ส่ง เช่น SudoChatBot <no-reply@โดเมนคุณ>' />
+                <Input name="low_credit_threshold" type="number" min={0} defaultValue={pf?.low_credit_threshold ?? 50} placeholder="เตือนเมื่อเครดิตต่ำกว่า (บาท)" />
+              </div>
+              <p className="mt-1 text-[11px] text-neutral-400">ไม่ใส่ key = ไม่ส่งอีเมล (ยังแจ้งใน dashboard เสมอ) · สมัครฟรีที่ resend.com</p>
             </div>
             <div className="border-t border-neutral-100 pt-3">
               <Label>ข้อมูลผู้ขายบนใบกำกับภาษี (VAT 7%)</Label>

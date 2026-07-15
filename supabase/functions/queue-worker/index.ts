@@ -174,6 +174,12 @@ async function processIncoming(item: QueueIncoming): Promise<void> {
 
   const result = await runSalesAgent(ctx);
 
+  // ---- เครดิต/โควตาหมด: แจ้งเจ้าของร้าน (dedupe 24 ชม. ใน RPC) แล้วจบงาน ----
+  if (result.billBlocked) {
+    await sb().rpc("notify_bot_blocked", { p_shop_id: item.shop_id });
+    return;
+  }
+
   // ---- กันตอบข้าม: ถ้ามีข้อความใหม่กว่าเข้ามาแล้ว ให้ข้าม (ข้อความล่าสุดจะตอบแทน) ----
   const { data: latest } = await s.from("messages").select("id")
     .eq("conversation_id", conv.id).eq("direction", "inbound")
