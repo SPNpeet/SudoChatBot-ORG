@@ -117,6 +117,13 @@ async function processIncoming(item: QueueIncoming): Promise<void> {
   // ---- บอทปิดอยู่ / คนคุมอยู่ -> เก็บอย่างเดียว ----
   if (!bot?.enabled || !conv.bot_enabled || conv.status === "human") return;
 
+  // ---- Rate limit ต่อร้าน (ต่อนาที/ต่อวัน ตามแพ็กเกจ) — เกินลิมิต = เก็บข้อความแต่ไม่ตอบ ----
+  const { data: withinLimit } = await s.rpc("check_shop_rate_limit", { p_shop_id: item.shop_id });
+  if (withinLimit === false) {
+    console.log("rate limit exceeded, skip reply", item.shop_id);
+    return;
+  }
+
   // ---- keyword ส่งต่อมนุษย์ ----
   const text = (item.text ?? "").toLowerCase();
   if (text && (bot.handoff_keywords ?? []).some((k: string) => k && text.includes(k.toLowerCase()))) {
