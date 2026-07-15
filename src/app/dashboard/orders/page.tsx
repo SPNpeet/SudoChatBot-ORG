@@ -2,7 +2,7 @@ import { getCurrentShop } from "@/lib/shop";
 import { Badge, Card, CardContent, EmptyState, Table, Th, Td } from "@/components/ui";
 import { baht, dateTH, ORDER_STATUS_TH, cn } from "@/lib/utils";
 import Link from "next/link";
-import { markShipped, verifyPaymentManual } from "../actions";
+import { markShipped, verifyPaymentManual, refundOrder } from "../actions";
 import type { Order } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,10 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   async function verify(formData: FormData) {
     "use server";
     await verifyPaymentManual(String(formData.get("payment_id")), String(formData.get("shop_id")), formData.get("approve") === "1");
+  }
+  async function refund(formData: FormData) {
+    "use server";
+    await refundOrder(String(formData.get("order_id")), String(formData.get("shop_id")), String(formData.get("reason") ?? ""));
   }
 
   return (
@@ -103,6 +107,16 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                               <input type="hidden" name="shop_id" value={shop.id} />
                               <input name="tracking" placeholder="เลขพัสดุ" className="h-7 w-28 rounded-lg border border-neutral-300 px-2 text-xs outline-none focus:border-emerald-500" />
                               <button className="rounded-lg bg-neutral-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-neutral-700">จัดส่ง</button>
+                            </form>
+                          )}
+                          {["pending_payment", "paid", "confirmed", "shipped"].includes(o.status) && (
+                            <form action={refund} className="flex gap-1.5">
+                              <input type="hidden" name="order_id" value={o.id} />
+                              <input type="hidden" name="shop_id" value={shop.id} />
+                              <input name="reason" placeholder="เหตุผล (ไม่บังคับ)" className="h-7 w-28 rounded-lg border border-neutral-300 px-2 text-xs outline-none focus:border-rose-400" />
+                              <button className="rounded-lg border border-rose-300 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50">
+                                {["paid", "confirmed", "shipped"].includes(o.status) ? "คืนเงิน/ยกเลิก" : "ยกเลิก"}
+                              </button>
                             </form>
                           )}
                         </div>

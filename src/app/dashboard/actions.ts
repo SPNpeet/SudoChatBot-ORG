@@ -352,13 +352,9 @@ export async function refundOrder(orderId: string, shopId: string, reason: strin
   const svc = createServiceClient();
   const { data: order } = await svc.from("orders").select("id,status,order_number").eq("id", orderId).eq("shop_id", shopId).single();
   if (!order) throw new Error("ไม่พบออเดอร์");
-  // คืนสต๊อกถ้าเคยตัดไปแล้ว (paid ขึ้นไป)
+  // คืนสต๊อกถ้าเคยตัดไปแล้ว (paid ขึ้นไป) — qty ติดลบ = บวกสต๊อกกลับ
   if (["paid", "confirmed", "shipped"].includes(order.status)) {
     const { data: items } = await svc.from("order_items").select("product_id,variant_id,quantity").eq("order_id", orderId);
-    for (const it of items ?? []) {
-      if (it.variant_id) await svc.from("product_variants").update({ stock: 0 }).eq("id", it.variant_id).then(() => {}, () => {});
-    }
-    // คืนสต๊อก: บวกกลับ
     for (const it of items ?? []) {
       if (it.product_id) await svc.rpc("decrement_stock", { p_product_id: it.product_id, p_variant_id: it.variant_id, p_qty: -it.quantity }).then(() => {}, () => {});
     }
