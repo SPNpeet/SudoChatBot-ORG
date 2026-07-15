@@ -67,3 +67,11 @@ Vercel env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABA
 - [ ] TikTok = Phase ถัดไป (ต้องเป็น TikTok partner)
 - [ ] SaaS billing คิดเงินร้านค้า (โครง plan/quota อยู่ใน shops.plan แล้ว)
 - [ ] Product variants UI (schema พร้อมแล้ว ยังไม่มีฟอร์มใน dashboard)
+
+## 10) Phase 7 — Billing (เพิ่มแล้ว) + งานค้าง
+- ตาราง: plans, wallets, wallet_transactions, topups, usage_monthly, platform_billing_settings (+ shops.plan/plan_since/next_bill_at/billing_overdue)
+- RPC: bill_bot_reply (billing gate ใน ai.ts เรียกก่อนตอบ), credit_wallet, billing_summary, run_plan_billing (017), admin_confirm_topup, platform_revenue
+- Migration 017 (ตัดค่าสมาชิกรายเดือน cron) + 018 (trigger บังคับ limit ช่องทาง/สมาชิก) = **ยังไม่ apply** ต้อง supabase db push
+- หน้า: dashboard/billing (เติมเงิน PromptPay QR+สลิป, แพ็กเกจ, ledger, ใบเสร็จ), admin/billing (รายได้+ยืนยันสลิป)
+- โมเดลราคา: 1 เครดิต=1บาท, โควตาฟรี/เดือนต่อแพ็กเกจ, เกินหักต่อข้อความ
+- **งานค้างทั้งหมดอยู่ใน HANDOFF.md** (ที่ root ของ repo) — อ่านก่อนเริ่มงานต่อ

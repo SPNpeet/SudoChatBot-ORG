@@ -1,13 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
+  --bg: #f7f8f7;
+  --ink: #0f1a17;
+  --brand: #0f9d6e;
+  --brand-ink: #0a5c43;
 }
+
+* { -webkit-tap-highlight-color: transparent; }
 
 body {
-  background: var(--background);
-  color: #171717;
+  background: var(--bg);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-::selection { background: #d1fae5; }
+::selection { background: #c8f0e0; color: var(--brand-ink); }
+
+/* scrollbar บาง สะอาด */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #d8ddd9; border-radius: 8px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: #c2c9c4; }
+
+/* animation นุ่มๆ ตอนโหลดการ์ด */
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise .3s ease both; }

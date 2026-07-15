@@ -345,3 +345,25 @@ export async function removeMember(memberId: string, shopId: string) {
   await supabase.from("shop_members").delete().eq("id", memberId).eq("shop_id", shopId).neq("role", "owner");
   revalidatePath("/dashboard/settings");
 }
+
+// ---------- ยกเลิก/คืนเงินออเดอร์ (คืนสต๊อก) ----------
+export async function refundOrder(orderId: string, shopId: string, reason: string) {
+  await assertMember(shopId, ["owner", "admin"]);
+  const svc = createServiceClient();
+  const { data: order } = await svc.from("orders").select("id,status,order_number").eq("id", orderId).eq("shop_id", shopId).single();
+  if (!order) throw new Error("ไม่พบออเดอร์");
+  // คืนสต๊อกถ้าเคยตัดไปแล้ว (paid ขึ้นไป)
+  if (["paid", "confirmed", "shipped"].includes(order.status)) {
+    const { data: items } = await svc.from("order_items").select("product_id,variant_id,quantity").eq("order_id", orderId);
+    for (const it of items ?? []) {
+      if (it.variant_id) await svc.from("product_variants").update({ stock: 0 }).eq("id", it.variant_id).then(() => {}, () => {});
+    }
+    // คืนสต๊อก: บวกกลับ
+    for (const it of items ?? []) {
+      if (it.product_id) await svc.rpc("decrement_stock", { p_product_id: it.product_id, p_variant_id: it.variant_id, p_qty: -it.quantity }).then(() => {}, () => {});
+    }
+  }
+  await svc.from("orders").update({ status: "cancelled", cancelled_reason: reason || "ยกเลิกโดยแอดมิน" }).eq("id", orderId);
+  await svc.from("audit_logs").insert({ shop_id: shopId, actor_type: "user", action: "order_cancelled", resource_type: "order", resource_id: orderId, details: { reason, order_number: order.order_number } });
+  revalidatePath("/dashboard/orders");
+}
