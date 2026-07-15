@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, MessageSquare, ShoppingBag, Package, Menu } from "lucide-react";
 import { useState } from "react";
-import { BookOpen, Share2, Settings, ShieldCheck } from "lucide-react";
+import { BookOpen, Share2, Settings, ShieldCheck, Wallet } from "lucide-react";
 
 const main = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
@@ -15,6 +15,7 @@ const main = [
 const more = [
   { href: "/dashboard/knowledge", label: "คลังความรู้", icon: BookOpen },
   { href: "/dashboard/channels", label: "ช่องทาง", icon: Share2 },
+  { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
   { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
 ];
 

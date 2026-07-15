@@ -17,7 +17,8 @@
     "lucide-react": "^0.515.0",
     "recharts": "^2.15.3",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "typescript": "^5.8.3",
@@ -25,6 +26,7 @@
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "tailwindcss": "^4.1.10",
-    "@tailwindcss/postcss": "^4.1.10"
+    "@tailwindcss/postcss": "^4.1.10",
+    "@types/qrcode": "^1.5.5"
   }
 }

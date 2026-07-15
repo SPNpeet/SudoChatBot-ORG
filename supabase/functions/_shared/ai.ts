@@ -40,6 +40,7 @@ export interface AgentContext {
 export interface AgentResult {
   messages: OutMessage[];
   handoff: boolean;
+  billBlocked?: boolean;
   model: string;
   input_tokens: number;
   output_tokens: number;
@@ -502,6 +503,15 @@ async function runGemini(ctx: AgentContext, model: string, apiKey: string, syste
 
 // ---------- main ----------
 export async function runSalesAgent(ctx: AgentContext): Promise<AgentResult> {
+  // ==== Billing gate: เช็คโควตา/เครดิตก่อนให้บอทตอบ ====
+  const { data: bill } = await sb().rpc("bill_bot_reply", { p_shop_id: ctx.shop.id });
+  if (bill && bill.allowed === false) {
+    return {
+      messages: [], handoff: false, billBlocked: true,
+      model: "none", input_tokens: 0, output_tokens: 0, cost_usd: 0,
+    };
+  }
+
   const cfg = await resolveChatConfig(ctx.bot.model_tier);
   const system = buildSystemPrompt(ctx);
 

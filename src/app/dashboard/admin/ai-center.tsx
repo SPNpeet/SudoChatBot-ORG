@@ -23,6 +23,7 @@ export default function AdminAiCenter({
       <div>
         <h1 className="text-xl font-bold">ศูนย์จัดการ AI (ผู้ดูแลแพลตฟอร์ม)</h1>
         <p className="text-sm text-neutral-400">เลือกค่าย → เลือกโมเดล → ใส่ API key เอง · {userEmail}</p>
+        <a href="/dashboard/admin/billing" className="mt-2 inline-block text-sm text-emerald-600 hover:underline">→ ภาพรวมรายได้ + ยืนยันการเติมเงิน</a>
       </div>
 
       {/* ===== ขั้น 1-2: API Keys ต่อค่าย ===== */}

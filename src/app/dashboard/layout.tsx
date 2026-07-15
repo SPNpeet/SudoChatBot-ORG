@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import {
   LayoutDashboard, MessageSquare, ShoppingBag, Package,
-  BookOpen, Share2, Settings, LogOut, ShieldCheck,
+  BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet,
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
 
@@ -15,6 +15,7 @@ const nav = [
   { href: "/dashboard/products", label: "สินค้า", icon: Package },
   { href: "/dashboard/knowledge", label: "คลังความรู้", icon: BookOpen },
   { href: "/dashboard/channels", label: "ช่องทาง", icon: Share2 },
+  { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
   { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
 ];
 
