@@ -11,7 +11,8 @@
 | **Supabase project** | ref `uafnpbawajgonarvlurj` · region ap-southeast-1 (Singapore) |
 | **Supabase Dashboard** | `https://supabase.com/dashboard/project/uafnpbawajgonarvlurj` |
 | **Supabase API URL** | `https://uafnpbawajgonarvlurj.supabase.co` |
-| **Vercel project** | `sudo-chat-bot-org` (team: Suphanat's projects) — กำลัง deploy |
+| **Vercel project** | `sudochatbot-org` (team: suphanats-projects) — **LIVE** |
+| **เว็บใช้งานจริง** | `https://sudochatbot-org.vercel.app` ✅ deploy สำเร็จ (main, READY) |
 | **Anon key (public)** | `eyJhbGciOiJIUzI1NiI...role":"anon"...` (อยู่ใน `.env.example` / Vercel env) |
 
 ### Edge Functions (deploy แล้วทั้งหมด — ตรวจ log cron 200 ทุกนาทีแล้ว)
@@ -55,10 +56,16 @@ supabase/migrations/          # 017-026 apply บน Supabase แล้วทั
 - Advisor: WARN แก้หมด เหลือเฉพาะข้อยกเว้นที่ตั้งใจ (membership fns + deny-all tables)
 - `supabase db pull` เพื่อเก็บไฟล์ 001–016 ยังทำได้ภายหลังจากเครื่องที่มี CLI (optional)
 
-## 🔲 เหลือเฉพาะฝั่งหน้าเว็บ + ตั้งค่า (ต้องใช้บัญชีของคุณ)
-1. **Vercel**: ตั้ง env (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `META_APP_ID/SECRET`, `GEMINI_API_KEY`) + deploy branch นี้ (หรือ merge เข้า main) + ตั้ง Auth providers FB/Google + Site URL
-2. **Supabase Edge Secrets**: `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_DOCAI_PROCESSOR`, `META_APP_ID/SECRET`, `META_VERIFY_TOKEN`
-3. **หน้า Admin → Billing**: เลือก gateway Omise + ใส่ keys · Resend key + ผู้ส่งอีเมล · ข้อมูลภาษี/VAT — แล้วตั้ง Omise webhook → `https://<โดเมน>/api/billing/omise/webhook`
+## ✅ Vercel deploy สำเร็จแล้ว (2026-07-16)
+- โปรเจกต์ `sudochatbot-org` เชื่อม repo `SPNpeet/SudoChatBot-ORG` branch `main` · production READY
+- เว็บใช้งานจริง: **https://sudochatbot-org.vercel.app** (landing/login/dashboard ทำงาน · middleware auth OK)
+- Env ที่ตั้งแล้ว: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+## 🔲 เหลือ 3 อย่าง (ค่า secret ที่ระบบไม่เปิดให้ agent อ่าน — ต้องวางจากบัญชีคุณ)
+1. **`SUPABASE_SERVICE_ROLE_KEY`** (สำคัญสุด — เปิดฟีเจอร์ฝั่ง server ทั้ง dashboard): คัดจาก Supabase → Settings → API แถว service_role → วางให้ agent หรือใส่เองใน Vercel env → redeploy
+2. **Supabase Auth**: Dashboard → Authentication → URL Configuration → Site URL = `https://sudochatbot-org.vercel.app` + เปิด Google/Facebook provider (email/password ใช้ได้อยู่แล้ว)
+3. **หน้า Admin → Billing**: ใส่ Omise keys · Resend key · ข้อมูล VAT → ตั้ง Omise webhook `https://sudochatbot-org.vercel.app/api/billing/omise/webhook`
+   (AI key ของบอทตั้งในหน้า Admin ได้เลย เก็บ Vault — ไม่ต้องพึ่ง env)
 
 ---
 
