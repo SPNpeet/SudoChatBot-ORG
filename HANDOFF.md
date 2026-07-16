@@ -14,13 +14,13 @@
 | **Vercel project** | `sudo-chat-bot-org` (team: Suphanat's projects) — กำลัง deploy |
 | **Anon key (public)** | `eyJhbGciOiJIUzI1NiI...role":"anon"...` (อยู่ใน `.env.example` / Vercel env) |
 
-### Edge Functions (deploy แล้วบน Supabase — ⚠️ queue-worker ต้อง deploy ใหม่ ดูงานค้าง)
+### Edge Functions (deploy แล้วทั้งหมด — ตรวจ log cron 200 ทุกนาทีแล้ว)
 | Function | URL | verify_jwt |
 |---|---|---|
 | webhook-meta | `https://uafnpbawajgonarvlurj.supabase.co/functions/v1/webhook-meta` | false |
 | webhook-line | `.../functions/v1/webhook-line?channel={channel_id}` | false |
-| webhook-tiktok | `.../functions/v1/webhook-tiktok?channel={channel_id}` — **โค้ดใหม่ ยังไม่ deploy** | false |
-| queue-worker | `.../functions/v1/queue-worker` — **โค้ดแก้แล้ว (rate limit + notify_bot_blocked + tiktok send) ต้อง deploy ใหม่** | true |
+| webhook-tiktok | `.../functions/v1/webhook-tiktok?channel={channel_id}` (v1) | false |
+| queue-worker | `.../functions/v1/queue-worker` (v4: rate limit + notify_bot_blocked + tiktok send) | true |
 | doc-processor | `.../functions/v1/doc-processor` (v2 multi-provider) | true |
 | slip-verifier | `.../functions/v1/slip-verifier` | true |
 
@@ -45,40 +45,20 @@ src/app/                      # Next.js 15 App Router
 src/lib/                      # supabase clients, shop.ts (RBAC), ai-catalog.ts, omise.ts, utils
 src/components/ui.tsx logo.tsx
 supabase/functions/_shared/   # ai.ts providers.ts embeddings.ts ocr.ts slip.ts promptpay.ts meta.ts line.ts tiktok.ts
-supabase/migrations/          # 017-023 = ยังไม่ apply (ดูด้านล่าง)
+supabase/migrations/          # 017-026 apply บน Supabase แล้วทั้งหมด
 ```
 
-## ⚠️ สิ่งที่ต้องทำจากเครื่องที่มีสิทธิ์ (Claude Code ในเซสชัน remote ทำไม่ได้ — ไม่มี Supabase token/MCP)
+## ✅ Backend deploy ครบแล้ว (ทำผ่าน Supabase MCP เมื่อ 2026-07-16)
+- Migrations **017–026 apply แล้วทั้งหมด** (024=แก้ decrement_stock คืนสต๊อกด้วย qty ติดลบ · 025=ปิด RPC ของ trigger fns · 026=แยก policy for all)
+- pg_net ย้ายไป schema `extensions` แล้ว — cron `net.http_post` เดิมใช้ได้ต่อ (ฟังก์ชันอยู่ schema `net` เสมอ)
+- ทดสอบ synthetic tenant ผ่าน 10/10: ตัดรอบบิล/overdue/limit ช่องทาง/limit สมาชิก/rate limit(บล็อกครั้งที่ 31)/notify dedupe/low credit/เลข INV/ตัด-คืนสต๊อก
+- Advisor: WARN แก้หมด เหลือเฉพาะข้อยกเว้นที่ตั้งใจ (membership fns + deny-all tables)
+- `supabase db pull` เพื่อเก็บไฟล์ 001–016 ยังทำได้ภายหลังจากเครื่องที่มี CLI (optional)
 
-### 1) apply migrations 017–023 (สำคัญสุด)
-```bash
-supabase link --project-ref uafnpbawajgonarvlurj
-supabase db push        # apply 017..023
-supabase db pull        # ดึง 001-016 มาเก็บเป็นไฟล์ให้ครบ
-```
-| # | ไฟล์ | ทำอะไร |
-|---|---|---|
-| 017 | monthly_plan_billing | ตัดค่าสมาชิกรายเดือน (cron 01:00 ไทย) + expire topup ค้าง |
-| 018 | enforce_plan_limits | trigger บังคับ limit ช่องทาง/สมาชิกตามแพ็กเกจ |
-| 019 | omise_gateway | topups.gateway/charge_id + payment_gateway + Vault RPC omise key |
-| 020 | tax_invoice | ข้อมูลภาษีผู้ขาย/ผู้ซื้อ + เลขใบกำกับ INV-YYYYMM-#### (trigger ตอน paid) |
-| 021 | billing_notifications | ตาราง notifications + send_platform_email (Resend/pg_net) + notify_bot_blocked + cron notify_low_credit |
-| 022 | rate_limiting | plans.rate_limit_per_min/day + RPC check_shop_rate_limit + cron cleanup |
-| 023 | move_pg_net | ย้าย pg_net ออกจาก public (advisor WARN) |
-
-หลัง apply: รัน `get_advisors(security)` + `(performance)` แก้ WARN ทุกตัว แล้วทดสอบ synthetic tenant (สร้าง auth.users→shop→ทดสอบ run_plan_billing / insert เกิน limit ต้อง raise / check_shop_rate_limit / notify_bot_blocked→ลบทิ้ง)
-
-### 2) deploy edge functions ที่แก้/เพิ่ม (ผ่าน Supabase MCP หรือ CLI)
-- **queue-worker** (แก้: rate limit gate + notify_bot_blocked + tiktok send) — verify_jwt true
-- **webhook-tiktok** (ใหม่) — verify_jwt **false**
-- วิธีบันเดิล _shared ดู `skill/sudochatbot-dev/SKILL.md` ข้อ 4
-
-### 3) ตั้ง secrets + deploy Vercel
-- Supabase Edge Secrets: `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_DOCAI_PROCESSOR`, `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN`
-- Vercel env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `META_APP_ID`, `META_APP_SECRET`, `GEMINI_API_KEY` (+ optional `OMISE_SECRET_KEY` เป็น fallback ถ้าไม่ตั้งใน Vault)
-- Deploy Vercel + ตั้ง Auth providers (Facebook/Google) + Site URL
-- ตั้งค่าในหน้า Admin → Billing: gateway (Omise keys), Resend API key + ผู้ส่งอีเมล, ข้อมูลภาษี/VAT
-- Omise: ตั้ง webhook endpoint ใน Omise dashboard → `https://<โดเมน Vercel>/api/billing/omise/webhook`
+## 🔲 เหลือเฉพาะฝั่งหน้าเว็บ + ตั้งค่า (ต้องใช้บัญชีของคุณ)
+1. **Vercel**: ตั้ง env (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `META_APP_ID/SECRET`, `GEMINI_API_KEY`) + deploy branch นี้ (หรือ merge เข้า main) + ตั้ง Auth providers FB/Google + Site URL
+2. **Supabase Edge Secrets**: `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_SERVICE_ACCOUNT_JSON`, `GOOGLE_DOCAI_PROCESSOR`, `META_APP_ID/SECRET`, `META_VERIFY_TOKEN`
+3. **หน้า Admin → Billing**: เลือก gateway Omise + ใส่ keys · Resend key + ผู้ส่งอีเมล · ข้อมูลภาษี/VAT — แล้วตั้ง Omise webhook → `https://<โดเมน>/api/billing/omise/webhook`
 
 ---
 
