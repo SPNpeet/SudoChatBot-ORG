@@ -6,7 +6,7 @@
 import { sb, logAiUsage } from "./supabase.ts";
 import { embedQuery } from "./embeddings.ts";
 import { promptPayPayload } from "./promptpay.ts";
-import { resolveChatConfig } from "./providers.ts";
+import { resolveChatConfig, OPENAI_COMPAT_BASE } from "./providers.ts";
 import { OutMessage } from "./types.ts";
 
 // ราคาโดยประมาณ USD/1M tokens (in, out) — เรียงจากเฉพาะเจาะจงก่อน
@@ -14,6 +14,10 @@ const PRICE_TABLE: [string, [number, number]][] = [
   ["claude-haiku", [1, 5]], ["claude-sonnet", [3, 15]], ["claude-opus", [15, 75]], ["claude-fable", [25, 100]],
   ["gpt-5-mini", [0.5, 2]], ["gpt-5-nano", [0.1, 0.4]], ["gpt-5", [2.5, 10]], ["gpt-4o-mini", [0.15, 0.6]], ["gpt-4o", [2.5, 10]],
   ["gemini-2.5-flash-lite", [0.1, 0.4]], ["gemini-2.5-flash", [0.3, 2.5]], ["gemini-2.5-pro", [1.25, 10]], ["gemini", [0.3, 2.5]],
+  ["deepseek-reasoner", [0.55, 2.19]], ["deepseek", [0.27, 1.1]],
+  ["qwen-max", [1.6, 6.4]], ["qwen-plus", [0.4, 1.2]], ["qwen-flash", [0.05, 0.4]], ["qwen", [0.4, 1.2]],
+  ["glm-4.5-air", [0.2, 1.1]], ["glm", [0.6, 2.2]],
+  ["kimi", [0.6, 2.5]],
 ];
 function priceFor(model: string): [number, number] {
   for (const [p, v] of PRICE_TABLE) if (model.startsWith(p)) return v;
@@ -408,19 +412,21 @@ async function runAnthropic(ctx: AgentContext, model: string, apiKey: string, sy
   return r;
 }
 
-// ---------- OpenAI (GPT) ----------
-async function runOpenAI(ctx: AgentContext, model: string, apiKey: string, system: string): Promise<LoopResult> {
+// ---------- OpenAI (GPT) + ค่าย OpenAI-compatible (DeepSeek/Qwen/GLM/Kimi) ----------
+async function runOpenAI(ctx: AgentContext, model: string, apiKey: string, system: string, baseUrl?: string): Promise<LoopResult> {
   const messages: Record<string, unknown>[] = [
     { role: "system", content: system },
     ...ctx.history.map((h) => ({ role: h.role, content: h.content })),
   ];
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
   const r: LoopResult = { text: "", inTok: 0, outTok: 0, outImages: [], handoff: false };
+  // OpenAI แท้ใช้ max_completion_tokens / ค่าย compatible ใช้ max_tokens
+  const tokenParam = baseUrl ? { max_tokens: 1024 } : { max_completion_tokens: 1024 };
   for (let i = 0; i < 6; i++) {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(`${baseUrl ?? "https://api.openai.com/v1"}/chat/completions`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, messages, tools, max_completion_tokens: 1024 }),
+      body: JSON.stringify({ model, messages, tools, ...tokenParam }),
     });
     if (!res.ok) throw new Error(`openai ${res.status}: ${(await res.text()).slice(0, 300)}`);
     const data = await res.json();
@@ -516,7 +522,8 @@ export async function runSalesAgent(ctx: AgentContext): Promise<AgentResult> {
   const system = buildSystemPrompt(ctx);
 
   let r: LoopResult;
-  if (cfg.provider === "openai") r = await runOpenAI(ctx, cfg.model, cfg.apiKey, system);
+  const compatBase = OPENAI_COMPAT_BASE[cfg.provider];
+  if (cfg.provider === "openai" || compatBase) r = await runOpenAI(ctx, cfg.model, cfg.apiKey, system, compatBase);
   else if (cfg.provider === "google") r = await runGemini(ctx, cfg.model, cfg.apiKey, system);
   else r = await runAnthropic(ctx, cfg.model, cfg.apiKey, system);
 

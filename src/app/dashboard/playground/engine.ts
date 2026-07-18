@@ -5,8 +5,9 @@
 //  ไม่เรียก bill_bot_reply — ทดลองฟรี ไม่หักเครดิตร้าน
 // ============================================================
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { OPENAI_COMPAT_BASE, type Provider } from "@/lib/ai-catalog";
 
-export type Provider = "anthropic" | "google" | "openai";
+export type { Provider };
 export interface ChatConfig { provider: Provider; model: string; apiKey: string }
 
 export interface PlaygroundCtx {
@@ -41,7 +42,7 @@ export async function resolvePlaygroundConfig(svc: SupabaseClient, tier: string)
   if (row) {
     const { data: key } = await svc.rpc("get_ai_key", { p_provider: row.provider });
     if (key) return { provider: row.provider, model: row.model, apiKey: key as string };
-    const envMap: Record<Provider, string | undefined> = {
+    const envMap: Partial<Record<Provider, string | undefined>> = {
       anthropic: process.env.ANTHROPIC_API_KEY, google: process.env.GEMINI_API_KEY, openai: process.env.OPENAI_API_KEY,
     };
     if (envMap[row.provider]) return { provider: row.provider, model: row.model, apiKey: envMap[row.provider]! };
@@ -261,19 +262,21 @@ async function runAnthropic(ctx: PlaygroundCtx, model: string, apiKey: string, s
   return r;
 }
 
-// ---------- OpenAI ----------
-async function runOpenAI(ctx: PlaygroundCtx, model: string, apiKey: string, system: string): Promise<LoopResult> {
+// ---------- OpenAI + ค่าย OpenAI-compatible (DeepSeek/Qwen/GLM/Kimi) ----------
+async function runOpenAI(ctx: PlaygroundCtx, model: string, apiKey: string, system: string, baseUrl?: string): Promise<LoopResult> {
   const messages: Record<string, unknown>[] = [
     { role: "system", content: system },
     ...ctx.history.map((h) => ({ role: h.role, content: h.content })),
   ];
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
   const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [] };
+  // OpenAI แท้ใช้ max_completion_tokens / ค่าย compatible ใช้ max_tokens
+  const tokenParam = baseUrl ? { max_tokens: 1024 } : { max_completion_tokens: 1024 };
   for (let i = 0; i < 6; i++) {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(`${baseUrl ?? "https://api.openai.com/v1"}/chat/completions`, {
       method: "POST",
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, messages, tools, max_completion_tokens: 1024 }),
+      body: JSON.stringify({ model, messages, tools, ...tokenParam }),
     });
     if (!res.ok) throw new Error(`openai ${res.status}: ${(await res.text()).slice(0, 300)}`);
     const data = await res.json();
@@ -344,7 +347,8 @@ export async function runPlayground(ctx: PlaygroundCtx): Promise<PlaygroundResul
   const system = buildSystemPrompt(ctx);
 
   let r: LoopResult;
-  if (cfg.provider === "openai") r = await runOpenAI(ctx, cfg.model, cfg.apiKey, system);
+  const compatBase = OPENAI_COMPAT_BASE[cfg.provider];
+  if (cfg.provider === "openai" || compatBase) r = await runOpenAI(ctx, cfg.model, cfg.apiKey, system, compatBase);
   else if (cfg.provider === "google") r = await runGemini(ctx, cfg.model, cfg.apiKey, system);
   else r = await runAnthropic(ctx, cfg.model, cfg.apiKey, system);
 

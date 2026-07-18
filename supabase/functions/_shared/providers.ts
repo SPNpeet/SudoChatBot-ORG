@@ -1,8 +1,16 @@
 // ==== AI Provider Resolver — อ่านการตั้งค่าจากหน้า Admin (DB+Vault) fallback เป็น env ====
 import { sb } from "./supabase.ts";
 
-export type ChatProvider = "anthropic" | "google" | "openai";
+export type ChatProvider = "anthropic" | "google" | "openai" | "deepseek" | "qwen" | "zhipu" | "moonshot";
 export interface ChatConfig { provider: ChatProvider; model: string; apiKey: string }
+
+/** ค่าย OpenAI-compatible — เรียก chat/completions ด้วย base URL ของค่ายนั้น */
+export const OPENAI_COMPAT_BASE: Partial<Record<ChatProvider, string>> = {
+  deepseek: "https://api.deepseek.com/v1",
+  qwen: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+  zhipu: "https://api.z.ai/api/paas/v4",
+  moonshot: "https://api.moonshot.ai/v1",
+};
 export interface EmbedConfig { provider: "google" | "openai"; model: string; apiKey: string }
 
 interface SettingRow { purpose: string; tier: string; provider: ChatProvider; model: string; enabled: boolean }

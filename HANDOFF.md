@@ -70,7 +70,19 @@ supabase/migrations/          # 017-026 apply บน Supabase แล้วทั
 - ✅ Omise webhook: ตอบ 200 idempotent · ถ้า env ยังไม่พร้อมจะตอบ 503 ให้ Omise retry (กัน event หาย)
 - ❌ **สมัครด้วยอีเมลยังติดคอขวด**: Supabase ตอบ `429 over_email_send_rate_limit` — เพราะเปิด "Confirm email" อยู่แต่ยังใช้ SMTP ในตัว (จำกัด ~2-4 ฉบับ/ชม.) — Google provider ยังไม่เปิด (ปุ่มจะแจ้งเป็นไทยว่ายังไม่เปิดใช้งาน)
 
+## ✅ ตัดสินใจแล้ว (2026-07-19 — คุยกับเจ้าของ)
+- **รับเงินแพลตฟอร์ม**: สลิป PromptPay + แอดมินยืนยัน ไปก่อน (ฟรี 0%) — Omise โค้ดพร้อมแล้ว เปิดทีหลังเมื่อยอดเยอะ
+- **โดเมน**: ซื้อ `sudochatbot.com` ที่ GoDaddy → ตั้งใน Vercel → อัปเดต Supabase Auth Site URL + ใช้ verify Resend
+- **AI**: เพิ่มค่ายจีนครบแล้ว — DeepSeek / Qwen (Alibaba) / GLM (Zhipu) / Kimi (Moonshot) เลือกในหน้า Admin ได้เหมือน 3 ค่ายเดิม
+
+## 🆕 ฟีเจอร์ใหม่ (2026-07-19)
+- **หน้า "ทดลองบอท"** (`/dashboard/playground`) — เจ้าของร้านคุยกับบอทตัวเองได้ทันทีโดยไม่ต้องเชื่อมเพจ ใช้ AI + สินค้า + คลังความรู้จริง จำลองออเดอร์ ไม่หักเครดิต มี chip โชว์ tool ที่บอทเรียก
+- **Setup Checklist 5 ก้าว** บนหน้าภาพรวม — เพิ่มสินค้า → สอนบอท → ตั้งพร้อมเพย์ → ทดลองบอท → เชื่อมช่องทาง (หายเองเมื่อครบ)
+- **ค่าย AI ใหม่ 4 ค่าย** (OpenAI-compatible): ใช้ได้ทันทีใน Playground + test-ai · ใช้กับแชทลูกค้าจริงต้อง **deploy queue-worker ใหม่** (โค้ดใน `_shared/providers.ts`+`ai.ts` พร้อมแล้ว) และ **apply migration 027** (วางเนื้อหา `supabase/migrations/027_more_ai_providers.sql` ใน SQL Editor → Run — เขียนแบบ idempotent รันซ้ำได้)
+
 ## 🔲 เหลือให้เจ้าของทำ (ต้องใช้บัญชีคุณ — agent เข้า dashboard แทนไม่ได้)
+0. **Apply migration 027** (เปิดค่าย AI ใหม่): Supabase → SQL Editor → วางไฟล์ 027 → Run
+0.5 **ซื้อโดเมน sudochatbot.com** ที่ GoDaddy → Vercel → Settings → Domains → Add → ทำตาม DNS ที่ Vercel บอก (A record + CNAME ใน GoDaddy DNS) → เสร็จแล้วอัปเดต Supabase Auth Site URL เป็นโดเมนใหม่
 1. **ปลดล็อกสมัครด้วยอีเมล** (เลือกทางเดียว):
    - **ทาง A (เร็วสุด 1 คลิก)**: Supabase Dashboard → Authentication → Sign In / Providers → Email → ปิด "Confirm email" → Save — สมัครแล้วเข้าใช้ได้ทันที
    - **ทาง B (โปรดักชันเต็มรูปแบบ)**: Authentication → Emails → SMTP Settings → ใส่ SMTP ของ Resend (host `smtp.resend.com` · user `resend` · pass = Resend API key) — ยืนยันอีเมลทำงานจริงไม่ติด rate limit
