@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import {
   LayoutDashboard, MessageSquare, ShoppingBag, Package,
-  BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet, Sparkles, Receipt,
+  BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp,
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
@@ -20,6 +20,7 @@ const nav = [
   { href: "/dashboard/channels", label: "ช่องทาง", icon: Share2 },
   { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
   { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
+  { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },
 ];
 
 async function signOut() {
