@@ -11,6 +11,18 @@ export default function LoginPage() {
 
   async function oauth(provider: "facebook" | "google") {
     setLoading(provider); setMsg(null);
+    // เช็คก่อน redirect: ค่ายที่ยังไม่เปิดใน Supabase จะพาไปเจอหน้า JSON error ดิบ — กันไว้ตรงนี้
+    try {
+      const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, {
+        headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
+      });
+      const s = await r.json();
+      if (!s?.external?.[provider]) {
+        setLoading(null);
+        setMsg({ ok: false, text: `เข้าสู่ระบบด้วย ${provider === "google" ? "Google" : "Facebook"} ยังไม่เปิดใช้งาน — ใช้อีเมล/รหัสผ่าน หรือช่องทางอื่นได้เลยค่ะ` });
+        return;
+      }
+    } catch { /* เช็คไม่ได้ให้ลองต่อตามปกติ */ }
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
