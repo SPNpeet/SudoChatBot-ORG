@@ -25,11 +25,12 @@ export async function claimAdmin() {
 
 /** บันทึก API key ของค่าย (เข้า Vault) — ไม่ log ค่า key */
 export async function saveProviderKey(provider: Provider, key: string) {
-  await assertPlatformAdmin();
+  // store_ai_key เป็น SECURITY DEFINER ที่เช็ค is_platform_admin() ด้วย auth.uid() ภายใน
+  // ต้องเรียกผ่าน user client (มี JWT) ไม่ใช่ service client (auth.uid()=NULL → ถูกปฏิเสธ)
+  const { supabase } = await assertPlatformAdmin();
   const trimmed = key.trim();
   if (trimmed.length < 10) throw new Error("API key สั้นเกินไป");
-  const svc = createServiceClient();
-  const { error } = await svc.rpc("store_ai_key", { p_provider: provider, p_key: trimmed });
+  const { error } = await supabase.rpc("store_ai_key", { p_provider: provider, p_key: trimmed });
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
 }

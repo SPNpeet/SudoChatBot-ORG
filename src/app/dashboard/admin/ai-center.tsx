@@ -48,11 +48,13 @@ function ProviderKeyRow({ meta, row }: { meta: ProviderMeta; row?: KeyRow }) {
   const [pending, start] = useTransition();
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function save() {
+    setSaveError(null);
     start(async () => {
       try { await saveProviderKey(meta.id, key); setKey(""); setOpen(false); setTestResult(null); }
-      catch (e) { alert((e as Error).message); }
+      catch (e) { setSaveError((e as Error).message || "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง"); }
     });
   }
   async function test() {
@@ -106,6 +108,7 @@ function ProviderKeyRow({ meta, row }: { meta: ProviderMeta; row?: KeyRow }) {
             <Input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="วาง API key ที่นี่ — ระบบเก็บเข้ารหัสใน Vault" className="flex-1 font-mono" autoComplete="off" />
             <Button size="sm" onClick={save} disabled={pending || key.length < 10}><Save className="h-4 w-4" /> {pending ? "บันทึก..." : "บันทึก"}</Button>
           </div>
+          {saveError && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{saveError}</p>}
           <a href={meta.keyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-sky-600 hover:underline">
             <ExternalLink className="h-3 w-3" /> ไปหน้าออก API key ของ {meta.label}
           </a>
@@ -118,6 +121,7 @@ function ProviderKeyRow({ meta, row }: { meta: ProviderMeta; row?: KeyRow }) {
 function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; keyMap: Record<string, KeyRow> }) {
   const [pending, start] = useTransition();
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // state ต่อ tier เพื่อให้ dropdown โมเดลเปลี่ยนตามค่าย
   const initChat = (tier: string) => setMap[`chat_${tier}`] ?? { provider: "anthropic", model: CHAT_MODELS.anthropic[0].id };
   const [economy, setEconomy] = useState<{ provider: string; model: string }>(initChat("economy"));
@@ -132,9 +136,10 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
   const tierLabel: Record<string, string> = { economy: "ประหยัด", standard: "มาตรฐาน (ค่าเริ่มต้นทุกร้าน)", premium: "พรีเมียม" };
 
   function submit(fd: FormData) {
+    setError(null);
     start(async () => {
       try { await saveRouting(fd); setSaved(true); setTimeout(() => setSaved(false), 2500); }
-      catch (e) { alert((e as Error).message); }
+      catch (e) { setError((e as Error).message || "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง"); }
     });
   }
 
@@ -186,6 +191,7 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
           <div className="flex items-center gap-3">
             <Button disabled={pending}><Save className="h-4 w-4" /> {pending ? "กำลังบันทึก..." : "บันทึกการตั้งค่า AI"}</Button>
             {saved && <span className="text-sm text-emerald-600">บันทึกแล้ว ✓</span>}
+            {error && <span className="text-sm text-red-600">{error}</span>}
           </div>
         </form>
       </CardContent>
