@@ -72,8 +72,23 @@ supabase/migrations/          # 017-026 apply บน Supabase แล้วทั
 
 ## ✅ ตัดสินใจแล้ว (2026-07-19 — คุยกับเจ้าของ)
 - **รับเงินแพลตฟอร์ม**: สลิป PromptPay + แอดมินยืนยัน ไปก่อน (ฟรี 0%) — Omise โค้ดพร้อมแล้ว เปิดทีหลังเมื่อยอดเยอะ
-- **โดเมน**: ซื้อ `sudochatbot.com` ที่ GoDaddy → ตั้งใน Vercel → อัปเดต Supabase Auth Site URL + ใช้ verify Resend
+- **โดเมน**: เจ้าของจดแล้ว → **`sudochatbot.online`** ที่ Hostinger (หมดอายุ 2027-07-19 ต่ออายุอัตโนมัติ) — เหลือชี้ DNS เข้า Vercel (ดูขั้นตอนล่าง)
 - **AI**: เพิ่มค่ายจีนครบแล้ว — DeepSeek / Qwen (Alibaba) / GLM (Zhipu) / Kimi (Moonshot) เลือกในหน้า Admin ได้เหมือน 3 ค่ายเดิม
+
+## ✅ Deploy บน Supabase จริงแล้ว (2026-07-19 ผ่าน MCP)
+- **Migrations 027+028 apply แล้ว**: ปลด provider constraint + ขยาย whitelist ใน `store_ai_key` → บันทึก key ค่ายจีนได้จริง
+- **queue-worker v5 deploy แล้ว** (รองรับ 4 ค่ายจีนบนแชทลูกค้าจริง) — ตรวจ log cron 200 ทุกนาที ปกติ
+- **หน้าใหม่ `/dashboard/slips` (คลังสลิป)**: รวมสลิปทุกใบที่ลูกค้าส่งเข้าแชท กรองตามสถานะ รอตรวจ/ผ่าน/ปฏิเสธ รูปเปิดผ่าน signed URL (bucket `slips` private) — เพิ่มในเมนู desktop+mobile แล้ว
+
+## 🔲 ชี้โดเมน sudochatbot.online เข้า Vercel (ทำใน 2 ที่ ~15 นาที)
+1. **Vercel** → โปรเจกต์ sudochatbot-org → Settings → Domains → Add → พิมพ์ `sudochatbot.online` (และ `www.sudochatbot.online`) — Vercel จะแสดงค่า DNS ที่ต้องตั้ง
+2. **Hostinger** → hpanel → Domain → sudochatbot.online → DNS / เนมเซิร์ฟเวอร์ → แก้ records:
+   - ลบ A record เดิม `@ → 2.57.91.91` (parking ของ Hostinger)
+   - เพิ่ม **A** ชื่อ `@` → `76.76.21.21` (หรือ IP ที่ Vercel แสดง)
+   - แก้ **CNAME** ชื่อ `www` → `cname.vercel-dns.com`
+3. รอ DNS อัปเดต (5-30 นาที) → Vercel ขึ้น Valid + ออก SSL ให้อัตโนมัติ
+4. หลังโดเมนติด: Supabase → Authentication → URL Configuration → Site URL = `https://sudochatbot.online` + เพิ่ม `https://sudochatbot.online/auth/callback` ใน Redirect URLs (คงของ vercel.app ไว้ด้วยได้) · Vercel env `NEXT_PUBLIC_APP_URL=https://sudochatbot.online` → redeploy
+5. อีเมลยืนยัน: สมัคร resend.com → verify โดเมน sudochatbot.online (เพิ่ม TXT/MX ที่ Hostinger ตามที่ Resend บอก) → เอา SMTP ไปใส่ใน Supabase Auth (host `smtp.resend.com` user `resend` pass = API key)
 
 ## 🆕 ฟีเจอร์ใหม่ (2026-07-19)
 - **หน้า "ทดลองบอท"** (`/dashboard/playground`) — เจ้าของร้านคุยกับบอทตัวเองได้ทันทีโดยไม่ต้องเชื่อมเพจ ใช้ AI + สินค้า + คลังความรู้จริง จำลองออเดอร์ ไม่หักเครดิต มี chip โชว์ tool ที่บอทเรียก
