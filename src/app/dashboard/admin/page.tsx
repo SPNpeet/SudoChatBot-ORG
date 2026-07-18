@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, Button } from "@/components/ui";
 import { PROVIDERS, TIERS } from "@/lib/ai-catalog";
+import SubmitButton from "@/components/submit-button";
 import { claimAdmin } from "./actions";
 import AdminAiCenter from "./ai-center";
 import { ShieldAlert } from "lucide-react";
@@ -26,7 +27,7 @@ export default async function AdminPage() {
             {count === 0 ? (
               <>
                 <p className="mt-2 text-sm text-neutral-500">ยังไม่มีผู้ดูแลระบบ — คุณเป็นคนแรก กดรับสิทธิ์เพื่อจัดการ AI ของทั้งแพลตฟอร์ม</p>
-                <form action={doClaim} className="mt-5"><Button className="w-full">รับสิทธิ์ผู้ดูแลแพลตฟอร์ม</Button></form>
+                <form action={doClaim} className="mt-5"><SubmitButton className="w-full" pendingText="กำลังรับสิทธิ์...">รับสิทธิ์ผู้ดูแลแพลตฟอร์ม</SubmitButton></form>
               </>
             ) : (
               <p className="mt-2 text-sm text-neutral-500">หน้านี้สำหรับผู้ดูแลแพลตฟอร์มเท่านั้น หากคุณควรมีสิทธิ์ ให้ผู้ดูแลปัจจุบันเพิ่มบัญชีของคุณ</p>

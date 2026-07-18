@@ -22,7 +22,7 @@ export function Button({ className, variant = "primary", size = "md", ...props }
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:pointer-events-none",
+        "inline-flex items-center justify-center gap-1.5 rounded-xl font-medium transition-all duration-100 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none",
         size === "sm" ? "h-8 px-3 text-xs" : "h-10 px-4 text-sm",
         variant === "primary" && "bg-neutral-900 text-white hover:bg-neutral-700",
         variant === "outline" && "border border-neutral-300 bg-white text-neutral-800 hover:bg-neutral-50",
