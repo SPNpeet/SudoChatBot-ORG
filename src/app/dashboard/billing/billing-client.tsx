@@ -151,10 +151,28 @@ export default function BillingClient({
 
 function ChangePlanButton({ shopId, planCode, planName }: { shopId: string; planCode: string; planName: string }) {
   const [pending, start] = useTransition();
+  const [open, setOpen] = useState(false);
   return (
-    <Button size="sm" variant="outline" className="mt-3" disabled={pending}
-      onClick={() => { if (confirm(`เปลี่ยนเป็นแพ็กเกจ "${planName}"?`)) start(async () => { await changePlan(shopId, planCode); }); }}>
-      {pending ? "..." : "เลือกแพ็กเกจนี้"}
-    </Button>
+    <>
+      <Button size="sm" variant="outline" className="mt-3" disabled={pending} onClick={() => setOpen(true)}>
+        {pending ? "กำลังเปลี่ยน..." : "เลือกแพ็กเกจนี้"}
+      </Button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base font-bold">เปลี่ยนเป็นแพ็กเกจ &ldquo;{planName}&rdquo;?</p>
+            <p className="mt-2 text-sm text-neutral-500">
+              มีผลทันที ค่าสมาชิกรายเดือนจะถูกหักจากเครดิตตามรอบบิลอัตโนมัติ เปลี่ยนกลับได้ตลอดเวลา
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>ยกเลิก</Button>
+              <Button size="sm" onClick={() => { setOpen(false); start(async () => { await changePlan(shopId, planCode); }); }}>
+                ยืนยันเปลี่ยนแพ็กเกจ
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
