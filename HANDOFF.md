@@ -8,6 +8,7 @@
 |---|---|
 | **GitHub repo** | `https://github.com/SPNpeet/SudoChatBot-ORG` (branch `main` — รวมงานทุก branch แล้ว) |
 | **โค้ดในเครื่อง** | `C:\Users\peet\Documents\GitHub\SudoChatBot-ORG` (clone ล่าสุด · `C:\SudoChatBot` เป็นสำเนาเก่า ไม่ใช่ git repo) |
+| **แผนที่โค้ด** | `docs/REPO-MAP.md` — สร้างอัตโนมัติด้วย `node ~/.claude/skills/ast-repo-mapper/scripts/repo-map.mjs src docs/REPO-MAP.md` (regenerate เมื่อโครงสร้างเปลี่ยนเยอะ) |
 | **Supabase project** | ref `uafnpbawajgonarvlurj` · region ap-southeast-1 (Singapore) |
 | **Supabase Dashboard** | `https://supabase.com/dashboard/project/uafnpbawajgonarvlurj` |
 | **Supabase API URL** | `https://uafnpbawajgonarvlurj.supabase.co` |
@@ -80,15 +81,15 @@ supabase/migrations/          # 017-026 apply บน Supabase แล้วทั
 - **queue-worker v5 deploy แล้ว** (รองรับ 4 ค่ายจีนบนแชทลูกค้าจริง) — ตรวจ log cron 200 ทุกนาที ปกติ
 - **หน้าใหม่ `/dashboard/slips` (คลังสลิป)**: รวมสลิปทุกใบที่ลูกค้าส่งเข้าแชท กรองตามสถานะ รอตรวจ/ผ่าน/ปฏิเสธ รูปเปิดผ่าน signed URL (bucket `slips` private) — เพิ่มในเมนู desktop+mobile แล้ว
 
-## 🔲 ชี้โดเมน sudochatbot.online เข้า Vercel (ทำใน 2 ที่ ~15 นาที)
-1. **Vercel** → โปรเจกต์ sudochatbot-org → Settings → Domains → Add → พิมพ์ `sudochatbot.online` (และ `www.sudochatbot.online`) — Vercel จะแสดงค่า DNS ที่ต้องตั้ง
-2. **Hostinger** → hpanel → Domain → sudochatbot.online → DNS / เนมเซิร์ฟเวอร์ → แก้ records:
-   - ลบ A record เดิม `@ → 2.57.91.91` (parking ของ Hostinger)
-   - เพิ่ม **A** ชื่อ `@` → `76.76.21.21` (หรือ IP ที่ Vercel แสดง)
-   - แก้ **CNAME** ชื่อ `www` → `cname.vercel-dns.com`
-3. รอ DNS อัปเดต (5-30 นาที) → Vercel ขึ้น Valid + ออก SSL ให้อัตโนมัติ
-4. หลังโดเมนติด: Supabase → Authentication → URL Configuration → Site URL = `https://sudochatbot.online` + เพิ่ม `https://sudochatbot.online/auth/callback` ใน Redirect URLs (คงของ vercel.app ไว้ด้วยได้) · Vercel env `NEXT_PUBLIC_APP_URL=https://sudochatbot.online` → redeploy
-5. อีเมลยืนยัน: สมัคร resend.com → verify โดเมน sudochatbot.online (เพิ่ม TXT/MX ที่ Hostinger ตามที่ Resend บอก) → เอา SMTP ไปใส่ใน Supabase Auth (host `smtp.resend.com` user `resend` pass = API key)
+## 🔲 ชี้โดเมน sudochatbot.online เข้า Vercel — เหลือ 1 ขั้นบน Vercel dashboard เท่านั้น
+**ตรวจแล้ว 2026-07-19**: Hostinger DNS ตั้งถูกต้องแล้ว (`nslookup sudochatbot.online` → `76.76.21.21` ตรงกับ Vercel · `www` → `cname.vercel-dns.com`) แต่ `curl https://sudochatbot.online` ตอบ **`404 DEPLOYMENT_NOT_FOUND`** (Vercel edge รับ request แล้วแต่ไม่รู้จักโดเมนนี้ว่าเป็นของโปรเจกต์ไหน) + HTTPS handshake ล้มเหลว (ยังไม่ออก SSL ให้) — แปลว่า**ยังไม่ได้กด Add Domain ในหน้า Vercel** ซึ่งเป็นขั้นตอนเดียวที่เหลือและต้องทำเองในบัญชี Vercel (agent ไม่มี Vercel token/CLI ในเครื่องนี้ ทำแทนไม่ได้):
+
+1. **Vercel** → vercel.com → โปรเจกต์ `sudochatbot-org` → Settings → Domains → Add → พิมพ์ `sudochatbot.online` แล้ว Add อีกครั้งด้วย `www.sudochatbot.online` — เพราะ DNS ตั้งไว้ถูกแล้ว ขั้นนี้ควรขึ้น **Valid** ทันทีหรือใน 1-2 นาที (ไม่ต้องรอ DNS propagate เพิ่ม)
+2. Vercel จะออก SSL ให้อัตโนมัติหลัง Valid — เช็คด้วย `curl -I https://sudochatbot.online` ควรได้ `200` ไม่ใช่ `404 DEPLOYMENT_NOT_FOUND`
+3. หลังโดเมนติด: Supabase → Authentication → URL Configuration → Site URL = `https://sudochatbot.online` + เพิ่ม `https://sudochatbot.online/auth/callback` ใน Redirect URLs (คงของ vercel.app ไว้ด้วยได้) · Vercel env `NEXT_PUBLIC_APP_URL=https://sudochatbot.online` → redeploy
+4. อีเมลยืนยัน: สมัคร resend.com → verify โดเมน sudochatbot.online (เพิ่ม TXT/MX ที่ Hostinger ตามที่ Resend บอก) → เอา SMTP ไปใส่ใน Supabase Auth (host `smtp.resend.com` user `resend` pass = API key)
+
+**ตรวจแล้ว 2026-07-19**: `mailer_autoconfirm` ยังเป็น `false` — ยังไม่ได้ปิด "Confirm email" ตามที่แนะนำไว้ก่อนหน้า สมัครสมาชิกยังติด rate limit เหมือนเดิมจนกว่าจะทำ (Supabase → Authentication → Sign In / Providers → Email → ปิด Confirm email)
 
 ## 🆕 ฟีเจอร์ใหม่ (2026-07-19)
 - **หน้า "ทดลองบอท"** (`/dashboard/playground`) — เจ้าของร้านคุยกับบอทตัวเองได้ทันทีโดยไม่ต้องเชื่อมเพจ ใช้ AI + สินค้า + คลังความรู้จริง จำลองออเดอร์ ไม่หักเครดิต มี chip โชว์ tool ที่บอทเรียก
