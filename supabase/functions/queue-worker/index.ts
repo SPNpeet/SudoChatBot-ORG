@@ -141,6 +141,7 @@ async function processIncoming(item: QueueIncoming): Promise<void> {
       content_type: "text", content: bot.fallback_message, status: "sent",
     });
     await auditLog({ shop_id: item.shop_id, actor_type: "bot", action: "handoff_keyword", resource_type: "conversation", resource_id: conv.id });
+    await s.rpc("notify_handoff", { p_shop_id: item.shop_id, p_conversation_id: conv.id });
     return;
   }
 
@@ -205,6 +206,7 @@ async function processIncoming(item: QueueIncoming): Promise<void> {
   if (result.handoff) {
     await s.from("conversations").update({ status: "human" }).eq("id", conv.id);
     await auditLog({ shop_id: item.shop_id, actor_type: "bot", action: "handoff_ai", resource_type: "conversation", resource_id: conv.id });
+    await s.rpc("notify_handoff", { p_shop_id: item.shop_id, p_conversation_id: conv.id });
   }
 
   const sent = await sendToPlatform(item.platform, item.channel_id, item.platform_user_id, result.messages, item.reply_token);

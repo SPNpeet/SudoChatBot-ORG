@@ -22,10 +22,13 @@ export default async function Notifications() {
       {items.map((n) => (
         <div key={n.id} className={cn(
           "flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm",
-          n.type === "bot_blocked" ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-800",
+          n.type === "bot_blocked" ? "border-red-200 bg-red-50 text-red-800"
+            : n.type === "order_paid" ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : n.type === "handoff" ? "border-blue-200 bg-blue-50 text-blue-800"
+            : "border-amber-200 bg-amber-50 text-amber-800",
         )}>
           <div>
-            <p className="font-medium">{n.type === "bot_blocked" ? "🛑" : "⚠️"} {n.title}</p>
+            <p className="font-medium">{n.type === "bot_blocked" ? "🛑" : n.type === "order_paid" ? "" : n.type === "handoff" ? "" : "⚠️"} {n.title}</p>
             {n.body && <p className="mt-0.5 text-xs opacity-80">{n.body}</p>}
             <a href="/dashboard/billing" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าเติมเงิน →</a>
           </div>

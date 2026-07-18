@@ -93,13 +93,33 @@ export default async function ChannelsPage({ searchParams }: { searchParams: Pro
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><MessageCircle className="h-4 w-4 text-[#06C755]" /> LINE Official Account</CardTitle></CardHeader>
           <CardContent>
+            {/* wizard ทีละขั้น — แม่ค้าส่วนใหญ่ไม่เคยเข้า LINE Developers มาก่อน */}
+            <ol className="mb-4 space-y-2.5 text-sm text-neutral-600">
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-[11px] font-bold text-white">1</span>
+                <span>มี LINE OA อยู่แล้วใช่ไหม? ถ้ายัง สมัครฟรีที่ <a href="https://manager.line.biz" target="_blank" rel="noreferrer" className="font-medium text-emerald-600 underline">manager.line.biz</a></span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-[11px] font-bold text-white">2</span>
+                <span>เข้า <a href="https://developers.line.biz/console/" target="_blank" rel="noreferrer" className="font-medium text-emerald-600 underline">developers.line.biz/console</a> → login ด้วย LINE เดียวกับที่เป็นแอดมิน OA → สร้าง/เลือก Provider → เลือก channel ประเภท <b>Messaging API</b> ของ OA คุณ</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-[11px] font-bold text-white">3</span>
+                <span>แท็บ <b>Basic settings</b>: คัดลอก <b>Channel ID</b> และ <b>Channel secret</b> มาวางด้านล่าง</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#06C755] text-[11px] font-bold text-white">4</span>
+                <span>แท็บ <b>Messaging API</b> (ล่างสุด): กด <b>Issue</b> ที่ Channel access token (long-lived) แล้วคัดลอกมาวาง</span>
+              </li>
+            </ol>
             <form action={lineConnect} className="space-y-3">
               <input type="hidden" name="shop_id" value={shop.id} />
               <div><Label>ชื่อ OA</Label><Input name="line_name" placeholder="ร้านของฉัน" /></div>
-              <div><Label>Channel ID</Label><Input name="line_channel_id" required placeholder="จาก LINE Developers Console" /></div>
-              <div><Label>Channel Secret</Label><Input name="line_channel_secret" required type="password" /></div>
-              <div><Label>Channel Access Token (long-lived)</Label><Input name="line_access_token" required type="password" /></div>
+              <div><Label>Channel ID (ขั้น 3)</Label><Input name="line_channel_id" required placeholder="เลข 10 หลัก เช่น 1657xxxxxx" /></div>
+              <div><Label>Channel Secret (ขั้น 3)</Label><Input name="line_channel_secret" required type="password" /></div>
+              <div><Label>Channel Access Token (ขั้น 4)</Label><Input name="line_access_token" required type="password" /></div>
               <Button size="sm">เชื่อมต่อ LINE</Button>
+              <p className="text-[11px] text-neutral-400">เชื่อมแล้วจะมีขั้นสุดท้าย: นำ Webhook URL ที่ระบบสร้างให้ ไปวางใน LINE Developers (มีบอกด้านล่างหลังกดเชื่อม)</p>
             </form>
             {lineChannels.length > 0 && (
               <div className="mt-4 rounded-xl bg-emerald-50 p-3">

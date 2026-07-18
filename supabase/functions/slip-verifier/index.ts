@@ -133,6 +133,8 @@ async function processSlip(item: QueueSlip): Promise<void> {
     resource_type: "order", resource_id: order.id,
     details: { order_number: order.order_number, amount, trans_ref: result.transRef, closed_by: order.closed_by },
   });
+  // แจ้งเจ้าของร้าน: บอทปิดการขายได้แล้ว (dashboard + อีเมล)
+  await s.rpc("notify_order_paid", { p_shop_id: item.shop_id, p_order_id: order.id });
   await reply(item, [{
     type: "text",
     text: `ยืนยันการชำระเงินเรียบร้อยค่ะ ✅\nออเดอร์ ${order.order_number} ยอด ${Number(order.total).toLocaleString()} บาท\nร้านจะรีบจัดส่งและแจ้งเลขพัสดุให้เร็วที่สุดนะคะ ขอบคุณที่อุดหนุนค่ะ 💚`,
