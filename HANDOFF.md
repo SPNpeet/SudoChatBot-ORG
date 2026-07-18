@@ -81,7 +81,15 @@ supabase/migrations/          # 017-026 apply บน Supabase แล้วทั
 - **queue-worker v5 deploy แล้ว** (รองรับ 4 ค่ายจีนบนแชทลูกค้าจริง) — ตรวจ log cron 200 ทุกนาที ปกติ
 - **หน้าใหม่ `/dashboard/slips` (คลังสลิป)**: รวมสลิปทุกใบที่ลูกค้าส่งเข้าแชท กรองตามสถานะ รอตรวจ/ผ่าน/ปฏิเสธ รูปเปิดผ่าน signed URL (bucket `slips` private) — เพิ่มในเมนู desktop+mobile แล้ว
 
-## 🔲 ชี้โดเมน sudochatbot.online เข้า Vercel — เหลือ 1 ขั้นบน Vercel dashboard เท่านั้น
+## ✅ โดเมนจริง LIVE + E2E ผ่านครบ (2026-07-19 รอบสอง)
+- **https://sudochatbot.online LIVE เต็มตัว** (Add domain ใน Vercel แล้ว, SSL ออกแล้ว, health เขียว) · **ปิด Confirm email แล้ว** — สมัครอีเมลเข้าใช้ได้ทันที
+- **E2E ในฐานะลูกค้าจริงผ่านครบ**: สมัคร → login → dashboard+checklist → เพิ่มสินค้าไทย → playground (error ชี้ทางถูกเมื่อไม่มี AI key) → คลังสลิป → billing แสดงแพ็กเกจครบ
+- **แก้บั๊กจริงที่เจอ**: ผู้ใช้ Facebook สร้างร้านซ้ำ 47 ครั้งใน 2 นาที (ปุ่ม onboarding ไม่มี loading state + ไม่กันซ้ำ) → แก้ทั้ง 2 ชั้น + ล้างร้านซ้ำ 46 ร้านออกจาก DB แล้ว (เหลือร้านจริง "admin" 1 ร้านของ ta_free14 — เข้าไปเปลี่ยนชื่อร้านได้ในหน้าตั้งค่า)
+- **Vercel CLI ติดตั้งแล้ว** (v56) + ลงทะเบียน Vercel MCP (`mcp.vercel.com`) ใน `~/.claude.json` — เซสชันหน้าใช้ได้หลัง auth ครั้งแรก
+- ⚠️ Supabase org อยู่ Free plan มี banner "Grace period is over" — ใช้งานจริงยังต่ำ (DB 12%, Edge 6%) ไม่กระทบตอนนี้ แต่เมื่อมีลูกค้าจ่ายเงินจริงควรอัป Pro ($25/เดือน) กันโดนจำกัด
+- **สิ่งเดียวที่ทำให้บอทยังตอบไม่ได้: ยังไม่มี AI key ในระบบ (0 คีย์) + ยังไม่มีใคร claim platform admin** — login ด้วยบัญชีคุณ → `/dashboard/admin` → กด claim → ใส่ key
+
+## 🔲 (เดิม) ขั้นตอนโดเมน — ทำครบแล้ว เก็บไว้อ้างอิง
 **ตรวจแล้ว 2026-07-19**: Hostinger DNS ตั้งถูกต้องแล้ว (`nslookup sudochatbot.online` → `76.76.21.21` ตรงกับ Vercel · `www` → `cname.vercel-dns.com`) แต่ `curl https://sudochatbot.online` ตอบ **`404 DEPLOYMENT_NOT_FOUND`** (Vercel edge รับ request แล้วแต่ไม่รู้จักโดเมนนี้ว่าเป็นของโปรเจกต์ไหน) + HTTPS handshake ล้มเหลว (ยังไม่ออก SSL ให้) — แปลว่า**ยังไม่ได้กด Add Domain ในหน้า Vercel** ซึ่งเป็นขั้นตอนเดียวที่เหลือและต้องทำเองในบัญชี Vercel (agent ไม่มี Vercel token/CLI ในเครื่องนี้ ทำแทนไม่ได้):
 
 1. **Vercel** → vercel.com → โปรเจกต์ `sudochatbot-org` → Settings → Domains → Add → พิมพ์ `sudochatbot.online` แล้ว Add อีกครั้งด้วย `www.sudochatbot.online` — เพราะ DNS ตั้งไว้ถูกแล้ว ขั้นนี้ควรขึ้น **Valid** ทันทีหรือใน 1-2 นาที (ไม่ต้องรอ DNS propagate เพิ่ม)
