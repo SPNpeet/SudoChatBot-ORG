@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getCurrentShop } from "@/lib/shop";
+import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import {
@@ -31,8 +31,7 @@ async function signOut() {
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { supabase, shop } = await getCurrentShop();
-  const { data: isAdmin } = await supabase.rpc("is_platform_admin");
+  const [{ shop }, isAdmin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
 
   return (
     <div className="min-h-screen">
