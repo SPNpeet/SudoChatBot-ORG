@@ -8,6 +8,10 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getOmiseSecretKey, retrieveCharge } from "@/lib/omise";
 
 export async function POST(request: Request) {
+  // ยังไม่ได้ตั้ง service key -> ตอบ 503 ให้ Omise retry ภายหลัง (กัน event หายเงียบ)
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ ok: false, error: "server not configured" }, { status: 503 });
+  }
   const svc = createServiceClient();
 
   let event: { key?: string; data?: { id?: string; object?: string } } = {};

@@ -45,7 +45,9 @@ export default function LoginPage() {
       const th = m.includes("Invalid login") ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง"
         : m.includes("already registered") ? "อีเมลนี้มีบัญชีแล้ว — กดเข้าสู่ระบบ"
         : m.includes("Email not confirmed") ? "ยังไม่ได้ยืนยันอีเมล — ตรวจกล่องอีเมลของคุณ"
+        : m.includes("rate limit") ? "ระบบส่งอีเมลถี่เกินไป — รอสักครู่แล้วลองใหม่ หรือติดต่อผู้ดูแลระบบ"
         : m.includes("at least") || m.includes("Password") ? "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"
+        : m.includes("invalid format") || m.includes("is invalid") ? "รูปแบบอีเมลไม่ถูกต้อง"
         : m;
       setMsg({ ok: false, text: th });
     } finally { setLoading(null); }
