@@ -2,6 +2,7 @@ import { getCurrentShop } from "@/lib/shop";
 import { Card, CardContent, CardHeader, CardTitle, Badge, Table, Th, Td, EmptyState } from "@/components/ui";
 import { baht, dateTH, ORDER_STATUS_TH } from "@/lib/utils";
 import RevenueChart from "./revenue-chart";
+import SetupChecklist from "./setup-checklist";
 import { Bot, MessageSquare, ShoppingBag, Wallet } from "lucide-react";
 import type { Order } from "@/lib/types/db";
 
@@ -49,6 +50,8 @@ export default async function Overview() {
         <h1 className="text-xl font-bold">ภาพรวม</h1>
         <p className="text-sm text-neutral-400">สรุปผลงานของบอทและยอดขายร้าน {shop.name}</p>
       </div>
+
+      <SetupChecklist shop={shop} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((s) => (
