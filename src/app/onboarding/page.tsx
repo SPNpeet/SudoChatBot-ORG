@@ -1,10 +1,15 @@
 import { requireUser } from "@/lib/shop";
 import { redirect } from "next/navigation";
-import { Button, Input, Label, Textarea } from "@/components/ui";
+import { Input, Label, Textarea } from "@/components/ui";
+import SubmitButton from "./submit-button";
 
 async function createShop(formData: FormData) {
   "use server";
   const { supabase, user } = await requireUser();
+  // กันสร้างซ้ำ: ถ้ามีร้านอยู่แล้ว (กดปุ่มรัว/เข้าหน้านี้ซ้ำ) ให้เข้าแดชบอร์ดเลย
+  const { data: existing } = await supabase.from("shop_members")
+    .select("id").eq("user_id", user.id).limit(1).maybeSingle();
+  if (existing) redirect("/dashboard");
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
   const { error } = await supabase.from("shops").insert({
@@ -17,7 +22,12 @@ async function createShop(formData: FormData) {
 }
 
 export default async function Onboarding() {
-  await requireUser();
+  const { supabase, user } = await requireUser();
+  // มีร้านแล้วไม่ต้องเห็นหน้านี้อีก
+  const { data: existing } = await supabase.from("shop_members")
+    .select("id").eq("user_id", user.id).limit(1).maybeSingle();
+  if (existing) redirect("/dashboard");
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <form action={createShop} className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-8">
@@ -33,7 +43,7 @@ export default async function Onboarding() {
             <Textarea id="description" name="description" placeholder="ขายอะไร จุดเด่นคืออะไร ส่งจากที่ไหน" />
           </div>
         </div>
-        <Button className="mt-6 w-full">สร้างร้านและเข้าแดชบอร์ด</Button>
+        <SubmitButton pendingText="กำลังสร้างร้าน...">สร้างร้านและเข้าแดชบอร์ด</SubmitButton>
       </form>
     </main>
   );
