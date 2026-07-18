@@ -6,8 +6,8 @@
 
 | สิ่ง | ที่อยู่ / ID |
 |---|---|
-| **GitHub repo** | `https://github.com/SPNpeet/SudoChatBot-ORG` (branch `main` · งานล่าสุดอยู่ branch `claude/sudochatbot-setup-q5ov87`) |
-| **โค้ดในเครื่อง** | `C:\SudoChatBot` |
+| **GitHub repo** | `https://github.com/SPNpeet/SudoChatBot-ORG` (branch `main` — รวมงานทุก branch แล้ว) |
+| **โค้ดในเครื่อง** | `C:\Users\peet\Documents\GitHub\SudoChatBot-ORG` (clone ล่าสุด · `C:\SudoChatBot` เป็นสำเนาเก่า ไม่ใช่ git repo) |
 | **Supabase project** | ref `uafnpbawajgonarvlurj` · region ap-southeast-1 (Singapore) |
 | **Supabase Dashboard** | `https://supabase.com/dashboard/project/uafnpbawajgonarvlurj` |
 | **Supabase API URL** | `https://uafnpbawajgonarvlurj.supabase.co` |
@@ -61,11 +61,22 @@ supabase/migrations/          # 017-026 apply บน Supabase แล้วทั
 - เว็บใช้งานจริง: **https://sudochatbot-org.vercel.app** (landing/login/dashboard ทำงาน · middleware auth OK)
 - Env ที่ตั้งแล้ว: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-## 🔲 เหลือ 3 อย่าง (ค่า secret ที่ระบบไม่เปิดให้ agent อ่าน — ต้องวางจากบัญชีคุณ)
-1. **`SUPABASE_SERVICE_ROLE_KEY`** (สำคัญสุด — เปิดฟีเจอร์ฝั่ง server ทั้ง dashboard): คัดจาก Supabase → Settings → API แถว service_role → วางให้ agent หรือใส่เองใน Vercel env → redeploy
-2. **Supabase Auth**: Dashboard → Authentication → URL Configuration → Site URL = `https://sudochatbot-org.vercel.app` + เปิด Google/Facebook provider (email/password ใช้ได้อยู่แล้ว)
-3. **หน้า Admin → Billing**: ใส่ Omise keys · Resend key · ข้อมูล VAT → ตั้ง Omise webhook `https://sudochatbot-org.vercel.app/api/billing/omise/webhook`
-   (AI key ของบอทตั้งในหน้า Admin ได้เลย เก็บ Vault — ไม่ต้องพึ่ง env)
+## ✅ ตรวจสอบจริงบนโปรดักชัน (2026-07-19 — ทดสอบจากภายนอกทุกจุดที่เข้าถึงได้)
+- ✅ **`SUPABASE_SERVICE_ROLE_KEY` ตั้งใน Vercel แล้วและใช้งานได้จริง** — พิสูจน์ผ่าน `GET /api/health` → `{"ok":true,"env":{"anonKey":true,"serviceRoleKey":true},"db":true}` (endpoint ใหม่ ใช้เช็คสุขภาพระบบได้ตลอด)
+- ✅ **Facebook OAuth เปิดใช้แล้ว** — authorize endpoint redirect ไป facebook.com ด้วย Meta App จริง และ `redirect_to` โดเมนโปรดักชันผ่าน allow-list (Site URL ตั้งถูกแล้ว)
+- ✅ Edge Functions ตอบถูกทุกตัว: webhook-meta 403 (ไม่มี token=ถูกต้อง) · webhook-line 405 (GET=ถูกต้อง) · webhook-tiktok 200
+- ✅ หน้า `/privacy` `/terms` `/data-deletion` ขึ้นครบ (ตามข้อกำหนด Meta App Review)
+- ✅ middleware กัน `/dashboard` → redirect ไป `/login` ถูกต้อง
+- ✅ Omise webhook: ตอบ 200 idempotent · ถ้า env ยังไม่พร้อมจะตอบ 503 ให้ Omise retry (กัน event หาย)
+- ❌ **สมัครด้วยอีเมลยังติดคอขวด**: Supabase ตอบ `429 over_email_send_rate_limit` — เพราะเปิด "Confirm email" อยู่แต่ยังใช้ SMTP ในตัว (จำกัด ~2-4 ฉบับ/ชม.) — Google provider ยังไม่เปิด (ปุ่มจะแจ้งเป็นไทยว่ายังไม่เปิดใช้งาน)
+
+## 🔲 เหลือให้เจ้าของทำ (ต้องใช้บัญชีคุณ — agent เข้า dashboard แทนไม่ได้)
+1. **ปลดล็อกสมัครด้วยอีเมล** (เลือกทางเดียว):
+   - **ทาง A (เร็วสุด 1 คลิก)**: Supabase Dashboard → Authentication → Sign In / Providers → Email → ปิด "Confirm email" → Save — สมัครแล้วเข้าใช้ได้ทันที
+   - **ทาง B (โปรดักชันเต็มรูปแบบ)**: Authentication → Emails → SMTP Settings → ใส่ SMTP ของ Resend (host `smtp.resend.com` · user `resend` · pass = Resend API key) — ยืนยันอีเมลทำงานจริงไม่ติด rate limit
+2. **ตั้งแอดมินแพลตฟอร์ม**: ล็อกอินครั้งแรก (Facebook หรืออีเมลหลังข้อ 1) → เข้า `/dashboard/admin` → กดปุ่ม claim admin (คนแรกที่กดได้เป็นแอดมิน) → ใส่ AI key (Claude/GPT/Gemini) ในหน้านี้ (เก็บ Vault)
+3. **หน้า Admin → Billing**: ใส่ Omise keys · Resend key · ข้อมูล VAT → แล้วไปตั้ง webhook ใน Omise dashboard ชี้ไป `https://sudochatbot-org.vercel.app/api/billing/omise/webhook`
+4. *(ทางเลือก)* เปิด Google provider ใน Supabase Auth ถ้าอยากให้ล็อกอินด้วย Google ได้
 
 ---
 
