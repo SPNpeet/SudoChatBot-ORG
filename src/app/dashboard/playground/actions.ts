@@ -5,6 +5,7 @@
 // ============================================================
 import { assertMember } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
+import { friendlyAiError } from "@/lib/ai-errors";
 import { runPlayground, type PlaygroundCtx } from "./engine";
 
 export interface PlaygroundTurn { role: "user" | "assistant"; content: string }
@@ -78,6 +79,6 @@ export async function playgroundReply(shopId: string, history: PlaygroundTurn[])
       return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่า AI — ผู้ดูแลระบบต้องใส่ API key ในหน้า ศูนย์ AI (Admin) ก่อน" };
     }
     if (m.includes("forbidden")) return { ok: false, error: "คุณไม่มีสิทธิ์ในร้านนี้" };
-    return { ok: false, error: `เกิดข้อผิดพลาด: ${m.slice(0, 200)}` };
+    return { ok: false, error: friendlyAiError(m) };
   }
 }

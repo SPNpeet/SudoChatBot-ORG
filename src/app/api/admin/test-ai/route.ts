@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { OPENAI_COMPAT_BASE, CHAT_MODELS, type Provider } from "@/lib/ai-catalog";
+import { friendlyAiError } from "@/lib/ai-errors";
 
 // ยิง request เล็กสุดไปแต่ละค่ายเพื่อยืนยันว่า key ใช้ได้จริง
 export async function POST(request: Request) {
@@ -49,12 +50,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "unknown provider" });
     }
 
+    const friendly = ok ? "เชื่อมต่อสำเร็จ" : friendlyAiError(detail);
     await svc.from("ai_provider_keys").update({
-      test_status: ok ? "ok" : "failed", test_message: ok ? "เชื่อมต่อสำเร็จ" : detail, tested_at: new Date().toISOString(),
+      test_status: ok ? "ok" : "failed", test_message: friendly, tested_at: new Date().toISOString(),
     }).eq("provider", provider);
 
-    return NextResponse.json({ ok, error: ok ? undefined : detail });
+    return NextResponse.json({ ok, error: ok ? undefined : friendly });
   } catch (e) {
-    return NextResponse.json({ ok: false, error: (e as Error).message });
+    return NextResponse.json({ ok: false, error: friendlyAiError((e as Error).message) });
   }
 }

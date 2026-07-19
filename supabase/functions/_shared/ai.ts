@@ -18,6 +18,7 @@ const PRICE_TABLE: [string, [number, number]][] = [
   ["qwen-max", [1.6, 6.4]], ["qwen-plus", [0.4, 1.2]], ["qwen-flash", [0.05, 0.4]], ["qwen", [0.4, 1.2]],
   ["glm-4.5-air", [0.2, 1.1]], ["glm", [0.6, 2.2]],
   ["kimi", [0.6, 2.5]],
+  ["mistral-small", [0.1, 0.3]], ["mistral", [0.4, 2]],
 ];
 function priceFor(model: string): [number, number] {
   for (const [p, v] of PRICE_TABLE) if (model.startsWith(p)) return v;

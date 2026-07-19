@@ -9,13 +9,14 @@ interface Plan { code: string; name: string; price_monthly: number; included_rep
 interface TopupState { topupId: string; qrUrl: string; promptpayId?: string; accountName?: string; amount: number; gateway?: "omise" }
 
 export default function BillingClient({
-  shopId, role, balance, currentPlan, plans, gateway = "promptpay_slip",
-}: { shopId: string; role: string; balance: number; currentPlan: string; plans: Plan[]; gateway?: "promptpay_slip" | "omise" }) {
+  shopId, role, balance, currentPlan, plans, gateway = "promptpay_slip", gatewayReady = true,
+}: { shopId: string; role: string; balance: number; currentPlan: string; plans: Plan[]; gateway?: "promptpay_slip" | "omise"; gatewayReady?: boolean }) {
   const isOwnerAdmin = role === "owner" || role === "admin";
   const [amount, setAmount] = useState(300);
   const [topup, setTopup] = useState<TopupState | null>(null);
   const [pending, start] = useTransition();
   const [slipMsg, setSlipMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [topupErr, setTopupErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [omisePaid, setOmisePaid] = useState(false);
 
@@ -34,11 +35,12 @@ export default function BillingClient({
 
   function makeQr() {
     start(async () => {
-      try {
-        setOmisePaid(false);
-        setTopup(gateway === "omise" ? await createOmiseTopup(shopId, amount) : await createTopup(shopId, amount));
-        setSlipMsg(null);
-      } catch (e) { alert((e as Error).message); }
+      setOmisePaid(false);
+      setTopupErr(null);
+      const r = gateway === "omise" ? await createOmiseTopup(shopId, amount) : await createTopup(shopId, amount);
+      if (!r.ok) { setTopupErr(r.error); return; }
+      setTopup(r);
+      setSlipMsg(null);
     });
   }
   async function uploadSlip(file: File) {
@@ -64,6 +66,14 @@ export default function BillingClient({
         <CardContent>
           {!isOwnerAdmin ? (
             <p className="text-sm text-neutral-400">เฉพาะเจ้าของ/ผู้ดูแลร้านเติมเงินได้</p>
+          ) : !gatewayReady ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p className="font-medium">ระบบเติมเงินยังไม่เปิดใช้งาน</p>
+              <p className="mt-1 text-[13px]">
+                แพลตฟอร์มยังไม่ได้ตั้งค่าบัญชีรับเงิน (พร้อมเพย์) — ผู้ดูแลแพลตฟอร์มตั้งค่าได้ที่
+                เมนู <span className="font-medium">ศูนย์ AI (Admin) → ภาพรวมรายได้ + ยืนยันการเติมเงิน → ตั้งค่าการเงิน</span> แล้วหน้านี้จะเปิดให้เติมเงินอัตโนมัติ
+              </p>
+            </div>
           ) : !topup ? (
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2">
@@ -80,6 +90,7 @@ export default function BillingClient({
                 <span className="text-sm text-neutral-400">บาท</span>
               </div>
               <Button onClick={makeQr} disabled={pending || amount < 20}>{pending ? "กำลังสร้าง QR..." : `สร้าง QR เติม ${baht(amount)}`}</Button>
+              {topupErr && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{topupErr}</p>}
             </div>
           ) : (
             <div className="space-y-4">
@@ -152,11 +163,13 @@ export default function BillingClient({
 function ChangePlanButton({ shopId, planCode, planName }: { shopId: string; planCode: string; planName: string }) {
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
   return (
     <>
       <Button size="sm" variant="outline" className="mt-3" disabled={pending} onClick={() => setOpen(true)}>
         {pending ? "กำลังเปลี่ยน..." : "เลือกแพ็กเกจนี้"}
       </Button>
+      {err && <p className="mt-1.5 text-[11px] text-red-600">{err}</p>}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setOpen(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
@@ -166,7 +179,14 @@ function ChangePlanButton({ shopId, planCode, planName }: { shopId: string; plan
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>ยกเลิก</Button>
-              <Button size="sm" onClick={() => { setOpen(false); start(async () => { await changePlan(shopId, planCode); }); }}>
+              <Button size="sm" onClick={() => {
+                setOpen(false);
+                setErr(null);
+                start(async () => {
+                  const r = await changePlan(shopId, planCode);
+                  if (!r.ok) setErr(r.error);
+                });
+              }}>
                 ยืนยันเปลี่ยนแพ็กเกจ
               </Button>
             </div>

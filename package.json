@@ -9,24 +9,25 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.50.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.515.0",
     "next": "^15.3.3",
+    "qrcode": "^1.5.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@supabase/supabase-js": "^2.50.0",
-    "@supabase/ssr": "^0.6.1",
-    "lucide-react": "^0.515.0",
     "recharts": "^2.15.3",
-    "clsx": "^2.1.1",
     "tailwind-merge": "^3.3.1",
-    "qrcode": "^1.5.4"
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
+    "@tailwindcss/postcss": "^4.1.10",
     "@types/node": "^22.15.0",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
     "tailwindcss": "^4.1.10",
-    "@tailwindcss/postcss": "^4.1.10",
-    "@types/qrcode": "^1.5.5"
+    "typescript": "^5.8.3"
   }
 }

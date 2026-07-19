@@ -1,5 +1,5 @@
 // ==== แคตตาล็อกค่าย/โมเดล AI ที่ Admin เลือกได้ ====
-export type Provider = "anthropic" | "google" | "openai" | "deepseek" | "qwen" | "zhipu" | "moonshot";
+export type Provider = "anthropic" | "google" | "openai" | "deepseek" | "qwen" | "zhipu" | "moonshot" | "mistral";
 
 export const PROVIDERS: { id: Provider; label: string; keyHint: string; keyUrl: string }[] = [
   { id: "anthropic", label: "Anthropic (Claude)", keyHint: "ขึ้นต้น sk-ant-...", keyUrl: "https://console.anthropic.com/settings/keys" },
@@ -9,6 +9,7 @@ export const PROVIDERS: { id: Provider; label: string; keyHint: string; keyUrl: 
   { id: "qwen", label: "Alibaba (Qwen)", keyHint: "DashScope International", keyUrl: "https://bailian.console.alibabacloud.com/?apiKey=1" },
   { id: "zhipu", label: "Zhipu (GLM)", keyHint: "จาก z.ai", keyUrl: "https://z.ai/manage-apikey/apikey-list" },
   { id: "moonshot", label: "Moonshot (Kimi)", keyHint: "ขึ้นต้น sk-...", keyUrl: "https://platform.moonshot.ai/console/api-keys" },
+  { id: "mistral", label: "Mistral (OCR + Chat)", keyHint: "จาก console.mistral.ai", keyUrl: "https://console.mistral.ai/api-keys" },
 ];
 
 /** ค่ายที่ใช้ OpenAI-compatible API — เรียกผ่าน chat/completions ด้วย base URL ของค่ายนั้น */
@@ -17,6 +18,7 @@ export const OPENAI_COMPAT_BASE: Partial<Record<Provider, string>> = {
   qwen: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
   zhipu: "https://api.z.ai/api/paas/v4",
   moonshot: "https://api.moonshot.ai/v1",
+  mistral: "https://api.mistral.ai/v1",
 };
 
 export const CHAT_MODELS: Record<Provider, { id: string; label: string; note?: string }[]> = {
@@ -52,6 +54,10 @@ export const CHAT_MODELS: Record<Provider, { id: string; label: string; note?: s
   moonshot: [
     { id: "kimi-k2-0905-preview", label: "Kimi K2", note: "โมเดลใหญ่ agentic ~0.1฿" },
     { id: "kimi-latest", label: "Kimi Latest", note: "ตัวล่าสุดอัตโนมัติ" },
+  ],
+  mistral: [
+    { id: "mistral-small-latest", label: "Mistral Small", note: "ถูก เร็ว — คู่กับ OCR นำเข้าสินค้า (แนะนำ)" },
+    { id: "mistral-medium-latest", label: "Mistral Medium", note: "ฉลาดขึ้น งานซับซ้อน" },
   ],
 };
 

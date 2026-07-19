@@ -27,13 +27,20 @@ external providers: email/google/facebook = true (ทั้ง 3 เปิดห
 
 ### Vercel Env ที่ตั้งครบแล้ว
 `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` · `SUPABASE_SERVICE_ROLE_KEY` · `META_APP_ID` · `META_APP_SECRET`
-(AI provider keys ตั้งในหน้า **Admin → ศูนย์ AI** เก็บ Vault ไม่ต้องพึ่ง env — รองรับ 10 ค่ายแล้ว: Claude/GPT/Gemini + DeepSeek/Qwen/GLM/Kimi)
+(AI provider keys ตั้งในหน้า **Admin → ศูนย์ AI** เก็บ Vault ไม่ต้องพึ่ง env — รองรับ 8 ค่ายแล้ว: Claude/GPT/Gemini + DeepSeek/Qwen/GLM/Kimi + Mistral)
 
 ### Edge Functions (deploy ล่าสุด — cron ปลุกทุกนาที 200 ต่อเนื่อง)
-`webhook-meta` · `webhook-line` · `webhook-tiktok` v1 · `queue-worker` **v6** (รองรับ 10 ค่าย AI + rate limit + notify) · `doc-processor` v2 · `slip-verifier` **v2**
+`webhook-meta` · `webhook-line` · `webhook-tiktok` v1 · `queue-worker` **v7** (รองรับ 8 ค่าย AI รวม Mistral + rate limit + notify) · `doc-processor` v2 · `slip-verifier` **v2**
 
 ### Database
 Migrations **001 → 029 apply ครบบน production** แล้วทั้งหมด (ไม่มีอะไรค้าง)
+
+## 🆕 รอบ 2026-07-20 — นำเข้าสินค้าจากไฟล์ + ค่าย Mistral + แก้ billing/error UX
+- **สาเหตุที่ AI key ยังเป็น 0 ทั้งที่เจ้าของเคยวาง key แล้ว**: key OpenAI ที่วางถูก OpenAI ปฏิเสธ (`401 Incorrect API key`) — ระบบทำงานถูกต้อง ตัว key เองใช้ไม่ได้ ต้องสร้างใหม่ที่ platform.openai.com (เช็คว่าบัญชีมี billing) หรือใช้ค่ายอื่น
+- **Billing แก้ทั้งชุด**: server actions คืน `{ok,error}` แทน throw (Next.js prod ซ่อนข้อความ throw เป็น "Server Components render error") · error แสดง inline เลิก alert() · ถ้าแพลตฟอร์มยังไม่ตั้งพร้อมเพย์รับเงิน หน้าเติมเงินโชว์การ์ดชี้ทางไปตั้งที่ Admin → Billing แทนปุ่มที่กดแล้วพัง
+- **Error AI เป็นไทย**: `src/lib/ai-errors.ts` แปลง 401/402/429/5xx เป็นข้อความชี้ทางแก้ ใช้ใน test-ai + playground + import
+- **ค่าย Mistral (ที่ 8)**: migration 029 apply แล้ว (ปลด constraint + whitelist) · queue-worker **v7** deploy แล้ว · เลือกในหน้า Admin ได้ (OCR + Chat)
+- **นำเข้าสินค้าจากไฟล์** (`/dashboard/products/import` + ปุ่ม "นำเข้าไฟล์" บนหน้าสินค้า): Excel/CSV parse ในเครื่องด้วย SheetJS + จับคู่คอลัมน์ไทย/อังกฤษอัตโนมัติ · PDF/รูปแคตตาล็อก (≤4MB) อ่านด้วย AI ผ่าน `/api/products/import-extract` (ลำดับ: Mistral OCR → Gemini → Claude → GPT ตาม key ที่มี) · พรีวิวแก้ไขได้ + ข้ามชื่อซ้ำ + นำเข้าเป็นร่าง + รองรับ variants
 
 ---
 

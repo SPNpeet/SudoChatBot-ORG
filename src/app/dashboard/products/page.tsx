@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { getCurrentShop } from "@/lib/shop";
-import { Badge, Card, CardContent, EmptyState, Table, Th, Td } from "@/components/ui";
+import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td } from "@/components/ui";
+import { FileUp } from "lucide-react";
 import { baht, dateTH } from "@/lib/utils";
 import { upsertProduct, archiveProduct } from "../actions";
 import ProductForm from "./product-form";
@@ -39,7 +41,12 @@ export default async function ProductsPage() {
           <h1 className="text-xl font-bold">สินค้า</h1>
           <p className="text-sm text-neutral-400">แคตตาล็อกที่บอทใช้ตอบราคาและเช็กสต๊อกแบบเรียลไทม์</p>
         </div>
-        <ProductForm shopId={shop.id} action={save} />
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/products/import">
+            <Button variant="outline"><FileUp className="h-4 w-4" /> นำเข้าไฟล์</Button>
+          </Link>
+          <ProductForm shopId={shop.id} action={save} />
+        </div>
       </div>
 
       <Card>

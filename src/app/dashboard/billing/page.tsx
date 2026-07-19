@@ -17,7 +17,7 @@ export default async function BillingPage() {
     svc.from("plans").select("*").eq("active", true).order("sort"),
     svc.from("wallet_transactions").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20),
     svc.from("topups").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(10),
-    svc.from("platform_billing_settings").select("payment_gateway").eq("id", true).maybeSingle(),
+    svc.from("platform_billing_settings").select("payment_gateway,promptpay_id").eq("id", true).maybeSingle(),
   ]);
 
   const s = (summary ?? {}) as { balance: number; plan: Plan; usage: { replies_count: number; billed_replies: number; billed_amount: number } };
@@ -73,6 +73,11 @@ export default async function BillingPage() {
         currentPlan={plan?.code ?? "free"}
         plans={(plans ?? []) as Plan[]}
         gateway={(pf as { payment_gateway?: string } | null)?.payment_gateway === "omise" ? "omise" : "promptpay_slip"}
+        gatewayReady={
+          (pf as { payment_gateway?: string } | null)?.payment_gateway === "omise"
+            ? true // omise เช็ค key ตอนสร้างรายการ (error แสดง inline)
+            : Boolean((pf as { promptpay_id?: string | null } | null)?.promptpay_id)
+        }
       />
 
       {/* ประวัติเติมเงิน */}
