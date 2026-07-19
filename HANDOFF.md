@@ -1,147 +1,97 @@
 # 🚀 SudoChatBot — เอกสารส่งต่อ (ทำต่อบน Claude Code ได้ 100%)
 
 > เปิด repo นี้ใน Claude Code แล้วสั่ง "อ่าน HANDOFF.md แล้วทำงานที่ค้างต่อ" ได้เลย
+> อัปเดตล่าสุด: 2026-07-19 — **ระบบ LIVE เต็มรูปแบบ เหลือจุดเดียวที่บล็อกไม่ให้บอทตอบลูกค้าได้จริง (ดูข้อ 1)**
 
-## 📍 ที่อยู่ทุกอย่าง (Addresses)
+## 📍 ที่อยู่ทุกอย่าง
 
 | สิ่ง | ที่อยู่ / ID |
 |---|---|
-| **GitHub repo** | `https://github.com/SPNpeet/SudoChatBot-ORG` (branch `main` — รวมงานทุก branch แล้ว) |
-| **โค้ดในเครื่อง** | `C:\Users\peet\Documents\GitHub\SudoChatBot-ORG` (clone ล่าสุด · `C:\SudoChatBot` เป็นสำเนาเก่า ไม่ใช่ git repo) |
-| **แผนที่โค้ด** | `docs/REPO-MAP.md` — สร้างอัตโนมัติด้วย `node ~/.claude/skills/ast-repo-mapper/scripts/repo-map.mjs src docs/REPO-MAP.md` (regenerate เมื่อโครงสร้างเปลี่ยนเยอะ) |
-| **Supabase project** | ref `uafnpbawajgonarvlurj` · region ap-southeast-1 (Singapore) |
-| **Supabase Dashboard** | `https://supabase.com/dashboard/project/uafnpbawajgonarvlurj` |
-| **Supabase API URL** | `https://uafnpbawajgonarvlurj.supabase.co` |
-| **Vercel project** | `sudochatbot-org` (team: suphanats-projects) — **LIVE** |
-| **เว็บใช้งานจริง** | `https://sudochatbot-org.vercel.app` ✅ deploy สำเร็จ (main, READY) |
-| **Anon key (public)** | `eyJhbGciOiJIUzI1NiI...role":"anon"...` (อยู่ใน `.env.example` / Vercel env) |
+| **เว็บใช้งานจริง** | 🟢 **https://sudochatbot.online** (custom domain, SSL ออกแล้ว) · alias `sudochatbot-org.vercel.app` ก็ใช้ได้ |
+| **Health check** | `https://sudochatbot.online/api/health` |
+| **GitHub repo** | `github.com/SPNpeet/SudoChatBot-ORG` branch `main` = production (auto-deploy ทุก push) |
+| **Vercel project** | `sudochatbot-org` (team `suphanats-projects`) — function region บังคับ `sin1` (สิงคโปร์ ติด Supabase) |
+| **Supabase project** | ref `uafnpbawajgonarvlurj` · ap-southeast-1 · เจ้าของบัญชี `ta_free14@hotmail.com` (ยืนยันแล้วว่าเป็นของเจ้าของระบบเอง) — **Free plan** (พอสำหรับ usage ตอนนี้ ~DB 12%/Edge 6%) |
+| **Facebook App** | "SudoLogin" App ID `1548418113603775` |
+| **เอกสารอ้างอิง** | `docs/GO-LIVE.md` (checklist) · `docs/META-REVIEW.md` (ขั้นตอน+สคริปต์ยื่น Facebook Advanced Access) · `docs/SETUP-LINE.md` · `docs/REPO-MAP.md` (แผนที่โค้ด, regenerate ด้วย `node ~/.claude/skills/ast-repo-mapper/scripts/repo-map.mjs src docs/REPO-MAP.md`) |
 
-### Edge Functions (deploy แล้วทั้งหมด — ตรวจ log cron 200 ทุกนาทีแล้ว)
-| Function | URL | verify_jwt |
-|---|---|---|
-| webhook-meta | `https://uafnpbawajgonarvlurj.supabase.co/functions/v1/webhook-meta` | false |
-| webhook-line | `.../functions/v1/webhook-line?channel={channel_id}` | false |
-| webhook-tiktok | `.../functions/v1/webhook-tiktok?channel={channel_id}` (v1) | false |
-| queue-worker | `.../functions/v1/queue-worker` (v4: rate limit + notify_bot_blocked + tiktok send) | true |
-| doc-processor | `.../functions/v1/doc-processor` (v2 multi-provider) | true |
-| slip-verifier | `.../functions/v1/slip-verifier` | true |
-
-### โครงไฟล์สำคัญ
+### สถานะจริงที่ตรวจสอบแล้ว (2026-07-19 — query ตรงจาก DB ไม่ใช่เดา)
 ```
-src/app/                      # Next.js 15 App Router
-  page.tsx                    # landing (ยกเครื่องแล้ว)
-  login/ onboarding/ auth/callback/
-  dashboard/
-    layout.tsx mobile-nav.tsx notifications.tsx  # nav + แถบแจ้งเตือน (เครดิตต่ำ/บอทหยุด)
-    page.tsx                  # ภาพรวม + กราฟ
-    chats/ orders/ products/ knowledge/ channels/ settings/
-    billing/                  # ⭐ แพ็กเกจ+เครดิต+เติมเงิน (PromptPay สลิป หรือ Omise)+ใบเสร็จ
-    billing/receipt/[id]/     # ใบเสร็จ/ใบกำกับภาษี VAT 7% (เลข INV รันอัตโนมัติ)
-    admin/                    # ⭐ ศูนย์ AI (เลือกค่าย/โมเดล/key)
-    admin/billing/            # ⭐ รายได้ + ยืนยันสลิป + ตั้ง gateway/Omise/Resend/ภาษี
-    actions.ts                # server actions (แชท/ออเดอร์/สินค้า+variants/refund/tiktok/ภาษี/แจ้งเตือน)
-  api/channels/meta/          # Meta OAuth (start + callback)
-  api/admin/test-ai/          # ทดสอบ key AI
-  api/billing/topup-slip/     # อัปโหลดสลิปเติมเงิน (โหมด trust-based)
-  api/billing/omise/webhook/  # ⭐ Omise callback — ยืนยัน charge จาก API ตรง + เครดิตอัตโนมัติ
-src/lib/                      # supabase clients, shop.ts (RBAC), ai-catalog.ts, omise.ts, utils
-src/components/ui.tsx logo.tsx
-supabase/functions/_shared/   # ai.ts providers.ts embeddings.ts ocr.ts slip.ts promptpay.ts meta.ts line.ts tiktok.ts
-supabase/migrations/          # 017-026 apply บน Supabase แล้วทั้งหมด
+platform_admins = 1     ✅ มีแอดมินแพลตฟอร์มแล้ว
+ai_provider_keys = 0    ❌ ยังไม่มี AI key เลยสักตัว ← บล็อกเดียวที่เหลือ
+shops = 1 (active)      ✅ ร้านเดียว สะอาด (เคยมีบั๊กสร้างร้านซ้ำ 47 ร้าน แก้+ล้างแล้ว)
+products / orders = 0   (ยังไม่ได้เพิ่มสินค้า — รอทำหลังใส่ AI key)
+mailer_autoconfirm = true            ✅ สมัครอีเมลแล้วเข้าใช้ได้ทันที ไม่ติด rate limit
+external providers: email/google/facebook = true (ทั้ง 3 เปิดหมดแล้ว)
 ```
 
-## ✅ Backend deploy ครบแล้ว (ทำผ่าน Supabase MCP เมื่อ 2026-07-16)
-- Migrations **017–026 apply แล้วทั้งหมด** (024=แก้ decrement_stock คืนสต๊อกด้วย qty ติดลบ · 025=ปิด RPC ของ trigger fns · 026=แยก policy for all)
-- pg_net ย้ายไป schema `extensions` แล้ว — cron `net.http_post` เดิมใช้ได้ต่อ (ฟังก์ชันอยู่ schema `net` เสมอ)
-- ทดสอบ synthetic tenant ผ่าน 10/10: ตัดรอบบิล/overdue/limit ช่องทาง/limit สมาชิก/rate limit(บล็อกครั้งที่ 31)/notify dedupe/low credit/เลข INV/ตัด-คืนสต๊อก
-- Advisor: WARN แก้หมด เหลือเฉพาะข้อยกเว้นที่ตั้งใจ (membership fns + deny-all tables)
-- `supabase db pull` เพื่อเก็บไฟล์ 001–016 ยังทำได้ภายหลังจากเครื่องที่มี CLI (optional)
+### Vercel Env ที่ตั้งครบแล้ว
+`NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` · `SUPABASE_SERVICE_ROLE_KEY` · `META_APP_ID` · `META_APP_SECRET`
+(AI provider keys ตั้งในหน้า **Admin → ศูนย์ AI** เก็บ Vault ไม่ต้องพึ่ง env — รองรับ 10 ค่ายแล้ว: Claude/GPT/Gemini + DeepSeek/Qwen/GLM/Kimi)
 
-## ✅ Vercel deploy สำเร็จแล้ว (2026-07-16)
-- โปรเจกต์ `sudochatbot-org` เชื่อม repo `SPNpeet/SudoChatBot-ORG` branch `main` · production READY
-- เว็บใช้งานจริง: **https://sudochatbot-org.vercel.app** (landing/login/dashboard ทำงาน · middleware auth OK)
-- Env ที่ตั้งแล้ว: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+### Edge Functions (deploy ล่าสุด — cron ปลุกทุกนาที 200 ต่อเนื่อง)
+`webhook-meta` · `webhook-line` · `webhook-tiktok` v1 · `queue-worker` **v6** (รองรับ 10 ค่าย AI + rate limit + notify) · `doc-processor` v2 · `slip-verifier` **v2**
 
-## ✅ ตรวจสอบจริงบนโปรดักชัน (2026-07-19 — ทดสอบจากภายนอกทุกจุดที่เข้าถึงได้)
-- ✅ **`SUPABASE_SERVICE_ROLE_KEY` ตั้งใน Vercel แล้วและใช้งานได้จริง** — พิสูจน์ผ่าน `GET /api/health` → `{"ok":true,"env":{"anonKey":true,"serviceRoleKey":true},"db":true}` (endpoint ใหม่ ใช้เช็คสุขภาพระบบได้ตลอด)
-- ✅ **Facebook OAuth เปิดใช้แล้ว** — authorize endpoint redirect ไป facebook.com ด้วย Meta App จริง และ `redirect_to` โดเมนโปรดักชันผ่าน allow-list (Site URL ตั้งถูกแล้ว)
-- ✅ Edge Functions ตอบถูกทุกตัว: webhook-meta 403 (ไม่มี token=ถูกต้อง) · webhook-line 405 (GET=ถูกต้อง) · webhook-tiktok 200
-- ✅ หน้า `/privacy` `/terms` `/data-deletion` ขึ้นครบ (ตามข้อกำหนด Meta App Review)
-- ✅ middleware กัน `/dashboard` → redirect ไป `/login` ถูกต้อง
-- ✅ Omise webhook: ตอบ 200 idempotent · ถ้า env ยังไม่พร้อมจะตอบ 503 ให้ Omise retry (กัน event หาย)
-- ❌ **สมัครด้วยอีเมลยังติดคอขวด**: Supabase ตอบ `429 over_email_send_rate_limit` — เพราะเปิด "Confirm email" อยู่แต่ยังใช้ SMTP ในตัว (จำกัด ~2-4 ฉบับ/ชม.) — Google provider ยังไม่เปิด (ปุ่มจะแจ้งเป็นไทยว่ายังไม่เปิดใช้งาน)
-
-## ✅ ตัดสินใจแล้ว (2026-07-19 — คุยกับเจ้าของ)
-- **รับเงินแพลตฟอร์ม**: สลิป PromptPay + แอดมินยืนยัน ไปก่อน (ฟรี 0%) — Omise โค้ดพร้อมแล้ว เปิดทีหลังเมื่อยอดเยอะ
-- **โดเมน**: เจ้าของจดแล้ว → **`sudochatbot.online`** ที่ Hostinger (หมดอายุ 2027-07-19 ต่ออายุอัตโนมัติ) — เหลือชี้ DNS เข้า Vercel (ดูขั้นตอนล่าง)
-- **AI**: เพิ่มค่ายจีนครบแล้ว — DeepSeek / Qwen (Alibaba) / GLM (Zhipu) / Kimi (Moonshot) เลือกในหน้า Admin ได้เหมือน 3 ค่ายเดิม
-
-## ✅ Deploy บน Supabase จริงแล้ว (2026-07-19 ผ่าน MCP)
-- **Migrations 027+028 apply แล้ว**: ปลด provider constraint + ขยาย whitelist ใน `store_ai_key` → บันทึก key ค่ายจีนได้จริง
-- **queue-worker v5 deploy แล้ว** (รองรับ 4 ค่ายจีนบนแชทลูกค้าจริง) — ตรวจ log cron 200 ทุกนาที ปกติ
-- **หน้าใหม่ `/dashboard/slips` (คลังสลิป)**: รวมสลิปทุกใบที่ลูกค้าส่งเข้าแชท กรองตามสถานะ รอตรวจ/ผ่าน/ปฏิเสธ รูปเปิดผ่าน signed URL (bucket `slips` private) — เพิ่มในเมนู desktop+mobile แล้ว
-
-## ✅ โดเมนจริง LIVE + E2E ผ่านครบ (2026-07-19 รอบสอง)
-- **https://sudochatbot.online LIVE เต็มตัว** (Add domain ใน Vercel แล้ว, SSL ออกแล้ว, health เขียว) · **ปิด Confirm email แล้ว** — สมัครอีเมลเข้าใช้ได้ทันที
-- **E2E ในฐานะลูกค้าจริงผ่านครบ**: สมัคร → login → dashboard+checklist → เพิ่มสินค้าไทย → playground (error ชี้ทางถูกเมื่อไม่มี AI key) → คลังสลิป → billing แสดงแพ็กเกจครบ
-- **แก้บั๊กจริงที่เจอ**: ผู้ใช้ Facebook สร้างร้านซ้ำ 47 ครั้งใน 2 นาที (ปุ่ม onboarding ไม่มี loading state + ไม่กันซ้ำ) → แก้ทั้ง 2 ชั้น + ล้างร้านซ้ำ 46 ร้านออกจาก DB แล้ว (เหลือร้านจริง "admin" 1 ร้านของ ta_free14 — เข้าไปเปลี่ยนชื่อร้านได้ในหน้าตั้งค่า)
-- **Vercel CLI ติดตั้งแล้ว** (v56) + ลงทะเบียน Vercel MCP (`mcp.vercel.com`) ใน `~/.claude.json` — เซสชันหน้าใช้ได้หลัง auth ครั้งแรก
-- ⚠️ Supabase org อยู่ Free plan มี banner "Grace period is over" — ใช้งานจริงยังต่ำ (DB 12%, Edge 6%) ไม่กระทบตอนนี้ แต่เมื่อมีลูกค้าจ่ายเงินจริงควรอัป Pro ($25/เดือน) กันโดนจำกัด
-- **สิ่งเดียวที่ทำให้บอทยังตอบไม่ได้: ยังไม่มี AI key ในระบบ (0 คีย์) + ยังไม่มีใคร claim platform admin** — login ด้วยบัญชีคุณ → `/dashboard/admin` → กด claim → ใส่ key
-
-## 🔲 (เดิม) ขั้นตอนโดเมน — ทำครบแล้ว เก็บไว้อ้างอิง
-**ตรวจแล้ว 2026-07-19**: Hostinger DNS ตั้งถูกต้องแล้ว (`nslookup sudochatbot.online` → `76.76.21.21` ตรงกับ Vercel · `www` → `cname.vercel-dns.com`) แต่ `curl https://sudochatbot.online` ตอบ **`404 DEPLOYMENT_NOT_FOUND`** (Vercel edge รับ request แล้วแต่ไม่รู้จักโดเมนนี้ว่าเป็นของโปรเจกต์ไหน) + HTTPS handshake ล้มเหลว (ยังไม่ออก SSL ให้) — แปลว่า**ยังไม่ได้กด Add Domain ในหน้า Vercel** ซึ่งเป็นขั้นตอนเดียวที่เหลือและต้องทำเองในบัญชี Vercel (agent ไม่มี Vercel token/CLI ในเครื่องนี้ ทำแทนไม่ได้):
-
-1. **Vercel** → vercel.com → โปรเจกต์ `sudochatbot-org` → Settings → Domains → Add → พิมพ์ `sudochatbot.online` แล้ว Add อีกครั้งด้วย `www.sudochatbot.online` — เพราะ DNS ตั้งไว้ถูกแล้ว ขั้นนี้ควรขึ้น **Valid** ทันทีหรือใน 1-2 นาที (ไม่ต้องรอ DNS propagate เพิ่ม)
-2. Vercel จะออก SSL ให้อัตโนมัติหลัง Valid — เช็คด้วย `curl -I https://sudochatbot.online` ควรได้ `200` ไม่ใช่ `404 DEPLOYMENT_NOT_FOUND`
-3. หลังโดเมนติด: Supabase → Authentication → URL Configuration → Site URL = `https://sudochatbot.online` + เพิ่ม `https://sudochatbot.online/auth/callback` ใน Redirect URLs (คงของ vercel.app ไว้ด้วยได้) · Vercel env `NEXT_PUBLIC_APP_URL=https://sudochatbot.online` → redeploy
-4. อีเมลยืนยัน: สมัคร resend.com → verify โดเมน sudochatbot.online (เพิ่ม TXT/MX ที่ Hostinger ตามที่ Resend บอก) → เอา SMTP ไปใส่ใน Supabase Auth (host `smtp.resend.com` user `resend` pass = API key)
-
-**ตรวจแล้ว 2026-07-19**: `mailer_autoconfirm` ยังเป็น `false` — ยังไม่ได้ปิด "Confirm email" ตามที่แนะนำไว้ก่อนหน้า สมัครสมาชิกยังติด rate limit เหมือนเดิมจนกว่าจะทำ (Supabase → Authentication → Sign In / Providers → Email → ปิด Confirm email)
-
-## 🆕 ฟีเจอร์ใหม่ (2026-07-19)
-- **หน้า "ทดลองบอท"** (`/dashboard/playground`) — เจ้าของร้านคุยกับบอทตัวเองได้ทันทีโดยไม่ต้องเชื่อมเพจ ใช้ AI + สินค้า + คลังความรู้จริง จำลองออเดอร์ ไม่หักเครดิต มี chip โชว์ tool ที่บอทเรียก
-- **Setup Checklist 5 ก้าว** บนหน้าภาพรวม — เพิ่มสินค้า → สอนบอท → ตั้งพร้อมเพย์ → ทดลองบอท → เชื่อมช่องทาง (หายเองเมื่อครบ)
-- **ค่าย AI ใหม่ 4 ค่าย** (OpenAI-compatible): ใช้ได้ทันทีใน Playground + test-ai · ใช้กับแชทลูกค้าจริงต้อง **deploy queue-worker ใหม่** (โค้ดใน `_shared/providers.ts`+`ai.ts` พร้อมแล้ว) และ **apply migration 027** (วางเนื้อหา `supabase/migrations/027_more_ai_providers.sql` ใน SQL Editor → Run — เขียนแบบ idempotent รันซ้ำได้)
-
-## 🔲 เหลือให้เจ้าของทำ (ต้องใช้บัญชีคุณ — agent เข้า dashboard แทนไม่ได้)
-0. **Apply migration 027** (เปิดค่าย AI ใหม่): Supabase → SQL Editor → วางไฟล์ 027 → Run
-0.5 **ซื้อโดเมน sudochatbot.com** ที่ GoDaddy → Vercel → Settings → Domains → Add → ทำตาม DNS ที่ Vercel บอก (A record + CNAME ใน GoDaddy DNS) → เสร็จแล้วอัปเดต Supabase Auth Site URL เป็นโดเมนใหม่
-1. **ปลดล็อกสมัครด้วยอีเมล** (เลือกทางเดียว):
-   - **ทาง A (เร็วสุด 1 คลิก)**: Supabase Dashboard → Authentication → Sign In / Providers → Email → ปิด "Confirm email" → Save — สมัครแล้วเข้าใช้ได้ทันที
-   - **ทาง B (โปรดักชันเต็มรูปแบบ)**: Authentication → Emails → SMTP Settings → ใส่ SMTP ของ Resend (host `smtp.resend.com` · user `resend` · pass = Resend API key) — ยืนยันอีเมลทำงานจริงไม่ติด rate limit
-2. **ตั้งแอดมินแพลตฟอร์ม**: ล็อกอินครั้งแรก (Facebook หรืออีเมลหลังข้อ 1) → เข้า `/dashboard/admin` → กดปุ่ม claim admin (คนแรกที่กดได้เป็นแอดมิน) → ใส่ AI key (Claude/GPT/Gemini) ในหน้านี้ (เก็บ Vault)
-3. **หน้า Admin → Billing**: ใส่ Omise keys · Resend key · ข้อมูล VAT → แล้วไปตั้ง webhook ใน Omise dashboard ชี้ไป `https://sudochatbot-org.vercel.app/api/billing/omise/webhook`
-4. *(ทางเลือก)* เปิด Google provider ใน Supabase Auth ถ้าอยากให้ล็อกอินด้วย Google ได้
+### Database
+Migrations **001 → 029 apply ครบบน production** แล้วทั้งหมด (ไม่มีอะไรค้าง)
 
 ---
 
-## ✅ สถานะระบบ
-- สมาชิก + RBAC (owner/admin/agent/viewer) · agent เชิญสมาชิกไม่ได้
-- RLS แยกร้าน 73+ policies (PDPA-safe)
-- Billing: wallet + โควตาฟรี + บล็อกเมื่อเครดิตหมด + เติมเงิน PromptPay/Omise + หักต่อข้อความ + ledger
-- AI engine 3 ค่าย (Claude/GPT/Gemini) · typecheck 0 error ทุก commit
+## 🔴 สิ่งเดียวที่บล็อกไม่ให้บอทตอบลูกค้าได้ตอนนี้
 
-## 📋 งานค้าง 9 ข้อเดิม — เสร็จครบแล้ว (commit บน branch `claude/sudochatbot-setup-q5ov87`)
-- [x] **ข้อ 1** Payment gateway จริง (Omise Charges API + PromptPay source, เครดิตอัตโนมัติ, webhook ยืนยันจาก API ตรง กัน payload ปลอม) → `api/billing/omise/webhook` + `lib/omise.ts` + migration 019
-- [x] **ข้อ 2** ปุ่ม refund/ยกเลิกในหน้าออเดอร์ (พร้อมแก้บั๊ก refundOrder ที่เซ็ตสต๊อก variant เป็น 0) → `dashboard/orders/page.tsx`
-- [x] **ข้อ 3** ใบกำกับภาษีเต็มรูปแบบ (ผู้ขาย/ผู้ซื้อ/เลขผู้เสียภาษี/VAT 7%/เลขที่ INV อัตโนมัติ) → `billing/receipt/[id]` + migration 020
-- [x] **ข้อ 4** แจ้งเตือนเครดิตใกล้หมด (cron รายชั่วโมง + แถบแจ้งใน dashboard + อีเมล Resend) → migration 021 + `dashboard/notifications.tsx`
-- [x] **ข้อ 5** Rate limiting ต่อร้าน (ต่อนาที/ต่อวันตามแพ็กเกจ) → migration 022 + queue-worker
-- [x] **ข้อ 6** TikTok webhook + ฟอร์มเชื่อมช่องทาง (ยังต้องได้ partner approval จาก TikTok ถึงใช้จริงได้) → `functions/webhook-tiktok` + `_shared/tiktok.ts`
-- [x] **ข้อ 7** Product variants UI (เพิ่ม/แก้/archive ตัวเลือกย่อยในฟอร์มสินค้า) → `products/product-form.tsx`
-- [x] **ข้อ 8** ย้าย pg_net ออกจาก public → migration 023
-- [x] **ข้อ 9** อีเมลแจ้งเจ้าของร้านเมื่อบอทหยุดเพราะเครดิตหมด (dedupe 24 ชม.) → migration 021 + queue-worker
+**ยังไม่มี AI provider key ในระบบเลย (`ai_provider_keys` = 0 แถว)** ทุกอย่างอื่นพร้อมหมดแล้ว
 
-## 🔲 งานถัดไป (Roadmap)
-- [ ] apply migrations 017-023 + deploy queue-worker/webhook-tiktok (ดูหัวข้อ ⚠️ ด้านบน)
-- [ ] Meta App Review (permissions ใน docs/SETUP-META.md) — dev mode ทดสอบกับเพจตัวเองได้ทันที
-- [ ] Google Document AI processor + service account (docs/GO-LIVE.md ขั้น 4)
-- [ ] TikTok partner approval (Business Messaging API)
-- [ ] Stripe เป็น gateway ทางเลือกที่สอง (โครง gateway ใน topups.gateway รองรับแล้ว)
+**วิธีแก้ (2 นาที)**:
+1. เข้า https://sudochatbot.online/login → ล็อกอิน
+2. ไป `/dashboard/admin` → ใส่ API key อย่างน้อย 1 ค่าย (แนะนำ Gemini เพราะมี free tier — เอาจาก aistudio.google.com หรือ Anthropic/OpenAI ก็ได้)
+3. ไป `/dashboard/products` → เพิ่มสินค้าอย่างน้อย 1 ตัว
+4. ทดสอบที่ `/dashboard/playground` — คุยกับบอทตัวเองได้ทันที ไม่หักเครดิต ไม่ต้องเชื่อมเพจก่อน
 
-## 🗂️ RPC สำคัญทั้งหมด (Postgres functions)
-`bill_bot_reply(shop)` · `credit_wallet(...)` · `billing_summary(shop)` · `run_plan_billing()` · `next_order_number(shop)` · `decrement_stock(prod,variant,qty)` (qty ติดลบ=คืนสต๊อก) · `match_knowledge_chunks` · `match_products` · `search_products` · `is_platform_admin()` · `claim_platform_admin()` · `store_ai_key/get_ai_key` · `admin_confirm_topup` · `platform_revenue()` · `queue_send/read/delete/archive` · `get_channel_token/store_channel_token` · **ใหม่ (019-022):** `store/get_platform_omise_key` · `store_platform_resend_key` · `send_platform_email` · `notify_bot_blocked` · `notify_low_credit()` · `check_shop_rate_limit` · `next_invoice_number()`
+---
+
+## ✅ ฟีเจอร์ที่มีและยืนยันด้วยการทดสอบจริงแล้ว (ไม่ใช่แค่เขียนโค้ด)
+
+**Auth**: สมัคร/ล็อกอินอีเมล (autoconfirm, ไม่ติด rate limit) · Google OAuth ✅ · Facebook OAuth ✅ (ใช้ได้กับ admin/tester ของแอพ Meta — เปิดสาธารณะรอ Business Verification ดูข้อ 2) · error message แปลไทยครบ + เช็ค provider ก่อน redirect กันเจอ JSON error ดิบ
+
+**Core**: RBAC (owner/admin/agent/viewer) · RLS แยกร้านทุกตาราง (PDPA-safe) · onboarding กันสร้างร้านซ้ำแล้ว
+
+**บอทขาย**: AI 10 ค่ายเลือกได้ต่อ tier (ประหยัด/มาตรฐาน/พรีเมียม) · **หน้า "ทดลองบอท" (Playground)** ไม่หักเครดิต ไม่ต้องเชื่อมเพจ · ค้นสินค้า/คลังความรู้แบบ semantic search
+
+**ช่องทาง**: LINE เต็มรูปแบบ (มี wizard ทีละขั้นในแอป) · Facebook/IG คลิกเดียวเชื่อม (จำกัดเฉพาะเพจของ admin/tester จนกว่าจะผ่าน App Review) · TikTok webhook พร้อม (รอ TikTok อนุมัติ partner)
+
+**ออเดอร์/เงิน**: ตัด/คืนสต๊อกอัตโนมัติ (แก้บั๊กคืนสต๊อกไม่ได้แล้ว) · **หน้าคลังสลิป** (`/dashboard/slips`) รวมสลิปทุกออเดอร์ · เติมเงิน PromptPay+ตรวจสลิป (ใช้อยู่ตอนนี้) หรือ Omise auto (โค้ดพร้อม รอเปิดทีหลัง) · ใบกำกับภาษี VAT 7% เลขที่ INV อัตโนมัติ
+
+**แจ้งเตือน**: เครดิตใกล้หมด/บอทหยุด/**ออเดอร์ใหม่**/**ลูกค้าขอคุยกับคน (handoff)** — dashboard + อีเมล Resend (เมื่อตั้ง key)
+
+**UX/Ops**: Setup Checklist 5 ขั้นในหน้าภาพรวม · press feedback ทั้งแอป · confirm()/alert() ดิบเปลี่ยนเป็น modal ในแอปหมดแล้ว · SEO เต็มชุด + คู่มือแอดมินในแอป (`/dashboard/help`) · `/api/health` เช็คสุขภาพระบบ · perf: Vercel function รันที่สิงคโปร์ (latency ต่ำ)
+
+---
+
+## 🔲 งานที่เหลือจริง ๆ (เรียงตามผลกระทบ หลังข้อ 🔴 ด้านบน)
+
+### 2. เปิด Facebook/IG ให้ **ร้านค้าอื่น** เชื่อมเพจของตัวเองได้ (ไม่บล็อกการขาย — LINE ใช้เต็มรูปแบบอยู่แล้ว)
+ต้องผ่าน **Facebook App Review** ขอ `pages_messaging`/`pages_show_list`/`instagram_manage_messages` — **มีคู่มือ+สคริปต์อัดวิดีโอพร้อมยื่นแล้วที่ `docs/META-REVIEW.md`** ก่อนหน้านั้นต้องผ่าน **Business Verification** (ต้องมีเอกสารธุรกิจ) รอ 2-7 วันทำการ ทำคู่ขนานได้ ไม่ต้องรีบ
+
+### 3. Google Document AI (OCR ไฟล์ในคลังความรู้) — optional
+ไม่มีก็ใช้ได้ปกติ (พิมพ์ข้อความ/FAQ แทน OCR ได้) วิธีตั้งอยู่ `docs/GO-LIVE.md` ขั้น 4
+
+### 4. Omise/Resend/VAT ของแพลตฟอร์ม — optional จนกว่าจะรับเงินจริงเกิน manual slip
+ใส่ใน Admin → Billing แล้วตั้ง webhook Omise ชี้ `https://sudochatbot.online/api/billing/omise/webhook`
+
+### 5. Supabase ยัง Free plan
+ใช้งานได้สบายตอนนี้ (usage ต่ำมาก) — อัปเป็น **Pro ($25/เดือน)** เมื่อมีลูกค้าจ่ายเงินจริง เพื่อปลดล็อก backup อัตโนมัติ + leaked-password-protection + ไม่ต้องกังวลโดน pause
+
+### ⚠️ ความปลอดภัย — ทำก่อนแจกงานให้คนอื่น/session อื่น
+ระหว่าง debug เคยแชร์ credentials ชั่วคราวในแชตหลายตัว **แนะนำ rotate ทั้งหมด**:
+- Vercel token: `vercel.com/account/settings/tokens`
+- Supabase management token: `supabase.com/dashboard/account/tokens`
+- Facebook App Secret: Meta App → ข้อมูลพื้นฐาน → รีเซ็ต (ต้องอัปเดต `META_APP_SECRET` ใน Vercel ทันทีถ้ารีเซ็ต)
+- รหัสผ่านบัญชีทดสอบที่ตั้งไว้ตอน debug — เปลี่ยนใหม่
+
+---
+
+## 🗂️ RPC สำคัญ (Postgres functions)
+`bill_bot_reply` · `credit_wallet` · `billing_summary` · `run_plan_billing` · `decrement_stock(prod,variant,qty)` (qty ติดลบ=คืนสต๊อก) · `match_knowledge_chunks/match_products/search_products` · `is_platform_admin` · `claim_platform_admin` · `store_ai_key/get_ai_key` · `admin_confirm_topup` · `platform_revenue` · `queue_send/read/delete/archive` · `store/get_channel_token` · `store/get_platform_omise_key` · `store_platform_resend_key` · `send_platform_email` · `notify_bot_blocked/notify_low_credit` · `check_shop_rate_limit` · `next_invoice_number`
 
 ## 🧪 วิธีทดสอบ (SQL synthetic tenant)
-สร้าง auth.users → shop → ทดสอบ → ลบทิ้ง ผ่าน Supabase SQL Editor (ตัวอย่างเต็มอยู่ใน git log / skill `sudochatbot-dev`)
+สร้าง auth.users (**ต้องใส่ token columns เช่น `confirmation_token` เป็น `''` ไม่ใช่ NULL** — เคยทำ NULL แล้ว auth ทั้งระบบพังทั้งหมดมาแล้วครั้งหนึ่ง เป็นบทเรียนสำคัญ) → shop → ทดสอบ → ลบทิ้ง ผ่าน Supabase SQL Editor/MCP
