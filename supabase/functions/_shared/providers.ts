@@ -14,8 +14,17 @@ export const OPENAI_COMPAT_BASE: Partial<Record<ChatProvider, string>> = {
 };
 export interface EmbedConfig { provider: "google" | "openai"; model: string; apiKey: string }
 
+/** โมเดลเริ่มต้นต่อค่าย — ใช้เมื่อ fallback ไปค่ายอื่นที่ไม่ใช่ค่ายใน routing */
+export const DEFAULT_CHAT_MODEL: Record<ChatProvider, string> = {
+  anthropic: "claude-haiku-4-5-20251001", google: "gemini-2.5-flash", openai: "gpt-4o-mini",
+  deepseek: "deepseek-chat", qwen: "qwen-plus", zhipu: "glm-4.6", moonshot: "kimi-k2-0905-preview",
+  mistral: "mistral-small-latest",
+};
+
 interface SettingRow { purpose: string; tier: string; provider: ChatProvider; model: string; enabled: boolean }
-const cache: { at: number; settings: SettingRow[] | null; keys: Record<string, string | null> } = { at: 0, settings: null, keys: {} };
+interface KeyRow { provider: string; test_status: string | null }
+const cache: { at: number; settings: SettingRow[] | null; keyRows: KeyRow[] | null; keys: Record<string, string | null> } =
+  { at: 0, settings: null, keyRows: null, keys: {} };
 
 async function loadSettings(): Promise<SettingRow[]> {
   if (cache.settings && Date.now() - cache.at < 60_000) return cache.settings;
@@ -23,8 +32,17 @@ async function loadSettings(): Promise<SettingRow[]> {
   if (error) console.error("ai_settings load", error.message);
   cache.settings = (data ?? []) as SettingRow[];
   cache.at = Date.now();
+  cache.keyRows = null;
   cache.keys = {};
   return cache.settings;
+}
+
+async function loadKeyRows(): Promise<KeyRow[]> {
+  if (cache.keyRows) return cache.keyRows;
+  const { data, error } = await sb().from("ai_provider_keys").select("provider,test_status");
+  if (error) console.error("ai_provider_keys load", error.message);
+  cache.keyRows = (data ?? []) as KeyRow[];
+  return cache.keyRows;
 }
 
 async function keyFor(provider: string): Promise<string | null> {
@@ -35,22 +53,44 @@ async function keyFor(provider: string): Promise<string | null> {
   return cache.keys[provider];
 }
 
+/**
+ * ลำดับค่ายที่จะลองใช้: ค่ายใน routing ก่อน (ถ้า key ไม่ถูกทดสอบว่าเสีย)
+ * -> ค่ายที่ทดสอบผ่าน -> ค่ายที่ยังไม่ทดสอบ -> ค่ายที่ทดสอบไม่ผ่าน (ดีกว่าไม่มีเลย)
+ * กันเคสจริง: admin ใส่ key ค่ายหนึ่งแต่ routing ยังชี้อีกค่าย -> บอทต้องไม่เงียบ
+ */
+async function candidateProviders(routed: ChatProvider | null): Promise<string[]> {
+  const rows = await loadKeyRows();
+  const rank = (p: string) => {
+    const r = rows.find((x) => x.provider === p);
+    if (!r) return 99;
+    if (p === routed && r.test_status !== "failed") return 0;
+    if (r.test_status === "ok") return 1;
+    if (r.test_status === null) return 2;
+    return 3; // failed
+  };
+  return rows.map((r) => r.provider).sort((a, b) => rank(a) - rank(b));
+}
+
 export async function resolveChatConfig(tier: string): Promise<ChatConfig> {
   const rows = await loadSettings();
   const row = rows.find((r) => r.purpose === "chat" && r.tier === tier)
     ?? rows.find((r) => r.purpose === "chat" && r.tier === "standard");
-  if (row) {
-    const k = await keyFor(row.provider);
-    if (k) return { provider: row.provider, model: row.model, apiKey: k };
-    // แถวถูกตั้งไว้แต่ยังไม่มี key ของค่ายนั้น -> ลอง env ของค่ายเดียวกัน
-    const envMap: Record<string, string | undefined> = {
-      anthropic: Deno.env.get("ANTHROPIC_API_KEY"),
-      google: Deno.env.get("GEMINI_API_KEY"),
-      openai: Deno.env.get("OPENAI_API_KEY"),
-    };
-    if (envMap[row.provider]) return { provider: row.provider, model: row.model, apiKey: envMap[row.provider]! };
+  const routed = row?.provider ?? null;
+
+  for (const p of await candidateProviders(routed)) {
+    const k = await keyFor(p);
+    if (!k) continue;
+    const model = p === routed && row ? row.model : DEFAULT_CHAT_MODEL[p as ChatProvider] ?? "gpt-4o-mini";
+    return { provider: p as ChatProvider, model, apiKey: k };
   }
-  // fallback สุดท้าย: Anthropic จาก env
+
+  // ไม่มี key ใน Vault เลย -> ลอง env ของค่ายใน routing แล้วค่อย Anthropic env
+  const envMap: Record<string, string | undefined> = {
+    anthropic: Deno.env.get("ANTHROPIC_API_KEY"),
+    google: Deno.env.get("GEMINI_API_KEY"),
+    openai: Deno.env.get("OPENAI_API_KEY"),
+  };
+  if (routed && row && envMap[routed]) return { provider: routed, model: row.model, apiKey: envMap[routed]! };
   const envKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (envKey) {
     const m: Record<string, string> = {
@@ -66,9 +106,18 @@ export async function resolveChatConfig(tier: string): Promise<ChatConfig> {
 export async function resolveEmbedConfig(): Promise<EmbedConfig> {
   const rows = await loadSettings();
   const row = rows.find((r) => r.purpose === "embedding");
-  if (row && (row.provider === "google" || row.provider === "openai")) {
-    const k = await keyFor(row.provider);
-    if (k) return { provider: row.provider, model: row.model, apiKey: k };
+  const routed = row && (row.provider === "google" || row.provider === "openai") ? row.provider : null;
+  // ลองค่ายใน routing ก่อน แล้ว fallback ไปอีกค่าย (embedding รองรับแค่ google/openai)
+  const order: ("google" | "openai")[] = routed === "openai" ? ["openai", "google"] : ["google", "openai"];
+  const keyRows = await loadKeyRows();
+  for (const p of order) {
+    const kr = keyRows.find((x) => x.provider === p);
+    if (kr?.test_status === "failed" && p !== routed) continue;
+    const k = await keyFor(p);
+    if (k) {
+      const model = p === routed && row ? row.model : (p === "google" ? "gemini-embedding-001" : "text-embedding-3-small");
+      return { provider: p, model, apiKey: k };
+    }
   }
   const g = Deno.env.get("GEMINI_API_KEY");
   if (g) return { provider: "google", model: "gemini-embedding-001", apiKey: g };
