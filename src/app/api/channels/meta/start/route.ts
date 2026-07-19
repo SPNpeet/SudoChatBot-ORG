@@ -13,9 +13,11 @@ export async function GET(request: Request) {
 
   const nonce = crypto.randomUUID();
   const redirectUri = `${origin}/api/channels/meta/callback`;
+  // ขอเท่าที่ใช้จริงเท่านั้น — ทุก scope ที่ขอต้องโชว์การใช้งานในวิดีโอ review ได้
+  // (pages_read_engagement เคยอยู่ในลิสต์แต่ callback ไม่ได้ใช้ — ตัดออก กันตกรีวิว)
   const scope = [
     "pages_show_list", "pages_messaging", "pages_manage_metadata",
-    "pages_read_engagement", "instagram_basic", "instagram_manage_messages",
+    "instagram_basic", "instagram_manage_messages",
     "business_management",
   ].join(",");
   const url = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${appId}`

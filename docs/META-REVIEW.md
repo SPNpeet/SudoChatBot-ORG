@@ -1,49 +1,103 @@
-# เตรียม Meta App Review — ให้เพจคนทั่วไปเชื่อม SudoChatBot ได้
+# 📦 ชุดยื่น Meta App Review — ฉบับพร้อมยื่นจริง
 
-> สถานะปัจจุบัน: แอปอยู่ dev mode ใช้ได้เฉพาะเพจของคนที่มี role ในแอป · ผ่าน review แล้วทุกเพจเชื่อมได้
+> เป้าหมาย: ให้**ทุกเพจ**เชื่อม SudoChatBot ได้ (ตอนนี้ dev mode ใช้ได้เฉพาะเพจของ admin/tester ของแอป)
+> แอป: **SudoLogin** App ID `1548418113603775` · อัปเดต: 2026-07-19
 
-## Permissions ที่ต้องขอ
+## สถานะความพร้อม — เหลือ 2 อย่างที่ระบบทำแทนไม่ได้
 
-| Permission | ใช้ทำอะไรในระบบ |
+| สิ่งที่ Meta ต้องการ | สถานะ |
 |---|---|
-| `pages_show_list` | ให้ผู้ใช้เลือกเพจตอนเชื่อมต่อ (api/channels/meta/start) |
-| `pages_messaging` | บอทรับ-ส่งข้อความ Messenger (webhook-meta + metaSend) |
-| `pages_manage_metadata` | ผูก webhook กับเพจอัตโนมัติ |
-| `instagram_basic` + `instagram_manage_messages` | รับ-ตอบ Instagram DM |
-| `business_management` | (ถ้าเพจอยู่ใต้ Business Portfolio) |
+| Privacy Policy `https://sudochatbot.online/privacy` | ✅ ขึ้นแล้ว ตอบ 200 |
+| Terms `https://sudochatbot.online/terms` | ✅ |
+| Data Deletion `https://sudochatbot.online/data-deletion` | ✅ (ใส่ URL นี้ในช่อง Data Deletion Instructions ของ App Settings → Basic) |
+| โดเมนจริง + SSL | ✅ |
+| App icon 1024×1024 | ✅ อัปโหลดแล้ว (ไอคอนแชทเขียว) |
+| Scope ในโค้ดตรงกับที่ยื่นขอ | ✅ ตัด `pages_read_engagement` ที่ไม่ได้ใช้ออกแล้ว — โค้ดขอ 6 ตัวเท่ากับที่ยื่นเป๊ะ |
+| **Business Verification** | ⬜ **คุณต้องทำเอง** — Business Settings → Security Center → Start Verification ใช้เอกสารจดทะเบียนพาณิชย์/หนังสือรับรองบริษัท (ถ้าไม่มีนิติบุคคล ใช้ทะเบียนพาณิชย์บุคคลธรรมดาได้) รอ 1-5 วันทำการ **ทำก่อนหรือพร้อมกับยื่น review ได้** |
+| **Screencast 2-4 นาที** | ⬜ **คุณต้องอัดเอง** — สคริปต์เป๊ะ ๆ อยู่ด้านล่าง |
 
-## สิ่งที่ Meta ต้องเห็น (มีครบแล้วในระบบ)
+## Permission ที่ยื่นขอ (6 ตัว — ตรงกับ scope ในโค้ด `api/channels/meta/start`)
 
-- ✅ Privacy Policy: `https://sudochatbot.online/privacy`
-- ✅ Terms: `https://sudochatbot.online/terms`
-- ✅ Data Deletion: `https://sudochatbot.online/data-deletion`
-- ✅ โดเมนจริง + SSL
-- ⬜ App icon 1024×1024 + ชื่อ/คำอธิบายแอปใน App Dashboard
-- ⬜ Business Verification (ยืนยันธุรกิจใน Business Manager — ใช้เอกสารจดทะเบียน/บัตรประชาชน)
+| # | Permission | ใช้ตรงไหนในระบบ | ต้องเห็นในวิดีโอช่วงไหน |
+|---|---|---|---|
+| 1 | `pages_show_list` | ดึงรายชื่อเพจตอนกด "เชื่อมต่อ Facebook Page" | นาที 0:30 — dialog เลือกเพจ |
+| 2 | `pages_messaging` | รับข้อความลูกค้าผ่าน webhook + บอทตอบกลับ | นาที 1:30 — ลูกค้าทัก บอทตอบ |
+| 3 | `pages_manage_metadata` | ผูก webhook เข้ากับเพจอัตโนมัติหลัง OAuth | นาที 0:50 — เพจขึ้นสถานะ "ใช้งาน" ทันที |
+| 4 | `instagram_basic` | อ่านบัญชี IG Business ที่ผูกกับเพจ | นาที 0:50 — IG ปรากฏใต้เพจในหน้า ช่องทาง |
+| 5 | `instagram_manage_messages` | รับ-ตอบ Instagram DM | นาที 2:30 — DM จาก IG บอทตอบ |
+| 6 | `business_management` | เข้าถึงเพจที่อยู่ใต้ Business Portfolio (เพจยุคใหม่ส่วนใหญ่อยู่ใต้ portfolio) | นาที 0:30 — เพจใน portfolio โผล่ใน dialog |
 
-## Screencast ที่ต้องอัด (หัวใจของการผ่าน review)
+> ถ้าโดนตีตกเฉพาะ `business_management` (Meta เข้มตัวนี้สุด): ยื่นรอบสองโดยตัดมันออกจาก scope ในโค้ดได้ — เพจแบบคลาสสิกยังเชื่อมได้ เพจใต้ portfolio จะหายไปจาก dialog เท่านั้น
 
-อัดวิดีโอเดียวยาว 2-4 นาที ตามสคริปต์นี้ (ใช้เพจทดสอบของตัวเอง):
+## คำตอบสำหรับฟอร์ม (ฟอร์มถาม "How will you use this permission?" ทีละตัว — copy ไปวางได้เลย)
 
-1. เปิด `sudochatbot.online` → login → หน้า dashboard
-2. หน้า "ช่องทาง" → กด "เชื่อมต่อ Facebook Page" → หน้าต่าง OAuth ของ Meta ขึ้น → เลือกเพจ → กดยอมรับ permissions (**ให้เห็น dialog ขอ permission ทุกตัวชัด ๆ**)
-3. กลับมาที่ระบบ เห็นเพจขึ้นสถานะ "ใช้งาน"
-4. เปิดมือถือ/อีกจอ ทักแชทไปที่เพจนั้นเป็นลูกค้า: ถามสินค้า → บอทตอบ
-5. กลับมาที่ dashboard หน้า "แชท" ให้เห็นบทสนทนาเข้ามา + แอดมินกดสลับมาตอบเองได้
-6. จบด้วยหน้า ออเดอร์ ที่บอทสร้างให้
+**ทุกตัวขึ้นต้นด้วยย่อหน้านี้ (บริบทแอป):**
+> SudoChatBot (sudochatbot.online) is a B2B SaaS for Thai SME shop owners. A shop owner connects their own Facebook Page / Instagram account, and our AI sales assistant answers their customers' shopping questions in Messenger/Instagram DM on the page's behalf. Data is processed only to serve that page's own customers; nothing is sold, shared, or used for advertising.
 
-จุดที่ reviewer ให้ตก: วิดีโอไม่เห็น OAuth dialog / ไม่เห็น permission ถูก "ใช้จริง" — ทุก permission ที่ขอต้องปรากฏการใช้งานในวิดีโอ
+**pages_show_list**
+> Used once during onboarding: after the page admin clicks "Connect Facebook Page" in our dashboard, we call `/me/accounts` so the admin can see and confirm which of their pages get connected. Shown in the screencast at ~0:30.
 
-## คำอธิบายการใช้ permission (กรอกใน review form — ปรับได้)
+**pages_messaging**
+> Core of the product. We receive customer messages via Messenger webhook and send the AI assistant's replies on behalf of the connected page using the page access token. Shown at ~1:30: a customer messages the page and the assistant replies with product info from the shop's catalog.
 
-> SudoChatBot is a B2B SaaS that lets Thai SME shop owners connect their own Facebook Page and Instagram account to an AI sales assistant. `pages_messaging` is used to receive customer messages via webhook and send replies on behalf of the page. `pages_show_list` lets the page admin select which of their pages to connect during onboarding. `instagram_manage_messages` provides the same for Instagram DM. Messages are processed only to answer shopping questions for that page's customers; no data is sold or used for ads.
+**pages_manage_metadata**
+> Right after the admin confirms the connection, we call `POST /{page-id}/subscribed_apps` to subscribe the page to our webhook so messages start flowing without any manual webhook setup. Shown at ~0:50: the page appears as "Active" immediately after OAuth.
 
-## ขั้นตอนยื่น
+**instagram_basic**
+> During connection we read the `instagram_business_account` linked to the page (id and username) so the shop's Instagram appears in the dashboard as a connected channel. Shown at ~0:50.
 
-1. App Dashboard → App Review → Permissions and Features → ขอทีละ permission ตามตาราง
-2. แนบ screencast + คำอธิบาย + บัญชีทดสอบ (สร้าง user ทดสอบใน App Roles ให้ reviewer login ได้: อีเมล+รหัสที่ใช้เข้า sudochatbot.online)
-3. รอ 2-7 วันทำการ ถ้าตกอ่านเหตุผลแล้วแก้ยื่นใหม่ได้ไม่จำกัด
+**instagram_manage_messages**
+> Same as pages_messaging but for Instagram DM: we receive DMs to the connected IG business account via webhook and send the assistant's replies. Shown at ~2:30.
 
-## ระหว่างรอ review
+**business_management**
+> Many Thai SME pages are owned by a Business Portfolio. This permission lets the page admin see and connect those pages during the same OAuth flow. We do not read or modify any other business asset. Shown at ~0:30 (portfolio-owned page appears in the page picker).
 
-dev mode ใช้กับเพจตัวเองได้เต็มรูปแบบ — เชื่อมเพจจริงของร้านคุณ ทดสอบขายจริง เก็บวิดีโอไว้ใช้ยื่นได้เลย
+## บัญชีทดสอบให้ reviewer (ต้องมี ไม่งั้นตกทันที)
+
+1. สมัคร user ใหม่ใน sudochatbot.online (อีเมล+รหัสจริงที่ใช้งานได้ เช่น `meta.reviewer@yourdomain`) → สร้างร้านทดสอบ ใส่สินค้า 2-3 ตัว
+2. กรอกในฟอร์ม review ช่อง "Testing instructions / test credentials":
+> 1. Go to https://sudochatbot.online/login — sign in with email `<อีเมล>` password `<รหัส>`
+> 2. You land on the shop dashboard. Open "ช่องทาง" (Channels) in the sidebar.
+> 3. Click the blue "เชื่อมต่อ Facebook Page" (Connect Facebook Page) button → Meta OAuth dialog appears → approve.
+> 4. Message the connected page from any account: ask about a product (e.g. "มีอะไรขายบ้าง") — the AI assistant replies within seconds.
+3. **อย่าลบ/เปลี่ยนรหัสบัญชีนี้จนกว่ารีวิวจะจบ** — reviewer ล็อกอินจริง
+
+## สคริปต์อัดวิดีโอ (เทคเดียว 2-4 นาที ไม่ต้องตัดต่อ ไม่ต้องพากย์ — คำบรรยายในฟอร์มพอ)
+
+เตรียมก่อนอัด: เพจทดสอบของตัวเอง (ผูก IG business ไว้ด้วยถ้ามี) · ร้านใน SudoChatBot มีสินค้า+AI key แล้ว · มือถือหรือจอที่สองไว้เล่นบทลูกค้า
+
+| เวลา | ทำอะไร | พิสูจน์ permission |
+|---|---|---|
+| 0:00 | เปิด `sudochatbot.online` → login → เห็น dashboard | — |
+| 0:20 | เข้าหน้า **ช่องทาง** → กด **เชื่อมต่อ Facebook Page** | — |
+| 0:30 | OAuth dialog ของ Meta ขึ้น → **ค้างหน้าจอที่ลิสต์ permission ไว้ 3-4 วินาที** → เลือกเพจ → ยอมรับ | `pages_show_list` `business_management` |
+| 0:50 | เด้งกลับมาหน้า ช่องทาง — เพจ (และ IG) ขึ้นสถานะ **"ใช้งาน"** โดยไม่ต้องตั้งอะไรเพิ่ม | `pages_manage_metadata` `instagram_basic` |
+| 1:10 | หยิบมือถือ/จอสอง ทัก Messenger ไปที่เพจเป็นลูกค้า: "สวัสดีครับ มีอะไรขายบ้าง" | — |
+| 1:30 | บอทตอบพร้อมข้อมูลสินค้าจริง → คุยต่อ 2-3 ประโยค เช่น ถามราคา | `pages_messaging` |
+| 2:00 | กลับมา dashboard หน้า **แชท** — เห็นบทสนทนาเดียวกันเข้ามา | ยืนยัน webhook ทำงาน |
+| 2:30 | (ถ้ามี IG) DM ไปที่ IG ของเพจ → บอทตอบ | `instagram_manage_messages` |
+| 3:00 | จบที่หน้า **ออเดอร์** หรือหน้าแชท ให้เห็นว่าระบบใช้งานจริง | — |
+
+**กฎเหล็กของวิดีโอ**: เห็น OAuth dialog เต็ม ๆ ห้ามข้าม · ทุก permission ที่ขอต้องมีฉากใช้งาน · ห้ามเบลอ/ตัดช่วง OAuth · อัดจากหน้าจอจริง ไม่ใช่สไลด์
+
+## ขั้นตอนกดยื่น (ตามหน้าจอจริงของ App Dashboard)
+
+1. developers.facebook.com → เลือกแอป **SudoLogin** → เมนูซ้าย **App Review → Permissions and Features** (ชื่อไทย: การตรวจสอบแอพ → สิทธิ์การอนุญาตและฟีเจอร์)
+2. ค้นหา permission ทีละตัวตามตาราง 6 ตัว → กด **Request Advanced Access** (ขอสิทธิ์การเข้าถึงขั้นสูง)
+3. Meta จะรวมทุกตัวเป็นคำขอเดียว → กรอกฟอร์ม: วางคำตอบภาษาอังกฤษด้านบน + อัปโหลดวิดีโอ (ใช้ไฟล์เดียวกันได้ทุก permission) + ใส่บัญชีทดสอบ
+4. ส่วน Data Handling / Platform Terms ถ้าถาม: เราเก็บข้อความลูกค้าเพื่อตอบแชทของเพจนั้นเท่านั้น เก็บใน Supabase (สิงคโปร์) เข้ารหัส ไม่ขายข้อมูล ไม่ใช้โฆษณา — สอดคล้องหน้า privacy ที่ยื่นไว้
+5. กด Submit → สถานะ "In Review" → รอ **2-7 วันทำการ** (ตอบกลับทางอีเมล + แจ้งเตือนในแอป)
+6. **ผ่านแล้ว**: สลับแอปจาก Development → **Live** (สวิตช์บนหัวหน้า dashboard ของแอป) — จากนั้นทุกเพจเชื่อมได้ทันที ไม่ต้องแก้โค้ดอะไรอีก
+
+## สาเหตุตกรีวิวที่เจอบ่อย (กันไว้ก่อนยื่น)
+
+- ❌ วิดีโอไม่เห็น OAuth dialog / เห็นแต่ตัดข้าม → **ตกทันที** อัดใหม่ให้ค้างหน้า dialog
+- ❌ ขอ permission ที่ไม่ปรากฏการใช้ในวิดีโอ → เราตัด `pages_read_engagement` ทิ้งแล้วด้วยเหตุนี้
+- ❌ บัญชีทดสอบล็อกอินไม่ได้/ร้านว่างเปล่า ไม่มีสินค้า → reviewer ทดสอบไม่ได้ = ตก
+- ❌ Business Verification ยังไม่ผ่านตอน Meta ตรวจ → คำขอค้าง ทำ verification ให้จบเร็วสุด
+- ❌ ลิงก์ privacy/data-deletion ตาย → ของเราขึ้นแล้ว แต่เช็คอีกครั้งวันยื่น
+- ตกแล้ว**ยื่นใหม่ได้ไม่จำกัด** — อ่านเหตุผลในอีเมล แก้เฉพาะจุด แล้วยื่นซ้ำ
+
+## ระหว่างรอรีวิว
+
+dev mode ใช้ได้เต็มระบบกับเพจของคนที่มี role ในแอป — เพิ่มคนได้ที่ App Roles → Testers (ชวนร้านค้ากลุ่มแรกเป็น tester ให้ใช้จริงไปพลาง เก็บ feedback ก่อนเปิดสาธารณะได้เลย) · LINE ไม่เกี่ยวกับรีวิวนี้ ใช้เต็มรูปแบบได้ตลอด
