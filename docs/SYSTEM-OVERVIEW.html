@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>SudoChatBot — สรุประบบฉบับสมบูรณ์</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", "Leelawadee UI", Tahoma, sans-serif; color: #1a1a1a; font-size: 13px; line-height: 1.65; margin: 0; }
+  h1 { font-size: 24px; margin: 0 0 2px; } h1 .g { color: #059669; }
+  .sub { color: #666; margin-bottom: 18px; }
+  h2 { font-size: 16px; color: #059669; border-bottom: 2px solid #059669; padding-bottom: 4px; margin: 26px 0 10px; page-break-after: avoid; }
+  h3 { font-size: 13.5px; margin: 14px 0 6px; page-break-after: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; page-break-inside: avoid; }
+  th, td { border: 1px solid #ddd; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #f0fdf4; font-weight: 600; }
+  code { background: #f5f5f5; padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: Consolas, monospace; }
+  ul, ol { margin: 6px 0 10px; padding-left: 22px; } li { margin-bottom: 3px; }
+  .warn { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 8px 12px; margin: 10px 0; page-break-inside: avoid; }
+  .ok { background: #f0fdf4; border-left: 4px solid #059669; padding: 8px 12px; margin: 10px 0; page-break-inside: avoid; }
+  .crit { background: #fef2f2; border-left: 4px solid #dc2626; padding: 8px 12px; margin: 10px 0; page-break-inside: avoid; }
+  .foot { margin-top: 30px; color: #999; font-size: 11px; border-top: 1px solid #eee; padding-top: 8px; }
+</style>
+</head>
+<body>
+
+<h1>Sudo<span class="g">ChatBot</span> — สรุประบบฉบับสมบูรณ์</h1>
+<p class="sub">แพลตฟอร์ม B2B2C SaaS: AI ปิดการขายอัตโนมัติสำหรับ Facebook / Instagram / LINE · จัดทำ 20 ก.ค. 2026</p>
+
+<h2>1. ที่อยู่ระบบทั้งหมด</h2>
+<table>
+<tr><th>สิ่ง</th><th>ที่อยู่</th></tr>
+<tr><td>เว็บใช้งานจริง</td><td><b>https://sudochatbot.online</b> (สำรอง: sudochatbot-org.vercel.app)</td></tr>
+<tr><td>เช็คสุขภาพระบบ</td><td>https://sudochatbot.online/api/health → ต้องได้ <code>{"ok":true,...,"db":true}</code></td></tr>
+<tr><td>โค้ด (GitHub)</td><td>github.com/SPNpeet/SudoChatBot-ORG · branch <code>main</code> = production (push แล้ว deploy อัตโนมัติ)</td></tr>
+<tr><td>Vercel</td><td>โปรเจกต์ <code>sudochatbot-org</code> · รันที่สิงคโปร์ (sin1)</td></tr>
+<tr><td>Supabase</td><td>ref <code>uafnpbawajgonarvlurj</code> · สิงคโปร์ · บัญชี ta_free14@hotmail.com · Free plan</td></tr>
+<tr><td>โดเมน</td><td>sudochatbot.online @ Hostinger (ต่ออายุอัตโนมัติ ถึง ก.ค. 2027)</td></tr>
+<tr><td>Facebook App</td><td>"SudoLogin" App ID 1548418113603775</td></tr>
+</table>
+
+<h2>2. สถาปัตยกรรมย่อ</h2>
+<ul>
+<li><b>หน้าเว็บ + แดชบอร์ด</b>: Next.js 15 บน Vercel — landing, สมัคร/ล็อกอิน (อีเมล·Google·Facebook), แดชบอร์ดร้าน, ศูนย์แอดมิน</li>
+<li><b>ฐานข้อมูล + Auth + Vault</b>: Supabase Postgres — RLS แยกข้อมูลรายร้าน 73+ policies (PDPA-safe) · API key / token ทุกตัวเก็บเข้ารหัสใน Vault</li>
+<li><b>ตัวประมวลผลแชท</b>: Supabase Edge Functions — webhook รับข้อความ (Meta/LINE/TikTok ตรวจลายเซ็น HMAC ทุกตัว) → คิว pgmq → <code>queue-worker</code> (AI ตอบ+ปิดการขาย) · <code>doc-processor</code> (คลังความรู้) · <code>slip-verifier</code> (ตรวจสลิป) — cron ปลุกทุก 1 นาที</li>
+<li><b>AI 8 ค่าย</b>: Claude · GPT · Gemini · DeepSeek · Qwen · GLM · Kimi · Mistral — แอดมินใส่ key/เลือกโมเดลได้ในเว็บ ไม่ต้องแตะโค้ด · มี <b>smart fallback</b>: ถ้าค่ายที่ตั้งไว้ key ใช้ไม่ได้ ระบบสลับไปค่ายที่มี key ใช้ได้จริงให้เอง บอทไม่มีวันเงียบเพราะตั้งค่าผิดค่าย</li>
+</ul>
+
+<h2>3. กติกาเงินและโควต้า (จุดที่ปกป้องเงินเจ้าของแพลตฟอร์ม)</h2>
+<table>
+<tr><th>แพ็กเกจ</th><th>ราคา/เดือน</th><th>ตอบฟรี/เดือน</th><th>เกินโควต้า</th><th>ช่องทาง</th><th>Rate limit</th></tr>
+<tr><td>ทดลองใช้ (free)</td><td>ฟรี</td><td>100 ข้อความ</td><td>0.79฿/ข้อความ</td><td>1</td><td>30/นาที · 3,000/วัน</td></tr>
+<tr><td>เริ่มต้น (starter)</td><td>390฿</td><td>1,500</td><td>0.49฿</td><td>3</td><td>ตามแพ็ก</td></tr>
+<tr><td>โปร (pro)</td><td>990฿</td><td>5,000</td><td>0.35฿</td><td>10</td><td>ตามแพ็ก</td></tr>
+<tr><td>องค์กร</td><td>คุยรายเคส</td><td>—</td><td>0.25฿</td><td>ไม่จำกัด</td><td>SLA</td></tr>
+</table>
+<div class="ok"><b>ลำดับการตัดเงินทุกข้อความ (ตรวจโค้ดจริงแล้ว 20 ก.ค.)</b>: บอทจะเรียก AI ได้ต่อเมื่อผ่านด่าน <code>bill_bot_reply</code> ก่อนเสมอ → (1) อยู่ในโควต้าฟรี = ตอบฟรี นับยอด (ล็อกแถวกันนับพลาดตอนยิงพร้อมกัน) (2) เกินโควต้า = หักจากเครดิตร้านทีละข้อความ (3) เครดิตไม่พอ = <b>บอทหยุดตอบทันที</b> + แจ้งเตือนเจ้าของร้านทาง dashboard/อีเมล (กันสแปมแจ้งซ้ำ 24 ชม.) — <b>ไม่มีเส้นทางที่ร้านฟรีใช้เกินแล้วแพลตฟอร์มต้องจ่ายแทน</b></div>
+<ul>
+<li><b>ตัดรอบบิลรายเดือน</b>: cron รายวัน <code>run_plan_billing</code> หักค่าแพ็กจากเครดิต · ค้างจ่าย = ร้าน overdue บอทหยุด</li>
+<li><b>เพดานส่วนที่แพลตฟอร์มออกค่า AI ให้</b> (เพิ่ม 20 ก.ค.): ทดลองบอท 15/นาที + <b>50 ข้อความ/วัน/ร้าน</b> · นำเข้าไฟล์ด้วย AI <b>20 ไฟล์/วัน/ร้าน</b> (Excel/CSV ไม่จำกัด เพราะไม่ใช้ AI) · ทดสอบ key ทำได้เฉพาะแอดมินแพลตฟอร์ม</li>
+<li><b>เติมเงิน</b>: PromptPay QR + ส่งสลิป (ตรวจอัตโนมัติ/แอดมินยืนยัน — กันสลิปปลอม+สลิปซ้ำ) · Omise พร้อมใช้เมื่อเปิด (เครดิตเข้าอัตโนมัติ ยืนยัน charge ตรงกับ Omise API กัน payload ปลอม) · ใบเสร็จ/ใบกำกับภาษี VAT 7% เลข INV อัตโนมัติ</li>
+</ul>
+
+<h2>4. ฟีเจอร์ทั้งหมด (ยืนยันด้วยการทดสอบจริง)</h2>
+<ul>
+<li><b>บัญชี/ทีม</b>: สมัครอีเมล (เข้าได้ทันที) · Google · Facebook · RBAC 4 ระดับ (owner/admin/agent/viewer) · เชิญสมาชิกตามลิมิตแพ็ก</li>
+<li><b>บอทขาย</b>: ตอบแชท เช็คสต๊อกจริง ห้ามเดาราคา · สร้าง/แก้ออเดอร์ คำนวณค่าส่ง · ส่ง QR พร้อมเพย์ของร้าน · รับสลิปในแชทแล้วตรวจอัตโนมัติ ตัดสต๊อกเมื่อเงินเข้า · ส่งต่อมนุษย์เมื่อลูกค้าขอ/เรื่องอ่อนไหว (แจ้งเตือนแอดมินร้าน)</li>
+<li><b>สินค้า</b>: ฟอร์มเพิ่ม/แก้ + ตัวเลือกย่อย (สี/ไซซ์) · <b>นำเข้าจากไฟล์</b>: Excel/CSV (จับคู่คอลัมน์ไทย/อังกฤษอัตโนมัติ แม่น 100%) และ PDF/รูปแคตตาล็อก ≤4MB (AI อ่าน: Mistral OCR → Gemini → Claude → GPT ตาม key ที่มี) → ตารางพรีวิวแก้ได้ก่อนบันทึก + ข้ามชื่อซ้ำ + นำเข้าเป็นร่าง</li>
+<li><b>คลังความรู้</b>: อัปโหลดเอกสาร/พิมพ์ FAQ → บอทค้นแบบ semantic search ตอบนโยบายร้านได้</li>
+<li><b>ช่องทาง</b>: LINE OA เต็มรูปแบบ (มี wizard ในแอป) · Facebook/IG เชื่อมคลิกเดียว (เพจของ admin แอปได้ทันที เพจคนอื่นรอ Meta App Review — เอกสาร+สคริปต์ยื่นพร้อมที่ docs/META-REVIEW.md) · TikTok พร้อม (รอ partner approval)</li>
+<li><b>หน้าจอเจ้าของร้าน</b>: ภาพรวม+กราฟ · Setup Checklist 5 ขั้น · ทดลองบอท (playground) · แชท · ออเดอร์ (refund คืนสต๊อก) · คลังสลิป · แจ้งเตือนเครดิตต่ำ/บอทหยุด/ออเดอร์ใหม่/handoff · คู่มือใช้งานในแอป</li>
+<li><b>คุณภาพ/ความเร็ว</b>: ทุก error เป็นภาษาไทยชี้ทางแก้ ไม่มี alert/JSON ดิบ · หน้า 404 แบรนด์ไทย · SEO ครบ (sitemap/robots/OG) · TTFB 0.13–0.5 วิ (server ติดกับ DB ที่สิงคโปร์)</li>
+</ul>
+
+<h2>5. คู่มือแอดมินแพลตฟอร์ม (บัญชีคุณ: ta_free14@hotmail.com)</h2>
+<table>
+<tr><th>ตั้งค่า</th><th>ที่ไหน</th><th>สถานะตอนนี้</th></tr>
+<tr><td>AI key 8 ค่าย + ทดสอบ + เลือกโมเดลต่อระดับ</td><td>ศูนย์ AI (Admin)</td><td><b>❌ ต้องใส่ key ที่ใช้ได้ 1 ตัว</b> (ตัว OpenAI เดิมถูกปฏิเสธ 401 — สร้างใหม่ หรือใช้ Gemini ฟรีจาก aistudio.google.com)</td></tr>
+<tr><td>พร้อมเพย์รับเงินแพลตฟอร์ม + ชื่อบัญชี</td><td>ศูนย์ AI → ภาพรวมรายได้ → ตั้งค่าการเงิน</td><td><b>❌ ยังไม่ตั้ง</b> — ตั้งแล้วลูกค้าเติมเงินได้ทันที</td></tr>
+<tr><td>ยืนยัน/ปฏิเสธสลิปเติมเงิน + ดูรายได้รวม</td><td>ศูนย์ AI → ภาพรวมรายได้</td><td>พร้อมใช้</td></tr>
+<tr><td>Omise (จ่ายอัตโนมัติ) · Resend (อีเมลระบบ) · ข้อมูล VAT</td><td>หน้าเดียวกัน</td><td>ทางเลือก — ใส่เมื่อพร้อม</td></tr>
+</table>
+
+<h2>6. เส้นทางใช้งานของร้านค้า (ลูกค้าของคุณ)</h2>
+<ol>
+<li>สมัครที่ sudochatbot.online (อีเมล/Google/Facebook) → ตั้งชื่อร้าน</li>
+<li>เพิ่มสินค้า (พิมพ์เอง หรือ <b>นำเข้าไฟล์</b> Excel/PDF) + สอนบอทในคลังความรู้</li>
+<li>ตั้งพร้อมเพย์รับเงิน<b>ของร้านตัวเอง</b> + ค่าส่ง ในหน้าตั้งค่า (เงินลูกค้าเข้าบัญชีร้านตรง ไม่ผ่านแพลตฟอร์ม)</li>
+<li>ทดลองบอท (ฟรี 50 ข้อความ/วัน ไม่หักเครดิต) จนพอใจ</li>
+<li>เชื่อมเพจ Facebook/IG/LINE → บอทเริ่มขายจริง 24 ชม.</li>
+<li>โควต้าฟรีหมด → เติมเงิน/อัปเกรดแพ็กในหน้า "แพ็กเกจ/เครดิต"</li>
+</ol>
+
+<h2>7. ความปลอดภัยและการตรวจสอบ</h2>
+<ul>
+<li>RLS แยกข้อมูลรายร้านทุกตาราง · service role ใช้เฉพาะฝั่ง server · SECURITY DEFINER ทุกตัวเช็คสิทธิ์ภายใน</li>
+<li>ทุก secret (AI keys, page tokens, Omise, Resend) เก็บเข้ารหัสใน Supabase Vault — ไม่มี key โผล่ในโค้ด/ล็อก</li>
+<li>Webhook ทุกแพลตฟอร์มตรวจลายเซ็น HMAC + timestamp กัน replay · Omise ยืนยัน charge ตรงกับ API</li>
+<li>audit_logs บันทึกทุกการกระทำสำคัญ (เปลี่ยนแพ็ก/ใส่ key/นำเข้าสินค้า/refund/error ฝั่งเบราว์เซอร์)</li>
+<li>ทดสอบ billing/quota แบบ synthetic tenant ผ่าน 10/10 (ตัดรอบ, overdue, limit, rate limit, ตัด-คืนสต๊อก, เลข INV)</li>
+</ul>
+<div class="warn"><b>คำแนะนำความปลอดภัยค้างอยู่</b>: (1) rotate token ที่เคยแชร์ตอน debug — Vercel token · Supabase management token · Meta App Secret · รหัสบัญชีทดสอบ (2) เมื่อมีรายได้จริง อัป Supabase Pro ($25/เดือน) เพื่อ backup อัตโนมัติ + leaked-password protection</div>
+
+<h2>8. สิ่งที่เหลือ — เจ้าของทำเอง 3 คลิก แล้วเปิดรับลูกค้าได้ 100%</h2>
+<div class="crit">
+<b>1. ใส่ AI key ที่ใช้ได้จริง</b> — ล็อกอิน → ศูนย์ AI → วาง key (ค่ายไหนก็ได้ ระบบ fallback หาเองแล้ว) → กด "ทดสอบ" ต้องขึ้น "เชื่อมต่อสำเร็จ"<br>
+<b>2. ตั้งพร้อมเพย์รับเงินแพลตฟอร์ม</b> — ศูนย์ AI → ภาพรวมรายได้ → ตั้งค่าการเงิน<br>
+<b>3. ตั้ง email forwarder</b> support@sudochatbot.online ใน Hostinger (Emails → Forwarders) ชี้เข้าเมลจริง — ปุ่ม "ติดต่อเรา" บนเว็บใช้เมลนี้
+</div>
+<p><b>หมายเหตุ</b>: มีลูกค้าจริงรายแรกสมัครแล้ว (ร้าน "Yedheeashop" ผ่าน Google login, 19 ก.ค.) — ทำข้อ 1 เมื่อไหร่ บอทของเขาเริ่มทำงานทันที</p>
+
+<h3>Roadmap ถัดไป (เรียงตามผลต่อยอดขาย)</h3>
+<ol>
+<li>Meta App Review (เอกสารพร้อมแล้ว) → เพจร้านค้าทั่วไปเชื่อม Facebook/IG ได้</li>
+<li>ดูดคอมเมนต์ → ทัก inbox อัตโนมัติ (private reply) → ต่อยอด CF ไลฟ์สด</li>
+<li>เลขพัสดุ + แจ้งลูกค้าอัตโนมัติ · Broadcast ทวงตะกร้าค้าง · PWA + push มือถือ · Shopee/Lazada sync</li>
+</ol>
+
+<p class="foot">SudoChatBot — สรุประบบ ณ 20 ก.ค. 2026 · โค้ดล่าสุด: commit f0602b5 (main) · queue-worker v8 · migrations 001–030 ครบ · สถานะระบบ: LIVE ทุกส่วน เหลือการตั้งค่า 3 ข้อของเจ้าของ · เอกสารเชิงลึก: HANDOFF.md · docs/META-REVIEW.md · docs/GO-LIVE.md ใน repo</p>
+
+</body>
+</html>
