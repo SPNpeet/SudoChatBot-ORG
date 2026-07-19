@@ -17,11 +17,22 @@ export interface PlaygroundReply {
 
 const MAX_HISTORY = 12;
 const MAX_LEN = 500;
+const PLAYGROUND_LIMIT_PER_MIN = 15;
 
 export async function playgroundReply(shopId: string, history: PlaygroundTurn[]): Promise<PlaygroundReply> {
   try {
-    await assertMember(shopId);
+    // viewer อ่านอย่างเดียว ห้ามสั่งเรียก AI จริง (มีต้นทุนค่าคีย์ของร้าน)
+    await assertMember(shopId, ["owner", "admin", "agent"]);
     const svc = createServiceClient();
+
+    // throttle แยกจาก check_shop_rate_limit ของโปรดักชัน (ไม่แชร์โควตากับลูกค้าจริง) กันสแปมยิง action ตรงๆ
+    const since = new Date(Date.now() - 60_000).toISOString();
+    const { count } = await svc.from("ai_usage_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("shop_id", shopId).is("conversation_id", null).gte("created_at", since);
+    if ((count ?? 0) >= PLAYGROUND_LIMIT_PER_MIN) {
+      return { ok: false, error: "ทดลองถี่เกินไป รอสักครู่แล้วลองใหม่นะคะ" };
+    }
 
     const trimmed = history
       .filter((h) => (h.role === "user" || h.role === "assistant") && typeof h.content === "string" && h.content.trim())

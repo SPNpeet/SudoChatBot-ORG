@@ -30,7 +30,13 @@ export default async function Notifications() {
           <div>
             <p className="font-medium">{n.type === "bot_blocked" ? "🛑" : n.type === "order_paid" ? "" : n.type === "handoff" ? "" : "⚠️"} {n.title}</p>
             {n.body && <p className="mt-0.5 text-xs opacity-80">{n.body}</p>}
-            <a href="/dashboard/billing" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าเติมเงิน →</a>
+            {n.type === "order_paid" ? (
+              <a href="/dashboard/orders" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าออเดอร์ →</a>
+            ) : n.type === "handoff" ? (
+              <a href="/dashboard/chats" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าแชท →</a>
+            ) : (
+              <a href="/dashboard/billing" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าเติมเงิน →</a>
+            )}
           </div>
           <form action={dismiss}>
             <input type="hidden" name="id" value={n.id} />
