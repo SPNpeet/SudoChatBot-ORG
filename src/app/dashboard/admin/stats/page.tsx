@@ -46,7 +46,11 @@ export default async function PlatformStatsPage() {
   const supabase = await createClient();
   const { data: isAdmin } = await supabase.rpc("is_platform_admin");
   if (!isAdmin) redirect("/dashboard");
-  const { data, error } = await supabase.rpc("platform_stats");
+  const [{ data, error }, { data: fbRows }] = await Promise.all([
+    supabase.rpc("platform_stats"),
+    // RLS: อ่าน feedback ได้เฉพาะแอดมิน (policy feedback_admin_read)
+    supabase.from("feedback").select("message,page,created_at,shops(name)").order("created_at", { ascending: false }).limit(8),
+  ]);
   if (error || !data) {
     return <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">โหลดสถิติไม่สำเร็จ: {error?.message ?? "ไม่มีข้อมูล"}</p>;
   }
@@ -126,6 +130,25 @@ export default async function PlatformStatsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ===== เสียงจากผู้ใช้ ===== */}
+      <Card>
+        <CardHeader><CardTitle>ความเห็นล่าสุดจากผู้ใช้ (ปุ่มแนะนำ/ติชมในแอป)</CardTitle></CardHeader>
+        <CardContent>
+          {!fbRows?.length ? (
+            <p className="text-sm text-neutral-400">ยังไม่มีความเห็นเข้ามา — ปุ่มแนะนำ/ติชมโชว์ทุกหน้าของผู้ใช้แล้ว</p>
+          ) : (
+            <div className="space-y-2">
+              {(fbRows as unknown as { message: string; page: string | null; created_at: string; shops: { name: string } | null }[]).map((f, i) => (
+                <div key={i} className="rounded-xl border border-neutral-100 px-4 py-2.5">
+                  <p className="text-sm">{f.message}</p>
+                  <p className="mt-1 text-[11px] text-neutral-400">{f.shops?.name ?? "-"} · {f.page ?? "-"} · {dateTH(f.created_at)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ===== รายการล่าสุด ===== */}
       <div className="grid gap-4 lg:grid-cols-2">

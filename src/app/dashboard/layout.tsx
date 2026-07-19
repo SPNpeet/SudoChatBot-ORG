@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
+import FeedbackWidget from "./feedback-widget";
 
 const nav = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
@@ -82,6 +83,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Bottom nav — มือถือ */}
       <MobileNav isAdmin={!!isAdmin} />
+
+      {/* ปุ่มแนะนำ/ติชม — เสียงผู้ใช้ตรงถึงเจ้าของแพลตฟอร์ม */}
+      <FeedbackWidget shopId={shop.id} />
     </div>
   );
 }

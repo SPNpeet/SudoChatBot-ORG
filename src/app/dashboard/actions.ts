@@ -132,6 +132,22 @@ export async function verifyPaymentManual(paymentId: string, shopId: string, app
 }
 
 // ---------- สินค้า ----------
+/** ส่งความเห็น/ปัญหาถึงเจ้าของแพลตฟอร์ม — RLS บังคับ user_id ตัวเอง + เป็นสมาชิกร้าน */
+export async function submitFeedback(shopId: string, message: string, page: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบใหม่" };
+    const msg = message.trim().slice(0, 2000);
+    if (msg.length < 3) return { ok: false, error: "พิมพ์อย่างน้อย 3 ตัวอักษร" };
+    const { error } = await supabase.from("feedback").insert({ shop_id: shopId, user_id: user.id, message: msg, page: page.slice(0, 200) });
+    if (error) return { ok: false, error: "ส่งไม่สำเร็จ ลองใหม่อีกครั้ง" };
+    return { ok: true };
+  } catch {
+    return { ok: false, error: "ส่งไม่สำเร็จ ลองใหม่อีกครั้ง" };
+  }
+}
+
 export async function upsertProduct(shopId: string, formData: FormData) {
   await assertMember(shopId, ["owner", "admin"]);
   const supabase = await createClient();
