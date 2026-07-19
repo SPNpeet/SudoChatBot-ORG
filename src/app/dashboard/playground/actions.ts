@@ -19,6 +19,8 @@ export interface PlaygroundReply {
 const MAX_HISTORY = 12;
 const MAX_LEN = 500;
 const PLAYGROUND_LIMIT_PER_MIN = 15;
+// เพดานรายวัน — playground ไม่หักเครดิตร้าน (แพลตฟอร์มจ่ายค่า AI) ต้องมีเพดานกันเผาเงิน
+const PLAYGROUND_LIMIT_PER_DAY = 50;
 
 export async function playgroundReply(shopId: string, history: PlaygroundTurn[]): Promise<PlaygroundReply> {
   try {
@@ -33,6 +35,13 @@ export async function playgroundReply(shopId: string, history: PlaygroundTurn[])
       .eq("shop_id", shopId).is("conversation_id", null).gte("created_at", since);
     if ((count ?? 0) >= PLAYGROUND_LIMIT_PER_MIN) {
       return { ok: false, error: "ทดลองถี่เกินไป รอสักครู่แล้วลองใหม่นะคะ" };
+    }
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
+    const { count: dayCount } = await svc.from("ai_usage_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("shop_id", shopId).is("conversation_id", null).gte("created_at", dayAgo);
+    if ((dayCount ?? 0) >= PLAYGROUND_LIMIT_PER_DAY) {
+      return { ok: false, error: `ครบโควตาทดลองบอทวันนี้แล้ว (${PLAYGROUND_LIMIT_PER_DAY} ข้อความ/วัน) — พรุ่งนี้ทดลองต่อได้ หรือเชื่อมช่องทางจริงเพื่อใช้กับลูกค้าได้เลย` };
     }
 
     const trimmed = history

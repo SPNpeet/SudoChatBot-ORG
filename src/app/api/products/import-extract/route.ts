@@ -179,6 +179,16 @@ export async function POST(request: Request) {
 
     const b64 = Buffer.from(await file.arrayBuffer()).toString("base64");
     const svc = createServiceClient();
+
+    // เพดานรายวัน — AI อ่านไฟล์ใช้ key ของแพลตฟอร์ม ต้องมีเพดานกันกดรัว
+    const IMPORT_LIMIT_PER_DAY = 20;
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
+    const { count: used } = await svc.from("ai_usage_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("shop_id", shopId).eq("purpose", "ocr").like("model", "import/%").gte("created_at", dayAgo);
+    if ((used ?? 0) >= IMPORT_LIMIT_PER_DAY) {
+      return NextResponse.json({ ok: false, error: `ครบโควตานำเข้าด้วย AI วันนี้แล้ว (${IMPORT_LIMIT_PER_DAY} ไฟล์/วัน) — พรุ่งนี้นำเข้าต่อได้ หรือใช้ไฟล์ Excel/CSV แทน (ไม่จำกัด)` });
+    }
     const keyOf = async (p: string) => (await svc.rpc("get_ai_key", { p_provider: p })).data as string | null;
 
     // ลำดับ: Mistral OCR (เก่งตาราง/สแกน) -> Gemini -> Claude -> GPT
