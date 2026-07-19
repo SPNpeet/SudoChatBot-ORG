@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import {
   LayoutDashboard, MessageSquare, ShoppingBag, Package,
-  BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp,
+  BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3,
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
@@ -49,10 +49,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </Link>
           ))}
           {isAdmin && (
-            <Link href="/dashboard/admin"
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
-              <ShieldCheck className="h-4 w-4" /> ศูนย์ AI (Admin)
-            </Link>
+            <>
+              <Link href="/dashboard/admin"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
+                <ShieldCheck className="h-4 w-4" /> ศูนย์ AI (Admin)
+              </Link>
+              <Link href="/dashboard/admin/stats"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
+                <BarChart3 className="h-4 w-4" /> แดชบอร์ดแพลตฟอร์ม
+              </Link>
+            </>
           )}
         </nav>
         <form action={signOut} className="border-t border-neutral-100 p-3">
