@@ -4,7 +4,7 @@
 // ============================================================
 import { sb, qSend } from "../_shared/supabase.ts";
 import { json, hmacSha256Hex, timingSafeEqual, kick } from "../_shared/utils.ts";
-import { QueueIncoming } from "../_shared/types.ts";
+import { QueueIncoming, QueueComment } from "../_shared/types.ts";
 
 Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
@@ -57,11 +57,41 @@ Deno.serve(async (req: Request) => {
         ...((entry.messaging ?? []) as Record<string, unknown>[]),
         ...((entry.standby ?? []) as Record<string, unknown>[]),
       ];
-      if (!messagings.length) continue;
+      const changes = (entry.changes ?? []) as Record<string, unknown>[];
+      if (!messagings.length && !changes.length) continue;
 
       const { data: channel } = await sb().from("channels")
         .select("id,shop_id,status").eq("platform", platform).eq("platform_page_id", pageId).maybeSingle();
       if (!channel || channel.status !== "active") continue;
+
+      // ---- คอมเมนต์ใหม่ (FB: field=feed item=comment · IG: field=comments) ----
+      for (const ch of changes) {
+        const field = String(ch.field ?? "");
+        const v = (ch.value ?? {}) as Record<string, unknown>;
+        let commentId: string | undefined; let commentText: string | undefined;
+        let commenterId: string | undefined; let commenterName: string | undefined; let postId: string | undefined;
+        if (field === "feed" && v.item === "comment" && v.verb === "add") {
+          const from = v.from as Record<string, string> | undefined;
+          commentId = v.comment_id as string; commentText = v.message as string;
+          commenterId = from?.id; commenterName = from?.name; postId = v.post_id as string | undefined;
+        } else if (field === "comments") { // Instagram
+          const from = v.from as Record<string, string> | undefined;
+          const media = v.media as Record<string, string> | undefined;
+          commentId = (v.id as string) ?? (v.comment_id as string); commentText = v.text as string;
+          commenterId = from?.id; commenterName = from?.username; postId = media?.id;
+        }
+        if (!commentId || !commentText || !commenterId) continue;
+        if (commenterId === pageId) continue; // คอมเมนต์ของเพจเอง
+        const item: QueueComment = {
+          webhook_event_id: evt?.id, shop_id: channel.shop_id, channel_id: channel.id,
+          platform: platform as QueueComment["platform"], page_id: pageId,
+          comment_id: commentId, post_id: postId,
+          commenter_id: commenterId, commenter_name: commenterName,
+          text: commentText, timestamp: Number(entry.time ?? Date.now()),
+        };
+        if (await qSend("comment_events", item) !== null) queued++;
+      }
+      if (!messagings.length) continue;
 
       for (const m of messagings) {
         const msg = m.message as Record<string, unknown> | undefined;

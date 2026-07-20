@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import {
   LayoutDashboard, MessageSquare, ShoppingBag, Package,
   BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark,
-  Store, MessagesSquare, ScrollText,
+  Store, MessagesSquare, ScrollText, Megaphone,
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
@@ -21,6 +21,7 @@ const nav = [
   { href: "/dashboard/products", label: "สินค้า", icon: Package },
   { href: "/dashboard/knowledge", label: "คลังความรู้", icon: BookOpen },
   { href: "/dashboard/channels", label: "ช่องทาง", icon: Share2 },
+  { href: "/dashboard/ads", label: "ยิงแอด AI", icon: Megaphone },
   { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
   { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
   { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },

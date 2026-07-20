@@ -76,6 +76,25 @@ export async function sendManualReply(shopId: string, conversationId: string, te
 }
 
 // ---------- ออเดอร์ ----------
+// แจ้งลูกค้าว่าจัดส่งแล้ว — tag POST_PURCHASE_UPDATE เพราะมักเกิดนอกหน้าต่าง 24 ชม. (Meta ปฏิเสธ RESPONSE)
+async function notifyShipped(svc: ReturnType<typeof createServiceClient>, shopId: string, orderId: string, tracking: string) {
+  const { data: o } = await svc.from("orders")
+    .select("order_number, channel_id, conversation_id, channels(platform), customers(platform_user_id)")
+    .eq("id", orderId).single();
+  if (!o?.conversation_id || !o.channel_id) return;
+  const ch = o.channels as unknown as { platform: string };
+  const cu = o.customers as unknown as { platform_user_id: string };
+  await svc.rpc("queue_send", {
+    p_queue: "outbound_messages",
+    p_msg: {
+      shop_id: shopId, channel_id: o.channel_id, conversation_id: o.conversation_id,
+      platform: ch.platform, platform_user_id: cu.platform_user_id,
+      messages: [{ type: "text", text: `ร้านจัดส่งออเดอร์ ${o.order_number} แล้วค่ะ 📦${tracking ? `\nเลขพัสดุ: ${tracking}` : ""} ขอบคุณที่อุดหนุนนะคะ` }],
+      attempt: 1, tag: "POST_PURCHASE_UPDATE",
+    },
+  });
+}
+
 export async function markShipped(orderId: string, shopId: string, tracking: string): Promise<ActionResult> {
   try {
     await assertMember(shopId, ["owner", "admin", "agent"]);
@@ -83,29 +102,65 @@ export async function markShipped(orderId: string, shopId: string, tracking: str
     await supabase.from("orders").update({
       status: "shipped", tracking_number: tracking.trim() || null,
     }).eq("id", orderId).eq("shop_id", shopId);
-    // แจ้งลูกค้าอัตโนมัติ
     const svc = createServiceClient();
-    const { data: o } = await svc.from("orders")
-      .select("order_number, channel_id, conversation_id, channels(platform), customers(platform_user_id)")
-      .eq("id", orderId).single();
-    if (o?.conversation_id && o.channel_id) {
-      const ch = o.channels as unknown as { platform: string };
-      const cu = o.customers as unknown as { platform_user_id: string };
-      await svc.rpc("queue_send", {
-        p_queue: "outbound_messages",
-        p_msg: {
-          shop_id: shopId, channel_id: o.channel_id, conversation_id: o.conversation_id,
-          platform: ch.platform, platform_user_id: cu.platform_user_id,
-          messages: [{ type: "text", text: `ร้านจัดส่งออเดอร์ ${o.order_number} แล้วค่ะ 📦${tracking ? `\nเลขพัสดุ: ${tracking}` : ""} ขอบคุณที่อุดหนุนนะคะ` }],
-          attempt: 1,
-        },
-      });
-      kickWorker("queue-worker");
-    }
+    await notifyShipped(svc, shopId, orderId, tracking.trim());
+    kickWorker("queue-worker");
     revalidatePath("/dashboard/orders");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: friendly(e, "บันทึกการจัดส่งไม่สำเร็จ") };
+  }
+}
+
+export interface TrackingRow { orderNumber: string; tracking: string }
+export type BulkShipResult =
+  | { ok: true; shipped: number; skipped: { orderNumber: string; reason: string }[] }
+  | { ok: false; error: string };
+
+// นำเข้าเลขพัสดุแบบชุด (จากไฟล์/รูป OCR) — จับคู่ด้วยเลขออเดอร์ แจ้งลูกค้าอัตโนมัติทุกรายการ
+export async function bulkMarkShipped(shopId: string, rows: TrackingRow[]): Promise<BulkShipResult> {
+  try {
+    await assertMember(shopId, ["owner", "admin", "agent"]);
+    const clean = (rows ?? [])
+      .filter((r) => r && r.orderNumber?.trim() && r.tracking?.trim())
+      .slice(0, 200)
+      .map((r) => ({ orderNumber: r.orderNumber.trim(), tracking: r.tracking.trim().slice(0, 60) }));
+    if (!clean.length) return { ok: false, error: "ไม่มีแถวที่ใช้ได้ (ต้องมีเลขออเดอร์ + เลขพัสดุ)" };
+
+    const svc = createServiceClient();
+    const { data: orders } = await svc.from("orders")
+      .select("id, order_number, status")
+      .eq("shop_id", shopId)
+      .in("order_number", clean.map((r) => r.orderNumber));
+    const byNumber = new Map((orders ?? []).map((o) => [o.order_number as string, o]));
+
+    let shipped = 0;
+    const skipped: { orderNumber: string; reason: string }[] = [];
+    for (const r of clean) {
+      const o = byNumber.get(r.orderNumber);
+      if (!o) { skipped.push({ orderNumber: r.orderNumber, reason: "ไม่พบออเดอร์นี้ในร้าน" }); continue; }
+      if (o.status === "shipped" || o.status === "completed") {
+        skipped.push({ orderNumber: r.orderNumber, reason: "จัดส่งแล้ว (ข้าม)" }); continue;
+      }
+      if (!["paid", "confirmed"].includes(o.status as string)) {
+        skipped.push({ orderNumber: r.orderNumber, reason: `สถานะ ${o.status} ยังจัดส่งไม่ได้` }); continue;
+      }
+      const { error } = await svc.from("orders").update({
+        status: "shipped", tracking_number: r.tracking,
+      }).eq("id", o.id).eq("shop_id", shopId);
+      if (error) { skipped.push({ orderNumber: r.orderNumber, reason: error.message.slice(0, 80) }); continue; }
+      await notifyShipped(svc, shopId, o.id as string, r.tracking);
+      shipped++;
+    }
+    if (shipped) kickWorker("queue-worker");
+    await svc.from("audit_logs").insert({
+      shop_id: shopId, actor_type: "user", action: "orders_bulk_shipped",
+      resource_type: "orders", details: { shipped, skipped: skipped.length },
+    });
+    revalidatePath("/dashboard/orders");
+    return { ok: true, shipped, skipped };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "นำเข้าเลขพัสดุไม่สำเร็จ") };
   }
 }
 
@@ -151,7 +206,7 @@ export async function verifyPaymentManual(paymentId: string, shopId: string, app
               ? `ยืนยันการชำระเงินออเดอร์ ${order.order_number} เรียบร้อยค่ะ ✅ ร้านจะรีบจัดส่งให้เร็วที่สุดนะคะ ขอบคุณค่ะ`
               : `ขออภัยค่ะ การตรวจสอบสลิปออเดอร์ ${order.order_number} ไม่ผ่าน รบกวนติดต่อแอดมินหรือส่งสลิปที่ถูกต้องอีกครั้งนะคะ`,
           }],
-          attempt: 1,
+          attempt: 1, tag: "POST_PURCHASE_UPDATE",
         },
       });
       kickWorker("queue-worker");

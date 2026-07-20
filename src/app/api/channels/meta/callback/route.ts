@@ -48,7 +48,8 @@ export async function GET(request: Request) {
     }, { onConflict: "platform,platform_page_id" }).select("id").single();
     if (!error && ch) {
       await svc.rpc("store_channel_token", { p_channel_id: ch.id, p_token: p.access_token });
-      await fetch(`${GRAPH}/${p.id}/subscribed_apps?subscribed_fields=messages,messaging_postbacks&access_token=${encodeURIComponent(p.access_token)}`, { method: "POST" });
+      // feed = คอมเมนต์ใหม่บนโพสต์เพจ (บอทตอบคอมเมนต์+ทัก inbox) — IG ใช้ field "comments" ที่ตั้งระดับแอปใน Meta dashboard
+      await fetch(`${GRAPH}/${p.id}/subscribed_apps?subscribed_fields=messages,messaging_postbacks,feed&access_token=${encodeURIComponent(p.access_token)}`, { method: "POST" });
       connected++;
     }
     // Instagram (ถ้าเพจผูก IG business ไว้)

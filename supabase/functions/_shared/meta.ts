@@ -7,11 +7,13 @@ export async function metaSend(
   pageToken: string,
   recipientId: string,
   messages: OutMessage[],
+  tag?: "POST_PURCHASE_UPDATE",
 ): Promise<{ ok: boolean; error?: string }> {
   for (const m of messages) {
     const body: Record<string, unknown> = {
       recipient: { id: recipientId },
-      messaging_type: "RESPONSE",
+      // นอกหน้าต่าง 24 ชม. (เช่น แจ้งเลขพัสดุ) ต้องใช้ MESSAGE_TAG — RESPONSE จะโดน Meta ปฏิเสธ
+      ...(tag ? { messaging_type: "MESSAGE_TAG", tag } : { messaging_type: "RESPONSE" }),
       message: m.type === "text"
         ? { text: m.text.slice(0, 1990) }
         : { attachment: { type: "image", payload: { url: m.url, is_reusable: false } } },
@@ -26,6 +28,57 @@ export async function metaSend(
       console.error("metaSend fail", res.status, err);
       return { ok: false, error: `meta ${res.status}: ${err.slice(0, 300)}` };
     }
+  }
+  return { ok: true };
+}
+
+/** ตอบคอมเมนต์แบบสาธารณะในนามเพจ — FB: POST /{comment_id}/comments · IG: POST /{ig_comment_id}/replies */
+export async function metaCommentReply(
+  pageToken: string,
+  commentId: string,
+  text: string,
+  platform: "facebook" | "instagram",
+): Promise<{ ok: boolean; error?: string }> {
+  const edge = platform === "instagram" ? "replies" : "comments";
+  const res = await fetch(`${GRAPH}/${commentId}/${edge}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: text.slice(0, 900), access_token: pageToken }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("metaCommentReply fail", res.status, err);
+    return { ok: false, error: `meta ${res.status}: ${err.slice(0, 300)}` };
+  }
+  return { ok: true };
+}
+
+/** ทัก inbox คนที่คอมเมนต์ (private reply) — ส่งได้ 1 ครั้ง/คอมเมนต์ ภายใน 7 วันเท่านั้น (ข้อจำกัดของ Meta)
+ *  FB: POST /{page_id}/messages · IG: POST /{ig_user_id}/messages — ทั้งคู่ recipient {comment_id} */
+export async function metaPrivateReply(
+  pageToken: string,
+  pageOrIgUserId: string,
+  commentId: string,
+  messages: OutMessage[],
+): Promise<{ ok: boolean; error?: string }> {
+  // private reply เปิดบทสนทนาได้แค่ข้อความแรก — ข้อความถัดไป (เช่น รูป) จะส่งได้ต่อเมื่อลูกค้าตอบกลับ
+  const first = messages[0];
+  if (!first) return { ok: false, error: "no message" };
+  const res = await fetch(`${GRAPH}/${pageOrIgUserId}/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      recipient: { comment_id: commentId },
+      message: first.type === "text"
+        ? { text: first.text.slice(0, 1990) }
+        : { attachment: { type: "image", payload: { url: first.url, is_reusable: false } } },
+      access_token: pageToken,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("metaPrivateReply fail", res.status, err);
+    return { ok: false, error: `meta ${res.status}: ${err.slice(0, 300)}` };
   }
   return { ok: true };
 }

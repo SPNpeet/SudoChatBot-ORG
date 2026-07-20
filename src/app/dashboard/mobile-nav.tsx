@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, MessageSquare, ShoppingBag, Package, Menu } from "lucide-react";
 import { useState } from "react";
-import { BookOpen, Share2, Settings, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark, Store, MessagesSquare, ScrollText } from "lucide-react";
+import { BookOpen, Share2, Settings, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark, Store, MessagesSquare, ScrollText, Megaphone } from "lucide-react";
 
 const main = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
@@ -17,6 +17,7 @@ const more = [
   { href: "/dashboard/slips", label: "คลังสลิป", icon: Receipt },
   { href: "/dashboard/knowledge", label: "คลังความรู้", icon: BookOpen },
   { href: "/dashboard/channels", label: "ช่องทาง", icon: Share2 },
+  { href: "/dashboard/ads", label: "ยิงแอด AI", icon: Megaphone },
   { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
   { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
   { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },

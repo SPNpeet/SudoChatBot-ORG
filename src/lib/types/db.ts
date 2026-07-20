@@ -58,6 +58,7 @@ export interface BotSettings {
   tone: string; language: string; custom_instructions: string | null;
   auto_close_sale: boolean; upsell_enabled: boolean; handoff_keywords: string[];
   fallback_message: string; model_tier: string;
+  comment_reply_enabled: boolean; comment_public_reply: string | null; comment_keywords: string[];
 }
 export interface ShopPaymentSettings {
   shop_id: string; promptpay_id: string | null; promptpay_type: string | null;

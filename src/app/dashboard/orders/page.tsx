@@ -4,6 +4,7 @@ import { baht, dateTH, ORDER_STATUS_TH, cn } from "@/lib/utils";
 import Link from "next/link";
 import { VerifyButtons, ShipForm, RefundForm } from "./order-actions";
 import EditOrderModal from "./edit-order-modal";
+import TrackingImportModal from "./tracking-import-modal";
 import type { Order } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
@@ -32,11 +33,20 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   const { data } = await query;
   const orders = (data ?? []) as Order[];
 
+  // ออเดอร์รอจัดส่ง — ส่งให้ modal นำเข้าเลขพัสดุใช้จับคู่/dropdown
+  const { data: openRows } = canFulfill
+    ? await supabase.from("orders").select("order_number").eq("shop_id", shop.id).in("status", ["paid", "confirmed"]).order("created_at", { ascending: false }).limit(300)
+    : { data: [] };
+  const openOrderNumbers = (openRows ?? []).map((o) => o.order_number as string);
+
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold">ออเดอร์</h1>
-        <p className="text-sm text-neutral-400">ออเดอร์ทั้งหมดที่บอทและทีมของคุณปิดได้</p>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-bold">ออเดอร์</h1>
+          <p className="text-sm text-neutral-400">ออเดอร์ทั้งหมดที่บอทและทีมของคุณปิดได้</p>
+        </div>
+        {canFulfill && <TrackingImportModal shopId={shop.id} openOrderNumbers={openOrderNumbers} />}
       </div>
 
       <div className="flex flex-wrap gap-1.5">

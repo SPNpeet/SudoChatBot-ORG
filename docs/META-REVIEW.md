@@ -11,21 +11,27 @@
 | Terms `https://sudochatbot.online/terms` | ✅ |
 | Data Deletion `https://sudochatbot.online/data-deletion` | ✅ (ใส่ URL นี้ในช่อง Data Deletion Instructions ของ App Settings → Basic) |
 | โดเมนจริง + SSL | ✅ |
-| App icon 1024×1024 | ✅ อัปโหลดแล้ว (ไอคอนแชทเขียว) |
-| Scope ในโค้ดตรงกับที่ยื่นขอ | ✅ ตัด `pages_read_engagement` ที่ไม่ได้ใช้ออกแล้ว — โค้ดขอ 6 ตัวเท่ากับที่ยื่นเป๊ะ |
+| App icon 1024×1024 | ✅ อัปโหลดแล้ว (โลโก้จริง) |
+| Scope ในโค้ดตรงกับที่ยื่นขอ | ✅ อัปเดต 2026-07-20: โค้ดขอ **10 ตัว** (เพิ่มชุดคอมเมนต์ 4 ตัว) — ยื่นให้ครบทั้ง 10 |
 | **Business Verification** | ⬜ **คุณต้องทำเอง** — Business Settings → Security Center → Start Verification ใช้เอกสารจดทะเบียนพาณิชย์/หนังสือรับรองบริษัท (ถ้าไม่มีนิติบุคคล ใช้ทะเบียนพาณิชย์บุคคลธรรมดาได้) รอ 1-5 วันทำการ **ทำก่อนหรือพร้อมกับยื่น review ได้** |
 | **Screencast 2-4 นาที** | ⬜ **คุณต้องอัดเอง** — สคริปต์เป๊ะ ๆ อยู่ด้านล่าง |
 
-## Permission ที่ยื่นขอ (6 ตัว — ตรงกับ scope ในโค้ด `api/channels/meta/start`)
+## Permission ที่ยื่นขอ (10 ตัว — ตรงกับ scope ในโค้ด `api/channels/meta/start`)
 
 | # | Permission | ใช้ตรงไหนในระบบ | ต้องเห็นในวิดีโอช่วงไหน |
 |---|---|---|---|
 | 1 | `pages_show_list` | ดึงรายชื่อเพจตอนกด "เชื่อมต่อ Facebook Page" | นาที 0:30 — dialog เลือกเพจ |
-| 2 | `pages_messaging` | รับข้อความลูกค้าผ่าน webhook + บอทตอบกลับ | นาที 1:30 — ลูกค้าทัก บอทตอบ |
-| 3 | `pages_manage_metadata` | ผูก webhook เข้ากับเพจอัตโนมัติหลัง OAuth | นาที 0:50 — เพจขึ้นสถานะ "ใช้งาน" ทันที |
+| 2 | `pages_messaging` | รับข้อความลูกค้าผ่าน webhook + บอทตอบกลับ + private reply หาคนคอมเมนต์ | นาที 1:30 — ลูกค้าทัก บอทตอบ |
+| 3 | `pages_manage_metadata` | ผูก webhook (messages + feed) เข้ากับเพจอัตโนมัติหลัง OAuth | นาที 0:50 — เพจขึ้นสถานะ "ใช้งาน" ทันที |
 | 4 | `instagram_basic` | อ่านบัญชี IG Business ที่ผูกกับเพจ | นาที 0:50 — IG ปรากฏใต้เพจในหน้า ช่องทาง |
-| 5 | `instagram_manage_messages` | รับ-ตอบ Instagram DM | นาที 2:30 — DM จาก IG บอทตอบ |
+| 5 | `instagram_manage_messages` | รับ-ตอบ Instagram DM + private reply หาคนคอมเมนต์ IG | นาที 2:30 — DM จาก IG บอทตอบ |
 | 6 | `business_management` | เข้าถึงเพจที่อยู่ใต้ Business Portfolio (เพจยุคใหม่ส่วนใหญ่อยู่ใต้ portfolio) | นาที 0:30 — เพจใน portfolio โผล่ใน dialog |
+| 7 | `pages_read_user_content` | อ่านข้อความคอมเมนต์ของลูกค้าใต้โพสต์เพจ (webhook field `feed`) | นาที 3:00 — คอมเมนต์ใต้โพสต์ → ระบบเห็น |
+| 8 | `pages_manage_engagement` | ตอบคอมเมนต์แบบสาธารณะในนามเพจ (`POST /{comment-id}/comments`) | นาที 3:15 — reply "ตอบใน DM แล้วนะคะ" ใต้คอมเมนต์ |
+| 9 | `pages_read_engagement` | อ่าน metadata เพจประกอบฟีเจอร์คอมเมนต์ | นาที 3:00 |
+| 10 | `instagram_manage_comments` | อ่าน+ตอบคอมเมนต์ IG (webhook `comments` + `POST /{ig-comment-id}/replies`) | นาที 3:30 — คอมเมนต์ IG → บอทตอบ+DM |
+
+> ⚠️ IG comments webhook ต้องเปิด field `comments` ที่ระดับแอปด้วย: App Dashboard → Webhooks → Instagram → Subscribe to `comments`
 
 > ถ้าโดนตีตกเฉพาะ `business_management` (Meta เข้มตัวนี้สุด): ยื่นรอบสองโดยตัดมันออกจาก scope ในโค้ดได้ — เพจแบบคลาสสิกยังเชื่อมได้ เพจใต้ portfolio จะหายไปจาก dialog เท่านั้น
 
@@ -51,6 +57,25 @@
 
 **business_management**
 > Many Thai SME pages are owned by a Business Portfolio. This permission lets the page admin see and connect those pages during the same OAuth flow. We do not read or modify any other business asset. Shown at ~0:30 (portfolio-owned page appears in the page picker).
+
+**pages_read_user_content**
+> Used by our opt-in "comment assistant" feature: when someone comments under the connected page's own post, we receive the comment via the `feed` webhook and read its text so the AI can answer the customer's question. Only comments on the page's own posts are processed. Shown at ~3:00.
+
+**pages_manage_engagement**
+> After answering a commenter privately, the assistant posts one short public reply under the comment as the page (e.g. "Answered in your DM") via `POST /{comment-id}/comments`, so other customers know the shop is responsive. The shop owner can customize or disable this reply. Shown at ~3:15.
+
+**pages_read_engagement**
+> Read-only page engagement metadata used alongside pages_read_user_content to support the comment assistant feature. Shown at ~3:00.
+
+**instagram_manage_comments**
+> Same comment-assistant feature for Instagram: we receive new comments on the connected IG business account's posts via the `comments` webhook and post a short public reply via `POST /{ig-comment-id}/replies`, then answer privately via Private Replies (one message per comment, per platform policy). Shown at ~3:30.
+
+## ยื่นแยกทีหลัง (อย่ารวมใน submission แรก): ชุดโฆษณา
+ฟีเจอร์ "ยิงแอด AI" ใช้ scope `ads_management,ads_read` ใน OAuth เส้นแยก (`/api/ads/meta/start`) — ตอนนี้ใช้ได้ใน dev mode กับบัญชีโฆษณาของ admin แอปทันที ไม่ต้อง review
+เมื่อจะเปิดให้ร้านทั่วไป:
+1. **App Review** ขอ Advanced Access `ads_management` + `ads_read` (ต้องผ่าน Business Verification ก่อน)
+2. **Access Verification (Tech Provider)** — ขั้นตอนแยกสำหรับแอปที่จัดการข้อมูลธุรกิจอื่น: App Settings → Basic → Access Verification (~5 วันทำการ) — ชุดคอมเมนต์ (`pages_manage_engagement`, `pages_read_user_content`, `pages_read_engagement`) ก็เข้าเกณฑ์นี้ด้วย
+3. **Marketing API Full Access** — อัปเกรดอัตโนมัติเมื่อยิง API สำเร็จ 500 ครั้ง/15 วัน + error rate <15% (ดูสถานะใน App Dashboard → Permissions & Features) — ระหว่างนี้ dev tier จำกัดแค่ rate (~300 calls/ชม./บัญชีแอด) ไม่จำกัดจำนวนบัญชี
 
 ## บัญชีทดสอบให้ reviewer (ต้องมี ไม่งั้นตกทันที)
 
