@@ -3,6 +3,8 @@ import Link from "next/link";
 import PlaygroundChat from "./chat";
 
 export const dynamic = "force-dynamic";
+// playground วนลูป tool กับ AI หลายรอบ — กัน Vercel ตัด server action กลางคัน
+export const maxDuration = 60;
 
 export default async function PlaygroundPage() {
   const { supabase, shop } = await getCurrentShop();

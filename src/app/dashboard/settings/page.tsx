@@ -8,6 +8,8 @@ import TeamForm from "./team-form";
 import type { BotSettings, ShopPaymentSettings } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
+// กล่องทดลองตอบคอมเมนต์เรียก AI + tool — กัน Vercel ตัด server action กลางคัน
+export const maxDuration = 60;
 
 export default async function SettingsPage() {
   const { supabase, shop, role } = await getCurrentShop();

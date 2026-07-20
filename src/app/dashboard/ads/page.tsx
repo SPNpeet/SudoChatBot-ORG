@@ -6,6 +6,8 @@ import AdsChat from "./chat";
 import { CapsForm, PauseButton, RefreshButton } from "./ads-controls";
 
 export const dynamic = "force-dynamic";
+// server action ของ agent วนลูป tool กับ Meta API สูงสุด 8 รอบ — กัน Vercel ตัดกลางคัน
+export const maxDuration = 90;
 
 const ADS_ERROR_TH: Record<string, string> = {
   missing_shop: "ไม่พบร้าน", forbidden: "เฉพาะเจ้าของ/ผู้ดูแลร้านเชื่อมบัญชีโฆษณาได้",

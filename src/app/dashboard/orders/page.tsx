@@ -8,6 +8,8 @@ import TrackingImportModal from "./tracking-import-modal";
 import type { Order } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
+// bulkMarkShipped สูงสุด 200 ออเดอร์ (อัปเดต+แจ้งลูกค้ารายแถว) — กัน Vercel ตัดกลางคัน
+export const maxDuration = 120;
 const TABS = [
   { key: "all", label: "ทั้งหมด" },
   { key: "pending_payment", label: "รอชำระ" },
