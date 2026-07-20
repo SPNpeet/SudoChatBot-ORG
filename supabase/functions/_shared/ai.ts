@@ -94,6 +94,10 @@ ${ship}
 
 ${ctx.bot.custom_instructions ? `## คำสั่งเพิ่มเติมจากเจ้าของร้าน\n${ctx.bot.custom_instructions}` : ""}
 
+${ctx.bot.greeting ? `## ข้อความทักทายเปิดบทสนทนาใหม่
+ถ้านี่คือข้อความแรกสุดของบทสนทนานี้ (ยังไม่มีประวัติแชทมาก่อนหน้า) ให้ทักทายลูกค้าด้วยข้อความนี้คำต่อคำก่อนเสมอ แล้วค่อยตอบคำถามลูกค้าต่อในข้อความเดียวกัน:
+"${ctx.bot.greeting}"
+` : ""}
 ## สถานะออเดอร์ปัจจุบันของลูกค้าคนนี้
 ${ctx.draftOrder ? JSON.stringify(ctx.draftOrder) : "ยังไม่มีออเดอร์ค้าง"}`;
 }
@@ -193,19 +197,23 @@ async function execSearchProducts(shopId: string, query: string): Promise<string
   return JSON.stringify(out.length ? out : { message: "ไม่พบสินค้าที่ตรงกับคำค้น" });
 }
 
-async function execGetProduct(shopId: string, productId: string): Promise<string> {
-  const { data: p } = await sb().from("products").select("id,name,description,price,stock,track_stock,sku,attributes,status")
+async function execGetProduct(shopId: string, productId: string): Promise<{ result: string; imageUrl?: string }> {
+  const { data: p } = await sb().from("products").select("id,name,description,price,stock,track_stock,sku,attributes,status,images")
     .eq("id", productId).eq("shop_id", shopId).maybeSingle();
-  if (!p || p.status !== "active") return JSON.stringify({ error: "ไม่พบสินค้านี้" });
+  if (!p || p.status !== "active") return { result: JSON.stringify({ error: "ไม่พบสินค้านี้" }) };
   const { data: variants } = await sb().from("product_variants")
     .select("id,name,price,stock,attributes").eq("product_id", productId).eq("status", "active");
-  return JSON.stringify({
-    product_id: p.id, name: p.name, description: p.description, sku: p.sku,
-    price: Number(p.price), stock: p.track_stock ? p.stock : "มีของ",
-    variants: (variants ?? []).map((v) => ({
-      variant_id: v.id, name: v.name, price: Number(v.price ?? p.price), stock: v.stock,
-    })),
-  });
+  const imageUrl = Array.isArray(p.images) && typeof p.images[0] === "string" ? p.images[0] as string : undefined;
+  return {
+    result: JSON.stringify({
+      product_id: p.id, name: p.name, description: p.description, sku: p.sku,
+      price: Number(p.price), stock: p.track_stock ? p.stock : "มีของ",
+      variants: (variants ?? []).map((v) => ({
+        variant_id: v.id, name: v.name, price: Number(v.price ?? p.price), stock: v.stock,
+      })),
+    }),
+    imageUrl,
+  };
 }
 
 async function execSearchKnowledge(shopId: string, query: string): Promise<string> {
@@ -358,13 +366,16 @@ async function execRequestPayment(ctx: AgentContext): Promise<{ result: string; 
 }
 
 // ---------- tool dispatcher (ใช้ร่วมทุกค่าย) ----------
-interface ToolOutcome { result: string; qrImage?: string; handoff?: boolean }
+interface ToolOutcome { result: string; qrImage?: string; imageUrl?: string; handoff?: boolean }
 
 async function executeTool(ctx: AgentContext, name: string, input: Record<string, unknown>): Promise<ToolOutcome> {
   try {
     switch (name) {
       case "search_products": return { result: await execSearchProducts(ctx.shop.id, String(input.query ?? "")) };
-      case "get_product": return { result: await execGetProduct(ctx.shop.id, String(input.product_id ?? "")) };
+      case "get_product": {
+        const r = await execGetProduct(ctx.shop.id, String(input.product_id ?? ""));
+        return { result: r.result, imageUrl: r.imageUrl };
+      }
       case "search_knowledge": return { result: await execSearchKnowledge(ctx.shop.id, String(input.query ?? "")) };
       case "upsert_order": return { result: await execUpsertOrder(ctx, input as unknown as UpsertOrderInput) };
       case "request_payment": {
@@ -405,6 +416,7 @@ async function runAnthropic(ctx: AgentContext, model: string, apiKey: string, sy
     for (const tu of toolUses) {
       const o = await executeTool(ctx, tu.name, tu.input ?? {});
       if (o.qrImage) r.outImages.push({ type: "image", url: o.qrImage });
+      if (o.imageUrl) r.outImages.push({ type: "image", url: o.imageUrl });
       if (o.handoff) r.handoff = true;
       results.push({ type: "tool_result", tool_use_id: tu.id, content: o.result });
     }
@@ -444,6 +456,7 @@ async function runOpenAI(ctx: AgentContext, model: string, apiKey: string, syste
       try { input = JSON.parse(tc.function?.arguments || "{}"); } catch { /* ignore */ }
       const o = await executeTool(ctx, tc.function?.name ?? "", input);
       if (o.qrImage) r.outImages.push({ type: "image", url: o.qrImage });
+      if (o.imageUrl) r.outImages.push({ type: "image", url: o.imageUrl });
       if (o.handoff) r.handoff = true;
       messages.push({ role: "tool", tool_call_id: tc.id, content: o.result });
     }
@@ -500,6 +513,7 @@ async function runGemini(ctx: AgentContext, model: string, apiKey: string, syste
       const fc = p.functionCall as { name: string; args?: Record<string, unknown> };
       const o = await executeTool(ctx, fc.name, fc.args ?? {});
       if (o.qrImage) r.outImages.push({ type: "image", url: o.qrImage });
+      if (o.imageUrl) r.outImages.push({ type: "image", url: o.imageUrl });
       if (o.handoff) r.handoff = true;
       respParts.push({ functionResponse: { name: fc.name, response: { result: o.result } } });
     }

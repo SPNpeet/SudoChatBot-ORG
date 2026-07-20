@@ -2,15 +2,16 @@ import { getCurrentShop } from "@/lib/shop";
 import { Badge, Card, EmptyState } from "@/components/ui";
 import { cn, timeAgo, dateTH } from "@/lib/utils";
 import Link from "next/link";
-import { toggleConversationMode, sendManualReply } from "../actions";
 import ChatLive from "./chat-live";
+import ReplyForm from "./reply-form";
+import ModeToggleButton from "./mode-toggle-button";
 import type { Conversation, Message } from "@/lib/types/db";
-import { Bot, User } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function ChatsPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
-  const { supabase, shop } = await getCurrentShop();
+  const { supabase, shop, role } = await getCurrentShop();
+  const canReply = role !== "viewer";
   const { c: selectedId } = await searchParams;
 
   const { data: conversations } = await supabase
@@ -32,23 +33,6 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
   }
 
   const platformIcon: Record<string, string> = { facebook: "FB", instagram: "IG", line: "LINE", tiktok: "TT" };
-
-  async function reply(formData: FormData) {
-    "use server";
-    const text = String(formData.get("text") ?? "");
-    const convId = String(formData.get("conversation_id") ?? "");
-    const shopId = String(formData.get("shop_id") ?? "");
-    if (text && convId) await sendManualReply(shopId, convId, text);
-  }
-
-  async function setMode(formData: FormData) {
-    "use server";
-    await toggleConversationMode(
-      String(formData.get("conversation_id")),
-      String(formData.get("shop_id")),
-      formData.get("mode") === "human" ? "human" : "bot",
-    );
-  }
 
   return (
     <div className="flex h-[calc(100vh-8.5rem)] gap-4 md:h-[calc(100vh-3.5rem)]">
@@ -97,19 +81,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
                 </p>
                 </div>
               </div>
-              <form action={setMode}>
-                <input type="hidden" name="conversation_id" value={selected.id} />
-                <input type="hidden" name="shop_id" value={shop.id} />
-                <input type="hidden" name="mode" value={selected.status === "bot" ? "human" : "bot"} />
-                <button className={cn(
-                  "flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium",
-                  selected.status === "bot"
-                    ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                    : "bg-amber-50 text-amber-700 hover:bg-amber-100",
-                )}>
-                  {selected.status === "bot" ? (<><Bot className="h-3.5 w-3.5" /> บอทกำลังตอบ — คลิกเพื่อรับช่วง</>) : (<><User className="h-3.5 w-3.5" /> คุณกำลังตอบเอง — คลิกให้บอทตอบต่อ</>)}
-                </button>
-              </form>
+              {canReply && <ModeToggleButton shopId={shop.id} conversationId={selected.id} status={selected.status} />}
             </div>
 
             <div className="flex-1 space-y-2 overflow-y-auto px-5 py-4">
@@ -135,15 +107,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
               <ChatLive conversationId={selected.id} />
             </div>
 
-            <form action={reply} className="flex gap-2 border-t border-neutral-100 p-3">
-              <input type="hidden" name="conversation_id" value={selected.id} />
-              <input type="hidden" name="shop_id" value={shop.id} />
-              <input
-                name="text" autoComplete="off" placeholder="พิมพ์ตอบลูกค้าในนามร้าน..."
-                className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm"
-              />
-              <button className="h-10 rounded-xl bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-700">ส่ง</button>
-            </form>
+            {canReply && <ReplyForm shopId={shop.id} conversationId={selected.id} />}
           </>
         )}
       </Card>

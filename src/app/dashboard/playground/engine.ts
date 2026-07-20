@@ -14,7 +14,7 @@ export interface PlaygroundCtx {
   svc: SupabaseClient;
   shop: { id: string; name: string; description?: string | null; currency: string };
   bot: {
-    persona_name: string; tone: string; language: string;
+    persona_name: string; tone: string; language: string; greeting?: string | null;
     custom_instructions?: string | null; auto_close_sale: boolean; upsell_enabled: boolean;
     model_tier: string; fallback_message: string;
   };
@@ -114,6 +114,8 @@ ${toneMap[ctx.bot.tone] ?? toneMap.friendly}
 ${ship}
 
 ${ctx.bot.custom_instructions ? `## คำสั่งเพิ่มเติมจากเจ้าของร้าน\n${ctx.bot.custom_instructions}\n` : ""}
+${ctx.bot.greeting ? `## ข้อความทักทายเปิดบทสนทนาใหม่
+ถ้านี่คือข้อความแรกสุดของบทสนทนานี้ ให้ทักทายลูกค้าด้วยข้อความนี้คำต่อคำก่อนเสมอ แล้วค่อยตอบคำถามลูกค้าต่อในข้อความเดียวกัน: "${ctx.bot.greeting}"\n` : ""}
 ## โหมดทดลอง (สำคัญ)
 ตอนนี้คุณกำลังคุยกับ "เจ้าของร้าน" ที่ทดลองระบบอยู่ ไม่ใช่ลูกค้าจริง — ตอบเหมือนคุยกับลูกค้าจริงทุกอย่าง แต่ออเดอร์เป็นการจำลอง จะไม่ถูกบันทึกและไม่ตัดสต๊อกจริง ถ้าถึงขั้นชำระเงินให้บอกว่า "(โหมดทดลอง — ระบบจริงจะส่ง QR พร้อมเพย์ให้ลูกค้าตรงนี้)"`;
 }
@@ -179,14 +181,16 @@ async function execSearchProducts(ctx: PlaygroundCtx, query: string): Promise<st
 }
 
 async function execGetProduct(ctx: PlaygroundCtx, productId: string): Promise<string> {
-  const { data: p } = await ctx.svc.from("products").select("id,name,description,price,stock,track_stock,sku,status")
+  const { data: p } = await ctx.svc.from("products").select("id,name,description,price,stock,track_stock,sku,status,images")
     .eq("id", productId).eq("shop_id", ctx.shop.id).maybeSingle();
   if (!p || p.status !== "active") return JSON.stringify({ error: "ไม่พบสินค้านี้" });
   const { data: variants } = await ctx.svc.from("product_variants")
     .select("id,name,price,stock").eq("product_id", productId).eq("status", "active");
+  const imageUrl = Array.isArray(p.images) && typeof p.images[0] === "string" ? p.images[0] : undefined;
   return JSON.stringify({
     product_id: p.id, name: p.name, description: p.description, sku: p.sku,
     price: Number(p.price), stock: p.track_stock ? p.stock : "มีของ",
+    image_url: imageUrl,
     variants: (variants ?? []).map((v) => ({ variant_id: v.id, name: v.name, price: Number(v.price ?? p.price), stock: v.stock })),
   });
 }

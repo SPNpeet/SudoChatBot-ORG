@@ -2,7 +2,8 @@ import { getCurrentShop } from "@/lib/shop";
 import { Badge, Card, CardContent, EmptyState, Table, Th, Td } from "@/components/ui";
 import { baht, dateTH, ORDER_STATUS_TH, cn } from "@/lib/utils";
 import Link from "next/link";
-import { markShipped, verifyPaymentManual, refundOrder } from "../actions";
+import { VerifyButtons, ShipForm, RefundForm } from "./order-actions";
+import EditOrderModal from "./edit-order-modal";
 import type { Order } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
@@ -11,31 +12,25 @@ const TABS = [
   { key: "pending_payment", label: "รอชำระ" },
   { key: "paid", label: "รอจัดส่ง" },
   { key: "shipped", label: "จัดส่งแล้ว" },
+  { key: "completed", label: "สำเร็จ" },
+  { key: "cancelled", label: "ยกเลิก" },
+  { key: "expired", label: "หมดอายุ" },
+  { key: "draft", label: "ตะกร้าที่ยังไม่ปิดการขาย" },
 ];
 
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const { supabase, shop } = await getCurrentShop();
+  const { supabase, shop, role } = await getCurrentShop();
+  const canManage = role === "owner" || role === "admin";
+  const canFulfill = role !== "viewer"; // owner/admin/agent จัดการออเดอร์ได้ (ยืนยันจ่าย/จัดส่ง ต้อง owner/admin ตาม action)
   const { tab = "all" } = await searchParams;
 
   let query = supabase.from("orders")
     .select("*, customers(display_name), order_items(id, product_name, variant_name, quantity, unit_price, total), payments(id, status, amount, slip_storage_path, verified_by, method, created_at, order_id)")
     .eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(100);
-  if (tab !== "all") query = query.eq("status", tab);
+  if (tab === "all") query = query.neq("status", "draft");
+  else query = query.eq("status", tab);
   const { data } = await query;
   const orders = (data ?? []) as Order[];
-
-  async function ship(formData: FormData) {
-    "use server";
-    await markShipped(String(formData.get("order_id")), String(formData.get("shop_id")), String(formData.get("tracking") ?? ""));
-  }
-  async function verify(formData: FormData) {
-    "use server";
-    await verifyPaymentManual(String(formData.get("payment_id")), String(formData.get("shop_id")), formData.get("approve") === "1");
-  }
-  async function refund(formData: FormData) {
-    "use server";
-    await refundOrder(String(formData.get("order_id")), String(formData.get("shop_id")), String(formData.get("reason") ?? ""));
-  }
 
   return (
     <div className="space-y-5">
@@ -44,7 +39,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         <p className="text-sm text-neutral-400">ออเดอร์ทั้งหมดที่บอทและทีมของคุณปิดได้</p>
       </div>
 
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {TABS.map((t) => (
           <Link key={t.key} href={`/dashboard/orders?tab=${t.key}`}
             className={cn("rounded-xl px-3.5 py-1.5 text-sm", tab === t.key ? "bg-neutral-900 text-white" : "text-neutral-500 hover:bg-neutral-100")}>
@@ -59,7 +54,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             <EmptyState title="ไม่มีออเดอร์ในหมวดนี้" />
           ) : (
             <Table>
-              <thead><tr><Th>ออเดอร์</Th><Th>ลูกค้า / รายการ</Th><Th>ยอดรวม</Th><Th>สถานะ</Th><Th>ปิดโดย</Th><Th>จัดการ</Th></tr></thead>
+              <thead><tr><Th>ออเดอร์</Th><Th>ลูกค้า / รายการ</Th><Th>ยอดรวม</Th><Th>สถานะ</Th><Th>ปิดโดย</Th>{canFulfill && <Th>จัดการ</Th>}</tr></thead>
               <tbody>
                 {orders.map((o) => {
                   const pendingPay = o.payments?.find((p) => ["pending", "verifying"].includes(p.status));
@@ -83,44 +78,24 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                         </Badge>
                       </Td>
                       <Td>{o.closed_by === "bot" ? <Badge tone="blue">🤖 บอท</Badge> : o.closed_by ? "แอดมิน" : "-"}</Td>
-                      <Td>
-                        <div className="flex flex-col gap-1.5">
-                          {o.status === "pending_payment" && pendingPay && (
-                            <div className="flex gap-1.5">
-                              <form action={verify}>
-                                <input type="hidden" name="payment_id" value={pendingPay.id} />
-                                <input type="hidden" name="shop_id" value={shop.id} />
-                                <input type="hidden" name="approve" value="1" />
-                                <button className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-emerald-500">ยืนยันชำระ</button>
-                              </form>
-                              <form action={verify}>
-                                <input type="hidden" name="payment_id" value={pendingPay.id} />
-                                <input type="hidden" name="shop_id" value={shop.id} />
-                                <input type="hidden" name="approve" value="0" />
-                                <button className="rounded-lg border border-neutral-300 px-2.5 py-1 text-xs text-neutral-600 hover:bg-neutral-50">ปฏิเสธ</button>
-                              </form>
-                            </div>
-                          )}
-                          {["paid", "confirmed"].includes(o.status) && (
-                            <form action={ship} className="flex gap-1.5">
-                              <input type="hidden" name="order_id" value={o.id} />
-                              <input type="hidden" name="shop_id" value={shop.id} />
-                              <input name="tracking" placeholder="เลขพัสดุ" className="h-7 w-28 rounded-lg border border-neutral-300 px-2 text-xs outline-none focus:border-emerald-500" />
-                              <button className="rounded-lg bg-neutral-900 px-2.5 py-1 text-xs font-medium text-white hover:bg-neutral-700">จัดส่ง</button>
-                            </form>
-                          )}
-                          {["pending_payment", "paid", "confirmed", "shipped"].includes(o.status) && (
-                            <form action={refund} className="flex gap-1.5">
-                              <input type="hidden" name="order_id" value={o.id} />
-                              <input type="hidden" name="shop_id" value={shop.id} />
-                              <input name="reason" placeholder="เหตุผล (ไม่บังคับ)" className="h-7 w-28 rounded-lg border border-neutral-300 px-2 text-xs outline-none focus:border-rose-400" />
-                              <button className="rounded-lg border border-rose-300 px-2.5 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50">
-                                {["paid", "confirmed", "shipped"].includes(o.status) ? "คืนเงิน/ยกเลิก" : "ยกเลิก"}
-                              </button>
-                            </form>
-                          )}
-                        </div>
-                      </Td>
+                      {canFulfill && (
+                        <Td>
+                          <div className="flex flex-col gap-1.5">
+                            {o.status === "pending_payment" && pendingPay && canManage && (
+                              <VerifyButtons paymentId={pendingPay.id} shopId={shop.id} />
+                            )}
+                            {["paid", "confirmed"].includes(o.status) && (
+                              <ShipForm orderId={o.id} shopId={shop.id} />
+                            )}
+                            {["pending_payment", "paid", "confirmed", "shipped"].includes(o.status) && canManage && (
+                              <RefundForm orderId={o.id} shopId={shop.id} isRefund={["paid", "confirmed", "shipped"].includes(o.status)} />
+                            )}
+                            {canManage && !["cancelled", "expired"].includes(o.status) && (
+                              <EditOrderModal order={o} shopId={shop.id} />
+                            )}
+                          </div>
+                        </Td>
+                      )}
                     </tr>
                   );
                 })}

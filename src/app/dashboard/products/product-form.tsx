@@ -2,21 +2,37 @@
 import { useState, useTransition } from "react";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import type { Product, ProductVariant } from "@/lib/types/db";
-import { Plus, Pencil, X } from "lucide-react";
+import type { ActionResult } from "../actions";
+import { uploadProductImage } from "../actions";
+import { Plus, Pencil, X, Upload } from "lucide-react";
 
 interface VariantRow { id?: string; name: string; sku: string; price: string; stock: string }
 
 export default function ProductForm({
   shopId, action, product, variants,
-}: { shopId: string; action: (fd: FormData) => Promise<void>; product?: Product; variants?: ProductVariant[] }) {
+}: { shopId: string; action: (fd: FormData) => Promise<ActionResult>; product?: Product; variants?: ProductVariant[] }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>(Array.isArray(product?.images) ? (product!.images as string[]) : []);
+  const [uploading, setUploading] = useState(false);
   const [rows, setRows] = useState<VariantRow[]>(
     (variants ?? []).map((v) => ({ id: v.id, name: v.name, sku: v.sku ?? "", price: v.price === null ? "" : String(v.price), stock: String(v.stock) })),
   );
 
   function setRow(i: number, patch: Partial<VariantRow>) {
     setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  }
+
+  async function pickImage(file: File) {
+    setUploading(true); setError(null);
+    const fd = new FormData();
+    fd.append("shop_id", shopId);
+    fd.append("file", file);
+    const r = await uploadProductImage(shopId, fd);
+    if (!r.ok) { setError(r.error); setUploading(false); return; }
+    setImages((im) => [...im, r.url]);
+    setUploading(false);
   }
 
   function submit(fd: FormData) {
@@ -26,8 +42,11 @@ export default function ProductForm({
       stock: parseInt(r.stock || "0", 10) || 0,
     }));
     fd.set("variants_json", JSON.stringify(clean));
+    fd.set("images_json", JSON.stringify(images));
+    setError(null);
     start(async () => {
-      await action(fd);
+      const r = await action(fd);
+      if (!r.ok) { setError(r.error); return; }
       setOpen(false);
     });
   }
@@ -62,18 +81,40 @@ export default function ProductForm({
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div><Label>ราคา (บาท) *</Label><Input name="price" type="number" step="0.01" min="0" required defaultValue={product?.price} /></div>
+              <div><Label>ราคาเดิม (ถ้ามีส่วนลด)</Label><Input name="compare_at_price" type="number" step="0.01" min="0" defaultValue={product?.compare_at_price ?? ""} placeholder="ว่าง = ไม่มี" /></div>
               <div><Label>สต๊อก</Label><Input name="stock" type="number" min="0" defaultValue={product?.stock ?? 0} /></div>
-              <div>
-                <Label>สถานะ</Label>
-                <Select name="status" defaultValue={product?.status ?? "active"}>
-                  <option value="active">ขายอยู่</option>
-                  <option value="draft">ร่าง (บอทไม่เห็น)</option>
-                </Select>
-              </div>
+            </div>
+            <div>
+              <Label>สถานะ</Label>
+              <Select name="status" defaultValue={product?.status ?? "active"}>
+                <option value="active">ขายอยู่</option>
+                <option value="draft">ร่าง (บอทไม่เห็น)</option>
+              </Select>
             </div>
             <div>
               <Label>รายละเอียด (บอทใช้ตอบลูกค้า — ใส่จุดเด่น วิธีใช้ ขนาด)</Label>
               <Textarea name="description" defaultValue={product?.description ?? ""} placeholder="อธิบายสินค้าให้ละเอียด บอทจะใช้ข้อมูลนี้ขายของ" />
+            </div>
+
+            {/* ===== รูปสินค้า — บอทส่งให้ลูกค้าดูได้ ===== */}
+            <div>
+              <Label>รูปสินค้า (บอทส่งให้ลูกค้าดูได้)</Label>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {images.map((url, i) => (
+                  <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg border border-neutral-200">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    <button type="button" onClick={() => setImages((im) => im.filter((_, j) => j !== i))}
+                      className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"><X className="h-3 w-3" /></button>
+                  </div>
+                ))}
+                <label className="flex h-16 w-16 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-neutral-300 text-neutral-400 hover:border-emerald-400 hover:text-emerald-600">
+                  <Upload className="h-4 w-4" />
+                  <span className="text-[9px]">{uploading ? "..." : "อัปโหลด"}</span>
+                  <input type="file" accept="image/*" className="hidden" disabled={uploading}
+                    onChange={(e) => e.target.files?.[0] && pickImage(e.target.files[0])} />
+                </label>
+              </div>
             </div>
 
             {/* ===== ตัวเลือกย่อย (variants) ===== */}
@@ -103,6 +144,7 @@ export default function ProductForm({
               )}
             </div>
 
+            {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
               <Button disabled={pending}>{pending ? "กำลังบันทึก..." : "บันทึกสินค้า"}</Button>

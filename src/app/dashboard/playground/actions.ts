@@ -64,6 +64,7 @@ export async function playgroundReply(shopId: string, history: PlaygroundTurn[])
       shop: { id: shop.id, name: shop.name, description: shop.description, currency: shop.currency ?? "THB" },
       bot: {
         persona_name: bot?.persona_name ?? "แอดมิน",
+        greeting: bot?.greeting ?? null,
         tone: bot?.tone ?? "friendly",
         language: bot?.language ?? "th",
         custom_instructions: bot?.custom_instructions ?? null,
