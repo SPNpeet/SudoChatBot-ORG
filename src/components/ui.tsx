@@ -96,7 +96,11 @@ export function Badge({ className, tone = "neutral", ...props }: React.HTMLAttri
 }
 
 export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
-  return <table className={cn("w-full text-sm", className)} {...props} />;
+  return (
+    <div className="overflow-x-auto">
+      <table className={cn("w-full text-sm", className)} {...props} />
+    </div>
+  );
 }
 export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return <th className={cn("px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-400", className)} {...props} />;

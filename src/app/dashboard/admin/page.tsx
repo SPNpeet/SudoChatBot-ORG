@@ -50,7 +50,6 @@ export default async function AdminPage() {
       keys={keys ?? []}
       settings={settings ?? []}
       providers={PROVIDERS}
-      tiers={TIERS}
       userEmail={user.email ?? ""}
     />
   );

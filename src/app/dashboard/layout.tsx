@@ -9,6 +9,7 @@ import {
 import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
 import FeedbackWidget from "./feedback-widget";
+import { Logo } from "@/components/logo";
 
 const nav = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
@@ -39,8 +40,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* Sidebar — เดสก์ท็อป */}
       <aside className="fixed inset-y-0 z-30 hidden w-56 flex-col border-r border-neutral-200 bg-white md:flex">
         <div className="px-5 py-5">
-          <p className="text-sm font-bold">Sudo<span className="text-emerald-600">ChatBot</span></p>
-          <p className="mt-0.5 truncate text-xs text-neutral-400">{shop.name}</p>
+          <Logo />
+          <p className="mt-1.5 truncate text-xs text-neutral-400">{shop.name}</p>
         </div>
         <nav className="flex-1 space-y-0.5 px-3">
           {nav.map((item) => (
@@ -75,7 +76,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Header — มือถือ */}
       <header className="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
-        <p className="text-sm font-bold">Sudo<span className="text-emerald-600">ChatBot</span></p>
+        <Logo />
         <span className="max-w-[45%] truncate text-xs text-neutral-400">{shop.name}</span>
       </header>
 

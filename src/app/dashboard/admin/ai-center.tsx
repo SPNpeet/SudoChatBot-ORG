@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Label, Select, Badge } from "@/components/ui";
-import { CHAT_MODELS, EMBED_MODELS, type Provider } from "@/lib/ai-catalog";
+import { CHAT_MODELS, EMBED_MODELS, PROVIDERS, TIERS, providerLabel, type Provider } from "@/lib/ai-catalog";
 import { saveProviderKey, deleteProviderKey, saveRouting } from "./actions";
 import { KeyRound, CheckCircle2, XCircle, Cpu, Save, Trash2, ExternalLink } from "lucide-react";
 
@@ -12,8 +12,7 @@ interface ProviderMeta { id: Provider; label: string; keyHint: string; keyUrl: s
 export default function AdminAiCenter({
   keys, settings, providers, userEmail,
 }: {
-  keys: KeyRow[]; settings: SettingRow[]; providers: ProviderMeta[];
-  tiers: { id: string; label: string; desc: string }[]; userEmail: string;
+  keys: KeyRow[]; settings: SettingRow[]; providers: ProviderMeta[]; userEmail: string;
 }) {
   const keyMap = Object.fromEntries(keys.map((k) => [k.provider, k]));
   const setMap = Object.fromEntries(settings.map((s) => [`${s.purpose}_${s.tier}`, s]));
@@ -133,7 +132,7 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
   const tierState: Record<string, [{ provider: string; model: string }, (v: { provider: string; model: string }) => void]> = {
     economy: [economy, setEconomy], standard: [standard, setStandard], premium: [premium, setPremium],
   };
-  const tierLabel: Record<string, string> = { economy: "ประหยัด", standard: "มาตรฐาน (ค่าเริ่มต้นทุกร้าน)", premium: "พรีเมียม" };
+  const tierLabel = Object.fromEntries(TIERS.map((t) => [t.id, t.label]));
 
   function submit(fd: FormData) {
     setError(null);
@@ -160,9 +159,7 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
                 <div className="grid grid-cols-2 gap-2">
                   <Select name={`chat_${tier}_provider`} value={st.provider}
                     onChange={(e) => setSt({ provider: e.target.value, model: (CHAT_MODELS[e.target.value as Provider] ?? [])[0]?.id ?? "" })}>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="google">Google (Gemini)</option>
-                    <option value="openai">OpenAI (GPT)</option>
+                    {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
                   </Select>
                   <Select name={`chat_${tier}_model`} value={st.model} onChange={(e) => setSt({ ...st, model: e.target.value })}>
                     {models.map((m) => <option key={m.id} value={m.id}>{m.label}{m.note ? ` — ${m.note}` : ""}</option>)}
@@ -178,8 +175,7 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
             <div className="grid grid-cols-2 gap-2">
               <Select name="embed_provider" value={embed.provider}
                 onChange={(e) => setEmbed({ provider: e.target.value, model: (EMBED_MODELS[e.target.value] ?? [])[0]?.id ?? "" })}>
-                <option value="google">Google (Gemini)</option>
-                <option value="openai">OpenAI</option>
+                {Object.keys(EMBED_MODELS).map((p) => <option key={p} value={p}>{providerLabel(p)}</option>)}
               </Select>
               <Select name="embed_model" value={embed.model} onChange={(e) => setEmbed({ ...embed, model: e.target.value })}>
                 {(EMBED_MODELS[embed.provider] ?? []).map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}

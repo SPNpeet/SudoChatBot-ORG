@@ -3,7 +3,7 @@
 //  Admin AI Center — Server Actions (platform admin เท่านั้น)
 //  key เก็บใน Vault ผ่าน RPC, ทุกการเปลี่ยนแปลงลง audit_logs
 // ============================================================
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
 import type { Provider } from "@/lib/ai-catalog";

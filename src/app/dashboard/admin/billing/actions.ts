@@ -16,8 +16,10 @@ export async function confirmTopup(topupId: string, approve: boolean): Promise<A
   try {
     await assertPlatformAdmin();
     const supabase = await createClient();
-    const { error } = await supabase.rpc("admin_confirm_topup", { p_topup_id: topupId, p_approve: approve });
+    const { data, error } = await supabase.rpc("admin_confirm_topup", { p_topup_id: topupId, p_approve: approve });
     if (error) return { ok: false, error: error.message };
+    const result = data as { ok: boolean; message?: string } | null;
+    if (result && result.ok === false) return { ok: false, error: result.message ?? "ทำรายการไม่สำเร็จ" };
     revalidatePath("/dashboard/admin/billing");
     return { ok: true };
   } catch (e) {

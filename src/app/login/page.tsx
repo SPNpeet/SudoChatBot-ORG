@@ -1,6 +1,7 @@
 "use client";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
+import { Logo } from "@/components/logo";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState<string | null>(null);
@@ -68,9 +69,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8">
-        <h1 className="text-center text-xl font-bold">
-          Sudo<span className="text-emerald-600">ChatBot</span>
-        </h1>
+        <Logo className="justify-center" />
         <p className="mt-2 text-center text-sm text-neutral-500">
           {mode === "signin" ? "เข้าสู่ระบบเพื่อจัดการร้านของคุณ" : "สร้างบัญชีใหม่เพื่อเริ่มใช้งาน"}
         </p>
