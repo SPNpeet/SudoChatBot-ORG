@@ -10,46 +10,63 @@ async function assertPlatformAdmin() {
   return { supabase, user };
 }
 
-export async function confirmTopup(topupId: string, approve: boolean) {
-  await assertPlatformAdmin();
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_confirm_topup", { p_topup_id: topupId, p_approve: approve });
-  if (error) throw new Error(error.message);
-  revalidatePath("/dashboard/admin/billing");
-  return data;
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
+export async function confirmTopup(topupId: string, approve: boolean): Promise<ActionResult> {
+  try {
+    await assertPlatformAdmin();
+    const supabase = await createClient();
+    const { error } = await supabase.rpc("admin_confirm_topup", { p_topup_id: topupId, p_approve: approve });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/dashboard/admin/billing");
+    return { ok: true };
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, error: m.includes("forbidden") ? "ไม่มีสิทธิ์ทำรายการนี้" : `ทำรายการไม่สำเร็จ: ${m.slice(0, 150)}` };
+  }
 }
 
-export async function savePlatformBilling(formData: FormData) {
-  await assertPlatformAdmin();
-  const svc = createServiceClient();
-  const { error } = await svc.from("platform_billing_settings").update({
-    promptpay_id: String(formData.get("promptpay_id") ?? "").trim() || null,
-    account_name: String(formData.get("account_name") ?? "").trim() || null,
-    slip_provider: String(formData.get("slip_provider") ?? "manual"),
-    payment_gateway: formData.get("payment_gateway") === "omise" ? "omise" : "promptpay_slip",
-    omise_public_key: String(formData.get("omise_public_key") ?? "").trim() || null,
-    company_name: String(formData.get("company_name") ?? "").trim() || null,
-    company_address: String(formData.get("company_address") ?? "").trim() || null,
-    tax_id: String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null,
-    tax_branch: String(formData.get("tax_branch") ?? "").trim() || "สำนักงานใหญ่",
-    vat_registered: formData.get("vat_registered") === "on",
-    email_from: String(formData.get("email_from") ?? "").trim() || null,
-    low_credit_threshold: Math.max(0, Number(formData.get("low_credit_threshold") ?? 50) || 50),
-    updated_at: new Date().toISOString(),
-  }).eq("id", true);
-  if (error) throw new Error(error.message);
-  const supabase = await createClient();
-  const slipKey = String(formData.get("slip_api_key") ?? "").trim();
-  if (slipKey) await supabase.rpc("store_platform_slip_key", { p_key: slipKey });
-  const omiseKey = String(formData.get("omise_secret_key") ?? "").trim();
-  if (omiseKey) {
-    const { error: keyErr } = await supabase.rpc("store_platform_omise_key", { p_key: omiseKey });
-    if (keyErr) throw new Error(`บันทึก Omise secret key ไม่สำเร็จ: ${keyErr.message}`);
+export async function savePlatformBilling(formData: FormData): Promise<ActionResult> {
+  try {
+    await assertPlatformAdmin();
+    const svc = createServiceClient();
+    const { error } = await svc.from("platform_billing_settings").update({
+      promptpay_id: String(formData.get("promptpay_id") ?? "").trim() || null,
+      account_name: String(formData.get("account_name") ?? "").trim() || null,
+      slip_provider: String(formData.get("slip_provider") ?? "manual"),
+      payment_gateway: formData.get("payment_gateway") === "omise" ? "omise" : "promptpay_slip",
+      omise_public_key: String(formData.get("omise_public_key") ?? "").trim() || null,
+      company_name: String(formData.get("company_name") ?? "").trim() || null,
+      company_address: String(formData.get("company_address") ?? "").trim() || null,
+      tax_id: String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null,
+      tax_branch: String(formData.get("tax_branch") ?? "").trim() || "สำนักงานใหญ่",
+      vat_registered: formData.get("vat_registered") === "on",
+      email_from: String(formData.get("email_from") ?? "").trim() || null,
+      low_credit_threshold: Math.max(0, Number(formData.get("low_credit_threshold") ?? 50) || 50),
+      updated_at: new Date().toISOString(),
+    }).eq("id", true);
+    if (error) return { ok: false, error: `บันทึกไม่สำเร็จ: ${error.message}` };
+
+    const supabase = await createClient();
+    const slipKey = String(formData.get("slip_api_key") ?? "").trim();
+    if (slipKey) {
+      const { error: e1 } = await supabase.rpc("store_platform_slip_key", { p_key: slipKey });
+      if (e1) return { ok: false, error: `บันทึก slip API key ไม่สำเร็จ: ${e1.message}` };
+    }
+    const omiseKey = String(formData.get("omise_secret_key") ?? "").trim();
+    if (omiseKey) {
+      const { error: e2 } = await supabase.rpc("store_platform_omise_key", { p_key: omiseKey });
+      if (e2) return { ok: false, error: `บันทึก Omise secret key ไม่สำเร็จ: ${e2.message}` };
+    }
+    const resendKey = String(formData.get("resend_api_key") ?? "").trim();
+    if (resendKey) {
+      const { error: e3 } = await supabase.rpc("store_platform_resend_key", { p_key: resendKey });
+      if (e3) return { ok: false, error: `บันทึก Resend API key ไม่สำเร็จ: ${e3.message}` };
+    }
+    revalidatePath("/dashboard/admin/billing");
+    return { ok: true };
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, error: m.includes("forbidden") ? "ไม่มีสิทธิ์ตั้งค่านี้" : `บันทึกไม่สำเร็จ: ${m.slice(0, 150)}` };
   }
-  const resendKey = String(formData.get("resend_api_key") ?? "").trim();
-  if (resendKey) {
-    const { error: keyErr } = await supabase.rpc("store_platform_resend_key", { p_key: resendKey });
-    if (keyErr) throw new Error(`บันทึก Resend API key ไม่สำเร็จ: ${keyErr.message}`);
-  }
-  revalidatePath("/dashboard/admin/billing");
 }
