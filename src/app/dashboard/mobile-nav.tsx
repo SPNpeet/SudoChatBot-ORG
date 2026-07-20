@@ -2,17 +2,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, MessageSquare, ShoppingBag, Package, Menu } from "lucide-react";
+import { LayoutDashboard, MessageSquare, ShoppingBag, Package, Menu, BrainCircuit } from "lucide-react";
 import { useState } from "react";
 import { BookOpen, Share2, Settings, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark, Store, MessagesSquare, ScrollText, Megaphone } from "lucide-react";
 
 const main = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
+  { href: "/dashboard/assistant", label: "ผู้จัดการ AI", icon: BrainCircuit },
   { href: "/dashboard/chats", label: "แชท", icon: MessageSquare },
   { href: "/dashboard/orders", label: "ออเดอร์", icon: ShoppingBag },
-  { href: "/dashboard/products", label: "สินค้า", icon: Package },
 ];
 const more = [
+  { href: "/dashboard/products", label: "สินค้า", icon: Package },
   { href: "/dashboard/playground", label: "ทดลองบอท", icon: Sparkles },
   { href: "/dashboard/slips", label: "คลังสลิป", icon: Receipt },
   { href: "/dashboard/knowledge", label: "คลังความรู้", icon: BookOpen },

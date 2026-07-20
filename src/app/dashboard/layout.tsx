@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import {
   LayoutDashboard, MessageSquare, ShoppingBag, Package,
   BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark,
-  Store, MessagesSquare, ScrollText, Megaphone,
+  Store, MessagesSquare, ScrollText, Megaphone, BrainCircuit,
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
@@ -14,6 +14,7 @@ import { Logo } from "@/components/logo";
 
 const nav = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
+  { href: "/dashboard/assistant", label: "ผู้จัดการร้าน AI", icon: BrainCircuit },
   { href: "/dashboard/playground", label: "ทดลองบอท", icon: Sparkles },
   { href: "/dashboard/chats", label: "แชท", icon: MessageSquare },
   { href: "/dashboard/orders", label: "ออเดอร์", icon: ShoppingBag },
