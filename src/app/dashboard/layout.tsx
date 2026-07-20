@@ -80,7 +80,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </header>
 
       {/* เนื้อหา */}
-      <main className="px-4 py-5 pb-24 md:ml-56 md:px-8 md:py-7 md:pb-7">
+      <main className="px-4 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))] md:ml-56 md:px-8 md:py-7 md:pb-7">
         <Notifications />
         {children}
       </main>

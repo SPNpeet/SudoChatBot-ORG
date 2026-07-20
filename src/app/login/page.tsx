@@ -80,12 +80,12 @@ export default function LoginPage() {
           <input
             type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
             placeholder="อีเมล" autoComplete="email"
-            className="h-11 w-full rounded-xl border border-neutral-300 px-3.5 text-sm outline-none focus:border-emerald-500"
+            className="h-11 w-full rounded-xl border border-neutral-300 px-3.5 text-base outline-none focus:border-emerald-500 sm:text-sm"
           />
           <input
             type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
             placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            className="h-11 w-full rounded-xl border border-neutral-300 px-3.5 text-sm outline-none focus:border-emerald-500"
+            className="h-11 w-full rounded-xl border border-neutral-300 px-3.5 text-base outline-none focus:border-emerald-500 sm:text-sm"
           />
           <button
             type="submit" disabled={!!loading}

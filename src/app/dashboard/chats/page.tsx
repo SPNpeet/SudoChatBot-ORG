@@ -140,7 +140,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
               <input type="hidden" name="shop_id" value={shop.id} />
               <input
                 name="text" autoComplete="off" placeholder="พิมพ์ตอบลูกค้าในนามร้าน..."
-                className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-sm outline-none focus:border-emerald-500"
+                className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm"
               />
               <button className="h-10 rounded-xl bg-neutral-900 px-4 text-sm font-medium text-white hover:bg-neutral-700">ส่ง</button>
             </form>

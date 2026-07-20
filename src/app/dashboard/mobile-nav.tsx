@@ -45,7 +45,7 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
           </div>
         </div>
       )}
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-neutral-200 bg-white/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-neutral-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         {main.map((m) => (
           <Link key={m.href} href={m.href}
             className={cn("flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px]", active(m.href) ? "text-emerald-600" : "text-neutral-400")}>

@@ -39,7 +39,8 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
   return (
     <input
       className={cn(
-        "h-10 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm outline-none",
+        // text-base (16px) กัน iOS Safari auto-zoom ตอนโฟกัส input ที่ font-size < 16px
+        "h-10 w-full rounded-xl border border-neutral-300 bg-white px-3 text-base outline-none sm:text-sm",
         "focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 placeholder:text-neutral-400",
         className,
       )}
@@ -52,7 +53,7 @@ export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<H
   return (
     <textarea
       className={cn(
-        "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm outline-none min-h-24",
+        "w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-base outline-none min-h-24 sm:text-sm",
         "focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 placeholder:text-neutral-400",
         className,
       )}
@@ -65,7 +66,7 @@ export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLS
   return (
     <select
       className={cn(
-        "h-10 w-full rounded-xl border border-neutral-300 bg-white px-3 text-sm outline-none focus:border-emerald-500",
+        "h-10 w-full rounded-xl border border-neutral-300 bg-white px-3 text-base outline-none focus:border-emerald-500 sm:text-sm",
         className,
       )}
       {...props}

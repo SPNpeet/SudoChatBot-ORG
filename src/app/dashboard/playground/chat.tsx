@@ -138,7 +138,7 @@ export default function PlaygroundChat({ shopId, botName }: { shopId: string; bo
         <input
           value={input} onChange={(e) => setInput(e.target.value)} disabled={busy}
           placeholder="พิมพ์เหมือนลูกค้าทักร้าน…" maxLength={500}
-          className="h-10 flex-1 rounded-xl border border-neutral-300 px-3.5 text-sm outline-none focus:border-emerald-500 disabled:bg-neutral-50"
+          className="h-10 flex-1 rounded-xl border border-neutral-300 px-3.5 text-base outline-none focus:border-emerald-500 disabled:bg-neutral-50 sm:text-sm"
         />
         <button type="submit" disabled={busy || !input.trim()}
           className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-40">

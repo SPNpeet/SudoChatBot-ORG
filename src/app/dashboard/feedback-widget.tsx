@@ -29,7 +29,7 @@ export default function FeedbackWidget({ shopId }: { shopId: string }) {
   return (
     <>
       <button onClick={() => setOpen(true)} aria-label="แนะนำ/ติชม"
-        className="fixed bottom-20 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-neutral-900 text-white shadow-lg transition hover:bg-neutral-700 active:scale-95 md:bottom-6">
+        className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex h-11 w-11 items-center justify-center rounded-full bg-neutral-900 text-white shadow-lg transition hover:bg-neutral-700 active:scale-95 md:bottom-6">
         <MessageCirclePlus className="h-5 w-5" />
       </button>
       {open && (
