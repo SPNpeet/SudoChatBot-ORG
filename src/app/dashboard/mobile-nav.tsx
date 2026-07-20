@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, MessageSquare, ShoppingBag, Package, Menu } from "lucide-react";
 import { useState } from "react";
-import { BookOpen, Share2, Settings, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark } from "lucide-react";
+import { BookOpen, Share2, Settings, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark, Store, MessagesSquare, ScrollText } from "lucide-react";
 
 const main = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
@@ -36,6 +36,9 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
               { href: "/dashboard/admin", label: "ศูนย์ AI (Admin)", icon: ShieldCheck },
               { href: "/dashboard/admin/stats", label: "แดชบอร์ดแพลตฟอร์ม", icon: BarChart3 },
               { href: "/dashboard/admin/billing", label: "รายได้ + บัญชีรับเงิน", icon: Landmark },
+              { href: "/dashboard/admin/shops", label: "จัดการร้านค้า", icon: Store },
+              { href: "/dashboard/admin/feedback", label: "ความเห็นผู้ใช้", icon: MessagesSquare },
+              { href: "/dashboard/admin/logs", label: "Audit Log", icon: ScrollText },
             ] : [])].map((m) => (
               <Link key={m.href} href={m.href} onClick={() => setOpen(false)}
                 className={cn("flex items-center gap-3 rounded-xl px-4 py-3 text-sm", active(m.href) ? "bg-emerald-50 text-emerald-700" : "text-neutral-700 hover:bg-neutral-50")}>

@@ -35,3 +35,7 @@ export const ORDER_STATUS_TH: Record<string, string> = {
 export const DOC_STATUS_TH: Record<string, string> = {
   pending: "รอประมวลผล", processing: "กำลังประมวลผล", ready: "พร้อมใช้", failed: "ล้มเหลว",
 };
+
+export const PLAN_TH: Record<string, string> = { free: "ทดลองใช้", starter: "เริ่มต้น", pro: "โปร", enterprise: "องค์กร" };
+
+export const SHOP_STATUS_TH: Record<string, string> = { active: "ใช้งานอยู่", suspended: "ระงับชั่วคราว", closed: "ปิดร้านแล้ว" };

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   LayoutDashboard, MessageSquare, ShoppingBag, Package,
   BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark,
+  Store, MessagesSquare, ScrollText,
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
@@ -63,6 +64,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <Link href="/dashboard/admin/billing"
                 className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
                 <Landmark className="h-4 w-4" /> รายได้ + บัญชีรับเงิน
+              </Link>
+              <Link href="/dashboard/admin/shops"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
+                <Store className="h-4 w-4" /> จัดการร้านค้า
+              </Link>
+              <Link href="/dashboard/admin/feedback"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
+                <MessagesSquare className="h-4 w-4" /> ความเห็นผู้ใช้
+              </Link>
+              <Link href="/dashboard/admin/logs"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
+                <ScrollText className="h-4 w-4" /> Audit Log
               </Link>
             </>
           )}

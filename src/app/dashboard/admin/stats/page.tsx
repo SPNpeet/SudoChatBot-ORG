@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Badge, Card, CardContent, CardHeader, CardTitle, Table, Th, Td } from "@/components/ui";
-import { baht, dateTH } from "@/lib/utils";
+import { baht, dateTH, PLAN_TH } from "@/lib/utils";
 import { Users, Store, Wallet, MessageSquare, Activity, AlertTriangle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,6 @@ interface Stats {
   recent_topups: { amount: number; status: string; created_at: string; shop: string | null }[];
 }
 
-const PLAN_TH: Record<string, string> = { free: "ทดลองใช้", starter: "เริ่มต้น", pro: "โปร", enterprise: "องค์กร" };
 const USD_THB = 36; // อัตราประมาณสำหรับแสดงต้นทุน AI เป็นบาท
 
 function Stat({ label, value, sub, icon: Icon, tone = "neutral" }: {
@@ -66,9 +65,12 @@ export default async function PlatformStatsPage() {
           <h1 className="text-xl font-bold">แดชบอร์ดแพลตฟอร์ม</h1>
           <p className="text-sm text-neutral-400">ยอดรวมทั้งระบบแบบเรียลไทม์ — เห็นเฉพาะผู้ดูแลแพลตฟอร์ม</p>
         </div>
-        <div className="flex gap-3 text-sm">
+        <div className="flex flex-wrap gap-3 text-sm">
           <Link href="/dashboard/admin" className="text-emerald-600 hover:underline">→ ศูนย์ AI</Link>
           <Link href="/dashboard/admin/billing" className="text-emerald-600 hover:underline">→ รายได้ + ยืนยันเติมเงิน</Link>
+          <Link href="/dashboard/admin/shops" className="text-emerald-600 hover:underline">→ จัดการร้านค้า</Link>
+          <Link href="/dashboard/admin/feedback" className="text-emerald-600 hover:underline">→ ความเห็นผู้ใช้</Link>
+          <Link href="/dashboard/admin/logs" className="text-emerald-600 hover:underline">→ Audit Log</Link>
         </div>
       </div>
 
@@ -133,7 +135,10 @@ export default async function PlatformStatsPage() {
 
       {/* ===== เสียงจากผู้ใช้ ===== */}
       <Card>
-        <CardHeader><CardTitle>ความเห็นล่าสุดจากผู้ใช้ (ปุ่มแนะนำ/ติชมในแอป)</CardTitle></CardHeader>
+        <CardHeader className="flex items-center justify-between">
+          <CardTitle>ความเห็นล่าสุดจากผู้ใช้ (ปุ่มแนะนำ/ติชมในแอป)</CardTitle>
+          <Link href="/dashboard/admin/feedback" className="text-xs text-emerald-600 hover:underline">ดูทั้งหมด &rarr;</Link>
+        </CardHeader>
         <CardContent>
           {!fbRows?.length ? (
             <p className="text-sm text-neutral-400">ยังไม่มีความเห็นเข้ามา — ปุ่มแนะนำ/ติชมโชว์ทุกหน้าของผู้ใช้แล้ว</p>
@@ -153,7 +158,10 @@ export default async function PlatformStatsPage() {
       {/* ===== รายการล่าสุด ===== */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle>ร้านค้าล่าสุด</CardTitle></CardHeader>
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle>ร้านค้าล่าสุด</CardTitle>
+            <Link href="/dashboard/admin/shops" className="text-xs text-emerald-600 hover:underline">ดูทั้งหมด &rarr;</Link>
+          </CardHeader>
           <CardContent className="px-0 pb-0 pt-0">
             <Table>
               <thead><tr><Th>ร้าน</Th><Th>แพ็ก</Th><Th>เจ้าของ</Th><Th>สมัครเมื่อ</Th></tr></thead>

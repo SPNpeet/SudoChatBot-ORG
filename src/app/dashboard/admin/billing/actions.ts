@@ -11,6 +11,34 @@ async function assertPlatformAdmin() {
 }
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
+export type PendingTopup = { id: string; shopName: string; amount: number; status: string; createdAt: string; slipUrl: string | null };
+export type ListTopupsResult = { ok: true; rows: PendingTopup[]; hasMore: boolean } | { ok: false; error: string };
+
+const TOPUPS_PAGE_SIZE = 30;
+
+export async function listPendingTopups(offset: number): Promise<ListTopupsResult> {
+  try {
+    await assertPlatformAdmin();
+    const svc = createServiceClient();
+    const { data, error } = await svc.from("topups").select("id,amount,status,created_at,slip_path,shops(name)")
+      .in("status", ["pending", "verifying"]).order("created_at", { ascending: false })
+      .range(offset, offset + TOPUPS_PAGE_SIZE);
+    if (error) return { ok: false, error: error.message };
+    const all = data ?? [];
+    const rows: PendingTopup[] = all.slice(0, TOPUPS_PAGE_SIZE).map((t) => ({
+      id: t.id,
+      shopName: (t.shops as unknown as { name: string } | null)?.name ?? "-",
+      amount: t.amount,
+      status: t.status,
+      createdAt: t.created_at,
+      slipUrl: t.slip_path ? svc.storage.from("slips").getPublicUrl(t.slip_path).data.publicUrl : null,
+    }));
+    return { ok: true, rows, hasMore: all.length > TOPUPS_PAGE_SIZE };
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, error: m.includes("forbidden") ? "ไม่มีสิทธิ์ดูรายการนี้" : `โหลดไม่สำเร็จ: ${m.slice(0, 150)}` };
+  }
+}
 
 export async function confirmTopup(topupId: string, approve: boolean): Promise<ActionResult> {
   try {

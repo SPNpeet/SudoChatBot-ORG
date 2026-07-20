@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { baht } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import BillingSettingsForm from "./billing-settings-form";
-import TopupRow from "./topup-row";
+import PendingTopupsList from "./pending-topups-list";
+import type { PendingTopup } from "./actions";
 
 export const dynamic = "force-dynamic";
+const TOPUPS_PAGE_SIZE = 30;
 
 export default async function AdminBillingPage() {
   const { supabase } = await requireUser();
@@ -16,10 +18,20 @@ export default async function AdminBillingPage() {
   const svc = createServiceClient();
   const [{ data: rev }, { data: pending }, { data: pf }] = await Promise.all([
     supabase.rpc("platform_revenue"),
-    svc.from("topups").select("*, shops(name)").in("status", ["pending", "verifying"]).order("created_at", { ascending: false }).limit(30),
+    svc.from("topups").select("id,amount,status,created_at,slip_path,shops(name)").in("status", ["pending", "verifying"]).order("created_at", { ascending: false }).range(0, TOPUPS_PAGE_SIZE),
     svc.from("platform_billing_settings").select("promptpay_id,account_name,slip_provider,payment_gateway,omise_public_key,company_name,company_address,tax_id,tax_branch,vat_registered,email_from,low_credit_threshold").eq("id", true).single(),
   ]);
   const r = (rev ?? {}) as Record<string, number>;
+  const pendingAll = pending ?? [];
+  const pendingRows: PendingTopup[] = pendingAll.slice(0, TOPUPS_PAGE_SIZE).map((t) => ({
+    id: t.id,
+    shopName: (t.shops as unknown as { name: string } | null)?.name ?? "-",
+    amount: t.amount,
+    status: t.status,
+    createdAt: t.created_at,
+    slipUrl: t.slip_path ? svc.storage.from("slips").getPublicUrl(t.slip_path).data.publicUrl : null,
+  }));
+  const pendingHasMore = pendingAll.length > TOPUPS_PAGE_SIZE;
 
   const stats = [
     { label: "รายได้เติมเงินรวม", value: baht(r.total_topup ?? 0) },
@@ -45,16 +57,9 @@ export default async function AdminBillingPage() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>รอยืนยันการเติมเงิน ({(pending ?? []).length})</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          {(pending ?? []).length === 0 && <p className="py-4 text-center text-sm text-neutral-400">ไม่มีรายการรอยืนยัน</p>}
-          {(pending ?? []).map((t) => {
-            const shopName = (t.shops as unknown as { name: string } | null)?.name ?? "-";
-            const slipUrl = t.slip_path ? svc.storage.from("slips").getPublicUrl(t.slip_path).data.publicUrl : null;
-            return (
-              <TopupRow key={t.id} id={t.id} shopName={shopName} amount={t.amount} status={t.status} createdAt={t.created_at} slipUrl={slipUrl} />
-            );
-          })}
+        <CardHeader><CardTitle>รอยืนยันการเติมเงิน ({pendingRows.length}{pendingHasMore ? "+" : ""})</CardTitle></CardHeader>
+        <CardContent>
+          <PendingTopupsList initial={pendingRows} initialHasMore={pendingHasMore} />
         </CardContent>
       </Card>
 
