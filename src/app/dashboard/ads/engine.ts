@@ -56,6 +56,18 @@ export async function syncCampaigns(svc: SupabaseClient, shopId: string, adAccou
   });
   const rows = (j.data ?? []) as { id: string; name: string; objective?: string; status?: string; effective_status?: string; daily_budget?: string }[];
 
+  // งบของแคมเปญที่เราสร้างอยู่ระดับ adset (ไม่ใช่ CBO) — ต้องรวมจาก adset ไม่งั้นเพดานรวมนับได้ 0
+  const adsetBudget = new Map<string, number>();
+  try {
+    const as = await metaGet(`${adAccountId}/adsets`, token, {
+      fields: "campaign_id,daily_budget,effective_status", limit: "100",
+    });
+    for (const a of (as.data ?? []) as { campaign_id?: string; daily_budget?: string; effective_status?: string }[]) {
+      if (!a.campaign_id || !a.daily_budget) continue;
+      adsetBudget.set(a.campaign_id, (adsetBudget.get(a.campaign_id) ?? 0) + Number(a.daily_budget) / 100);
+    }
+  } catch { /* บางบัญชีไม่มี adset */ }
+
   // spend วันนี้ต่อแคมเปญ
   let spendMap = new Map<string, number>();
   try {
@@ -67,11 +79,12 @@ export async function syncCampaigns(svc: SupabaseClient, shopId: string, adAccou
   } catch { /* insights ว่างได้ถ้ายังไม่มี delivery */ }
 
   for (const c of rows) {
+    const budget = c.daily_budget ? Number(c.daily_budget) / 100 : (adsetBudget.get(c.id) ?? null);
     await svc.from("ad_campaigns").upsert({
       campaign_id: c.id, shop_id: shopId, ad_account_id: adAccountId,
       name: c.name, objective: c.objective ?? null,
       status: c.effective_status ?? c.status ?? null,
-      daily_budget: c.daily_budget ? Number(c.daily_budget) / 100 : null,
+      daily_budget: budget,
       spend_today: spendMap.get(c.id) ?? 0,
       synced_at: new Date().toISOString(),
     }, { onConflict: "campaign_id" });
@@ -101,11 +114,32 @@ export type ProposalPayload = CreateCampaignPayload | UpdateBudgetPayload | Resu
 export async function executeProposalPayload(ctx: { token: string; account: AdAccountInfo }, p: ProposalPayload): Promise<string> {
   const act = ctx.account.adAccountId;
   if (p.kind === "update_budget") {
-    await metaPost(p.campaign_id, ctx.token, { daily_budget: Math.round(p.new_daily_budget_thb * 100) });
+    // งบของแคมเปญที่ agent สร้างอยู่ระดับ adset — ยิงที่ campaign ได้เฉพาะ CBO เท่านั้น
+    const camp = await metaGet(p.campaign_id, ctx.token, { fields: "daily_budget" });
+    if (camp.daily_budget) {
+      await metaPost(p.campaign_id, ctx.token, { daily_budget: Math.round(p.new_daily_budget_thb * 100) });
+    } else {
+      const as = await metaGet(`${p.campaign_id}/adsets`, ctx.token, { fields: "id,daily_budget", limit: "50" });
+      const sets = ((as.data ?? []) as { id: string; daily_budget?: string }[]).filter((s) => s.daily_budget);
+      if (!sets.length) throw new Error("แคมเปญนี้ไม่มี ad set ที่ตั้งงบไว้ — แก้งบใน Ads Manager โดยตรง");
+      const per = Math.round((p.new_daily_budget_thb * 100) / sets.length);
+      for (const s of sets) await metaPost(s.id, ctx.token, { daily_budget: per });
+    }
     return p.campaign_id;
   }
   if (p.kind === "resume_campaign") {
+    // แคมเปญที่ agent สร้างเป็น PAUSED ทั้ง 3 ชั้น — เปิดแค่ campaign ลูกยัง PAUSED = แอดไม่รันจริง
     await metaPost(p.campaign_id, ctx.token, { status: "ACTIVE" });
+    try {
+      const as = await metaGet(`${p.campaign_id}/adsets`, ctx.token, { fields: "id,status", limit: "50" });
+      for (const s of (as.data ?? []) as { id: string; status?: string }[]) {
+        if (s.status === "PAUSED") await metaPost(s.id, ctx.token, { status: "ACTIVE" });
+      }
+      const ads = await metaGet(`${p.campaign_id}/ads`, ctx.token, { fields: "id,status", limit: "50" });
+      for (const a of (ads.data ?? []) as { id: string; status?: string }[]) {
+        if (a.status === "PAUSED") await metaPost(a.id, ctx.token, { status: "ACTIVE" });
+      }
+    } catch (e) { console.error("resume children failed", (e as Error).message); }
     return p.campaign_id;
   }
   // create_campaign — สร้างเป็น PAUSED เสมอ (safety default) แล้วให้ resume ผ่าน proposal อีกชั้น

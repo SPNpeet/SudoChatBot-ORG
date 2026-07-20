@@ -57,7 +57,7 @@ export async function auditLog(entry: {
 
 export async function logAiUsage(entry: {
   shop_id: string; conversation_id?: string; message_id?: string;
-  purpose: "reply" | "embedding" | "ocr" | "slip_verify" | "summarize" | "classify" | "ads";
+  purpose: "reply" | "embedding" | "ocr" | "slip_verify" | "summarize" | "classify" | "ads" | "comment";
   model?: string; input_tokens?: number; output_tokens?: number; cost_usd?: number;
 }): Promise<void> {
   const { error } = await sb().from("ai_usage_logs").insert(entry);

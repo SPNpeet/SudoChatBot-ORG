@@ -40,6 +40,8 @@ export interface AgentContext {
   customer_id: string;
   history: { role: "user" | "assistant"; content: string }[];
   draftOrder: Record<string, unknown> | null;
+  // id ข้อความขาเข้า — ใช้กันบิลซ้ำเมื่อ pgmq retry (bill_bot_reply idempotent ต่อ ref)
+  bill_ref?: string;
 }
 
 export interface AgentResult {
@@ -576,7 +578,7 @@ ${ctx.shop.description ? `ข้อมูลร้าน: ${ctx.shop.description
 // ---------- main ----------
 export async function runSalesAgent(ctx: AgentContext): Promise<AgentResult> {
   // ==== Billing gate: เช็คโควตา/เครดิตก่อนให้บอทตอบ ====
-  const { data: bill } = await sb().rpc("bill_bot_reply", { p_shop_id: ctx.shop.id });
+  const { data: bill } = await sb().rpc("bill_bot_reply", { p_shop_id: ctx.shop.id, p_ref: ctx.bill_ref ?? null });
   if (bill && bill.allowed === false) {
     return {
       messages: [], handoff: false, billBlocked: true,

@@ -185,6 +185,7 @@ async function processIncoming(item: QueueIncoming): Promise<void> {
     } : null,
     conversation_id: conv.id, customer_id: customer.id,
     history: merged, draftOrder: draft ?? null,
+    bill_ref: inMsg?.id ? `msg:${inMsg.id}` : undefined,
   };
 
   const result = await runSalesAgent(ctx);
@@ -283,7 +284,7 @@ async function processComment(item: QueueComment): Promise<void> {
   // rate limit + billing gate เดียวกับข้อความแชท
   const { data: withinLimit } = await s.rpc("check_shop_rate_limit", { p_shop_id: item.shop_id });
   if (withinLimit === false) { await done({ status: "skipped", error: "rate limited" }); return; }
-  const { data: bill } = await s.rpc("bill_bot_reply", { p_shop_id: item.shop_id });
+  const { data: bill } = await s.rpc("bill_bot_reply", { p_shop_id: item.shop_id, p_ref: `comment:${item.comment_id}` });
   if (bill && bill.allowed === false) {
     await s.rpc("notify_bot_blocked", { p_shop_id: item.shop_id });
     await done({ status: "skipped", error: "billing blocked" });
@@ -303,7 +304,7 @@ async function processComment(item: QueueComment): Promise<void> {
     });
     dmText = r.text;
     await logAiUsage({
-      shop_id: item.shop_id, purpose: "reply", model: r.model,
+      shop_id: item.shop_id, purpose: "comment", model: r.model,
       input_tokens: r.input_tokens, output_tokens: r.output_tokens, cost_usd: r.cost_usd,
     });
   } catch (e) {
