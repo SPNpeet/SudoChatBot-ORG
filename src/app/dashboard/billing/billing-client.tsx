@@ -5,7 +5,7 @@ import { baht, cn } from "@/lib/utils";
 import { createTopup, createOmiseTopup, getTopupStatus, changePlan } from "./actions";
 import { Check, Wallet, Upload } from "lucide-react";
 
-interface Plan { code: string; name: string; price_monthly: number; included_replies: number; price_per_extra_reply: number; features: string[] }
+interface Plan { code: string; name: string; price_monthly: number; included_replies: number; price_per_extra_reply: number; features: string[]; daily_reply_cap?: number | null }
 interface TopupState { topupId: string; qrUrl: string; promptpayId?: string; accountName?: string; amount: number; gateway?: "omise" }
 
 export default function BillingClient({
@@ -94,32 +94,54 @@ export default function BillingClient({
             </div>
           ) : (
             <div className="space-y-4">
+              {/* ยอดเครดิต ก่อน -> หลัง */}
+              <div className="flex items-center justify-center gap-3 rounded-xl bg-emerald-50/60 px-4 py-3 text-center text-sm">
+                <div>
+                  <p className="text-[11px] text-neutral-400">เครดิตตอนนี้</p>
+                  <p className="font-semibold text-neutral-700">{baht(balance)}</p>
+                </div>
+                <span className="text-lg text-emerald-400">→</span>
+                <div>
+                  <p className="text-[11px] text-neutral-400">หลังยืนยัน</p>
+                  <p className="font-bold text-emerald-600">{baht(balance + topup.amount)}</p>
+                </div>
+              </div>
+
+              {/* QR + จำนวน + สถานะ */}
               <div className="flex flex-col items-center rounded-2xl border border-neutral-200 p-5">
-                <p className="mb-1 text-sm font-medium">สแกนจ่ายด้วยแอปธนาคาร</p>
-                <p className="mb-3 text-2xl font-bold text-emerald-600">{baht(topup.amount)}</p>
+                <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-[11px] font-medium text-amber-700">
+                  <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-500" />
+                  {topup.gateway === "omise" ? "รอการชำระเงิน" : "รอโอนเงิน"}
+                </span>
+                <p className="text-sm font-medium">① สแกน QR แล้วโอน</p>
+                <p className="mb-3 text-3xl font-bold text-emerald-600">{baht(topup.amount)}</p>
                 {topup.qrUrl
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  ? <img src={topup.qrUrl} alt="PromptPay QR" className="h-56 w-56" />
+                  ? <img src={topup.qrUrl} alt="PromptPay QR" className="h-52 w-52 max-w-full sm:h-56 sm:w-56" />
                   : <p className="font-mono text-sm">พร้อมเพย์: {topup.promptpayId ?? "-"}</p>}
-                <p className="mt-2 text-[11px] text-neutral-400">
+                <p className="mt-2 text-center text-[11px] text-neutral-400">
                   {topup.gateway === "omise" ? "ชำระผ่าน Omise · เครดิตเข้าอัตโนมัติทันทีที่จ่ายสำเร็จ" : `${topup.accountName ?? "บัญชีแพลตฟอร์ม"} · พร้อมเพย์ ${topup.promptpayId ?? "-"}`}
                 </p>
               </div>
+
               {topup.gateway === "omise" ? (
                 <div className="rounded-xl bg-neutral-50 p-4 text-center">
                   {omisePaid
                     ? <p className="text-sm font-medium text-emerald-600">✓ ชำระเงินสำเร็จ! เครดิตเข้าแล้ว — กำลังรีเฟรช...</p>
-                    : <p className="text-xs text-neutral-500"><span className="mr-1 inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" /> กำลังรอการชำระเงิน — ไม่ต้องอัปโหลดสลิป ระบบยืนยันอัตโนมัติ</p>}
+                    : <p className="text-xs text-neutral-500"><span className="mr-1 inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" /> ② กำลังรอการชำระเงิน — ไม่ต้องอัปโหลดสลิป ระบบยืนยันอัตโนมัติ</p>}
                   {slipMsg && !slipMsg.ok && <p className="mt-2 text-xs text-red-600">{slipMsg.text}</p>}
                 </div>
               ) : (
                 <div className="rounded-xl bg-neutral-50 p-4">
-                  <p className="mb-2 text-sm font-medium"><Upload className="mr-1 inline h-4 w-4" /> อัปโหลดสลิปเพื่อยืนยัน</p>
-                  <input type="file" accept="image/*" disabled={uploading}
+                  <p className="mb-2 text-sm font-medium"><Upload className="mr-1 inline h-4 w-4" /> ② อัปโหลดสลิปเพื่อยืนยัน</p>
+                  <input type="file" accept="image/*" capture="environment" disabled={uploading}
                     onChange={(e) => e.target.files?.[0] && uploadSlip(e.target.files[0])}
                     className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-neutral-900 file:px-3 file:py-1.5 file:text-xs file:text-white" />
-                  {uploading && <p className="mt-2 text-xs text-neutral-400">กำลังตรวจสอบสลิป...</p>}
-                  {slipMsg && <p className={cn("mt-2 text-xs", slipMsg.ok ? "text-emerald-600" : "text-red-600")}>{slipMsg.text}</p>}
+                  {uploading
+                    ? <p className="mt-2 flex items-center gap-1.5 text-xs text-neutral-500"><span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" /> กำลังตรวจสอบสลิป...</p>
+                    : slipMsg
+                      ? <p className={cn("mt-2 rounded-lg px-2.5 py-1.5 text-xs", slipMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600")}>{slipMsg.ok ? "✓ " : ""}{slipMsg.text}</p>
+                      : <p className="mt-2 text-[11px] text-neutral-400">โอนเสร็จแล้วถ่ายรูป/แคปสลิปมาอัปโหลด — ระบบตรวจอัตโนมัติ หรือแอดมินยืนยันให้ ดูสถานะได้ที่ &ldquo;ประวัติการเติมเงิน&rdquo; ด้านล่าง</p>}
                 </div>
               )}
               <button onClick={() => { setTopup(null); setSlipMsg(null); }} className="text-xs text-neutral-400 hover:text-neutral-700">← เติมจำนวนอื่น</button>
@@ -140,7 +162,11 @@ export default function BillingClient({
                   {current && <Badge tone="green" className="mb-2 self-start">แพ็กเกจปัจจุบัน</Badge>}
                   <p className="font-bold">{p.name}</p>
                   <p className="mt-1"><span className="text-xl font-bold">{p.price_monthly ? baht(p.price_monthly) : "ฟรี"}</span>{p.price_monthly ? <span className="text-xs text-neutral-400">/เดือน</span> : ""}</p>
-                  <p className="mt-1 text-[11px] text-neutral-400">ตอบฟรี {p.included_replies.toLocaleString()} ข้อความ · เกิน {p.price_per_extra_reply}฿/ข้อความ</p>
+                  {p.code === "free" ? (
+                    <p className="mt-1 text-[11px] text-neutral-400">ตอบฟรี {(p.daily_reply_cap ?? 30).toLocaleString()} ข้อความ/วัน (รีเซ็ตทุกวัน)</p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-neutral-400">ตอบฟรี {p.included_replies.toLocaleString()} ข้อความ/เดือน · เกิน {p.price_per_extra_reply}฿/ข้อความ{p.daily_reply_cap ? ` · สูงสุด ${p.daily_reply_cap.toLocaleString()}/วัน` : ""}</p>
+                  )}
                   <ul className="mt-3 flex-1 space-y-1.5">
                     {(p.features ?? []).map((f, i) => (
                       <li key={i} className="flex items-start gap-1.5 text-[11px] text-neutral-600"><Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" /> {f}</li>
