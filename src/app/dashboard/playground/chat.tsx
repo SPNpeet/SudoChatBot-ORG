@@ -60,7 +60,7 @@ export default function PlaygroundChat({ shopId, botName }: { shopId: string; bo
   }
 
   return (
-    <div className="flex h-[calc(100vh-220px)] min-h-[420px] flex-col rounded-2xl border border-neutral-200 bg-white">
+    <div className="flex h-[calc(100svh-220px)] min-h-[420px] flex-col rounded-2xl border border-neutral-200 bg-white">
       {/* header */}
       <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
         <div className="flex items-center gap-2">
@@ -109,7 +109,7 @@ export default function PlaygroundChat({ shopId, botName }: { shopId: string; bo
               </div>
             )}
             <div className={cn(
-              "max-w-[85%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm",
+              "max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3.5 py-2 text-sm",
               m.role === "user" ? "rounded-br-md bg-emerald-600 text-white" : "rounded-bl-md bg-neutral-100 text-neutral-800",
             )}>
               {m.content}

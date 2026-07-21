@@ -33,7 +33,7 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
     <>
       {open && (
         <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)}>
-          <div className="absolute bottom-16 left-3 right-3 rounded-2xl border border-neutral-200 bg-white p-2" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute bottom-16 left-3 right-3 max-h-[65vh] overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-2" onClick={(e) => e.stopPropagation()}>
             {[...more, ...(isAdmin ? [
               { href: "/dashboard/admin", label: "ศูนย์ AI (Admin)", icon: ShieldCheck },
               { href: "/dashboard/admin/stats", label: "แดชบอร์ดแพลตฟอร์ม", icon: BarChart3 },

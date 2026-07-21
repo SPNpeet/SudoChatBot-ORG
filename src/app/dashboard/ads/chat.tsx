@@ -116,13 +116,13 @@ export default function AdsChat({ shopId }: { shopId: string }) {
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600">ข้อเสนอ — ต้องยืนยันก่อนใช้เงิน</p>
                   <p className="mt-1 text-sm text-neutral-800">{p.summary}</p>
                   {p.state === "pending" && (
-                    <div className="mt-2.5 flex gap-2">
+                    <div className="mt-2.5 flex gap-3">
                       <button onClick={() => confirm(i, p.id)}
-                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500">
-                        ยืนยัน
+                        className="min-h-[42px] flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500 sm:flex-none">
+                        ยืนยันยิงแอด
                       </button>
                       <button onClick={() => reject(i, p.id)}
-                        className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs text-neutral-600 hover:bg-white">
+                        className="min-h-[42px] flex-1 rounded-lg border border-neutral-300 px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50 sm:flex-none">
                         ไม่เอา
                       </button>
                     </div>

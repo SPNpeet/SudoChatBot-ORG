@@ -65,54 +65,96 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           {orders.length === 0 ? (
             <EmptyState title="ไม่มีออเดอร์ในหมวดนี้" />
           ) : (
-            <Table>
-              <thead><tr><Th>ออเดอร์</Th><Th>ลูกค้า / รายการ</Th><Th>ยอดรวม</Th><Th>สถานะ</Th><Th>ปิดโดย</Th>{canFulfill && <Th>จัดการ</Th>}</tr></thead>
-              <tbody>
+            <>
+              {/* ===== ตาราง — จอใหญ่ (≥md) ===== */}
+              <div className="hidden md:block">
+                <Table>
+                  <thead><tr><Th>ออเดอร์</Th><Th>ลูกค้า / รายการ</Th><Th>ยอดรวม</Th><Th>สถานะ</Th><Th>ปิดโดย</Th>{canFulfill && <Th>จัดการ</Th>}</tr></thead>
+                  <tbody>
+                    {orders.map((o) => {
+                      const pendingPay = o.payments?.find((p) => ["pending", "verifying"].includes(p.status));
+                      return (
+                        <tr key={o.id}>
+                          <Td>
+                            <p className="font-medium">{o.order_number}</p>
+                            <p className="text-[11px] text-neutral-400">{dateTH(o.created_at)}</p>
+                          </Td>
+                          <Td>
+                            <p className="font-medium">{o.shipping_name ?? o.customers?.display_name ?? "-"}</p>
+                            <p className="max-w-64 truncate text-[11px] text-neutral-400">
+                              {(o.order_items ?? []).map((i) => `${i.product_name}${i.variant_name ? ` (${i.variant_name})` : ""} x${i.quantity}`).join(", ")}
+                            </p>
+                            {o.tracking_number && <p className="text-[11px] text-sky-600">พัสดุ: {o.tracking_number}</p>}
+                          </Td>
+                          <Td className="font-semibold">{baht(o.total)}</Td>
+                          <Td>
+                            <Badge tone={["paid", "confirmed", "completed"].includes(o.status) ? "green" : o.status === "shipped" ? "blue" : o.status === "pending_payment" ? "amber" : "neutral"}>
+                              {ORDER_STATUS_TH[o.status] ?? o.status}
+                            </Badge>
+                          </Td>
+                          <Td>{o.closed_by === "bot" ? <Badge tone="blue">🤖 บอท</Badge> : o.closed_by ? "แอดมิน" : "-"}</Td>
+                          {canFulfill && (
+                            <Td>
+                              <div className="flex flex-col gap-1.5">
+                                {o.status === "pending_payment" && pendingPay && canManage && <VerifyButtons paymentId={pendingPay.id} shopId={shop.id} />}
+                                {["paid", "confirmed"].includes(o.status) && <ShipForm orderId={o.id} shopId={shop.id} />}
+                                {["pending_payment", "paid", "confirmed", "shipped"].includes(o.status) && canManage && <RefundForm orderId={o.id} shopId={shop.id} isRefund={["paid", "confirmed", "shipped"].includes(o.status)} />}
+                                {canManage && !["cancelled", "expired"].includes(o.status) && <EditOrderModal order={o} shopId={shop.id} />}
+                              </div>
+                            </Td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </Table>
+              </div>
+
+              {/* ===== การ์ด — มือถือ (<md) ===== */}
+              <div className="divide-y divide-neutral-100 md:hidden">
                 {orders.map((o) => {
                   const pendingPay = o.payments?.find((p) => ["pending", "verifying"].includes(p.status));
+                  const hasActions = canFulfill && (
+                    (o.status === "pending_payment" && pendingPay && canManage) ||
+                    ["paid", "confirmed"].includes(o.status) ||
+                    (["pending_payment", "paid", "confirmed", "shipped"].includes(o.status) && canManage) ||
+                    (canManage && !["cancelled", "expired"].includes(o.status))
+                  );
                   return (
-                    <tr key={o.id}>
-                      <Td>
-                        <p className="font-medium">{o.order_number}</p>
-                        <p className="text-[11px] text-neutral-400">{dateTH(o.created_at)}</p>
-                      </Td>
-                      <Td>
-                        <p className="font-medium">{o.shipping_name ?? o.customers?.display_name ?? "-"}</p>
-                        <p className="max-w-64 truncate text-[11px] text-neutral-400">
-                          {(o.order_items ?? []).map((i) => `${i.product_name}${i.variant_name ? ` (${i.variant_name})` : ""} x${i.quantity}`).join(", ")}
-                        </p>
-                        {o.tracking_number && <p className="text-[11px] text-sky-600">พัสดุ: {o.tracking_number}</p>}
-                      </Td>
-                      <Td className="font-semibold">{baht(o.total)}</Td>
-                      <Td>
+                    <div key={o.id} className="space-y-2.5 px-4 py-3.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-semibold">{o.order_number}</p>
+                          <p className="text-[11px] text-neutral-400">{dateTH(o.created_at)}</p>
+                        </div>
                         <Badge tone={["paid", "confirmed", "completed"].includes(o.status) ? "green" : o.status === "shipped" ? "blue" : o.status === "pending_payment" ? "amber" : "neutral"}>
                           {ORDER_STATUS_TH[o.status] ?? o.status}
                         </Badge>
-                      </Td>
-                      <Td>{o.closed_by === "bot" ? <Badge tone="blue">🤖 บอท</Badge> : o.closed_by ? "แอดมิน" : "-"}</Td>
-                      {canFulfill && (
-                        <Td>
-                          <div className="flex flex-col gap-1.5">
-                            {o.status === "pending_payment" && pendingPay && canManage && (
-                              <VerifyButtons paymentId={pendingPay.id} shopId={shop.id} />
-                            )}
-                            {["paid", "confirmed"].includes(o.status) && (
-                              <ShipForm orderId={o.id} shopId={shop.id} />
-                            )}
-                            {["pending_payment", "paid", "confirmed", "shipped"].includes(o.status) && canManage && (
-                              <RefundForm orderId={o.id} shopId={shop.id} isRefund={["paid", "confirmed", "shipped"].includes(o.status)} />
-                            )}
-                            {canManage && !["cancelled", "expired"].includes(o.status) && (
-                              <EditOrderModal order={o} shopId={shop.id} />
-                            )}
-                          </div>
-                        </Td>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{o.shipping_name ?? o.customers?.display_name ?? "-"}</p>
+                        <p className="truncate text-[11px] text-neutral-400">
+                          {(o.order_items ?? []).map((i) => `${i.product_name}${i.variant_name ? ` (${i.variant_name})` : ""} x${i.quantity}`).join(", ")}
+                        </p>
+                        {o.tracking_number && <p className="text-[11px] text-sky-600">พัสดุ: {o.tracking_number}</p>}
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-lg font-bold tracking-tight">{baht(o.total)}</p>
+                        {o.closed_by === "bot" ? <Badge tone="blue">🤖 บอทปิด</Badge> : o.closed_by ? <span className="text-[11px] text-neutral-400">ปิดโดยแอดมิน</span> : null}
+                      </div>
+                      {hasActions && (
+                        <div className="flex flex-col gap-2 border-t border-neutral-100 pt-2.5">
+                          {o.status === "pending_payment" && pendingPay && canManage && <VerifyButtons paymentId={pendingPay.id} shopId={shop.id} />}
+                          {["paid", "confirmed"].includes(o.status) && <ShipForm orderId={o.id} shopId={shop.id} />}
+                          {["pending_payment", "paid", "confirmed", "shipped"].includes(o.status) && canManage && <RefundForm orderId={o.id} shopId={shop.id} isRefund={["paid", "confirmed", "shipped"].includes(o.status)} />}
+                          {canManage && !["cancelled", "expired"].includes(o.status) && <EditOrderModal order={o} shopId={shop.id} />}
+                        </div>
                       )}
-                    </tr>
+                    </div>
                   );
                 })}
-              </tbody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

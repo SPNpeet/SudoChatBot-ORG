@@ -133,7 +133,7 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
           </Card>
 
           {/* ===== แชทผู้ช่วย ===== */}
-          <Card className="flex h-[32rem] flex-col overflow-hidden">
+          <Card className="flex h-[70svh] min-h-[24rem] flex-col overflow-hidden sm:h-[32rem]">
             <CardHeader className="border-b border-neutral-100"><CardTitle>💬 ผู้ช่วยแอด AI</CardTitle></CardHeader>
             <div className="min-h-0 flex-1"><AdsChat shopId={shop.id} /></div>
           </Card>

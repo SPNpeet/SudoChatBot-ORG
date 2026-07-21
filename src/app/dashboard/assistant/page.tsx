@@ -46,7 +46,7 @@ export default async function AssistantPage() {
         ))}
       </div>
 
-      <Card className="flex h-[34rem] flex-col overflow-hidden">
+      <Card className="flex h-[70svh] min-h-[26rem] flex-col overflow-hidden sm:h-[34rem]">
         <CardContent className="min-h-0 flex-1 p-0">
           <AssistantChat shopId={shop.id} />
         </CardContent>

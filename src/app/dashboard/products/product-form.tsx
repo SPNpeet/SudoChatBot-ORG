@@ -62,11 +62,11 @@ export default function ProductForm({
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
           <form
             action={submit}
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+            className="max-h-[92vh] w-full space-y-4 overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:max-w-lg sm:rounded-2xl sm:p-6"
           >
             <h2 className="font-bold">{product ? "แก้ไขสินค้า" : "เพิ่มสินค้าใหม่"}</h2>
             <input type="hidden" name="shop_id" value={shopId} />
@@ -79,10 +79,10 @@ export default function ProductForm({
               <div><Label>SKU</Label><Input name="sku" defaultValue={product?.sku ?? ""} placeholder="VC-30" /></div>
               <div><Label>หมวดหมู่</Label><Input name="category" defaultValue={product?.category ?? ""} placeholder="สกินแคร์" /></div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div><Label>ราคา (บาท) *</Label><Input name="price" type="number" step="0.01" min="0" required defaultValue={product?.price} /></div>
-              <div><Label>ราคาเดิม (ถ้ามีส่วนลด)</Label><Input name="compare_at_price" type="number" step="0.01" min="0" defaultValue={product?.compare_at_price ?? ""} placeholder="ว่าง = ไม่มี" /></div>
-              <div><Label>สต๊อก</Label><Input name="stock" type="number" min="0" defaultValue={product?.stock ?? 0} /></div>
+              <div><Label>ราคาเดิม (ถ้าลด)</Label><Input name="compare_at_price" type="number" step="0.01" min="0" defaultValue={product?.compare_at_price ?? ""} placeholder="ว่าง = ไม่มี" /></div>
+              <div className="col-span-2 sm:col-span-1"><Label>สต๊อก</Label><Input name="stock" type="number" min="0" defaultValue={product?.stock ?? 0} /></div>
             </div>
             <div>
               <Label>สถานะ</Label>
@@ -126,28 +126,45 @@ export default function ProductForm({
               </div>
               {rows.length > 0 && (
                 <div className="mt-2 space-y-2">
-                  <div className="grid grid-cols-[1fr_5rem_6rem_4.5rem_1.5rem] gap-1.5 text-[10px] text-neutral-400">
+                  {/* หัวคอลัมน์เฉพาะจอ ≥sm — มือถือใช้ป้ายกำกับในแต่ละการ์ดแทน */}
+                  <div className="hidden gap-1.5 text-[10px] text-neutral-400 sm:grid sm:grid-cols-[1fr_5rem_6rem_4.5rem_2rem]">
                     <span>ชื่อตัวเลือก</span><span>SKU</span><span>ราคา (ว่าง=ราคาหลัก)</span><span>สต๊อก</span><span />
                   </div>
                   {rows.map((r, i) => (
-                    <div key={r.id ?? `new-${i}`} className="grid grid-cols-[1fr_5rem_6rem_4.5rem_1.5rem] items-center gap-1.5">
-                      <Input value={r.name} onChange={(e) => setRow(i, { name: e.target.value })} placeholder="เช่น แดง / L" className="h-9 text-xs" />
-                      <Input value={r.sku} onChange={(e) => setRow(i, { sku: e.target.value })} placeholder="SKU" className="h-9 text-xs" />
-                      <Input value={r.price} onChange={(e) => setRow(i, { price: e.target.value })} type="number" step="0.01" min="0" placeholder="ราคาหลัก" className="h-9 text-xs" />
-                      <Input value={r.stock} onChange={(e) => setRow(i, { stock: e.target.value })} type="number" min="0" className="h-9 text-xs" />
+                    <div key={r.id ?? `new-${i}`}
+                      className="grid grid-cols-1 gap-2 rounded-xl border border-neutral-200 p-3 sm:grid-cols-[1fr_5rem_6rem_4.5rem_2rem] sm:items-center sm:gap-1.5 sm:rounded-none sm:border-0 sm:p-0">
+                      <div>
+                        <label className="mb-0.5 block text-[11px] font-medium text-neutral-500 sm:hidden">ชื่อตัวเลือก (สี/ไซซ์)</label>
+                        <Input value={r.name} onChange={(e) => setRow(i, { name: e.target.value })} placeholder="เช่น แดง / L" className="h-11 sm:h-9 sm:text-xs" />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-[11px] font-medium text-neutral-500 sm:hidden">SKU (ถ้ามี)</label>
+                        <Input value={r.sku} onChange={(e) => setRow(i, { sku: e.target.value })} placeholder="SKU" className="h-11 sm:h-9 sm:text-xs" />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-[11px] font-medium text-neutral-500 sm:hidden">ราคา (ว่าง = ราคาหลัก)</label>
+                        <Input value={r.price} onChange={(e) => setRow(i, { price: e.target.value })} type="number" step="0.01" min="0" placeholder="ราคาหลัก" className="h-11 sm:h-9 sm:text-xs" />
+                      </div>
+                      <div>
+                        <label className="mb-0.5 block text-[11px] font-medium text-neutral-500 sm:hidden">สต๊อก</label>
+                        <Input value={r.stock} onChange={(e) => setRow(i, { stock: e.target.value })} type="number" min="0" className="h-11 sm:h-9 sm:text-xs" />
+                      </div>
                       <button type="button" onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
-                        className="text-neutral-300 hover:text-red-500" aria-label="ลบตัวเลือก"><X className="h-4 w-4" /></button>
+                        className="flex h-10 w-full items-center justify-center gap-1 rounded-lg border border-neutral-200 text-xs text-red-500 hover:bg-red-50 sm:h-9 sm:w-auto sm:border-0"
+                        aria-label="ลบตัวเลือก">
+                        <X className="h-4 w-4" /><span className="sm:hidden">ลบตัวเลือกนี้</span>
+                      </button>
                     </div>
                   ))}
-                  <p className="text-[10px] text-neutral-400">ลบตัวเลือกที่เคยบันทึกแล้ว = เก็บเข้าคลัง (ออเดอร์เก่ายังอ้างอิงได้)</p>
+                  <p className="text-[11px] text-neutral-400">ลบตัวเลือกที่เคยบันทึกแล้ว = เก็บเข้าคลัง (ออเดอร์เก่ายังอ้างอิงได้)</p>
                 </div>
               )}
             </div>
 
             {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
-            <div className="flex justify-end gap-2 pt-1">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>ยกเลิก</Button>
-              <Button disabled={pending}>{pending ? "กำลังบันทึก..." : "บันทึกสินค้า"}</Button>
+            <div className="sticky bottom-0 -mx-5 flex gap-2 border-t border-neutral-100 bg-white px-5 pb-1 pt-3 sm:mx-0 sm:justify-end sm:border-0 sm:bg-transparent sm:px-0 sm:pt-1">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1 sm:flex-none">ยกเลิก</Button>
+              <Button disabled={pending} className="flex-1 sm:flex-none">{pending ? "กำลังบันทึก..." : "บันทึกสินค้า"}</Button>
             </div>
           </form>
         </div>

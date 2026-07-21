@@ -35,7 +35,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
   const platformIcon: Record<string, string> = { facebook: "FB", instagram: "IG", line: "LINE", tiktok: "TT" };
 
   return (
-    <div className="flex h-[calc(100vh-8.5rem)] gap-4 md:h-[calc(100vh-3.5rem)]">
+    <div className="flex h-[calc(100dvh-8.5rem)] gap-4 md:h-[calc(100dvh-3.5rem)]">
       {/* รายการสนทนา */}
       <Card className={cn("w-full shrink-0 overflow-y-auto md:w-80", selected ? "hidden md:block" : "block")}>
         <div className="border-b border-neutral-100 px-4 py-3">
@@ -71,17 +71,17 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
           <EmptyState title="เลือกบทสนทนาจากด้านซ้าย" />
         ) : (
           <>
-            <div className="flex items-center justify-between border-b border-neutral-100 px-5 py-3">
-              <div className="flex items-center gap-2">
-                <Link href="/dashboard/chats" className="md:hidden text-neutral-400">&larr;</Link>
-                <div>
-                <p className="text-sm font-semibold">{selected.customers?.display_name ?? "ลูกค้า"}</p>
-                <p className="text-[11px] text-neutral-400">
-                  {selected.channels?.page_name} · {selected.channels?.platform}
-                </p>
+            <div className="flex items-center justify-between gap-2 border-b border-neutral-100 px-3 py-2.5 sm:px-5 sm:py-3">
+              <div className="flex min-w-0 items-center gap-1">
+                <Link href="/dashboard/chats" aria-label="กลับ" className="-ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl text-neutral-500 hover:bg-neutral-100 md:hidden">&larr;</Link>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold">{selected.customers?.display_name ?? "ลูกค้า"}</p>
+                  <p className="truncate text-[11px] text-neutral-400">
+                    {selected.channels?.page_name} · {selected.channels?.platform}
+                  </p>
                 </div>
               </div>
-              {canReply && <ModeToggleButton shopId={shop.id} conversationId={selected.id} status={selected.status} />}
+              {canReply && <div className="shrink-0"><ModeToggleButton shopId={shop.id} conversationId={selected.id} status={selected.status} /></div>}
             </div>
 
             <div className="flex-1 space-y-2 overflow-y-auto px-5 py-4">
@@ -95,7 +95,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
                   )}>
                     {m.content_type === "image" && m.content?.startsWith("http")
                       /* eslint-disable-next-line @next/next/no-img-element */
-                      ? <img src={m.content} alt="รูปภาพ" className="max-h-56 rounded-lg" />
+                      ? <img src={m.content} alt="รูปภาพ" className="max-h-56 max-w-full rounded-lg object-contain" />
                       : <p className="whitespace-pre-wrap break-words">{m.content}</p>}
                     <p className={cn("mt-1 text-[10px]", m.direction === "outbound" ? "text-white/60" : "text-neutral-400")}>
                       {m.sender_type === "bot" ? "🤖 " : m.sender_type === "agent" ? "👤 " : ""}{dateTH(m.created_at)}
