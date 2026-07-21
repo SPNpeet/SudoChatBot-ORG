@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     default: "SudoChatBot — AI ปิดการขายอัตโนมัติ สำหรับ Facebook / IG / LINE",
     template: "%s | SudoChatBot",
   },
-  description: "แชทบอท AI ที่ตอบลูกค้า แนะนำสินค้า สรุปออเดอร์ ส่ง QR พร้อมเพย์ และตรวจสลิปปิดการขายให้ร้านคุณ อัตโนมัติ 24 ชม. เริ่มฟรี 100 ข้อความ ไม่ต้องใช้บัตรเครดิต",
+  description: "แชทบอท AI ที่ตอบลูกค้า แนะนำสินค้า สรุปออเดอร์ ส่ง QR พร้อมเพย์ และตรวจสลิปปิดการขายให้ร้านคุณ อัตโนมัติ 24 ชม. เริ่มฟรี 30 ข้อความ/วัน ไม่ต้องใช้บัตรเครดิต",
   keywords: [
     "แชทบอท", "แชทบอทตอบลูกค้า", "บอทขายของ", "แชทบอท facebook", "บอทตอบแชท line",
     "ระบบตอบแชทอัตโนมัติ", "AI ตอบลูกค้า", "ปิดการขายอัตโนมัติ", "แชทบอทร้านค้าออนไลน์",
@@ -56,7 +56,7 @@ const jsonLd = {
       operatingSystem: "Web",
       url: SITE,
       description: "แชทบอท AI ปิดการขายอัตโนมัติสำหรับร้านค้าออนไลน์ไทย บน Facebook Messenger, Instagram DM และ LINE OA",
-      offers: { "@type": "Offer", price: "0", priceCurrency: "THB", description: "เริ่มฟรี ตอบ 100 ข้อความแรกไม่มีค่าใช้จ่าย" },
+      offers: { "@type": "Offer", price: "0", priceCurrency: "THB", description: "เริ่มฟรี ตอบ 30 ข้อความ/วัน ไม่มีค่าใช้จ่าย" },
       inLanguage: "th",
     },
     {

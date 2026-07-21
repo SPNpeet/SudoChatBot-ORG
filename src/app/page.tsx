@@ -61,7 +61,7 @@ export default function Landing() {
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="text-center lg:text-left">
             <p className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-              <Sparkles className="h-3.5 w-3.5" /> เริ่มฟรี ตอบ 100 ข้อความแรกไม่มีค่าใช้จ่าย
+              <Sparkles className="h-3.5 w-3.5" /> เริ่มฟรี ตอบ 30 ข้อความ/วัน ไม่มีค่าใช้จ่าย
             </p>
             <h1 className="text-4xl font-bold leading-[1.15] tracking-tight sm:text-5xl">
               AI ที่<span className="text-emerald-600">ปิดการขาย</span>ให้ร้านคุณ<br />ตั้งแต่ทักจนโอนเงิน
