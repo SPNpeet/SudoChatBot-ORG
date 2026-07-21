@@ -35,13 +35,29 @@ export interface PlaygroundResult {
 
 // ---------- resolve provider/model/key (mirror ของ _shared/providers.ts) ----------
 /** โมเดลเริ่มต้นต่อค่าย — ใช้เมื่อ fallback ไปค่ายอื่นที่ไม่ใช่ค่ายใน routing */
-const DEFAULT_CHAT_MODEL: Record<Provider, string> = {
+export const DEFAULT_CHAT_MODEL: Record<Provider, string> = {
   anthropic: "claude-haiku-4-5-20251001", google: "gemini-2.5-flash", openai: "gpt-4o-mini",
   deepseek: "deepseek-chat", qwen: "qwen-plus", zhipu: "glm-4.6", moonshot: "kimi-k2-0905-preview",
   mistral: "mistral-small-latest",
 };
 
+/** คีย์เฉพาะงาน (ai_purpose_keys) — แอดมินตั้งไว้ = ใช้ก่อนคีย์รวมเสมอ · null = ไม่ได้ตั้ง */
+export async function resolvePurposeKey(svc: SupabaseClient, purpose: "assistant" | "chat"): Promise<ChatConfig | null> {
+  try {
+    const { data } = await svc.rpc("get_purpose_ai_key", { p_purpose: purpose });
+    const pk = data as { provider?: Provider; model?: string | null; key?: string } | null;
+    if (pk?.key && pk.provider) {
+      return { provider: pk.provider, model: pk.model ?? DEFAULT_CHAT_MODEL[pk.provider] ?? "gpt-4o-mini", apiKey: pk.key };
+    }
+  } catch { /* ตารางยังไม่มี/สิทธิ์ไม่ถึง = ข้ามไปใช้คีย์รวม */ }
+  return null;
+}
+
 export async function resolvePlaygroundConfig(svc: SupabaseClient, tier: string): Promise<ChatConfig> {
+  // บอทตอบลูกค้า (และ playground ที่จำลองมัน) ใช้คีย์เฉพาะงาน 'chat' ถ้าตั้งไว้
+  const dedicated = await resolvePurposeKey(svc, "chat");
+  if (dedicated) return dedicated;
+
   const { data } = await svc.from("ai_settings").select("*").eq("enabled", true);
   const rows = (data ?? []) as { purpose: string; tier: string; provider: Provider; model: string }[];
   const row = rows.find((r) => r.purpose === "chat" && r.tier === tier)

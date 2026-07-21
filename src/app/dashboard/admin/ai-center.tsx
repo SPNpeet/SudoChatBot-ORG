@@ -2,17 +2,18 @@
 import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Label, Select, Badge } from "@/components/ui";
 import { CHAT_MODELS, EMBED_MODELS, PROVIDERS, TIERS, providerLabel, type Provider } from "@/lib/ai-catalog";
-import { saveProviderKey, deleteProviderKey, saveRouting } from "./actions";
-import { KeyRound, CheckCircle2, XCircle, Cpu, Save, Trash2, ExternalLink } from "lucide-react";
+import { saveProviderKey, deleteProviderKey, saveRouting, savePurposeKey, deletePurposeKey, type PurposeKeyPurpose } from "./actions";
+import { KeyRound, CheckCircle2, XCircle, Cpu, Save, Trash2, ExternalLink, SplitSquareHorizontal, BrainCircuit, MessageSquare } from "lucide-react";
 
 interface KeyRow { provider: string; key_last4: string | null; test_status: string | null; test_message: string | null; tested_at: string | null; updated_at: string }
 interface SettingRow { purpose: string; tier: string; provider: string; model: string }
 interface ProviderMeta { id: Provider; label: string; keyHint: string; keyUrl: string }
+export interface PurposeKeyRow { purpose: string; provider: string; model: string | null; key_last4: string | null; updated_at: string }
 
 export default function AdminAiCenter({
-  keys, settings, providers, userEmail,
+  keys, settings, providers, userEmail, purposeKeys,
 }: {
-  keys: KeyRow[]; settings: SettingRow[]; providers: ProviderMeta[]; userEmail: string;
+  keys: KeyRow[]; settings: SettingRow[]; providers: ProviderMeta[]; userEmail: string; purposeKeys: PurposeKeyRow[];
 }) {
   const keyMap = Object.fromEntries(keys.map((k) => [k.provider, k]));
   const setMap = Object.fromEntries(settings.map((s) => [`${s.purpose}_${s.tier}`, s]));
@@ -37,6 +38,109 @@ export default function AdminAiCenter({
 
       {/* ===== ขั้น 3: เลือกค่าย+โมเดล ต่อระดับ ===== */}
       <RoutingForm setMap={setMap} keyMap={keyMap} />
+
+      {/* ===== ทางเลือก: แยกคีย์ตามงาน ===== */}
+      <PurposeKeysCard purposeKeys={purposeKeys} providers={providers} />
+    </div>
+  );
+}
+
+// แยกคีย์ "ผู้จัดการร้าน AI" ออกจาก "บอทตอบลูกค้า" — กันโควตาชนกัน + เลือกโมเดลต่างกันได้
+function PurposeKeysCard({ purposeKeys, providers }: { purposeKeys: PurposeKeyRow[]; providers: ProviderMeta[] }) {
+  const rowMap = Object.fromEntries(purposeKeys.map((k) => [k.purpose, k]));
+  const slots: { purpose: PurposeKeyPurpose; label: string; desc: string; icon: typeof BrainCircuit }[] = [
+    { purpose: "assistant", label: "ผู้จัดการร้าน AI", desc: "ใช้กับแชทสั่งงานของเจ้าของร้าน — แนะนำโมเดลฉลาด", icon: BrainCircuit },
+    { purpose: "chat", label: "บอทตอบลูกค้า", desc: "ใช้กับแชทลูกค้าจริง + คอมเมนต์ + ทดลองบอท — แนะนำตัวเร็ว/ประหยัด", icon: MessageSquare },
+  ];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><SplitSquareHorizontal className="h-4 w-4 text-emerald-600" /> ทางเลือก — แยกคีย์ตามงาน</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-neutral-400">
+          ไม่ตั้ง = ทุกงานใช้คีย์รวมจากขั้นที่ 1 ตามเดิม · ตั้งไว้ = งานนั้นใช้คีย์นี้ก่อนเสมอ
+          (แยกโควตา rate limit ของค่าย AI ไม่ให้ผู้จัดการร้านเบียดบอทตอบลูกค้า และดูค่าใช้จ่ายแยกฝั่งได้ที่แดชบอร์ดค่าย)
+        </p>
+        {slots.map((s) => (
+          <PurposeKeyRowUI key={s.purpose} slot={s} row={rowMap[s.purpose]} providers={providers} />
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PurposeKeyRowUI({
+  slot, row, providers,
+}: {
+  slot: { purpose: PurposeKeyPurpose; label: string; desc: string; icon: typeof BrainCircuit };
+  row?: PurposeKeyRow; providers: ProviderMeta[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [provider, setProvider] = useState<Provider>((row?.provider as Provider) ?? "google");
+  const [model, setModel] = useState(row?.model ?? "");
+  const [key, setKey] = useState("");
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function save() {
+    setError(null);
+    start(async () => {
+      try { await savePurposeKey(slot.purpose, provider, model, key); setKey(""); setOpen(false); }
+      catch (e) { setError((e as Error).message || "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง"); }
+    });
+  }
+
+  return (
+    <div className="rounded-xl border border-neutral-200 p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <slot.icon className="h-4 w-4 text-neutral-500" />
+          <span className="text-sm font-semibold">{slot.label}</span>
+          {row ? (
+            <Badge tone="green">{providerLabel(row.provider)}{row.model ? ` · ${row.model}` : ""} ••••{row.key_last4}</Badge>
+          ) : (
+            <Badge tone="neutral">ใช้คีย์รวม</Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setOpen((v) => !v)}>{open ? "ยกเลิก" : row ? "เปลี่ยน" : "ตั้งคีย์แยก"}</Button>
+          {row && (
+            <form action={async () => { await deletePurposeKey(slot.purpose); }}>
+              <button className="text-neutral-400 hover:text-red-600" title="ลบ — กลับไปใช้คีย์รวม"><Trash2 className="h-4 w-4" /></button>
+            </form>
+          )}
+        </div>
+      </div>
+      <p className="mt-1 text-[11px] text-neutral-400">{slot.desc}</p>
+      {open && (
+        <div className="mt-3 space-y-2">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <Label>ค่าย AI</Label>
+              <Select value={provider} onChange={(e) => { setProvider(e.target.value as Provider); setModel(""); }}>
+                {providers.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Label>โมเดล <span className="font-normal text-neutral-400">(เว้นว่าง = ตัวเริ่มต้นของค่าย)</span></Label>
+              <Select value={model} onChange={(e) => setModel(e.target.value)}>
+                <option value="">— โมเดลเริ่มต้น —</option>
+                {CHAT_MODELS[provider]?.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>API Key ของงานนี้</Label>
+            <div className="flex gap-2">
+              <Input type="password" value={key} onChange={(e) => setKey(e.target.value)}
+                placeholder="วาง API key — เก็บเข้ารหัสใน Vault แยกจากคีย์รวม" className="flex-1 font-mono" autoComplete="off" />
+              <Button size="sm" onClick={save} disabled={pending || key.length < 10}><Save className="h-4 w-4" /> {pending ? "บันทึก..." : "บันทึก"}</Button>
+            </div>
+          </div>
+          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
+        </div>
+      )}
     </div>
   );
 }

@@ -38,11 +38,12 @@ export default async function AdminPage() {
     );
   }
 
-  // โหลดสถานะ key + routing
+  // โหลดสถานะ key + routing + คีย์เฉพาะงาน
   const svc = createServiceClient();
-  const [{ data: keys }, { data: settings }] = await Promise.all([
+  const [{ data: keys }, { data: settings }, { data: purposeKeys }] = await Promise.all([
     svc.from("ai_provider_keys").select("provider,key_last4,test_status,test_message,tested_at,updated_at"),
     svc.from("ai_settings").select("*"),
+    svc.from("ai_purpose_keys").select("purpose,provider,model,key_last4,updated_at"),
   ]);
 
   return (
@@ -51,6 +52,7 @@ export default async function AdminPage() {
       settings={settings ?? []}
       providers={PROVIDERS}
       userEmail={user.email ?? ""}
+      purposeKeys={purposeKeys ?? []}
     />
   );
 }

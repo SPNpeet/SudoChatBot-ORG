@@ -71,3 +71,25 @@ export async function saveRouting(formData: FormData) {
   });
   revalidatePath("/dashboard/admin");
 }
+
+// ---------- คีย์เฉพาะงาน (แยกผู้จัดการร้าน AI / บอทตอบลูกค้า) ----------
+export type PurposeKeyPurpose = "assistant" | "chat";
+
+/** บันทึกคีย์เฉพาะงาน — RPC เช็ค is_platform_admin() ภายใน ต้องเรียกผ่าน user client */
+export async function savePurposeKey(purpose: PurposeKeyPurpose, provider: Provider, model: string, key: string) {
+  const { supabase } = await assertPlatformAdmin();
+  const trimmed = key.trim();
+  if (trimmed.length < 10) throw new Error("API key สั้นเกินไป");
+  const { error } = await supabase.rpc("store_purpose_ai_key", {
+    p_purpose: purpose, p_provider: provider, p_model: model.trim(), p_key: trimmed,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard/admin");
+}
+
+export async function deletePurposeKey(purpose: PurposeKeyPurpose) {
+  const { supabase } = await assertPlatformAdmin();
+  const { error } = await supabase.rpc("delete_purpose_ai_key", { p_purpose: purpose });
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard/admin");
+}

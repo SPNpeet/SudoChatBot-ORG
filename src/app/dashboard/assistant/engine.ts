@@ -6,7 +6,7 @@
 // ============================================================
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { OPENAI_COMPAT_BASE } from "@/lib/ai-catalog";
-import { resolvePlaygroundConfig } from "../playground/engine";
+import { resolvePlaygroundConfig, resolvePurposeKey } from "../playground/engine";
 
 export interface AssistantCtx {
   svc: SupabaseClient;
@@ -163,8 +163,14 @@ const TOOLS = [
   },
   {
     name: "search_products",
-    description: "ค้นสินค้าในร้านด้วยชื่อ/SKU ดู id ราคา สต๊อก สถานะ",
-    input_schema: { type: "object", properties: { query: { type: "string", description: "เว้นว่าง = ล่าสุด 15 ตัว" } } },
+    description: "ค้นสินค้าในร้านด้วยชื่อ/SKU ดู id ราคา สต๊อก สถานะ — หรือใช้ low_stock=true เพื่อดูตัวที่สต๊อกเหลือน้อยสุดก่อน (ใกล้หมด)",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "เว้นว่าง = ล่าสุด 15 ตัว" },
+        low_stock: { type: "boolean", description: "true = เรียงจากสต๊อกน้อยสุด (เฉพาะตัวที่นับสต๊อก)" },
+      },
+    },
   },
   {
     name: "update_product",
@@ -458,15 +464,22 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
       // ================= สินค้า =================
       case "search_products": {
         const query = String(input.query ?? "").trim();
+        const lowStock = Boolean(input.low_stock);
         let q = s.from("products").select("id,name,sku,price,stock,track_stock,status")
-          .eq("shop_id", ctx.shopId).neq("status", "archived")
-          .order("created_at", { ascending: false }).limit(15);
+          .eq("shop_id", ctx.shopId).neq("status", "archived").limit(15);
+        if (lowStock) q = q.eq("track_stock", true).eq("status", "active").order("stock", { ascending: true });
+        else q = q.order("created_at", { ascending: false });
         if (query) q = q.or(`name.ilike.%${query.replace(/[%,()]/g, "")}%,sku.ilike.%${query.replace(/[%,()]/g, "")}%`);
         const { data, error } = await q;
         if (error) return JSON.stringify({ error: error.message });
-        return JSON.stringify(data?.length
-          ? data.map((p) => ({ ...p, stock: p.track_stock ? p.stock : "ไม่จำกัด" }))
-          : { message: "ไม่พบสินค้า" });
+        if (data?.length) {
+          return JSON.stringify(data.map((p) => ({ ...p, stock: p.track_stock ? p.stock : "ไม่จำกัด" })));
+        }
+        // แยกให้ชัดว่า "ร้านไม่มีสินค้าเลย" หรือ "แค่ค้นไม่เจอ" — กัน AI สรุปผิด
+        const { count } = await s.from("products").select("id", { count: "exact", head: true })
+          .eq("shop_id", ctx.shopId).neq("status", "archived");
+        if (!count) return JSON.stringify({ message: "ร้านยังไม่มีสินค้าในระบบเลย — เพิ่มได้ด้วย create_product หรือหน้าสินค้า" });
+        return JSON.stringify({ message: `ไม่พบสินค้าที่ตรงเงื่อนไข (ร้านมีสินค้าทั้งหมด ${count} รายการ — ลองเว้น query ว่างเพื่อดูรายการ)` });
       }
       case "update_product": {
         const pid = String(input.product_id ?? "").trim();
@@ -774,7 +787,8 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
 
 // ---------- main ----------
 export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> {
-  const cfg = await resolvePlaygroundConfig(ctx.svc, "standard");
+  // คีย์เฉพาะ 'assistant' (แอดมินตั้งในศูนย์ AI) — แยกโควตา/โมเดลจากบอทตอบลูกค้า
+  const cfg = (await resolvePurposeKey(ctx.svc, "assistant")) ?? (await resolvePlaygroundConfig(ctx.svc, "standard"));
   const system = buildSystemPrompt(ctx);
 
   let r: LoopResult;

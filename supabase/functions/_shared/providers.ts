@@ -72,6 +72,19 @@ async function candidateProviders(routed: ChatProvider | null): Promise<string[]
 }
 
 export async function resolveChatConfig(tier: string): Promise<ChatConfig> {
+  // คีย์เฉพาะงาน 'chat' (แอดมินแยกคีย์บอทลูกค้าออกจากผู้จัดการร้าน AI) — ตั้งไว้ = ใช้ก่อนเสมอ
+  try {
+    const { data: pk } = await sb().rpc("get_purpose_ai_key", { p_purpose: "chat" });
+    const pko = pk as { provider?: string; model?: string | null; key?: string } | null;
+    if (pko?.key && pko.provider) {
+      return {
+        provider: pko.provider as ChatProvider,
+        model: pko.model ?? DEFAULT_CHAT_MODEL[pko.provider as ChatProvider] ?? "gpt-4o-mini",
+        apiKey: pko.key,
+      };
+    }
+  } catch (e) { console.error("purpose key lookup", (e as Error).message); }
+
   const rows = await loadSettings();
   const row = rows.find((r) => r.purpose === "chat" && r.tier === tier)
     ?? rows.find((r) => r.purpose === "chat" && r.tier === "standard");
