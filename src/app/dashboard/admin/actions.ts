@@ -93,3 +93,21 @@ export async function deletePurposeKey(purpose: PurposeKeyPurpose) {
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
 }
+
+// ---------- เกราะกันค่า AI รั่ว (เพดานรายวัน + สวิตช์ปิดฉุกเฉิน) ----------
+export type AiGuardResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function savePlatformAiGuard(capUsd: number | null, kill: boolean): Promise<AiGuardResult> {
+  try {
+    const { supabase } = await assertPlatformAdmin();
+    const cap = capUsd != null && capUsd > 0 ? Math.min(100000, capUsd) : null;
+    const { error } = await supabase.rpc("set_platform_ai_guard", { p_cap_usd: cap, p_kill: kill });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/dashboard/admin");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message.includes("forbidden") ? "เฉพาะผู้ดูแลแพลตฟอร์ม" : "บันทึกไม่สำเร็จ" };
+  }
+}

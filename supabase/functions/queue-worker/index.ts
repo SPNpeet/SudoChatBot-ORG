@@ -103,6 +103,11 @@ async function processIncoming(item: QueueIncoming): Promise<void> {
     const { data: pendingOrder } = await s.from("orders").select("id")
       .eq("conversation_id", conv.id).eq("status", "pending_payment").limit(1).maybeSingle();
     if (pendingOrder) {
+      // gate ต่อลูกค้า — สลิป OCR มีค่าใช้จ่ายจริง กันลูกค้าสแปมส่งรูปรัวๆ เผาเงินค่า OCR
+      const { data: slipOk } = await s.rpc("check_customer_rate_limit", {
+        p_channel_id: item.channel_id, p_user_id: item.platform_user_id, p_limit: 8,
+      });
+      if (slipOk === false) { console.log("slip rate limit, skip OCR", item.platform_user_id); return; }
       const slipItem: QueueSlip = {
         shop_id: item.shop_id, channel_id: item.channel_id, conversation_id: conv.id,
         customer_id: customer.id, platform: item.platform, platform_user_id: item.platform_user_id,
@@ -123,6 +128,15 @@ async function processIncoming(item: QueueIncoming): Promise<void> {
 
   // ---- บอทปิดอยู่ / คนคุมอยู่ -> เก็บอย่างเดียว ----
   if (!bot?.enabled || !conv.bot_enabled || conv.status === "human") return;
+
+  // ---- Rate limit ต่อลูกค้ารายคน — กันผู้โจมตี/ลูกค้าคนเดียวสแปมเผาโควตา AI ของทั้งร้าน ----
+  const { data: custOk } = await s.rpc("check_customer_rate_limit", {
+    p_channel_id: item.channel_id, p_user_id: item.platform_user_id,
+  });
+  if (custOk === false) {
+    console.log("customer rate limit exceeded, skip reply", item.platform_user_id);
+    return;
+  }
 
   // ---- Rate limit ต่อร้าน (ต่อนาที/ต่อวัน ตามแพ็กเกจ) — เกินลิมิต = เก็บข้อความแต่ไม่ตอบ ----
   const { data: withinLimit } = await s.rpc("check_shop_rate_limit", { p_shop_id: item.shop_id });
@@ -152,7 +166,8 @@ async function processIncoming(item: QueueIncoming): Promise<void> {
     .eq("conversation_id", conv.id).order("created_at", { ascending: false }).limit(20);
   const history = (historyRows ?? []).reverse().map((m) => ({
     role: (m.direction === "inbound" ? "user" : "assistant") as "user" | "assistant",
-    content: m.content ?? `[${m.content_type}]`,
+    // ตัดความยาวต่อข้อความ กัน input token พองจากข้อความยาวผิดปกติ (เช่นสแปมวางข้อความยาว ๆ)
+    content: (m.content ?? `[${m.content_type}]`).slice(0, 2000),
   })).filter((m) => m.content);
   // รวมข้อความ user ติดกัน (Claude ต้องการ alternating; เผื่อ user ส่งรัว)
   const merged: { role: "user" | "assistant"; content: string }[] = [];
@@ -281,11 +296,25 @@ async function processComment(item: QueueComment): Promise<void> {
     await done({ status: "skipped", error: "no keyword match" });
     return;
   }
+  // rate limit ต่อผู้คอมเมนต์รายคน — กันคนเดียวสแปมคอมเมนต์เผาโควตา
+  const { data: custOk } = await s.rpc("check_customer_rate_limit", {
+    p_channel_id: item.channel_id, p_user_id: item.commenter_id,
+  });
+  if (custOk === false) { await done({ status: "skipped", error: "commenter rate limited" }); return; }
   // rate limit + billing gate เดียวกับข้อความแชท
   const { data: withinLimit } = await s.rpc("check_shop_rate_limit", { p_shop_id: item.shop_id });
   if (withinLimit === false) { await done({ status: "skipped", error: "rate limited" }); return; }
-  const { data: bill } = await s.rpc("bill_bot_reply", { p_shop_id: item.shop_id, p_ref: `comment:${item.comment_id}` });
-  if (bill && bill.allowed === false) {
+  // FAIL-CLOSED: ตอบคอมเมนต์ (ยิง AI) ได้เฉพาะเมื่อยืนยัน allowed===true — error/null = ไม่ตอบ
+  const { data: bill, error: billErr } = await s.rpc("bill_bot_reply", {
+    p_shop_id: item.shop_id, p_ref: `comment:${item.comment_id}`,
+    p_weight: bot.model_tier === "premium" ? 3 : 1,
+  });
+  if (billErr || !bill) {
+    console.error("bill_bot_reply(comment) error -> fail-closed", billErr?.message);
+    await done({ status: "failed", error: "billing error (fail-closed)" });
+    return;
+  }
+  if (bill.allowed !== true) {
     await s.rpc("notify_bot_blocked", { p_shop_id: item.shop_id });
     await done({ status: "skipped", error: "billing blocked" });
     return;

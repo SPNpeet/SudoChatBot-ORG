@@ -31,7 +31,8 @@ const demo: { from: "customer" | "bot"; text: string }[] = [
 // ราคาตรงกับตาราง plans ในระบบ — แก้ราคาต้องแก้ทั้งสองที่
 const plans = [
   { name: "ทดลองใช้", price: "ฟรี", per: "", items: ["ตอบฟรี 100 ข้อความ/เดือน", "1 ช่องทาง", "บอทปิดการขายอัตโนมัติ", "ไม่ต้องใช้บัตรเครดิต"], cta: "เริ่มใช้ฟรี", hot: false },
-  { name: "เริ่มต้น", price: "390", per: "บาท/เดือน", items: ["ตอบฟรี 1,500 ข้อความ/เดือน", "3 ช่องทาง", "ตรวจสลิปอัตโนมัติ", "ทีมงาน 5 คน"], cta: "เลือกแพ็กนี้", hot: true },
+  { name: "มินิ", price: "190", per: "บาท/เดือน", items: ["ตอบฟรี 500 ข้อความ/เดือน", "2 ช่องทาง", "ตรวจสลิปอัตโนมัติ", "เริ่มจ่ายน้อยสุด คุ้มสุดสำหรับแม่ค้ารายเล็ก"], cta: "เลือกแพ็กนี้", hot: true },
+  { name: "เริ่มต้น", price: "390", per: "บาท/เดือน", items: ["ตอบฟรี 1,500 ข้อความ/เดือน", "3 ช่องทาง", "ตรวจสลิปอัตโนมัติ", "ทีมงาน 5 คน"], cta: "เลือกแพ็กนี้", hot: false },
   { name: "โปร", price: "990", per: "บาท/เดือน", items: ["ตอบฟรี 5,000 ข้อความ/เดือน", "10 ช่องทาง", "โมเดล AI ระดับพรีเมียม", "รายงานเชิงลึก"], cta: "เลือกแพ็กนี้", hot: false },
 ];
 
@@ -135,7 +136,7 @@ export default function Landing() {
       <section id="pricing" className="mx-auto max-w-5xl px-6 py-16">
         <h2 className="text-center text-2xl font-bold tracking-tight">ราคาตรงไปตรงมา</h2>
         <p className="mt-2 text-center text-sm text-neutral-500">เริ่มฟรี อัปเกรดเมื่อขายดี ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด</p>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {plans.map((p) => (
             <div key={p.name} className={`relative rounded-2xl border p-6 ${p.hot ? "border-emerald-300 bg-emerald-50/40 shadow-sm" : "border-neutral-200 bg-white"}`}>
               {p.hot && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-3 py-0.5 text-[11px] font-medium text-white">ยอดนิยม</span>}

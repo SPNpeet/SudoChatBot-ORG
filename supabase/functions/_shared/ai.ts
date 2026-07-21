@@ -243,6 +243,10 @@ async function execUpsertOrder(ctx: AgentContext, input: UpsertOrderInput): Prom
 
   const lines: { product_id: string; variant_id: string | null; product_name: string; variant_name: string | null; unit_price: number; quantity: number; total: number }[] = [];
   for (const it of input.items) {
+    // จำนวนต้องเป็นจำนวนเต็มบวก — กัน quantity ติดลบ/ศูนย์ ทำให้ยอดรวมเพี้ยน/ติดลบ
+    it.quantity = Math.floor(Number(it.quantity));
+    if (!Number.isFinite(it.quantity) || it.quantity < 1) return JSON.stringify({ error: "จำนวนสินค้าต้องเป็นตัวเลขตั้งแต่ 1 ขึ้นไป" });
+    if (it.quantity > 9999) return JSON.stringify({ error: "จำนวนสินค้าต่อรายการมากเกินไป" });
     const { data: p } = await s.from("products").select("id,name,price,stock,track_stock,status")
       .eq("id", it.product_id).eq("shop_id", ctx.shop.id).maybeSingle();
     if (!p || p.status !== "active") return JSON.stringify({ error: `ไม่พบสินค้า ${it.product_id}` });
@@ -577,9 +581,15 @@ ${ctx.shop.description ? `ข้อมูลร้าน: ${ctx.shop.description
 
 // ---------- main ----------
 export async function runSalesAgent(ctx: AgentContext): Promise<AgentResult> {
-  // ==== Billing gate: เช็คโควตา/เครดิตก่อนให้บอทตอบ ====
-  const { data: bill } = await sb().rpc("bill_bot_reply", { p_shop_id: ctx.shop.id, p_ref: ctx.bill_ref ?? null });
-  if (bill && bill.allowed === false) {
+  // ==== Billing gate (FAIL-CLOSED): ยิง AI ได้เฉพาะเมื่อยืนยัน allowed===true เท่านั้น ====
+  // โมเดลพรีเมียมต้นทุนสูงกว่ามาก — นับ 3 เครดิต/ข้อความ (กัน margin ติดลบ, แจ้งใน features แพ็ก pro แล้ว)
+  // สำคัญ: ถ้า RPC error/timeout/คืน null = ถือว่า "ไม่อนุญาต" ไม่ยิง AI (กันจ่ายค่า API ฟรีตอน DB สะดุด)
+  const { data: bill, error: billErr } = await sb().rpc("bill_bot_reply", {
+    p_shop_id: ctx.shop.id, p_ref: ctx.bill_ref ?? null,
+    p_weight: ctx.bot.model_tier === "premium" ? 3 : 1,
+  });
+  if (billErr) console.error("bill_bot_reply error -> fail-closed (ไม่ยิง AI)", billErr.message);
+  if (billErr || !bill || bill.allowed !== true) {
     return {
       messages: [], handoff: false, billBlocked: true,
       model: "none", input_tokens: 0, output_tokens: 0, cost_usd: 0,

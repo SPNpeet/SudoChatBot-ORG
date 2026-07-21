@@ -5,6 +5,7 @@ import { PROVIDERS, TIERS } from "@/lib/ai-catalog";
 import SubmitButton from "@/components/submit-button";
 import { claimAdmin } from "./actions";
 import AdminAiCenter from "./ai-center";
+import AiGuardCard, { type AiGuardStatus } from "./ai-guard-card";
 import { ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -38,21 +39,25 @@ export default async function AdminPage() {
     );
   }
 
-  // โหลดสถานะ key + routing + คีย์เฉพาะงาน
+  // โหลดสถานะ key + routing + คีย์เฉพาะงาน + เกราะค่า AI
   const svc = createServiceClient();
-  const [{ data: keys }, { data: settings }, { data: purposeKeys }] = await Promise.all([
+  const [{ data: keys }, { data: settings }, { data: purposeKeys }, { data: guard }] = await Promise.all([
     svc.from("ai_provider_keys").select("provider,key_last4,test_status,test_message,tested_at,updated_at"),
     svc.from("ai_settings").select("*"),
     svc.from("ai_purpose_keys").select("purpose,provider,model,key_last4,updated_at"),
+    supabase.rpc("platform_ai_guard_status"),
   ]);
 
   return (
-    <AdminAiCenter
-      keys={keys ?? []}
-      settings={settings ?? []}
-      providers={PROVIDERS}
-      userEmail={user.email ?? ""}
-      purposeKeys={purposeKeys ?? []}
-    />
+    <div className="max-w-3xl space-y-6">
+      <AdminAiCenter
+        keys={keys ?? []}
+        settings={settings ?? []}
+        providers={PROVIDERS}
+        userEmail={user.email ?? ""}
+        purposeKeys={purposeKeys ?? []}
+      />
+      {guard && <AiGuardCard status={guard as unknown as AiGuardStatus} />}
+    </div>
   );
 }
