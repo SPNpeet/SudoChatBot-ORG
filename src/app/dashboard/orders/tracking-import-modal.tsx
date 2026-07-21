@@ -118,8 +118,8 @@ export default function TrackingImportModal({ shopId, openOrderNumbers }: {
         <FileUp className="h-4 w-4" /> นำเข้าเลขพัสดุ
       </button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpen(false)}>
-          <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
+          <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 sm:max-w-2xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold">นำเข้าเลขพัสดุแบบชุด</h2>
               <button onClick={() => setOpen(false)} className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-100"><X className="h-4 w-4" /></button>
@@ -174,7 +174,7 @@ export default function TrackingImportModal({ shopId, openOrderNumbers }: {
                             ) : (
                               <select value={r.orderNumber}
                                 onChange={(e) => setRows((prev) => prev.map((x, j) => j === i ? { ...x, orderNumber: e.target.value, known: !!e.target.value } : x))}
-                                className="h-7 rounded-lg border border-amber-300 bg-amber-50 px-1.5 text-xs outline-none">
+                                className="h-9 rounded-lg border border-amber-300 bg-amber-50 px-1.5 text-sm outline-none">
                                 <option value="">— เลือกออเดอร์ —</option>
                                 {r.orderNumber && !openOrderNumbers.includes(r.orderNumber) && <option value={r.orderNumber}>{r.orderNumber} (ตามไฟล์)</option>}
                                 {openOrderNumbers.map((n) => <option key={n} value={n}>{n}</option>)}
