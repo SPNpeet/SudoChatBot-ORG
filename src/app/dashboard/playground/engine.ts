@@ -5,7 +5,7 @@
 //  ไม่เรียก bill_bot_reply — ทดลองฟรี ไม่หักเครดิตร้าน
 // ============================================================
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { OPENAI_COMPAT_BASE, type Provider } from "@/lib/ai-catalog";
+import { OPENAI_COMPAT_BASE, estimateAiCost, type Provider } from "@/lib/ai-catalog";
 
 export type { Provider };
 export interface ChatConfig { provider: Provider; model: string; apiKey: string }
@@ -411,7 +411,8 @@ ${ctx.shop.description ? `ข้อมูลร้าน: ${ctx.shop.description
 
   await ctx.svc.from("ai_usage_logs").insert({
     shop_id: ctx.shop.id, purpose: "reply", model: `${cfg.provider}/${cfg.model}`,
-    input_tokens: r.inTok, output_tokens: r.outTok, cost_usd: 0,
+    input_tokens: r.inTok, output_tokens: r.outTok,
+    cost_usd: estimateAiCost(cfg.model, r.inTok, r.outTok),
   });
   return {
     text: r.text || "ขอบคุณที่สนใจนะคะ ทักแชทสอบถามได้เลยค่ะ",
@@ -434,7 +435,8 @@ export async function runPlayground(ctx: PlaygroundCtx): Promise<PlaygroundResul
   // log ต้นทุนไว้ดูในหน้า admin (conversation_id ว่าง = มาจาก playground)
   await ctx.svc.from("ai_usage_logs").insert({
     shop_id: ctx.shop.id, purpose: "reply", model: `${cfg.provider}/${cfg.model}`,
-    input_tokens: r.inTok, output_tokens: r.outTok, cost_usd: 0,
+    input_tokens: r.inTok, output_tokens: r.outTok,
+    cost_usd: estimateAiCost(cfg.model, r.inTok, r.outTok),
   });
 
   return {

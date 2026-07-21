@@ -5,7 +5,7 @@
 //  หน่วยงบของ Meta = สตางค์ (minor units): 300 บาท = 30000
 // ============================================================
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { OPENAI_COMPAT_BASE } from "@/lib/ai-catalog";
+import { OPENAI_COMPAT_BASE, estimateAiCost } from "@/lib/ai-catalog";
 import { resolvePlaygroundConfig } from "../playground/engine";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
@@ -496,7 +496,8 @@ export async function runAdsAgent(ctx: AdsCtx): Promise<AdsAgentResult> {
 
   await ctx.svc.from("ai_usage_logs").insert({
     shop_id: ctx.shopId, purpose: "ads", model: `${cfg.provider}/${cfg.model}`,
-    input_tokens: r.inTok, output_tokens: r.outTok, cost_usd: 0,
+    input_tokens: r.inTok, output_tokens: r.outTok,
+    cost_usd: estimateAiCost(cfg.model, r.inTok, r.outTok),
   });
 
   return {

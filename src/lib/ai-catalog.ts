@@ -76,3 +76,24 @@ export const TIERS: { id: string; label: string; desc: string }[] = [
 ];
 
 export function providerLabel(p: string) { return PROVIDERS.find((x) => x.id === p)?.label ?? p; }
+
+// ประมาณต้นทุน USD ต่อการเรียก AI (in, out) USD/1M tokens — mirror ของ _shared/ai.ts ฝั่ง Deno
+// ใช้ให้ owner-facing AI (ผู้จัดการร้าน/ads/playground) log ต้นทุนจริง เพื่อให้ circuit breaker + แดชบอร์ดเห็นครบ
+const PRICE_TABLE: [string, [number, number]][] = [
+  ["claude-haiku", [1, 5]], ["claude-sonnet", [3, 15]], ["claude-opus", [15, 75]], ["claude-fable", [25, 100]],
+  ["gpt-5-mini", [0.5, 2]], ["gpt-5-nano", [0.1, 0.4]], ["gpt-5", [2.5, 10]], ["gpt-4o-mini", [0.15, 0.6]], ["gpt-4o", [2.5, 10]],
+  ["gemini-2.5-flash-lite", [0.1, 0.4]], ["gemini-2.5-flash", [0.3, 2.5]], ["gemini-2.5-pro", [1.25, 10]], ["gemini", [0.3, 2.5]],
+  ["deepseek-reasoner", [0.55, 2.19]], ["deepseek", [0.27, 1.1]],
+  ["qwen-max", [1.6, 6.4]], ["qwen-plus", [0.4, 1.2]], ["qwen-flash", [0.05, 0.4]], ["qwen", [0.4, 1.2]],
+  ["glm-4.5-air", [0.2, 1.1]], ["glm", [0.6, 2.2]],
+  ["kimi", [0.6, 2.5]],
+  ["mistral-small", [0.1, 0.3]], ["mistral", [0.4, 2]],
+];
+
+/** ประมาณต้นทุน USD — model รับได้ทั้ง "provider/model" หรือ "model" ล้วน */
+export function estimateAiCost(model: string, inTok: number, outTok: number): number {
+  const m = model.includes("/") ? model.split("/").pop()! : model;
+  let price: [number, number] = [3, 15];
+  for (const [p, v] of PRICE_TABLE) if (m.startsWith(p)) { price = v; break; }
+  return +(((inTok || 0) * price[0] + (outTok || 0) * price[1]) / 1_000_000).toFixed(6);
+}
