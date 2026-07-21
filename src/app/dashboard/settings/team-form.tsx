@@ -52,14 +52,16 @@ export default function TeamForm({ shopId, members, canEdit }: { shopId: string;
         ))}
       </div>
       {canEdit && (
-        <form ref={formRef} action={submit} className="flex gap-2">
-          <Input name="email" type="email" required placeholder="อีเมลของสมาชิก (ต้องเคย Login แล้ว)" className="flex-1" />
-          <Select name="role" defaultValue="agent" className="w-40">
-            <option value="admin">ผู้ดูแล</option>
-            <option value="agent">แอดมินเพจ</option>
-            <option value="viewer">ดูอย่างเดียว</option>
-          </Select>
-          <Button size="sm" className="h-10" disabled={pending}>{pending ? "..." : "เพิ่ม"}</Button>
+        <form ref={formRef} action={submit} className="flex flex-col gap-2 sm:flex-row">
+          <Input name="email" type="email" required placeholder="อีเมลของสมาชิก (ต้องเคย Login แล้ว)" className="min-w-0 flex-1" />
+          <div className="flex gap-2">
+            <Select name="role" defaultValue="agent" className="flex-1 sm:w-40 sm:flex-none">
+              <option value="admin">ผู้ดูแล</option>
+              <option value="agent">แอดมินเพจ</option>
+              <option value="viewer">ดูอย่างเดียว</option>
+            </Select>
+            <Button className="h-10 shrink-0" disabled={pending}>{pending ? "..." : "เพิ่ม"}</Button>
+          </div>
         </form>
       )}
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}

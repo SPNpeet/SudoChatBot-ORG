@@ -34,7 +34,7 @@ export default function BotSettingsForm({ shopId, b }: { shopId: string; b: Part
           ชวนซื้อเพิ่ม (upsell)
         </label>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><Label>ชื่อบอท</Label><Input name="persona_name" defaultValue={b.persona_name ?? "แอดมิน"} /></div>
         <div>
           <Label>โทนการพูด</Label>
@@ -61,7 +61,7 @@ export default function BotSettingsForm({ shopId, b }: { shopId: string; b: Part
         <Label>คำสั่งเพิ่มเติมถึงบอท (จุดขาย โปรโมชัน สิ่งที่ห้ามพูด)</Label>
         <Textarea name="custom_instructions" defaultValue={b.custom_instructions ?? ""} placeholder="เช่น ตอนนี้มีโปรซื้อ 2 แถม 1 ทุกรายการ / ห้ามรับปากวันจัดส่งที่แน่นอน" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label>คีย์เวิร์ดส่งต่อแอดมิน (คั่นด้วย ,)</Label>
           <Input name="handoff_keywords" defaultValue={(b.handoff_keywords ?? ["คุยกับคน", "ติดต่อแอดมิน"]).join(", ")} />
@@ -72,7 +72,7 @@ export default function BotSettingsForm({ shopId, b }: { shopId: string; b: Part
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <Button size="sm" disabled={pending}>{pending ? "กำลังบันทึก..." : "บันทึกการตั้งค่าบอท"}</Button>
+        <Button disabled={pending} className="w-full sm:w-auto">{pending ? "กำลังบันทึก..." : "บันทึกการตั้งค่าบอท"}</Button>
         {result?.ok && <span className="text-sm text-emerald-600">✓ {result.msg}</span>}
       </div>
       {result && !result.ok && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{result.msg}</p>}

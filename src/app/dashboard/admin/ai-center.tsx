@@ -260,7 +260,7 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
             return (
               <div key={tier} className="rounded-xl border border-neutral-100 p-3">
                 <p className="mb-2 text-xs font-semibold text-neutral-600">{tierLabel[tier]}</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <Select name={`chat_${tier}_provider`} value={st.provider}
                     onChange={(e) => setSt({ provider: e.target.value, model: (CHAT_MODELS[e.target.value as Provider] ?? [])[0]?.id ?? "" })}>
                     {PROVIDERS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
@@ -276,7 +276,7 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
 
           <div className="rounded-xl border border-neutral-100 p-3">
             <p className="mb-2 text-xs font-semibold text-neutral-600">ระบบค้นหาความรู้ (Embedding)</p>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <Select name="embed_provider" value={embed.provider}
                 onChange={(e) => setEmbed({ provider: e.target.value, model: (EMBED_MODELS[e.target.value] ?? [])[0]?.id ?? "" })}>
                 {Object.keys(EMBED_MODELS).map((p) => <option key={p} value={p}>{providerLabel(p)}</option>)}

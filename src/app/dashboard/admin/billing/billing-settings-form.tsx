@@ -29,7 +29,7 @@ export default function BillingSettingsForm({ pf }: { pf: Settings | null }) {
 
   return (
     <form ref={formRef} action={submit} className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div><Label>พร้อมเพย์ (รับเงินเติม)</Label><Input name="promptpay_id" defaultValue={pf?.promptpay_id ?? ""} placeholder="เบอร์/เลขบัตร ปชช." /></div>
         <div><Label>ชื่อบัญชี</Label><Input name="account_name" defaultValue={pf?.account_name ?? ""} /></div>
       </div>
@@ -42,7 +42,7 @@ export default function BillingSettingsForm({ pf }: { pf: Settings | null }) {
       </div>
       <div>
         <Label>Omise (opn.ooo) — ใช้เมื่อเลือก gateway Omise</Label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input name="omise_public_key" defaultValue={pf?.omise_public_key ?? ""} placeholder="Public key (pkey_...)" />
           <Input name="omise_secret_key" type="password" placeholder="Secret key (skey_... กรอกเมื่อเปลี่ยน)" />
         </div>
@@ -50,7 +50,7 @@ export default function BillingSettingsForm({ pf }: { pf: Settings | null }) {
       </div>
       <div>
         <Label>ตรวจสลิปเติมเงินอัตโนมัติ (โหมด PromptPay+สลิป)</Label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select name="slip_provider" defaultValue={pf?.slip_provider ?? "manual"}>
             <option value="manual">ยืนยันเอง (กดปุ่มข้างบน)</option>
             <option value="easyslip">EasySlip — อัตโนมัติ</option>
@@ -61,7 +61,7 @@ export default function BillingSettingsForm({ pf }: { pf: Settings | null }) {
       </div>
       <div className="border-t border-neutral-100 pt-3">
         <Label>อีเมลแจ้งเตือน (Resend) — เครดิตใกล้หมด / บอทหยุดเพราะเครดิตหมด</Label>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Input name="resend_api_key" type="password" placeholder="Resend API Key (re_... กรอกเมื่อเปลี่ยน)" />
           <Input name="email_from" defaultValue={pf?.email_from ?? ""} placeholder='ผู้ส่ง เช่น SudoChatBot <no-reply@โดเมนคุณ>' />
           <Input name="low_credit_threshold" type="number" min={0} defaultValue={pf?.low_credit_threshold ?? 50} placeholder="เตือนเมื่อเครดิตต่ำกว่า (บาท)" />
@@ -70,7 +70,7 @@ export default function BillingSettingsForm({ pf }: { pf: Settings | null }) {
       </div>
       <div className="border-t border-neutral-100 pt-3">
         <Label>ข้อมูลผู้ขายบนใบกำกับภาษี (VAT 7%)</Label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input name="company_name" defaultValue={pf?.company_name ?? ""} placeholder="ชื่อบริษัท/ผู้ประกอบการ" />
           <Input name="tax_id" defaultValue={pf?.tax_id ?? ""} placeholder="เลขประจำตัวผู้เสียภาษี 13 หลัก" maxLength={13} />
           <Input name="company_address" defaultValue={pf?.company_address ?? ""} placeholder="ที่อยู่จดทะเบียน" className="col-span-2" />

@@ -86,7 +86,7 @@ export default async function SlipsPage({ searchParams }: { searchParams: Promis
         {FILTERS.map((t) => (
           <Link key={t.id} href={t.id === "all" ? "/dashboard/slips" : `/dashboard/slips?f=${t.id}`}
             className={cn(
-              "rounded-full px-3.5 py-1.5 text-xs font-medium",
+              "inline-flex min-h-[36px] items-center rounded-full px-4 py-1.5 text-sm font-medium",
               f === t.id ? "bg-neutral-900 text-white" : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50",
             )}>
             {t.label} ({counts[t.id as keyof typeof counts]})

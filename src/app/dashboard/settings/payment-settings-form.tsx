@@ -21,7 +21,7 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
   return (
     <form action={submit} className="space-y-4">
       <input type="hidden" name="shop_id" value={shopId} />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <Label>พร้อมเพย์ (เบอร์/เลขบัตร ปชช.)</Label>
           <Input name="promptpay_id" defaultValue={p.promptpay_id ?? ""} placeholder="0812345678" />
@@ -32,7 +32,7 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
 
       <div>
         <Label>การตรวจสลิปอัตโนมัติ</Label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select name="slip_provider" defaultValue={p.slip_provider ?? "manual"}>
             <option value="manual">ตรวจเอง (แอดมินกดยืนยันในหน้าออเดอร์)</option>
             <option value="easyslip">EasySlip — อัตโนมัติ 100%</option>
@@ -47,8 +47,8 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
         <Label>ตัวเลือกจัดส่ง (บอทใช้คำนวณยอดรวม)</Label>
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="grid grid-cols-3 gap-2">
-              <Input name={`ship_name_${i}`} defaultValue={ship[i]?.name ?? (i === 0 ? "ส่งด่วน Kerry/Flash" : "")} placeholder={`ช่องทางที่ ${i + 1}`} />
+            <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <Input name={`ship_name_${i}`} defaultValue={ship[i]?.name ?? (i === 0 ? "ส่งด่วน Kerry/Flash" : "")} placeholder={`ช่องทางที่ ${i + 1}`} className="col-span-2 sm:col-span-1" />
               <Input name={`ship_fee_${i}`} type="number" min="0" defaultValue={ship[i]?.fee ?? (i === 0 ? 40 : "")} placeholder="ค่าส่ง (บาท)" />
               <Input name={`ship_free_${i}`} type="number" min="0" defaultValue={ship[i]?.free_over ?? ""} placeholder="ฟรีเมื่อครบ (บาท)" />
             </div>
@@ -56,7 +56,7 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <Button size="sm" disabled={pending}>{pending ? "กำลังบันทึก..." : "บันทึกการตั้งค่าการเงิน"}</Button>
+        <Button disabled={pending} className="w-full sm:w-auto">{pending ? "กำลังบันทึก..." : "บันทึกการตั้งค่าการเงิน"}</Button>
         {result?.ok && <span className="text-sm text-emerald-600">✓ {result.msg}</span>}
       </div>
       {result && !result.ok && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{result.msg}</p>}
