@@ -29,8 +29,22 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
     supabase.from("fin_docs").select("id,doc_number,doc_type,status").eq("shop_id", shop.id).eq("ref_doc_id", id).neq("status", "void"),
   ]);
 
-  // สลิปแนบ — ลิงก์ชั่วคราว
   const svc = createServiceClient();
+
+  // ใครยกเลิก + เมื่อไหร่ (audit trail แสดงบนหน้าเอกสาร)
+  let voidInfo: { by: string; at: string } | null = null;
+  if (doc.status === "void") {
+    const { data: log } = await svc.from("audit_logs")
+      .select("actor_id, created_at").eq("shop_id", shop.id).eq("resource_id", id)
+      .in("action", ["fin_doc_voided", "assistant_doc_voided"])
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (log) {
+      const { data: prof } = await svc.from("profiles").select("display_name,email").eq("id", log.actor_id).maybeSingle();
+      voidInfo = { by: prof?.display_name || prof?.email || "ผู้ดูแล", at: log.created_at };
+    }
+  }
+
+  // สลิปแนบ — ลิงก์ชั่วคราว
   const slipPaths = (payments ?? []).map((p) => p.slip_storage_path).filter(Boolean) as string[];
   const urlMap = new Map<string, string>();
   if (slipPaths.length) {
@@ -60,6 +74,12 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
           status: doc.status as DocStatus, outstanding, shareKey: doc.share_key ?? null, whtAmount: Number(doc.wht_amount),
         }} />}
       </div>
+
+      {doc.status === "void" && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          🚫 เอกสารนี้ถูกยกเลิกแล้ว{voidInfo ? ` โดย ${voidInfo.by} เมื่อ ${dateTH(voidInfo.at)}` : ""} — ระบบกลับรายการบัญชีและคืนสต๊อกแล้ว ดูรายละเอียดได้ในสมุดรายวัน (รายการกลับรายการ)
+        </p>
+      )}
 
       <Card>
         <CardContent className="px-0 pb-0 pt-1">

@@ -1,0 +1,3 @@
+﻿-- 056: ซื้อแพ็กเกจจ่ายตรง — apply บน production แล้ว
+-- topups.plan_code + plan_applied_at + RPC apply_plan_purchase(topup_id):
+-- ตัดค่าแพ็กจากเครดิตที่เพิ่งเข้า + เปิดแพ็ก + next_bill_at +1 เดือน (idempotent, service_role เท่านั้น)

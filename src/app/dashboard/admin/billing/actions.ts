@@ -48,6 +48,11 @@ export async function confirmTopup(topupId: string, approve: boolean): Promise<A
     if (error) return { ok: false, error: error.message };
     const result = data as { ok: boolean; message?: string } | null;
     if (result && result.ok === false) return { ok: false, error: result.message ?? "ทำรายการไม่สำเร็จ" };
+    if (approve) {
+      // ซื้อแพ็กเกจจ่ายตรง -> เปิดแพ็กให้ทันที (idempotent — ข้ามเองถ้าเป็นเติมเครดิตปกติ)
+      const svc = createServiceClient();
+      await svc.rpc("apply_plan_purchase", { p_topup_id: topupId });
+    }
     revalidatePath("/dashboard/admin/billing");
     return { ok: true };
   } catch (e) {

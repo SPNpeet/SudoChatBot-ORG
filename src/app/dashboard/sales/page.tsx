@@ -69,15 +69,16 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       <Card>
         <CardContent className="px-0 pb-0 pt-1">
           {rows.length === 0 ? (
-            <EmptyState title="ยังไม่มีเอกสารในหมวดนี้"
-              hint="ออกใบเสนอราคา/ใบแจ้งหนี้/ใบเสร็จได้จากปุ่มด้านบน หรือสั่งผู้ช่วย AI เป็นภาษาคนได้เลย" />
+            <EmptyState icon="🧾" title="ยังไม่มีเอกสารในหมวดนี้"
+              hint="ออกใบเสนอราคา/ใบแจ้งหนี้/ใบเสร็จ — ระบบลงบัญชีและตามยอดค้างให้อัตโนมัติ หรือพิมพ์สั่งผู้ช่วย AI เป็นภาษาคนก็ได้"
+              action={{ href: "/dashboard/sales/new?type=invoice", label: "+ ออกเอกสารใบแรก" }} />
           ) : (
             <Table>
               <thead><tr><Th>เลขที่</Th><Th>ประเภท</Th><Th>ลูกค้า</Th><Th>วันที่</Th><Th className="text-right">ยอด</Th><Th className="text-right">ค้างรับ</Th><Th>สถานะ</Th></tr></thead>
               <tbody>
                 {rows.map((d) => (
-                  <tr key={d.id} className="hover:bg-neutral-50">
-                    <Td><Link className="font-medium text-emerald-700 hover:underline" href={`/dashboard/sales/${d.id}`}>{d.doc_number}</Link></Td>
+                  <tr key={d.id} className={cn("hover:bg-neutral-50", d.status === "void" && "opacity-50")}>
+                    <Td><Link className={cn("font-medium text-emerald-700 hover:underline", d.status === "void" && "text-neutral-400 line-through")} href={`/dashboard/sales/${d.id}`}>{d.doc_number}</Link></Td>
                     <Td>{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
                     <Td>{d.contact_name ?? "-"}</Td>
                     <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>

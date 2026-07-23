@@ -15,24 +15,29 @@ export interface AssistantReply {
   ok: boolean;
   text?: string;
   toolCalls?: { name: string; label: string }[];
+  artifacts?: { label: string; href: string }[];   // ปุ่มลิงก์เอกสารที่ AI เพิ่งสร้าง
   error?: string;
+  quotaExceeded?: boolean;   // โควตา AI หมด -> หน้าบ้านโชว์ paywall สวยๆ ไม่ใช่ error
 }
 
 const MAX_HISTORY = 20;
 const MAX_LEN = 2000;
-const ASSISTANT_LIMIT_PER_DAY = 100;
 
 export async function assistantReply(shopId: string, history: AssistantTurn[]): Promise<AssistantReply> {
   try {
     const { user } = await assertMember(shopId, ["owner", "admin", "agent"]);
     const svc = createServiceClient();
 
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
-    const { count } = await svc.from("ai_usage_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("shop_id", shopId).eq("purpose", "assistant").gte("created_at", dayAgo);
-    if ((count ?? 0) >= ASSISTANT_LIMIT_PER_DAY) {
-      return { ok: false, error: `ครบโควตาผู้ช่วยบัญชี AI วันนี้แล้ว (${ASSISTANT_LIMIT_PER_DAY} ข้อความ/วัน) — พรุ่งนี้คุยต่อได้` };
+    // โควตากลางต่อ "เจ้าของ" (นับรวมทุกกิจการ กันปั๊มโควตาหลายบริษัท) + แจ้งเตือน 80%/95% อัตโนมัติ
+    const { data: quota } = await svc.rpc("consume_ai_quota", { p_shop_id: shopId });
+    const q = quota as { allowed?: boolean; reason?: string } | null;
+    if (q && q.allowed === false) {
+      return {
+        ok: false, quotaExceeded: true,
+        error: q.reason === "daily"
+          ? "โควตางาน AI วันนี้เต็มแล้ว — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา"
+          : "โควตางาน AI ของแพ็กเกจเดือนนี้เต็มแล้ว — สมัคร/อัปเกรดแพ็กเกจเพื่อใช้งานต่อทันที",
+      };
     }
 
     const { data: shop } = await svc.from("shops").select("name,status").eq("id", shopId).single();
@@ -50,7 +55,7 @@ export async function assistantReply(shopId: string, history: AssistantTurn[]): 
       svc, shopId, shopName: shop.name, userId: user.id, history: trimmed,
     };
     const r = await runAssistant(ctx);
-    return { ok: true, text: r.text, toolCalls: r.toolCalls };
+    return { ok: true, text: r.text, toolCalls: r.toolCalls, artifacts: r.artifacts };
   } catch (e) {
     const m = (e as Error).message;
     if (m === "AI_NOT_CONFIGURED") return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่า AI — ผู้ดูแลระบบต้องใส่ API key ก่อน" };

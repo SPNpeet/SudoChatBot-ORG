@@ -177,14 +177,16 @@ export async function POST(request: Request) {
     const b64 = buf.toString("base64");
     const svc = createServiceClient();
 
-    // เพดานรายวันกันกดรัว (AI ใช้ key ของแพลตฟอร์ม)
-    const EXTRACT_LIMIT_PER_DAY = 60;
-    const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
-    const { count: used } = await svc.from("ai_usage_logs")
-      .select("id", { count: "exact", head: true })
-      .eq("shop_id", shopId).eq("purpose", "ocr").like("model", "finance/%").gte("created_at", dayAgo);
-    if ((used ?? 0) >= EXTRACT_LIMIT_PER_DAY) {
-      return NextResponse.json({ ok: false, error: `ครบโควตา AI อ่านเอกสารวันนี้แล้ว (${EXTRACT_LIMIT_PER_DAY} ไฟล์/วัน) — พรุ่งนี้ใช้ต่อได้ หรือคีย์เองได้ไม่จำกัด` });
+    // โควตากลางต่อ "เจ้าของ" (นับรวมทุกกิจการ กันปั๊มโควตาหลายบริษัท) + แจ้งเตือน 80%/95% อัตโนมัติ
+    const { data: quota } = await svc.rpc("consume_ai_quota", { p_shop_id: shopId });
+    const q = quota as { allowed?: boolean; reason?: string } | null;
+    if (q && q.allowed === false) {
+      return NextResponse.json({
+        ok: false, quotaExceeded: true,
+        error: q.reason === "daily"
+          ? "โควตางาน AI วันนี้เต็มแล้ว — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจที่หน้า แพ็กเกจ/เครดิต (คีย์เอกสารเองได้ไม่จำกัด)"
+          : "โควตางาน AI ของแพ็กเกจเดือนนี้เต็มแล้ว — สมัคร/อัปเกรดแพ็กเกจที่หน้า แพ็กเกจ/เครดิต เพื่อใช้งานต่อทันที (คีย์เองได้ไม่จำกัด)",
+      });
     }
 
     // เก็บไฟล์ไว้แนบเอกสาร (bucket slips เป็น private)

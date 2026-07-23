@@ -92,7 +92,9 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
         <CardHeader><CardTitle>รายการเงินล่าสุด</CardTitle></CardHeader>
         <CardContent className="px-0 pb-0">
           {rows.length === 0 ? (
-            <EmptyState title="ยังไม่มีรายการเงิน" hint="บันทึกรับเงินจากใบแจ้งหนี้ หรืออัปโหลดสลิปให้ระบบจับคู่ให้" />
+            <EmptyState icon="🏦" title="ยังไม่มีรายการเงิน"
+              hint="เมื่อรับ-จ่ายเงินจากเอกสาร หรืออัปสลิป/นำเข้า statement ด้านบน รายการเงินจะขึ้นที่นี่พร้อมลงบัญชีอัตโนมัติ"
+              action={{ href: "/dashboard/sales?t=unpaid", label: "ดูใบแจ้งหนี้ค้างรับ" }} />
           ) : (
             <Table>
               <thead><tr><Th>วันที่</Th><Th>ทิศทาง</Th><Th className="text-right">ยอด</Th><Th>ช่องทาง</Th><Th>เอกสาร</Th><Th>สลิป</Th></tr></thead>

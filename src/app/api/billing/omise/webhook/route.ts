@@ -57,6 +57,8 @@ export async function POST(request: Request) {
         p_shop_id: topup.shop_id, p_amount: Number(topup.amount), p_type: "topup",
         p_ref_type: "topup", p_ref_id: topup.id, p_note: "เติมเงินผ่าน Omise (PromptPay)", p_actor: null,
       });
+      // ซื้อแพ็กเกจจ่ายตรง -> เปิดแพ็กทันที (idempotent — ข้ามเองถ้าไม่ใช่รายการซื้อแพ็ก)
+      await svc.rpc("apply_plan_purchase", { p_topup_id: topup.id });
     }
     return done("processed");
   } catch (e) {

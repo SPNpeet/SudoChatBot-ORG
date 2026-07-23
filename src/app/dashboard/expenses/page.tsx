@@ -63,15 +63,16 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       <Card>
         <CardContent className="px-0 pb-0 pt-1">
           {rows.length === 0 ? (
-            <EmptyState title="ยังไม่มีค่าใช้จ่ายในหมวดนี้"
-              hint="กด 'บันทึกค่าใช้จ่าย' แล้วถ่ายรูปบิล — AI อ่านและกรอกให้ทั้งฟอร์ม" />
+            <EmptyState icon="📸" title="ยังไม่มีค่าใช้จ่ายในหมวดนี้"
+              hint="ถ่ายรูปบิลแล้วให้ AI อ่าน-ลงบัญชีให้ทั้งใบ หรือคีย์เองก็ได้ ระบบแยก VAT/หัก ณ ที่จ่ายให้ครบ"
+              action={{ href: "/dashboard/expenses/new", label: "+ บันทึกค่าใช้จ่ายใบแรก" }} />
           ) : (
             <Table>
               <thead><tr><Th>เลขที่</Th><Th>ผู้ขาย</Th><Th>หมวด</Th><Th>วันที่</Th><Th className="text-right">ยอด</Th><Th className="text-right">ค้างจ่าย</Th><Th>สถานะ</Th></tr></thead>
               <tbody>
                 {rows.map((d) => (
-                  <tr key={d.id} className="hover:bg-neutral-50">
-                    <Td><Link className="font-medium text-emerald-700 hover:underline" href={`/dashboard/expenses/${d.id}`}>{d.doc_number}</Link></Td>
+                  <tr key={d.id} className={cn("hover:bg-neutral-50", d.status === "void" && "opacity-50")}>
+                    <Td><Link className={cn("font-medium text-emerald-700 hover:underline", d.status === "void" && "text-neutral-400 line-through")} href={`/dashboard/expenses/${d.id}`}>{d.doc_number}</Link></Td>
                     <Td>{d.contact_name ?? "-"}</Td>
                     <Td className="text-neutral-500">{d.expense_categories?.name ?? "-"}</Td>
                     <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>

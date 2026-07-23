@@ -17,6 +17,16 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  function downloadTemplate() {
+    const csv = "﻿วันที่,รายละเอียด,เงินเข้า,เงินออก\n2026-07-01,โอนจากลูกค้า A,5350.00,\n2026-07-02,ค่าธรรมเนียม,,25.00\n2026-07-03,รับชำระ INV-2026-0001,12840.00,\n";
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "statement-template.csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   async function onFile(f: File) {
     setError(null);
     try {
@@ -71,11 +81,18 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
       <CardContent className="space-y-3">
         <input ref={fileRef} type="file" accept=".csv,.xls,.xlsx" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
-        <Button variant="outline" className="w-full" onClick={() => fileRef.current?.click()}>
-          <FileSpreadsheet className="h-4 w-4" /> เลือกไฟล์ Statement (CSV/Excel)
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={() => fileRef.current?.click()}>
+            <FileSpreadsheet className="h-4 w-4" /> เลือกไฟล์ Statement (CSV/Excel)
+          </Button>
+          <button onClick={downloadTemplate}
+            className="shrink-0 rounded-xl border border-dashed border-neutral-300 px-3 text-xs text-neutral-500 hover:border-emerald-400 hover:text-emerald-700">
+            ⬇ ไฟล์ตัวอย่าง
+          </button>
+        </div>
         <p className="text-xs text-neutral-400">
-          ระบบอ่านแถวเงินเข้า จับคู่กับใบแจ้งหนี้ที่ยอดค้างตรงกันให้อัตโนมัติ — กดยืนยันทีละแถวเพื่อบันทึกรับเงิน
+          ปลอดภัย 100%: ระบบแค่ &quot;พรีวิว&quot; รายการให้ตรวจก่อน — ไม่มีอะไรถูกบันทึกจนกว่าคุณกดยืนยันเป็นรายแถว ·
+          รองรับไฟล์จากแอปธนาคารโดยตรง (ระบบเดาคอลัมน์วันที่/รายการ/เงินเข้าให้เอง)
         </p>
 
         {rows.length > 0 && (

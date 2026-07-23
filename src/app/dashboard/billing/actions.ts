@@ -102,6 +102,45 @@ export async function getTopupStatus(shopId: string, topupId: string) {
   return data?.status ?? "unknown";
 }
 
+/** ซื้อ/ต่ออายุแพ็กเกจแบบจ่ายตรง — สร้างรายการยอดเท่าราคาแพ็กพอดี พร้อม QR
+ *  เมื่อสลิปผ่าน (อัตโนมัติ/แอดมินยืนยัน) ระบบเปิดแพ็ก + ตั้งรอบบิลถัดไปให้ทันที */
+export async function purchasePlan(shopId: string, planCode: string): Promise<TopupResult> {
+  try {
+    await assertMember(shopId, ["owner"]);
+    const svc = createServiceClient();
+    const { data: plan } = await svc.from("plans").select("code,name,price_monthly").eq("code", planCode).eq("active", true).maybeSingle();
+    if (!plan || Number(plan.price_monthly) <= 0) return { ok: false, error: "แพ็กเกจนี้ไม่เปิดให้ชำระตรง" };
+    const amount = Number(plan.price_monthly);
+
+    const { data: pf } = await svc.from("platform_billing_settings").select("promptpay_id,account_name").eq("id", true).single();
+    if (!pf?.promptpay_id) return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่าบัญชีรับเงิน — ติดต่อผู้ดูแลระบบ" };
+
+    const { data: topup, error } = await svc.from("topups").insert({
+      shop_id: shopId, amount, method: "promptpay", status: "pending", plan_code: plan.code,
+    }).select("id").single();
+    if (error) return { ok: false, error: error.message };
+
+    const payload = promptPayPayload(pf.promptpay_id, amount);
+    let qrUrl = "";
+    try {
+      const QRCode = (await import("qrcode")).default;
+      const dataUrl = await QRCode.toDataURL(payload, { width: 512, margin: 2 });
+      const bytes = Buffer.from(dataUrl.split(",")[1], "base64");
+      const path = `${shopId}/topup/${topup.id}.png`;
+      await svc.storage.from("shop-assets").upload(path, bytes, { contentType: "image/png", upsert: true });
+      const { data: pub } = svc.storage.from("shop-assets").getPublicUrl(path);
+      qrUrl = pub.publicUrl;
+      await svc.from("topups").update({ qr_path: path }).eq("id", topup.id);
+    } catch { /* ยังแสดงเลขพร้อมเพย์ได้ */ }
+
+    revalidatePath("/dashboard/billing");
+    return { ok: true, topupId: topup.id, qrUrl, promptpayId: pf.promptpay_id, accountName: pf.account_name, amount };
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, error: m.includes("forbidden") ? "เฉพาะเจ้าของกิจการสมัครแพ็กเกจได้" : `สมัครแพ็กเกจไม่สำเร็จ: ${m.slice(0, 150)}` };
+  }
+}
+
 export async function changePlan(shopId: string, planCode: string): Promise<PlanResult> {
   try {
     await assertMember(shopId, ["owner"]);

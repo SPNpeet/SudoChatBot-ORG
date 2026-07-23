@@ -27,6 +27,20 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
   const { data: payments } = await supabase.from("fin_payments").select("*").eq("doc_id", id).order("paid_at", { ascending: false });
 
   const svc = createServiceClient();
+
+  // ใครยกเลิก + เมื่อไหร่ (audit trail แสดงบนหน้าเอกสาร)
+  let voidInfo: { by: string; at: string } | null = null;
+  if (doc.status === "void") {
+    const { data: log } = await svc.from("audit_logs")
+      .select("actor_id, created_at").eq("shop_id", shop.id).eq("resource_id", id)
+      .in("action", ["fin_doc_voided", "assistant_doc_voided"])
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (log) {
+      const { data: prof } = await svc.from("profiles").select("display_name,email").eq("id", log.actor_id).maybeSingle();
+      voidInfo = { by: prof?.display_name || prof?.email || "ผู้ดูแล", at: log.created_at };
+    }
+  }
+
   let fileUrl: string | null = null;
   if (doc.file_path) {
     const { data: signed } = await svc.storage.from("slips").createSignedUrl(doc.file_path, 3600);
@@ -54,6 +68,12 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
           status: doc.status as DocStatus, outstanding, shareKey: null, whtAmount: Number(doc.wht_amount),
         }} />}
       </div>
+
+      {doc.status === "void" && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          🚫 เอกสารนี้ถูกยกเลิกแล้ว{voidInfo ? ` โดย ${voidInfo.by} เมื่อ ${dateTH(voidInfo.at)}` : ""} — ระบบกลับรายการบัญชีแล้ว ดูได้ในสมุดรายวัน
+        </p>
+      )}
 
       {Number(doc.wht_amount) > 0 && doc.status !== "void" && (
         <a href={`/dashboard/print/${doc.id}?form=wht`} target="_blank"

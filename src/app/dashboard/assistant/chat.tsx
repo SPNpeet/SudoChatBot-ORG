@@ -15,7 +15,7 @@ const STARTERS = [
   "สินค้าตัวไหนใกล้หมดสต๊อก",
 ];
 
-interface Msg extends AssistantTurn { toolCalls?: { name: string; label: string }[] }
+interface Msg extends AssistantTurn { toolCalls?: { name: string; label: string }[]; artifacts?: { label: string; href: string }[] }
 
 export default function AssistantChat({ shopId }: { shopId: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -23,6 +23,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaWall, setQuotaWall] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -42,11 +43,14 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     try {
       const r = await assistantReply(shopId, next.map(({ role, content }) => ({ role, content })));
       if (r.ok && r.text) {
-        setMsgs([...next, { role: "assistant", content: r.text, toolCalls: r.toolCalls }]);
+        setMsgs([...next, { role: "assistant", content: r.text, toolCalls: r.toolCalls, artifacts: r.artifacts }]);
         // ถ้ามีการแก้ไขข้อมูล ให้หน้าอื่นเห็นค่าล่าสุดตอนสลับไป
         if (r.toolCalls?.some((c) => !c.name.startsWith("get_") && !c.name.startsWith("search_") && !c.name.startsWith("list_"))) {
           router.refresh();
         }
+      } else if (r.quotaExceeded) {
+        setQuotaWall(r.error ?? "โควตางาน AI เต็มแล้ว");
+        setMsgs(msgs);
       } else {
         setError(r.error ?? "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
         setMsgs(msgs);
@@ -110,6 +114,16 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
               m.role === "user" ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-800",
             )}>
               <p className="whitespace-pre-wrap break-words">{m.role === "user" && m.content.startsWith("[ไฟล์แนบ") ? m.content.split("\n")[0] : m.content}</p>
+              {m.artifacts && m.artifacts.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {m.artifacts.map((a, j) => (
+                    <a key={j} href={a.href} target={a.href.startsWith("/doc/") || a.href.includes("/print/") ? "_blank" : undefined}
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
+                      {a.label} →
+                    </a>
+                  ))}
+                </div>
+              )}
               {m.toolCalls && m.toolCalls.length > 0 && (
                 <p className="mt-1 text-[10px] text-neutral-400">{m.toolCalls.map((t) => t.label).join(" · ")}</p>
               )}
@@ -119,6 +133,17 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
         {reading && <p className="text-xs text-neutral-400">กำลังอ่านไฟล์ด้วย AI...</p>}
         {busy && <p className="text-xs text-neutral-400">ผู้ช่วยบัญชีกำลังจัดการให้...</p>}
         {error && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-600">{error}</p>}
+        {quotaWall && (
+          <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 text-center">
+            <p className="text-2xl">⚡</p>
+            <p className="mt-1 text-sm font-semibold text-neutral-800">{quotaWall}</p>
+            <p className="mt-1 text-xs text-neutral-400">งานเอกสาร/บัญชีคีย์เองได้ไม่จำกัดตามปกติ — โควตานี้เฉพาะงาน AI</p>
+            <a href="/dashboard/billing"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">
+              อัปเกรด / ต่ออายุแพ็กเกจ →
+            </a>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
       <div className="border-t border-neutral-100 p-3">

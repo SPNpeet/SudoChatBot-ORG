@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import * as React from "react";
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -109,11 +110,21 @@ export function Td({ className, ...props }: React.TdHTMLAttributes<HTMLTableCell
   return <td className={cn("border-t border-neutral-100 px-4 py-3 align-middle", className)} {...props} />;
 }
 
-export function EmptyState({ title, hint }: { title: string; hint?: string }) {
+export function EmptyState({ title, hint, icon = "🗂️", action }: {
+  title: string; hint?: string; icon?: string;
+  action?: { href: string; label: string };
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-14 text-center">
+    <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+      <span className="mb-2 grid h-14 w-14 place-items-center rounded-2xl bg-neutral-50 text-2xl" aria-hidden>{icon}</span>
       <p className="text-sm font-medium text-neutral-500">{title}</p>
-      {hint && <p className="mt-1 text-xs text-neutral-400">{hint}</p>}
+      {hint && <p className="mt-1 max-w-sm text-xs text-neutral-400">{hint}</p>}
+      {action && (
+        <Link href={action.href}
+          className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">
+          {action.label}
+        </Link>
+      )}
     </div>
   );
 }

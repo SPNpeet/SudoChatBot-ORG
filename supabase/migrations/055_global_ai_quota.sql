@@ -1,0 +1,4 @@
+﻿-- 055: Global AI Quota ต่อเจ้าของ (กันปั๊มโควตาหลายบริษัท) — apply บน production แล้ว
+-- ดู definition จริง: get_ai_quota_status(uuid), consume_ai_quota(uuid), shops.ai_quota_override
+-- โควตางาน AI (purpose assistant/ocr) นับรวมทุกกิจการของเจ้าของ เพดาน = แพ็กที่ดีที่สุดของเจ้าของ
+-- แจ้งเตือนอัตโนมัติที่ 80%/95% (ครั้งเดียว/วัน/ระดับ) ผ่านตาราง notifications

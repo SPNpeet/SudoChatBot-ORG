@@ -20,6 +20,17 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
+
+  // OAuth (Facebook/Google) บางกรณี redirect กลับมาที่หน้าแรกพร้อม ?code= — ส่งต่อไป exchange ที่ callback ให้จบ flow
+  if (path === "/") {
+    const code = request.nextUrl.searchParams.get("code");
+    if (code) {
+      return NextResponse.redirect(new URL(`/auth/callback?code=${encodeURIComponent(code)}`, request.url));
+    }
+    // ล็อกอินอยู่แล้วไม่ต้องเห็นหน้าขาย — เข้าแดชบอร์ดเลย
+    if (user) return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
   const isProtected = path.startsWith("/dashboard") || path.startsWith("/onboarding");
   if (isProtected && !user) {
     return NextResponse.redirect(new URL("/login", request.url));

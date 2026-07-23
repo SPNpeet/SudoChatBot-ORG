@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 //  ผู้ช่วยบัญชี AI (Accounting Copilot) — สั่งงานบัญชีทั้งระบบจากแชทเดียว
 //  หลัก: ทุก tool ผูก shop_id เสมอ · การเขียนวิ่งผ่าน action ชุดเดียวกับหน้า UI
 //  (saveDoc/recordPayment/convertDoc/voidDoc) จึงลงสมุดรายวัน + ตัดสต๊อก +
@@ -19,12 +19,27 @@ export interface AssistantCtx {
   history: { role: "user" | "assistant"; content: string }[];
 }
 
+export interface AssistantArtifact { label: string; href: string }
+
 export interface AssistantResult {
   text: string;
   toolCalls: { name: string; label: string }[];
+  artifacts: AssistantArtifact[];   // ลิงก์เอกสาร/หน้าที่ AI เพิ่งสร้าง — หน้าบ้านโชว์เป็นปุ่มกดได้ทันที
   model: string;
   input_tokens: number;
   output_tokens: number;
+}
+
+/** เก็บลิงก์จากผลลัพธ์ tool (view_link/print_link/share_link) มาโชว์เป็นการ์ดในแชท */
+function collectArtifacts(r: LoopResult, resultStr: string) {
+  try {
+    const j = JSON.parse(resultStr) as Record<string, unknown>;
+    if (!j || j.error) return;
+    const doc = (j.doc_number ?? j.new_doc_number ?? "เอกสาร") as string;
+    if (typeof j.view_link === "string") r.artifacts.push({ label: `เปิด ${doc}`, href: j.view_link });
+    if (typeof j.print_link === "string") r.artifacts.push({ label: `พิมพ์/PDF ${doc}`, href: j.print_link });
+    if (typeof j.share_link === "string") r.artifacts.push({ label: `ลิงก์ส่งลูกค้า ${doc}`, href: j.share_link });
+  } catch { /* ผลลัพธ์ไม่ใช่ JSON — ข้าม */ }
 }
 
 // วันธุรกิจไทย (UTC+7) — server รันเป็น UTC
@@ -323,6 +338,7 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         return JSON.stringify({
           ok: true, doc_number: r.docNumber,
           note: `ออก${DOC_TYPE_TH[docType]} ${r.docNumber} แล้ว ลงบัญชีเรียบร้อย`,
+          view_link: `/dashboard/sales/${r.docId}`,
           share_link: created?.share_key && docType !== "quotation" ? `/doc/${created.share_key}` : undefined,
           print_link: `/dashboard/print/${r.docId}`,
         });
@@ -351,7 +367,7 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         });
         if (!r.ok) return JSON.stringify({ error: r.error });
         await audit(ctx, "expense_created", "fin_doc", r.docId, { doc_number: r.docNumber });
-        return JSON.stringify({ ok: true, doc_number: r.docNumber, note: `บันทึกค่าใช้จ่าย ${r.docNumber} แล้ว${input.paid_now === false ? " (ตั้งหนี้รอจ่าย)" : " (จ่ายแล้ว)"} ลงบัญชีเรียบร้อย` });
+        return JSON.stringify({ ok: true, doc_number: r.docNumber, view_link: `/dashboard/expenses/${r.docId}`, note: `บันทึกค่าใช้จ่าย ${r.docNumber} แล้ว${input.paid_now === false ? " (ตั้งหนี้รอจ่าย)" : " (จ่ายแล้ว)"} ลงบัญชีเรียบร้อย` });
       }
       case "record_payment": {
         const doc = await findDocByNumber(ctx, String(input.doc_number ?? ""));
@@ -372,7 +388,7 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         if (!doc) return JSON.stringify({ error: "ไม่พบเอกสารเลขนี้" });
         const r = await convertDoc(ctx.shopId, doc.id);
         if (!r.ok) return JSON.stringify({ error: r.error });
-        return JSON.stringify({ ok: true, new_doc_number: r.docNumber, note: `แปลงเป็น ${r.docNumber} แล้ว` });
+        return JSON.stringify({ ok: true, new_doc_number: r.docNumber, view_link: `/dashboard/sales/${r.docId}`, note: `แปลงเป็น ${r.docNumber} แล้ว` });
       }
       case "void_doc": {
         const doc = await findDocByNumber(ctx, String(input.doc_number ?? ""));
@@ -566,11 +582,11 @@ function buildSystemPrompt(ctx: AssistantCtx): string {
 }
 
 // ---------- provider loops ----------
-interface LoopResult { text: string; inTok: number; outTok: number; toolCalls: { name: string; label: string }[] }
+interface LoopResult { text: string; inTok: number; outTok: number; toolCalls: { name: string; label: string }[]; artifacts: AssistantArtifact[] }
 
 async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, system: string): Promise<LoopResult> {
   const messages: Record<string, unknown>[] = ctx.history.map((h) => ({ role: h.role, content: h.content }));
-  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [] };
+  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [] };
   for (let i = 0; i < 10; i++) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -589,7 +605,9 @@ async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, sy
     const results: Record<string, unknown>[] = [];
     for (const tu of toolUses) {
       r.toolCalls.push({ name: tu.name, label: ASSISTANT_TOOL_LABEL_TH[tu.name] ?? tu.name });
-      results.push({ type: "tool_result", tool_use_id: tu.id, content: await executeTool(ctx, tu.name, tu.input ?? {}) });
+      const out = await executeTool(ctx, tu.name, tu.input ?? {});
+      collectArtifacts(r, out);
+      results.push({ type: "tool_result", tool_use_id: tu.id, content: out });
     }
     messages.push({ role: "user", content: results });
   }
@@ -602,7 +620,7 @@ async function runOpenAI(ctx: AssistantCtx, model: string, apiKey: string, syste
     ...ctx.history.map((h) => ({ role: h.role, content: h.content })),
   ];
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
-  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [] };
+  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [] };
   const tokenParam = baseUrl ? { max_tokens: 1500 } : { max_completion_tokens: 1500 };
   for (let i = 0; i < 10; i++) {
     const res = await fetch(`${baseUrl ?? "https://api.openai.com/v1"}/chat/completions`, {
@@ -625,7 +643,9 @@ async function runOpenAI(ctx: AssistantCtx, model: string, apiKey: string, syste
       try { input = JSON.parse(tc.function?.arguments || "{}"); } catch { /* ignore */ }
       const name = tc.function?.name ?? "";
       r.toolCalls.push({ name, label: ASSISTANT_TOOL_LABEL_TH[name] ?? name });
-      messages.push({ role: "tool", tool_call_id: tc.id, content: await executeTool(ctx, name, input) });
+      const out = await executeTool(ctx, name, input);
+      collectArtifacts(r, out);
+      messages.push({ role: "tool", tool_call_id: tc.id, content: out });
     }
   }
   return r;
@@ -637,7 +657,7 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
     parts: [{ text: h.content }],
   }));
   const tools = [{ functionDeclarations: TOOLS.map((t) => ({ name: t.name, description: t.description, parameters: t.input_schema })) }];
-  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [] };
+  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [] };
   for (let i = 0; i < 10; i++) {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -665,7 +685,9 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
     for (const p of fcalls) {
       const fc = p.functionCall as { name: string; args?: Record<string, unknown> };
       r.toolCalls.push({ name: fc.name, label: ASSISTANT_TOOL_LABEL_TH[fc.name] ?? fc.name });
-      respParts.push({ functionResponse: { name: fc.name, response: { result: await executeTool(ctx, fc.name, fc.args ?? {}) } } });
+      const out = await executeTool(ctx, fc.name, fc.args ?? {});
+      collectArtifacts(r, out);
+      respParts.push({ functionResponse: { name: fc.name, response: { result: out } } });
     }
     contents.push({ role: "user", parts: respParts });
   }
@@ -693,6 +715,7 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
   return {
     text: r.text || "ขอโทษค่ะ ลองพิมพ์ใหม่อีกครั้งนะคะ",
     toolCalls: r.toolCalls,
+    artifacts: r.artifacts.slice(0, 6),
     model: `${cfg.provider}/${cfg.model}`, input_tokens: r.inTok, output_tokens: r.outTok,
   };
 }

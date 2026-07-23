@@ -69,7 +69,9 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
 
       {rows.length === 0 ? (
         <Card><CardContent className="pt-5">
-          <EmptyState title="ยังไม่มีผู้ติดต่อ" hint="เพิ่มลูกค้า/ผู้ขายเพื่อออกเอกสารได้เร็วขึ้น หรือให้ผู้ช่วย AI เพิ่มให้จากไฟล์" />
+          <EmptyState icon="👥" title="ยังไม่มีผู้ติดต่อ"
+            hint="เพิ่มลูกค้า/ผู้ขายพร้อมเลขผู้เสียภาษี เพื่อออกเอกสารเต็มรูปได้ทันที และเห็นยอดค้างรายคน"
+            action={{ href: "/dashboard/assistant", label: "ให้ผู้ช่วย AI เพิ่มให้" }} />
         </CardContent></Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

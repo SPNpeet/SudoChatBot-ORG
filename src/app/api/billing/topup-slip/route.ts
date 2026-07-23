@@ -47,7 +47,10 @@ export async function POST(request: Request) {
           if (!dupErr) {
             await svc.from("topups").update({ status: "paid", verified_by: "auto", paid_at: new Date().toISOString() }).eq("id", topupId);
             await svc.rpc("credit_wallet", { p_shop_id: topup.shop_id, p_amount: Number(t.amount), p_type: "topup", p_ref_type: "topup", p_ref_id: topupId, p_note: "เติมเงิน PromptPay (auto)", p_actor: user.id });
-            return NextResponse.json({ ok: true, auto: true, message: "เติมเงินสำเร็จ! เครดิตเข้าแล้ว" });
+            // ซื้อแพ็กเกจจ่ายตรง -> เปิดแพ็ก + ตัดค่าแพ็ก + ตั้งรอบบิลทันที (idempotent)
+            const { data: applied } = await svc.rpc("apply_plan_purchase", { p_topup_id: topupId });
+            const isPlan = (applied as { plan?: string } | null)?.plan;
+            return NextResponse.json({ ok: true, auto: true, message: isPlan ? "ชำระสำเร็จ! เปิดแพ็กเกจให้แล้ว ใช้งานได้ทันที" : "เติมเงินสำเร็จ! เครดิตเข้าแล้ว" });
           }
         }
       } catch { /* fallback manual */ }

@@ -11,6 +11,7 @@ import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
 import FeedbackWidget from "./feedback-widget";
 import CompanySwitcher from "./company-switcher";
+import AiQuotaBar, { type AiQuota } from "./ai-quota-bar";
 import { Logo } from "@/components/logo";
 
 const nav = [
@@ -36,8 +37,9 @@ async function signOut() {
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [{ shop, memberships }, isAdmin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
+  const [{ supabase, shop, memberships }, isAdmin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
   const companies = memberships.map((m) => ({ id: m.shop.id, name: m.shop.name, role: m.role }));
+  const { data: quota } = await supabase.rpc("get_ai_quota_status", { p_shop_id: shop.id });
 
   return (
     <div className="min-h-screen">
@@ -85,7 +87,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </>
           )}
         </nav>
-        <form action={signOut} className="border-t border-neutral-100 p-3">
+        <div className="border-t border-neutral-100 px-2 pt-2">
+          <AiQuotaBar quota={quota as AiQuota | null} />
+        </div>
+        <form action={signOut} className="p-3 pt-1">
           <button className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-neutral-500 hover:bg-neutral-100">
             <LogOut className="h-4 w-4" /> ออกจากระบบ
           </button>
