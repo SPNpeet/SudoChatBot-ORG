@@ -77,6 +77,12 @@
 - ใช้ Gemini Flash-Lite (ถูกสุด) ไม่ log เข้า `ai_usage_logs`/โควตาร้าน (แยกกระเป๋าคนละก้อนจากลูกค้าจริง) เพราะไม่มี shop_id ให้ผูก
 - เช็ค `platform_billing_settings.ai_kill_switch` ก่อนตอบทุกครั้ง — **พบว่า kill switch ตัวนี้ปัจจุบันไม่ถูกบังคับใช้กับ AI ของร้านที่ล็อกอินแล้วเลย** (ตรวจสอบแล้ว: enforcement เดิมอยู่ใน edge functions ที่ถูกลบไปตอน pivot chatbot, เหลือแค่ tracking/UI ให้ admin ดู) — เป็นช่องโหว่แยกที่ควรแก้ต่างหาก ไม่ได้แก้ในรอบนี้ (ดูรายการงานถัดไป)
 
+### Hardening รอบสอง (mig 061 — ทดสอบผ่านบน production แล้ว: 3 ครั้งตอบจริง ครั้งที่ 4 โดน HTTP 429)
+- **Atomic RPC** `consume_guest_ai_quota(guest, ip_hash)`: advisory lock + นับ 3 ชั้น + insert ในทรานแซกชันเดียว (กัน race ยิงพร้อมกัน) — service_role เท่านั้น
+- **ไม่เก็บ IP ดิบ (PDPA)**: HMAC-SHA256 (`RATE_LIMIT_IP_SECRET` ใน env ถ้าตั้ง, fallback service key) + IPv6 normalize เป็น /64 ก่อน hash
+- **HTTP status ถูกต้อง**: 429+Retry-After เมื่อครบโควตา · 503 fail-closed เมื่อ RPC/kill switch ล่ม (ไม่ปล่อยผ่านเด็ดขาด) · 400 prompt ว่าง · 502+code `upstream_XXX` เมื่อค่าย AI ล่ม (วินิจฉัยได้โดยไม่รั่ว detail)
+- **แก้บั๊ก AI ไม่ตอบ (เจอตอนทดสอบรอบแรก)**: เดิม hardcode gemini-2.5-flash-lite + maxOutputTokens 300 → Gemini 2.5 เป็น thinking model กินโทเคนจนตอบว่าง/ล้ม — แก้เป็น: ใช้คีย์จากการ์ดงานระบบ (purpose chat → assistant → คีย์สำรอง google) + ไล่โมเดลสำรองอัตโนมัติ + maxOutputTokens 1000
+
 ## 🔲 งานถัดไป (เรียงตามผลกระทบ)
 1. **⚠️ ช่องโหว่ที่พบ: platform AI kill switch/cap ไม่ได้บังคับใช้กับร้านที่ล็อกอินแล้ว** — ตอนนี้ทำงานจริงเฉพาะ guest sandbox หน้าแรก (รอบนี้) ส่วนแชทผู้ช่วย/OCR ของร้านจริงยังไม่มีจุดเช็ค `ai_kill_switch`/`ai_daily_cap_usd` เลย (enforcement เดิมอยู่ใน edge functions ที่ถูกลบตอน pivot) — แนะนำเพิ่ม check นี้ใน `runAssistant`/`extract/route.ts` ก่อนเปิดขายจริงเต็มรูป
 2. **ทดสอบ end-to-end บน production**: สมัคร → ตั้งกิจการ → ออก INV → ลิงก์ลูกค้า → สลิป → ดูสมุดรายวัน/รายงาน → ลอง guest sandbox หน้าแรกด้วย
