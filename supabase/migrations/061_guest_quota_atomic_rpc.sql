@@ -1,0 +1,4 @@
+﻿-- 061: Guest Sandbox quota แบบ atomic RPC (apply บน production แล้ว)
+-- consume_guest_ai_quota(guest, ip_hash): advisory lock + นับ 3 ชั้น (guest 3 ตลอดชีพ / ip_hash 15 ต่อวัน /
+-- แพลตฟอร์ม 300 ต่อวัน) + insert ในทรานแซกชันเดียว — service_role เท่านั้น
+-- คอลัมน์ guest_ai_usage.ip เก็บ HMAC-SHA256 hash (IPv6 normalize /64 ก่อน) ไม่เก็บ IP ดิบ (PDPA)
