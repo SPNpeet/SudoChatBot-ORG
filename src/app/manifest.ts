@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "SudoChatBot — AI ปิดการขาย",
+    name: "SudoChatBot — ระบบบัญชี + ผู้ช่วย AI",
     short_name: "SudoChatBot",
-    description: "แชทบอท AI ปิดการขายสำหรับร้านค้าบน Facebook / IG / LINE",
+    description: "ระบบบัญชีและออกเอกสารครบวงจร พร้อมผู้ช่วย AI สำหรับธุรกิจไทย",
     start_url: "/dashboard",
     display: "standalone",
     background_color: "#fafafa",

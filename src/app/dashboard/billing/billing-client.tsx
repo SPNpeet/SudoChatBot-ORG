@@ -163,9 +163,9 @@ export default function BillingClient({
                   <p className="font-bold">{p.name}</p>
                   <p className="mt-1"><span className="text-xl font-bold">{p.price_monthly ? baht(p.price_monthly) : "ฟรี"}</span>{p.price_monthly ? <span className="text-xs text-neutral-400">/เดือน</span> : ""}</p>
                   {p.code === "free" ? (
-                    <p className="mt-1 text-[11px] text-neutral-400">ตอบฟรี {(p.daily_reply_cap ?? 30).toLocaleString()} ข้อความ/วัน (รีเซ็ตทุกวัน)</p>
+                    <p className="mt-1 text-[11px] text-neutral-400">งาน AI ฟรี {(p.daily_reply_cap ?? 30).toLocaleString()} ครั้ง/วัน (รีเซ็ตทุกวัน) · คีย์เองไม่จำกัด</p>
                   ) : (
-                    <p className="mt-1 text-[11px] text-neutral-400">ตอบฟรี {p.included_replies.toLocaleString()} ข้อความ/เดือน · เกิน {p.price_per_extra_reply}฿/ข้อความ{p.daily_reply_cap ? ` · สูงสุด ${p.daily_reply_cap.toLocaleString()}/วัน` : ""}</p>
+                    <p className="mt-1 text-[11px] text-neutral-400">งาน AI ฟรี {p.included_replies.toLocaleString()} ครั้ง/เดือน · เกิน {p.price_per_extra_reply}฿/ครั้ง{p.daily_reply_cap ? ` · สูงสุด ${p.daily_reply_cap.toLocaleString()}/วัน` : ""}</p>
                   )}
                   <ul className="mt-3 flex-1 space-y-1.5">
                     {(p.features ?? []).map((f, i) => (

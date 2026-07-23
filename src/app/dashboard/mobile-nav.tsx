@@ -2,23 +2,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, MessageSquare, ShoppingBag, Package, Menu, BrainCircuit } from "lucide-react";
+import { LayoutDashboard, FileText, Receipt, Menu, Calculator } from "lucide-react";
 import { useState } from "react";
-import { BookOpen, Share2, Settings, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark, Store, MessagesSquare, ScrollText, Megaphone } from "lucide-react";
+import {
+  Settings, ShieldCheck, Wallet, CircleHelp, BarChart3, Landmark, Store,
+  MessagesSquare, ScrollText, Package, Users, Banknote, BookOpenText, PieChart,
+} from "lucide-react";
 
 const main = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
-  { href: "/dashboard/assistant", label: "ผู้จัดการ AI", icon: BrainCircuit },
-  { href: "/dashboard/chats", label: "แชท", icon: MessageSquare },
-  { href: "/dashboard/orders", label: "ออเดอร์", icon: ShoppingBag },
+  { href: "/dashboard/assistant", label: "ผู้ช่วย AI", icon: Calculator },
+  { href: "/dashboard/sales", label: "เอกสารขาย", icon: FileText },
+  { href: "/dashboard/expenses", label: "ค่าใช้จ่าย", icon: Receipt },
 ];
 const more = [
-  { href: "/dashboard/products", label: "สินค้า", icon: Package },
-  { href: "/dashboard/playground", label: "ทดลองบอท", icon: Sparkles },
-  { href: "/dashboard/slips", label: "คลังสลิป", icon: Receipt },
-  { href: "/dashboard/knowledge", label: "คลังความรู้", icon: BookOpen },
-  { href: "/dashboard/channels", label: "ช่องทาง", icon: Share2 },
-  { href: "/dashboard/ads", label: "ยิงแอด AI", icon: Megaphone },
+  { href: "/dashboard/money", label: "การเงิน/กระทบยอด", icon: Banknote },
+  { href: "/dashboard/contacts", label: "ผู้ติดต่อ", icon: Users },
+  { href: "/dashboard/products", label: "สินค้า/บริการ", icon: Package },
+  { href: "/dashboard/journal", label: "สมุดรายวัน", icon: BookOpenText },
+  { href: "/dashboard/reports", label: "รายงาน + ภาษี", icon: PieChart },
   { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
   { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
   { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },
@@ -38,7 +40,7 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
               { href: "/dashboard/admin", label: "ศูนย์ AI (Admin)", icon: ShieldCheck },
               { href: "/dashboard/admin/stats", label: "แดชบอร์ดแพลตฟอร์ม", icon: BarChart3 },
               { href: "/dashboard/admin/billing", label: "รายได้ + บัญชีรับเงิน", icon: Landmark },
-              { href: "/dashboard/admin/shops", label: "จัดการร้านค้า", icon: Store },
+              { href: "/dashboard/admin/shops", label: "จัดการผู้ใช้ระบบ", icon: Store },
               { href: "/dashboard/admin/feedback", label: "ความเห็นผู้ใช้", icon: MessagesSquare },
               { href: "/dashboard/admin/logs", label: "Audit Log", icon: ScrollText },
             ] : [])].map((m) => (

@@ -10,11 +10,24 @@ export function baht(n: number | string | null | undefined): string {
   return v.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " ฿";
 }
 
+/** จำนวนเงินบนเอกสารทางการ — ทศนิยม 2 ตำแหน่งเสมอ ไม่มีสัญลักษณ์ */
+export function bahtDoc(n: number | string | null | undefined): string {
+  return Number(n ?? 0).toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function dateTH(d: string | Date | null | undefined): string {
   if (!d) return "-";
   return new Date(d).toLocaleString("th-TH", {
     day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
     timeZone: "Asia/Bangkok",
+  });
+}
+
+/** วันที่อย่างเดียว (ใช้กับ issue/due date) */
+export function dateOnlyTH(d: string | Date | null | undefined): string {
+  if (!d) return "-";
+  return new Date(d).toLocaleDateString("th-TH", {
+    day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok",
   });
 }
 
@@ -27,15 +40,6 @@ export function timeAgo(d: string | Date | null | undefined): string {
   return `${Math.floor(diff / 86400)} วันที่แล้ว`;
 }
 
-export const ORDER_STATUS_TH: Record<string, string> = {
-  draft: "ร่าง", pending_payment: "รอชำระ", paid: "ชำระแล้ว", confirmed: "ยืนยันแล้ว",
-  shipped: "จัดส่งแล้ว", completed: "สำเร็จ", cancelled: "ยกเลิก", expired: "หมดอายุ",
-};
+export const PLAN_TH: Record<string, string> = { free: "ทดลองใช้", mini: "มินิ", starter: "เริ่มต้น", pro: "โปร", enterprise: "องค์กร" };
 
-export const DOC_STATUS_TH: Record<string, string> = {
-  pending: "รอประมวลผล", processing: "กำลังประมวลผล", ready: "พร้อมใช้", failed: "ล้มเหลว",
-};
-
-export const PLAN_TH: Record<string, string> = { free: "ทดลองใช้", starter: "เริ่มต้น", pro: "โปร", enterprise: "องค์กร" };
-
-export const SHOP_STATUS_TH: Record<string, string> = { active: "ใช้งานอยู่", suspended: "ระงับชั่วคราว", closed: "ปิดร้านแล้ว" };
+export const SHOP_STATUS_TH: Record<string, string> = { active: "ใช้งานอยู่", suspended: "ระงับชั่วคราว", closed: "ปิดแล้ว" };

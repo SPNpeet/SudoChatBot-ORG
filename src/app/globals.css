@@ -27,6 +27,13 @@ body {
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .rise { animation: rise .3s ease both; }
 
+/* ==== โหมดพิมพ์เอกสาร A4 — ซ่อนโครง dashboard ให้เหลือแต่ตัวเอกสาร ==== */
+@media print {
+  aside, header, nav, [data-noprint] { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; }
+  body { background: #fff !important; }
+}
+
 /* ==== สัมผัสตอนกด (press feedback) ทั้งแอป — ปุ่ม/ลิงก์ยุบเล็กน้อยเมื่อกด แบบ SaaS สมัยใหม่ ==== */
 @layer base {
   button, a[href], [role="button"] {

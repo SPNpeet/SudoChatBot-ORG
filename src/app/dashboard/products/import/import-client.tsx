@@ -274,7 +274,7 @@ export default function ImportClient({ shopId }: { shopId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-4 text-sm">
           <label className="flex items-center gap-1.5"><input type="checkbox" checked={skipDup} onChange={(e) => setSkipDup(e.target.checked)} /> ข้ามชื่อที่ซ้ำกับสินค้าเดิม</label>
-          <label className="flex items-center gap-1.5"><input type="checkbox" checked={asDraft} onChange={(e) => setAsDraft(e.target.checked)} /> นำเข้าเป็นร่างก่อน (บอทยังไม่เห็น)</label>
+          <label className="flex items-center gap-1.5"><input type="checkbox" checked={asDraft} onChange={(e) => setAsDraft(e.target.checked)} /> นำเข้าเป็นสถานะพักก่อน (ยังไม่ขึ้นตอนออกเอกสาร)</label>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => { setStep("pick"); setRows([]); setHeaders([]); setDataRows([]); setErr(null); }}>

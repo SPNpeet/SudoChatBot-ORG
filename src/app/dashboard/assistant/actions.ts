@@ -24,7 +24,7 @@ const ASSISTANT_LIMIT_PER_DAY = 100;
 
 export async function assistantReply(shopId: string, history: AssistantTurn[]): Promise<AssistantReply> {
   try {
-    const { user } = await assertMember(shopId, ["owner", "admin"]);
+    const { user } = await assertMember(shopId, ["owner", "admin", "agent"]);
     const svc = createServiceClient();
 
     const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
@@ -32,11 +32,11 @@ export async function assistantReply(shopId: string, history: AssistantTurn[]): 
       .select("id", { count: "exact", head: true })
       .eq("shop_id", shopId).eq("purpose", "assistant").gte("created_at", dayAgo);
     if ((count ?? 0) >= ASSISTANT_LIMIT_PER_DAY) {
-      return { ok: false, error: `ครบโควตาผู้จัดการร้าน AI วันนี้แล้ว (${ASSISTANT_LIMIT_PER_DAY} ข้อความ/วัน) — พรุ่งนี้คุยต่อได้` };
+      return { ok: false, error: `ครบโควตาผู้ช่วยบัญชี AI วันนี้แล้ว (${ASSISTANT_LIMIT_PER_DAY} ข้อความ/วัน) — พรุ่งนี้คุยต่อได้` };
     }
 
     const { data: shop } = await svc.from("shops").select("name,status").eq("id", shopId).single();
-    if (!shop || shop.status !== "active") return { ok: false, error: "ร้านถูกระงับการใช้งาน — ติดต่อผู้ดูแลระบบ" };
+    if (!shop || shop.status !== "active") return { ok: false, error: "บัญชีธุรกิจถูกระงับการใช้งาน — ติดต่อผู้ดูแลระบบ" };
 
     const trimmed = history
       .filter((h) => (h.role === "user" || h.role === "assistant") && typeof h.content === "string" && h.content.trim())
@@ -54,7 +54,7 @@ export async function assistantReply(shopId: string, history: AssistantTurn[]): 
   } catch (e) {
     const m = (e as Error).message;
     if (m === "AI_NOT_CONFIGURED") return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่า AI — ผู้ดูแลระบบต้องใส่ API key ก่อน" };
-    if (m.includes("forbidden")) return { ok: false, error: "เฉพาะเจ้าของ/ผู้ดูแลร้านใช้ผู้จัดการร้าน AI ได้" };
+    if (m.includes("forbidden")) return { ok: false, error: "สิทธิ์ของคุณใช้ผู้ช่วยบัญชี AI สั่งงานไม่ได้" };
     return { ok: false, error: friendlyAiError(m) };
   }
 }

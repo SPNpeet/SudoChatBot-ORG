@@ -1,47 +1,46 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { MessageCircle, Bot, QrCode, FileText, BarChart3, ShieldCheck, ArrowRight, Sparkles, Check } from "lucide-react";
+import { FileText, ScanLine, BookOpenText, Landmark, Building2, ShieldCheck, ArrowRight, Sparkles, Check, Calculator } from "lucide-react";
 
 const features = [
-  { icon: Bot, title: "AI พนักงานขาย 24 ชม.", desc: "ตอบทุกแชทใน 5 วินาที เช็กสต๊อกจริง ไม่ตอบมั่ว ไม่หลุดราคา" },
-  { icon: QrCode, title: "ปิดการขายอัตโนมัติ", desc: "สรุปออเดอร์ ส่ง QR พร้อมเพย์ ตรวจสลิปเอง ตัดสต๊อกทันทีเมื่อเงินเข้า" },
-  { icon: FileText, title: "สอนบอทด้วยไฟล์ PDF", desc: "อัปโหลดข้อมูลร้าน นโยบาย FAQ ระบบ OCR อ่านและจำให้ตอบได้ทันที" },
-  { icon: MessageCircle, title: "ครบทุกช่องทาง", desc: "Facebook Messenger, Instagram DM และ LINE OA ในที่เดียว" },
-  { icon: BarChart3, title: "เห็นยอดขายชัด", desc: "รายได้ ออเดอร์ที่บอทปิดเอง ต้นทุน AI — ครบในหน้าเดียว" },
-  { icon: ShieldCheck, title: "ปลอดภัยระดับองค์กร", desc: "ข้อมูลแยกรายร้าน เข้ารหัส token กันสลิปปลอม/สลิปซ้ำอัตโนมัติ" },
+  { icon: Calculator, title: "ผู้ช่วยบัญชี AI สั่งเป็นภาษาคน", desc: "\"ออกใบแจ้งหนี้ 5,000 ให้บริษัท A บวก VAT\" — พิมพ์แค่นี้ เอกสารออก บัญชีลงให้ครบ" },
+  { icon: ScanLine, title: "ถ่ายรูปบิล = ลงบัญชีเสร็จ", desc: "AI อ่านบิล แยก VAT ภาษีซื้อ หัก ณ ที่จ่าย จัดหมวด แล้วลงสมุดรายวันให้อัตโนมัติ" },
+  { icon: FileText, title: "เอกสารครบ พร้อมลิงก์เก็บเงิน", desc: "ใบเสนอราคา → ใบแจ้งหนี้ → ใบเสร็จ/ใบกำกับภาษี ส่งลิงก์ให้ลูกค้าสแกน QR จ่าย + อัปสลิป ระบบตรวจเองตัดยอดเอง" },
+  { icon: BookOpenText, title: "สมุดรายวันอัตโนมัติ 100%", desc: "ทุกธุรกรรมลงเดบิต/เครดิตเองทันที นักบัญชีแค่รีวิว — งบทดลองพร้อมดูตลอดเวลา" },
+  { icon: Landmark, title: "ภาษีไทยครบ พร้อมยื่น", desc: "สรุป ภ.พ.30 รายช่อง · หนังสือรับรอง 50 ทวิ · ภ.ง.ด.3/53 + ไฟล์แนบยื่นสรรพากร" },
+  { icon: Building2, title: "สำนักงานบัญชีดูแลหลายบริษัท", desc: "บัญชีเดียวสลับดูแลลูกค้าหลายกิจการ ข้อมูลแยกขาดจากกัน ตรวจย้อนหลังได้ทุกรายการ" },
 ];
 
 const steps = [
-  { n: "1", t: "เชื่อมเพจ", d: "Facebook / IG / LINE ใน 5 นาที" },
-  { n: "2", t: "ใส่สินค้า + สอนบอท", d: "อัปโหลด PDF หรือพิมพ์เอง" },
-  { n: "3", t: "ปล่อยให้บอทปิดการขาย", d: "คุณแค่แพ็กของส่ง" },
+  { n: "1", t: "ใส่ข้อมูลกิจการ", d: "ชื่อ เลขผู้เสียภาษี พร้อมเพย์ — 3 นาที" },
+  { n: "2", t: "ออกเอกสาร/ถ่ายบิล", d: "พิมพ์สั่ง AI หรือคีย์เองก็ได้" },
+  { n: "3", t: "บัญชี-ภาษีเสร็จเอง", d: "สมุดรายวัน รายงาน ไฟล์ยื่นภาษี พร้อมหมด" },
 ];
 
-// ตัวอย่างบทสนทนา — สะท้อน flow จริงของบอท (ถาม→เช็กสต๊อก→สรุปยอด→QR→ตรวจสลิป)
-const demo: { from: "customer" | "bot"; text: string }[] = [
-  { from: "customer", text: "มีเสื้อยืดสีดำไซซ์ L ไหมคะ" },
-  { from: "bot", text: "มีค่ะ 🖤 เสื้อยืดคอกลม สีดำ ไซซ์ L เหลือ 4 ตัว ราคา 290 บาทค่ะ รับกี่ตัวดีคะ" },
-  { from: "customer", text: "เอา 2 ตัวค่ะ ส่งไปเชียงใหม่" },
-  { from: "bot", text: "สรุปออเดอร์นะคะ 🧾 เสื้อยืดดำ L ×2 = 580 บาท + ส่ง Flash 40 บาท รวม 620 บาท — ขอชื่อ ที่อยู่ เบอร์โทรได้เลยค่ะ" },
-  { from: "bot", text: "รับออเดอร์แล้วค่ะ ✅ สแกน QR พร้อมเพย์นี้ได้เลย โอนแล้วส่งสลิปในแชทนี้ ระบบตรวจให้อัตโนมัติค่ะ" },
-  { from: "customer", text: "(ส่งสลิป)" },
-  { from: "bot", text: "ยืนยันการชำระเงินเรียบร้อยค่ะ ✅ ออเดอร์ #ORD-0042 ยอด 620 บาท ร้านจะรีบจัดส่งและแจ้งเลขพัสดุนะคะ ขอบคุณที่อุดหนุนค่ะ 💚" },
+// ตัวอย่างการสั่งงานผู้ช่วยบัญชี AI — สะท้อน flow จริง
+const demo: { from: "user" | "ai"; text: string }[] = [
+  { from: "user", text: "ออกใบแจ้งหนี้ค่าออกแบบเว็บ 25,000 ให้บริษัท สยามเทรด บวก VAT เขาหัก ณ ที่จ่าย 3%" },
+  { from: "ai", text: "ออกใบแจ้งหนี้ INV-2026-0042 แล้วค่ะ ✓ ยอดรวม 26,750 บาท (VAT 1,750) หัก ณ ที่จ่าย 750 รับจริง 26,000 บาท — ลงบัญชีตั้งลูกหนี้ให้แล้ว ส่งลิงก์ให้ลูกค้าสแกนจ่ายได้เลยค่ะ" },
+  { from: "user", text: "(แนบรูปบิลค่าไฟ)" },
+  { from: "ai", text: "อ่านบิลแล้วค่ะ: การไฟฟ้านครหลวง 2,340.51 บาท (รวม VAT) — บันทึกเป็นค่าน้ำ/ค่าไฟ EXP-2026-0018 แยกภาษีซื้อ 153.12 ลงสมุดรายวันเรียบร้อยค่ะ" },
+  { from: "user", text: "เดือนนี้ต้องยื่นภาษีอะไรบ้าง" },
+  { from: "ai", text: "ภ.พ.30: ภาษีขาย 4,120 − ภาษีซื้อ 1,890 = ชำระ 2,230 บาท · ภ.ง.ด.3 มี 2 ราย 1,150 บาท — ดาวน์โหลดรายงานแนบ + ไฟล์ยื่นได้ที่หน้ารายงานเลยค่ะ" },
 ];
 
 // ราคาตรงกับตาราง plans ในระบบ — แก้ราคาต้องแก้ทั้งสองที่
 const plans = [
-  { name: "ทดลองใช้", price: "ฟรี", per: "", items: ["ตอบฟรี 30 ข้อความ/วัน (รีเซ็ตทุกวัน)", "1 ช่องทาง", "บอทปิดการขายอัตโนมัติ", "ไม่ต้องใช้บัตรเครดิต"], cta: "เริ่มใช้ฟรี", hot: false },
-  { name: "มินิ", price: "190", per: "บาท/เดือน", items: ["ตอบฟรี 500 ข้อความ/เดือน", "2 ช่องทาง", "ตรวจสลิปอัตโนมัติ", "เริ่มจ่ายน้อยสุด คุ้มสุดสำหรับแม่ค้ารายเล็ก"], cta: "เลือกแพ็กนี้", hot: true },
-  { name: "เริ่มต้น", price: "390", per: "บาท/เดือน", items: ["ตอบฟรี 1,500 ข้อความ/เดือน", "3 ช่องทาง", "ตรวจสลิปอัตโนมัติ", "ทีมงาน 5 คน"], cta: "เลือกแพ็กนี้", hot: false },
-  { name: "โปร", price: "990", per: "บาท/เดือน", items: ["ตอบฟรี 5,000 ข้อความ/เดือน", "10 ช่องทาง", "โมเดล AI ระดับพรีเมียม", "รายงานเชิงลึก"], cta: "เลือกแพ็กนี้", hot: false },
+  { name: "ทดลองใช้", price: "ฟรี", per: "", items: ["เอกสาร + บัญชี + รายงานครบ", "AI อ่านบิล/สั่งงาน 30 ครั้ง/วัน", "1 กิจการ", "ไม่ต้องใช้บัตรเครดิต"], cta: "เริ่มใช้ฟรี", hot: false },
+  { name: "มินิ", price: "190", per: "บาท/เดือน", items: ["ทุกอย่างในทดลองใช้", "AI 500 ครั้ง/เดือน", "ตรวจสลิปอัตโนมัติ", "เหมาะฟรีแลนซ์/ร้านเล็ก"], cta: "เลือกแพ็กนี้", hot: true },
+  { name: "เริ่มต้น", price: "390", per: "บาท/เดือน", items: ["AI 1,500 ครั้ง/เดือน", "หลายกิจการ", "ทีมงาน 5 คน", "ตรวจสลิปอัตโนมัติ"], cta: "เลือกแพ็กนี้", hot: false },
+  { name: "โปร", price: "990", per: "บาท/เดือน", items: ["AI 5,000 ครั้ง/เดือน", "โมเดล AI พรีเมียม", "เหมาะสำนักงานบัญชี", "รายงานเชิงลึก"], cta: "เลือกแพ็กนี้", hot: false },
 ];
 
 const faqs = [
-  { q: "บอทตอบมั่วไหม ถ้าลูกค้าถามนอกเรื่อง?", a: "บอทตอบจากข้อมูลสินค้าและคลังความรู้ของร้านคุณเท่านั้น ราคากับสต๊อกดึงจากระบบสด ๆ ทุกครั้ง ไม่เดาเอง ถ้าไม่รู้จะบอกตรง ๆ แล้วส่งต่อให้แอดมิน และคุณกดสลับมาตอบเองแทนบอทได้ตลอดเวลา" },
-  { q: "ต้องเขียนโปรแกรมเป็นไหม?", a: "ไม่ต้องเลย สมัคร เชื่อมเพจ ใส่สินค้า แล้วบอททำงานทันที มีหน้า 'ทดลองบอท' ให้คุยกับบอทตัวเองก่อนเปิดใช้จริง ฟรี ไม่หักเครดิต" },
-  { q: "เงินเข้าบัญชีใคร?", a: "เข้าบัญชีพร้อมเพย์ของร้านคุณโดยตรง 100% เราไม่ผ่านเงินของร้าน — ระบบแค่สร้าง QR และตรวจสลิปให้" },
-  { q: "ใช้ LINE อย่างเดียวได้ไหม?", a: "ได้ เชื่อม LINE OA ได้เต็มรูปแบบทันที มีตัวช่วยพาทำทีละขั้นตอนในแอป ส่วน Facebook/IG เชื่อมได้ด้วยการกดปุ่มเดียว" },
-  { q: "ยกเลิกยากไหม?", a: "ไม่มีสัญญาผูกมัด ลดแพ็กเกจหรือหยุดใช้เมื่อไหร่ก็ได้ ข้อมูลร้านเป็นของคุณ ขอลบได้ตลอดตามนโยบายความเป็นส่วนตัว" },
+  { q: "ไม่มีความรู้บัญชีเลย ใช้ได้ไหม?", a: "ได้ — คุณแค่ออกเอกสารหรือถ่ายรูปบิล ระบบลงเดบิต/เครดิตให้เองตามหลักบัญชีคู่ ส่วนที่นักบัญชีต้องใช้ (สมุดรายวัน งบทดลอง รายงานภาษี) ระบบเตรียมให้ครบ ส่งต่อสำนักงานบัญชีได้ทันที" },
+  { q: "ต่างจากโปรแกรมบัญชีทั่วไปยังไง?", a: "หัวใจคือ AI: พิมพ์สั่งเป็นภาษาคนหรือถ่ายรูปบิลก็ลงบัญชีได้เลย ไม่ต้องเรียนรู้เมนูซับซ้อน และมีลิงก์เก็บเงินที่ลูกค้าสแกน QR จ่ายแล้วอัปสลิปเองได้ ระบบตรวจสลิปจริง/สลิปซ้ำและตัดยอดให้อัตโนมัติ" },
+  { q: "สำนักงานบัญชีใช้ดูแลลูกค้าหลายเจ้าได้ไหม?", a: "ได้ — บัญชีเดียวสร้าง/สลับได้หลายกิจการ ข้อมูลแยกขาดจากกันด้วย Row-Level Security ทุกการแก้ไขมี audit log ตรวจย้อนหลังได้ และเชิญพนักงานเข้าทำงานแยกสิทธิ์ตามบทบาทได้" },
+  { q: "เงินเข้าบัญชีใคร?", a: "เข้าพร้อมเพย์ของกิจการคุณโดยตรง 100% เราไม่ผ่านเงินของคุณ — ระบบแค่สร้าง QR ตรวจสลิป และลงบัญชีให้" },
+  { q: "ยกเลิกยากไหม ข้อมูลเป็นของใคร?", a: "ไม่มีสัญญาผูกมัด หยุดใช้เมื่อไหร่ก็ได้ ข้อมูลเป็นของคุณ ดาวน์โหลดรายงานเป็น Excel ได้ตลอด และขอลบข้อมูลได้ตามนโยบายความเป็นส่วนตัว" },
 ];
 
 export default function Landing() {
@@ -61,45 +60,46 @@ export default function Landing() {
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="text-center lg:text-left">
             <p className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-              <Sparkles className="h-3.5 w-3.5" /> เริ่มฟรี ตอบ 30 ข้อความ/วัน ไม่มีค่าใช้จ่าย
+              <Sparkles className="h-3.5 w-3.5" /> ระบบบัญชี + ผู้ช่วย AI — เริ่มฟรี ไม่ต้องใช้บัตร
             </p>
             <h1 className="text-4xl font-bold leading-[1.15] tracking-tight sm:text-5xl">
-              AI ที่<span className="text-emerald-600">ปิดการขาย</span>ให้ร้านคุณ<br />ตั้งแต่ทักจนโอนเงิน
+              บัญชีทั้งบริษัท<br /><span className="text-emerald-600">เสร็จด้วยการพิมพ์สั่ง</span>
             </h1>
             <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-neutral-500 lg:mx-0 mx-auto">
-              เชื่อมเพจ Facebook, IG, LINE แล้วปล่อยให้ AI ตอบลูกค้า แนะนำสินค้า สรุปยอด
-              ส่ง QR พร้อมเพย์ และตรวจสลิปยืนยันออเดอร์ — อัตโนมัติทั้งหมด เงินเข้าบัญชีคุณตรง
+              ออกใบแจ้งหนี้-ใบกำกับภาษี เก็บเงินผ่าน QR ตรวจสลิปอัตโนมัติ ถ่ายรูปบิลให้ AI ลงบัญชี
+              สมุดรายวันเดบิต/เครดิตอัตโนมัติ จนถึงรายงาน ภ.พ.30 / ภ.ง.ด. พร้อมยื่น — ครบในระบบเดียว
+              ใช้ง่ายทั้งเจ้าของกิจการและสำนักงานบัญชี
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start justify-center">
               <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500">
                 เริ่มใช้ฟรี <ArrowRight className="h-4 w-4" />
               </Link>
-              <span className="text-xs text-neutral-400">ไม่ต้องใช้บัตรเครดิต · ไม่ต้องเขียนโค้ด</span>
+              <span className="text-xs text-neutral-400">ไม่ต้องมีความรู้บัญชี · ไม่ต้องเขียนโค้ด</span>
             </div>
           </div>
 
-          {/* ตัวอย่างบทสนทนา — ให้เห็นก่อนสมัครว่าบอททำอะไรได้จริง */}
+          {/* ตัวอย่างสั่งงานผู้ช่วยบัญชี AI */}
           <div className="mx-auto w-full max-w-sm">
             <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2 border-b border-neutral-200 pb-3">
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-600 text-white"><Bot className="h-4 w-4" /></div>
+                <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-600 text-white"><Calculator className="h-4 w-4" /></div>
                 <div>
-                  <p className="text-xs font-semibold">น้องขายดี — แอดมินร้าน</p>
-                  <p className="text-[10px] text-emerald-600">● ตอบทันที ตลอด 24 ชม.</p>
+                  <p className="text-xs font-semibold">ผู้ช่วยบัญชี AI</p>
+                  <p className="text-[10px] text-emerald-600">● ลงบัญชีให้ทุกคำสั่ง ตรวจย้อนหลังได้</p>
                 </div>
               </div>
               <div className="space-y-2">
                 {demo.map((m, i) => (
-                  <div key={i} className={m.from === "customer" ? "flex justify-end" : "flex justify-start"}>
+                  <div key={i} className={m.from === "user" ? "flex justify-end" : "flex justify-start"}>
                     <p className={
-                      m.from === "customer"
+                      m.from === "user"
                         ? "max-w-[80%] rounded-2xl rounded-br-md bg-emerald-600 px-3 py-2 text-[12px] leading-relaxed text-white"
                         : "max-w-[85%] rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-3 py-2 text-[12px] leading-relaxed text-neutral-700"
                     }>{m.text}</p>
                   </div>
                 ))}
               </div>
-              <p className="mt-3 text-center text-[10px] text-neutral-400">ตัวอย่างบทสนทนา — ลองคุยกับบอทของคุณเองได้ฟรีหลังสมัคร</p>
+              <p className="mt-3 text-center text-[10px] text-neutral-400">ตัวอย่างการใช้งานจริง — สมัครแล้วลองสั่งได้ทันที</p>
             </div>
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function Landing() {
 
       <section className="border-t border-neutral-100 bg-neutral-50/60 py-16">
         <div className="mx-auto max-w-6xl px-6">
-          <h2 className="mb-8 text-center text-2xl font-bold tracking-tight">ทุกอย่างที่ร้านต้องใช้ ในที่เดียว</h2>
+          <h2 className="mb-8 text-center text-2xl font-bold tracking-tight">หน้าบ้านใช้ง่าย หลังบ้านไม่ต้องคีย์ซ้ำ</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
               <div key={f.title} className="rounded-2xl border border-neutral-200 bg-white p-6 transition-shadow hover:shadow-sm">
@@ -129,13 +129,17 @@ export default function Landing() {
               </div>
             ))}
           </div>
+          <p className="mx-auto mt-6 flex max-w-xl items-center justify-center gap-2 text-center text-xs text-neutral-400">
+            <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600" />
+            ข้อมูลแยกรายกิจการด้วย Row-Level Security · ทุกการแก้ไขมี Audit Log · เอกสารยกเลิกได้แบบกลับรายการ ตรวจสอบย้อนหลังได้เสมอ
+          </p>
         </div>
       </section>
 
       {/* ราคา — ตัวเลขเดียวกับหน้า แพ็กเกจ ในระบบ */}
       <section id="pricing" className="mx-auto max-w-5xl px-6 py-16">
         <h2 className="text-center text-2xl font-bold tracking-tight">ราคาตรงไปตรงมา</h2>
-        <p className="mt-2 text-center text-sm text-neutral-500">เริ่มฟรี อัปเกรดเมื่อขายดี ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด</p>
+        <p className="mt-2 text-center text-sm text-neutral-500">เริ่มฟรี อัปเกรดเมื่อธุรกิจโต ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด</p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {plans.map((p) => (
             <div key={p.name} className={`relative rounded-2xl border p-6 ${p.hot ? "border-emerald-300 bg-emerald-50/40 shadow-sm" : "border-neutral-200 bg-white"}`}>
@@ -155,10 +159,10 @@ export default function Landing() {
             </div>
           ))}
         </div>
-        <p className="mt-4 text-center text-xs text-neutral-400">ข้อความเกินแพ็กเกจ คิดตามจริง 0.35–0.79 บาท/ข้อความตามแพ็ก · ร้านใหญ่/หลายแบรนด์ ติดต่อแพ็กองค์กรได้ในแอป</p>
+        <p className="mt-4 text-center text-xs text-neutral-400">คีย์เอกสารเองไม่จำกัดทุกแพ็ก — เครดิตใช้เฉพาะงาน AI (อ่านบิล/สั่งงาน) · สำนักงานบัญชีขนาดใหญ่ ติดต่อแพ็กองค์กรในแอป</p>
       </section>
 
-      {/* FAQ — คำถามที่แม่ค้าถามก่อนตัดสินใจจริง */}
+      {/* FAQ */}
       <section className="border-t border-neutral-100 bg-neutral-50/60 py-16">
         <div className="mx-auto max-w-3xl px-6">
           <h2 className="mb-8 text-center text-2xl font-bold tracking-tight">คำถามที่เจอบ่อย</h2>
@@ -176,8 +180,8 @@ export default function Landing() {
       </section>
 
       <section className="mx-auto max-w-3xl px-6 py-16 text-center">
-        <h2 className="text-2xl font-bold tracking-tight">พร้อมให้บอทปิดการขายแทนคุณ?</h2>
-        <p className="mt-2 text-sm text-neutral-500">สมัครแล้วลองคุยกับบอทของคุณเองได้ทันที ฟรี ไม่ต้องเชื่อมเพจก่อน</p>
+        <h2 className="text-2xl font-bold tracking-tight">พร้อมให้บัญชีเสร็จเองทั้งระบบ?</h2>
+        <p className="mt-2 text-sm text-neutral-500">สมัครฟรี ออกเอกสารใบแรกได้ใน 3 นาที — สั่งผู้ช่วย AI เป็นภาษาคนได้ทันที</p>
         <Link href="/login" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500">
           เริ่มเลย <ArrowRight className="h-4 w-4" />
         </Link>
@@ -191,7 +195,7 @@ export default function Landing() {
             <Link href="/data-deletion" className="hover:text-neutral-600">การลบข้อมูล</Link>
             <a href="mailto:support@sudochatbot.online" className="hover:text-neutral-600">ติดต่อเรา</a>
           </div>
-          <p>© {new Date().getFullYear()} SudoChatBot — AI Sales-Closing Platform</p>
+          <p>© {new Date().getFullYear()} SudoChatBot — AI Accounting & Back-Office Platform</p>
         </div>
       </footer>
     </main>

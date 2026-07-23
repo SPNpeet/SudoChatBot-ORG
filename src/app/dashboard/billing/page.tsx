@@ -40,17 +40,17 @@ export default async function BillingPage() {
     <div className="max-w-3xl space-y-6">
       <div>
         <h1 className="text-xl font-bold">แพ็กเกจและเครดิต</h1>
-        <p className="text-sm text-neutral-400">เติมเงิน จัดการแพ็กเกจ และดูการใช้งานของร้าน {shop.name}</p>
+        <p className="text-sm text-neutral-400">เติมเงิน จัดการแพ็กเกจ และดูการใช้งาน AI ของ {shop.name} — คีย์เอกสารเองไม่จำกัดทุกแพ็ก</p>
       </div>
 
       {dailyCap && quotaUsed >= quotaMax && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <span>⚠️ ใช้ครบโควตาฟรีวันนี้แล้ว ({quotaMax} ข้อความ/วัน) — บอทจะกลับมาตอบพรุ่งนี้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตาต่อวัน</span>
+          <span>⚠️ ใช้ครบโควตา AI ฟรีวันนี้แล้ว ({quotaMax} ครั้ง/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา (คีย์เอกสารเองได้ไม่จำกัด)</span>
         </div>
       )}
       {!dailyCap && balance <= 0 && usage.replies_count >= (plan?.included_replies ?? 0) && (
         <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>⚠️ เครดิตหมดและใช้เกินโควตาแพ็กเกจแล้ว — บอทจะหยุดตอบลูกค้าจนกว่าจะเติมเงินหรืออัปเกรดแพ็กเกจ</span>
+          <span>⚠️ เครดิตหมดและใช้เกินโควตาแพ็กเกจแล้ว — งาน AI (อ่านบิล/ผู้ช่วย) จะหยุดจนกว่าจะเติมเงินหรืออัปเกรด (คีย์เอกสารเองยังใช้ได้ปกติ)</span>
         </div>
       )}
 
@@ -122,7 +122,7 @@ export default async function BillingPage() {
           {(txns ?? []).map((t) => (
             <div key={t.id} className="flex items-center justify-between border-b border-neutral-50 py-2 text-sm last:border-0">
               <div>
-                <span className="font-medium">{t.type === "topup" ? "เติมเงิน" : t.type === "debit" ? "ค่าบอทตอบ" : t.type === "bonus" ? "โบนัส" : "ปรับปรุง"}</span>
+                <span className="font-medium">{t.type === "topup" ? "เติมเงิน" : t.type === "debit" ? "ค่างาน AI" : t.type === "bonus" ? "โบนัส" : "ปรับปรุง"}</span>
                 {t.note && <span className="text-[11px] text-neutral-400"> · {t.note}</span>}
                 <p className="text-[11px] text-neutral-400">{dateTH(t.created_at)}</p>
               </div>

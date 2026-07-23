@@ -1,18 +1,18 @@
 "use client";
-// แชทผู้จัดการร้าน AI — สั่งงานทุกระบบของร้านจากที่เดียว
+// แชทผู้ช่วยบัญชี AI — สั่งงานบัญชีทั้งระบบ + แนบรูปบิลให้บันทึกเองได้จากแชท
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, BrainCircuit, Sparkles } from "lucide-react";
+import { Send, Calculator, Sparkles, Paperclip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { assistantReply, type AssistantTurn } from "./actions";
 
 const STARTERS = [
-  "วันนี้ขายได้เท่าไหร่ มีอะไรค้างบ้าง",
-  "มีแชทไหนรอแอดมินตอบไหม",
-  "ออเดอร์ไหนจ่ายแล้วยังไม่ได้ส่งบ้าง",
-  "ปรับคำทักทายบอทให้น่ารักกว่านี้หน่อย",
+  "เดือนนี้กำไรเท่าไหร่ มีอะไรค้างบ้าง",
+  "ใครค้างจ่ายเราบ้าง ทวงใครก่อนดี",
+  "ออกใบแจ้งหนี้ค่าบริการ 5,000 บาท ให้บริษัท ตัวอย่าง จำกัด บวก VAT หัก ณ ที่จ่าย 3%",
+  "บันทึกค่าไฟเดือนนี้ 2,340 บาท จ่ายแล้ว",
+  "สรุปภาษีที่ต้องยื่นเดือนนี้",
   "สินค้าตัวไหนใกล้หมดสต๊อก",
-  "สรุปยอดขาย 7 วันล่าสุดให้หน่อย",
 ];
 
 interface Msg extends AssistantTurn { toolCalls?: { name: string; label: string }[] }
@@ -21,13 +21,15 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs, busy]);
+  }, [msgs, busy, reading]);
 
   async function send(text: string) {
     const t = text.trim();
@@ -59,17 +61,37 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     }
   }
 
+  async function attachFile(f: File) {
+    if (busy || reading) return;
+    setError(null);
+    setReading(true);
+    try {
+      const fd = new FormData();
+      fd.append("shop_id", shopId);
+      fd.append("file", f);
+      const res = await fetch("/api/finance/extract", { method: "POST", body: fd });
+      const j = await res.json();
+      if (!j.ok) { setError(j.error ?? "อ่านไฟล์ไม่สำเร็จ"); return; }
+      const summary = `[ไฟล์แนบ: ${f.name}${j.file_path ? ` · file_path: ${j.file_path}` : ""}]\nข้อมูลที่ AI อ่านได้จากเอกสาร: ${JSON.stringify(j.data)}\nช่วยตรวจและบันทึกเข้าระบบให้หน่อย`;
+      await send(summary);
+    } catch {
+      setError("อ่านไฟล์ไม่สำเร็จ ลองใหม่อีกครั้ง");
+    } finally {
+      setReading(false);
+    }
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {msgs.length === 0 && (
           <div className="pt-6 text-center">
-            <BrainCircuit className="mx-auto h-8 w-8 text-neutral-300" />
+            <Calculator className="mx-auto h-8 w-8 text-neutral-300" />
             <p className="mt-2 text-sm text-neutral-500">
-              สั่งได้ทุกเรื่องของร้าน — ออเดอร์ จัดส่ง สินค้า ตอบลูกค้า ปรับบอท ดูยอดขาย
+              สั่งได้ทุกเรื่องบัญชี — ออกเอกสาร บันทึกรายจ่าย รับเงิน ดูยอดค้าง สรุปภาษี
             </p>
             <p className="mx-auto mt-1 flex max-w-sm items-center justify-center gap-1 text-[11px] text-neutral-400">
-              <Sparkles className="h-3 w-3 shrink-0" /> ทุกการแก้ไขบันทึกประวัติไว้ ตรวจย้อนหลังได้เสมอ
+              <Sparkles className="h-3 w-3 shrink-0" /> แนบรูปบิลได้เลย เดี๋ยวอ่านและลงบัญชีให้ · ทุกรายการตรวจย้อนหลังได้ในสมุดรายวัน
             </p>
             <div className="mx-auto mt-4 flex max-w-md flex-wrap justify-center gap-1.5">
               {STARTERS.map((s) => (
@@ -87,20 +109,28 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
               "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm",
               m.role === "user" ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-800",
             )}>
-              <p className="whitespace-pre-wrap break-words">{m.content}</p>
+              <p className="whitespace-pre-wrap break-words">{m.role === "user" && m.content.startsWith("[ไฟล์แนบ") ? m.content.split("\n")[0] : m.content}</p>
               {m.toolCalls && m.toolCalls.length > 0 && (
                 <p className="mt-1 text-[10px] text-neutral-400">{m.toolCalls.map((t) => t.label).join(" · ")}</p>
               )}
             </div>
           </div>
         ))}
-        {busy && <p className="text-xs text-neutral-400">ผู้จัดการร้านกำลังจัดการให้...</p>}
+        {reading && <p className="text-xs text-neutral-400">กำลังอ่านไฟล์ด้วย AI...</p>}
+        {busy && <p className="text-xs text-neutral-400">ผู้ช่วยบัญชีกำลังจัดการให้...</p>}
         {error && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-600">{error}</p>}
         <div ref={bottomRef} />
       </div>
       <div className="border-t border-neutral-100 p-3">
         <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); send(input); }}>
-          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="สั่งงานผู้จัดการร้าน เช่น ใส่เลขพัสดุออเดอร์ SD-0012..."
+          <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) attachFile(f); e.target.value = ""; }} />
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || reading}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-neutral-300 text-neutral-500 hover:border-emerald-400 hover:text-emerald-600 disabled:opacity-40"
+            title="แนบรูปบิล/เอกสาร ให้ AI อ่านและบันทึก">
+            <Paperclip className="h-4 w-4" />
+          </button>
+          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="สั่งงานบัญชี เช่น ออกใบแจ้งหนี้ 5,000 ให้คุณสมชาย..."
             className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
           <button disabled={busy || !input.trim()}
             className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">

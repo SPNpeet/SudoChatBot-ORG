@@ -2,7 +2,7 @@ import { getCurrentShop } from "@/lib/shop";
 import { markNotificationRead } from "./actions";
 import { cn } from "@/lib/utils";
 
-/** แถบแจ้งเตือนของร้าน (เครดิตใกล้หมด/บอทหยุด) — แสดงเหนือเนื้อหาทุกหน้า dashboard */
+/** แถบแจ้งเตือนของกิจการ (เครดิตใกล้หมด ฯลฯ) — แสดงเหนือเนื้อหาทุกหน้า dashboard */
 export default async function Notifications() {
   const { supabase, shop } = await getCurrentShop();
   const { data } = await supabase.from("notifications")
@@ -31,9 +31,7 @@ export default async function Notifications() {
             <p className="font-medium">{n.type === "bot_blocked" ? "🛑" : n.type === "order_paid" ? "" : n.type === "handoff" ? "" : "⚠️"} {n.title}</p>
             {n.body && <p className="mt-0.5 text-xs opacity-80">{n.body}</p>}
             {n.type === "order_paid" ? (
-              <a href="/dashboard/orders" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าออเดอร์ →</a>
-            ) : n.type === "handoff" ? (
-              <a href="/dashboard/chats" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าแชท →</a>
+              <a href="/dashboard/money" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าการเงิน →</a>
             ) : (
               <a href="/dashboard/billing" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าเติมเงิน →</a>
             )}

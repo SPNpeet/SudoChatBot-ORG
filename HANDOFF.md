@@ -1,113 +1,61 @@
-# 🚀 SudoChatBot — เอกสารส่งต่อ (ทำต่อบน Claude Code ได้ 100%)
+# 🚀 SudoChatBot (ระบบบัญชี AI) — เอกสารส่งต่อ
 
 > เปิด repo นี้ใน Claude Code แล้วสั่ง "อ่าน HANDOFF.md แล้วทำงานที่ค้างต่อ" ได้เลย
-> อัปเดตล่าสุด: 2026-07-19 — **ระบบ LIVE เต็มรูปแบบ เหลือจุดเดียวที่บล็อกไม่ให้บอทตอบลูกค้าได้จริง (ดูข้อ 1)**
+> อัปเดตล่าสุด: 2026-07-23 — **PIVOT ครั้งใหญ่: จาก AI Chatbot ขายของ → ระบบบัญชี + ออกเอกสารครบวงจร (Full Cloud Accounting) ชื่อเดิม SudoChatBot (โดเมนเช่าแล้ว)**
 
 ## 📍 ที่อยู่ทุกอย่าง
 
 | สิ่ง | ที่อยู่ / ID |
 |---|---|
-| **เว็บใช้งานจริง** | 🟢 **https://sudochatbot.online** (custom domain, SSL ออกแล้ว) · alias `sudochatbot-org.vercel.app` ก็ใช้ได้ |
-| **Health check** | `https://sudochatbot.online/api/health` |
+| **เว็บใช้งานจริง** | 🟢 https://sudochatbot.online · alias `sudochatbot-org.vercel.app` |
 | **GitHub repo** | `github.com/SPNpeet/SudoChatBot-ORG` branch `main` = production (auto-deploy ทุก push) |
-| **Vercel project** | `sudochatbot-org` (team `suphanats-projects`) — function region บังคับ `sin1` (สิงคโปร์ ติด Supabase) |
-| **Supabase project** | ref `uafnpbawajgonarvlurj` · ap-southeast-1 · เจ้าของบัญชี `ta_free14@hotmail.com` (ยืนยันแล้วว่าเป็นของเจ้าของระบบเอง) — **Free plan** (พอสำหรับ usage ตอนนี้ ~DB 12%/Edge 6%) |
-| **Facebook App** | "SudoLogin" App ID `1548418113603775` |
-| **เอกสารอ้างอิง** | `docs/GO-LIVE.md` (checklist) · `docs/META-REVIEW.md` (ขั้นตอน+สคริปต์ยื่น Facebook Advanced Access) · `docs/SETUP-LINE.md` · `docs/REPO-MAP.md` (แผนที่โค้ด, regenerate ด้วย `node ~/.claude/skills/ast-repo-mapper/scripts/repo-map.mjs src docs/REPO-MAP.md`) |
+| **Vercel project** | `sudochatbot-org` (team `suphanats-projects`) region `sin1` |
+| **Supabase project** | ref `uafnpbawajgonarvlurj` · ap-southeast-1 · Free plan |
+| **แผนที่โค้ด** | `docs/REPO-MAP.md` (119 ไฟล์ ~11,000 บรรทัด — regenerate: `node ~/.claude/skills/ast-repo-mapper/scripts/repo-map.mjs src docs/REPO-MAP.md`) |
 
-### สถานะจริงที่ตรวจสอบแล้ว (2026-07-19 — query ตรงจาก DB ไม่ใช่เดา)
-```
-platform_admins = 1     ✅ มีแอดมินแพลตฟอร์มแล้ว
-ai_provider_keys = 0    ❌ ยังไม่มี AI key เลยสักตัว ← บล็อกเดียวที่เหลือ
-shops = 1 (active)      ✅ ร้านเดียว สะอาด (เคยมีบั๊กสร้างร้านซ้ำ 47 ร้าน แก้+ล้างแล้ว)
-products / orders = 0   (ยังไม่ได้เพิ่มสินค้า — รอทำหลังใส่ AI key)
-mailer_autoconfirm = true            ✅ สมัครอีเมลแล้วเข้าใช้ได้ทันที ไม่ติด rate limit
-external providers: email/google/facebook = true (ทั้ง 3 เปิดหมดแล้ว)
-```
+## 🔄 Pivot 2026-07-23 — เกิดอะไรขึ้น
 
-### Vercel Env ที่ตั้งครบแล้ว
-`NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` · `SUPABASE_SERVICE_ROLE_KEY` · `META_APP_ID` · `META_APP_SECRET`
-(AI provider keys ตั้งในหน้า **Admin → ศูนย์ AI** เก็บ Vault ไม่ต้องพึ่ง env — รองรับ 8 ค่ายแล้ว: Claude/GPT/Gemini + DeepSeek/Qwen/GLM/Kimi + Mistral)
+**ลบทิ้งทั้งหมด (ตามคำสั่งเจ้าของ):** แชทบอทตอบลูกค้า FB/IG/LINE/TikTok, playground, ยิงแอด AI, คลังความรู้บอท, ออเดอร์จากแชท, edge functions ทุกตัว (webhook-*, queue-worker, doc-processor, slip-verifier, ads-watchdog) และ cron ที่ปลุกมัน (unschedule แล้วบน production: kick_queue_worker, kick_doc_processor, kick_slip_verifier, kick_ads_watchdog)
+- ⚠️ ตาราง DB เก่าของแชทบอท (conversations, messages, channels, knowledge_* ฯลฯ) **ไม่ได้ drop** — เก็บข้อมูลไว้เฉยๆ ไม่มีผลกับระบบใหม่ · Edge functions บน Supabase ยัง deploy ค้างไว้แต่ไม่มีอะไรเรียก — ลบได้จาก Supabase dashboard เมื่อสะดวก
 
-### Edge Functions (deploy ล่าสุด — cron ปลุกทุกนาที 200 ต่อเนื่อง)
-`webhook-meta` · `webhook-line` · `webhook-tiktok` v1 · `queue-worker` **v7** (รองรับ 8 ค่าย AI รวม Mistral + rate limit + notify) · `doc-processor` v2 · `slip-verifier` **v2**
+**สิ่งที่เก็บไว้:** Auth (email/Google/Facebook), multi-tenant `shops` + RLS + RBAC, billing เครดิต/แพ็กเกจ (PromptPay topup + ตรวจสลิป), ศูนย์ AI (8 ค่าย, key ใน Vault), หน้า admin ทั้งชุด, สินค้า + นำเข้าไฟล์, ai-errors, feedback, audit logs
 
-### Database
-Migrations **001 → 029 apply ครบบน production** แล้วทั้งหมด (ไม่มีอะไรค้าง)
+## ✅ ระบบใหม่ทั้งหมด (สร้างเสร็จ + build ผ่าน)
 
-## 🆕 รอบ 2026-07-20 — นำเข้าสินค้าจากไฟล์ + ค่าย Mistral + แก้ billing/error UX
-- **สาเหตุที่ AI key ยังเป็น 0 ทั้งที่เจ้าของเคยวาง key แล้ว**: key OpenAI ที่วางถูก OpenAI ปฏิเสธ (`401 Incorrect API key`) — ระบบทำงานถูกต้อง ตัว key เองใช้ไม่ได้ ต้องสร้างใหม่ที่ platform.openai.com (เช็คว่าบัญชีมี billing) หรือใช้ค่ายอื่น
-- **Billing แก้ทั้งชุด**: server actions คืน `{ok,error}` แทน throw (Next.js prod ซ่อนข้อความ throw เป็น "Server Components render error") · error แสดง inline เลิก alert() · ถ้าแพลตฟอร์มยังไม่ตั้งพร้อมเพย์รับเงิน หน้าเติมเงินโชว์การ์ดชี้ทางไปตั้งที่ Admin → Billing แทนปุ่มที่กดแล้วพัง
-- **Error AI เป็นไทย**: `src/lib/ai-errors.ts` แปลง 401/402/429/5xx เป็นข้อความชี้ทางแก้ ใช้ใน test-ai + playground + import
-- **ค่าย Mistral (ที่ 8)**: migration 029 apply แล้ว (ปลด constraint + whitelist) · queue-worker **v7** deploy แล้ว · เลือกในหน้า Admin ได้ (OCR + Chat)
-- **นำเข้าสินค้าจากไฟล์** (`/dashboard/products/import` + ปุ่ม "นำเข้าไฟล์" บนหน้าสินค้า): Excel/CSV parse ในเครื่องด้วย SheetJS + จับคู่คอลัมน์ไทย/อังกฤษอัตโนมัติ · PDF/รูปแคตตาล็อก (≤4MB) อ่านด้วย AI ผ่าน `/api/products/import-extract` (ลำดับ: Mistral OCR → Gemini → Claude → GPT ตาม key ที่มี) · พรีวิวแก้ไขได้ + ข้ามชื่อซ้ำ + นำเข้าเป็นร่าง + รองรับ variants
+**Migrations 050-054 (apply บน production ครบแล้ว):**
+- `contacts` ผู้ติดต่อ (ลูกค้า/ผู้ขาย + เลขภาษี/สาขา/ที่อยู่)
+- `fin_docs` + `fin_doc_items` เอกสาร 4 ชนิด: quotation/invoice/receipt/expense · เลขรันต่อร้าน/ปี (QT-, INV-, RC-, EXP-, JV-) · VAT แยกนอก/รวมใน · หัก ณ ที่จ่าย · `share_key` ลิงก์สาธารณะ
+- `fin_payments` รับ-จ่ายเงิน + สลิป + ผล EasySlip + กันสลิปซ้ำ (unique trans_ref)
+- `expense_categories` 10 หมวดไทย seed ทุกร้าน + map รหัสบัญชี 5xxx
+- **GL:** `chart_of_accounts` (ผังบัญชีไทย 23 บัญชี seed ทุกร้าน) + `journal_entries`/`journal_lines`
+- `products.cost` (COGS) + `fin_doc_items.product_id` (ตัดสต๊อก)
+- ปลด trigger กันสร้างร้านซ้ำ → เจ้าของ 1 คนมีได้ 20 กิจการ (สำนักงานบัญชี)
 
----
+**เครื่องยนต์บัญชี (src/lib/finance-server.ts):** ทุกธุรกรรมลงเดบิต/เครดิตอัตโนมัติ บังคับ Dr=Cr · ขายเชื่อ→AR/รายได้/ภาษีขาย · ขายสด→เงิน+WHT asset · ค่าใช้จ่าย→หมวด5xxx/ภาษีซื้อ/AP หรือจ่ายสด · รับ-จ่ายชำระ · COGS/ตัดสต๊อก · ยกเลิก = reversal + คืนสต๊อก (audit-safe ไม่ลบ)
 
-## 🔴 สิ่งเดียวที่บล็อกไม่ให้บอทตอบลูกค้าได้ตอนนี้
+**หน้าจอ:** ภาพรวมการเงิน (cash flow, ค้างรับ-จ่าย, เกินกำหนด) · เอกสารขาย (ออก/แปลง QT→INV→RC/พิมพ์ A4+ตัวอักษรไทย/ลิงก์ลูกค้า) · ค่าใช้จ่าย (AI อ่านบิล → กรอกฟอร์ม + 50 ทวิ) · การเงิน/กระทบยอด (อัปสลิปจับคู่ + import statement CSV/Excel) · ผู้ติดต่อ · สินค้า/บริการ (ราคา+ต้นทุน+สต๊อก) · สมุดรายวัน (+JV เอง) · รายงาน+ภาษี (P&L, Aging AR/AP, ภ.พ.30 รายช่อง, ภ.ง.ด.3/53 + ไฟล์ .txt, งบทดลอง, export Excel) · ตั้งค่า/ทีม/สลับกิจการ
 
-**ยังไม่มี AI provider key ในระบบเลย (`ai_provider_keys` = 0 แถว)** ทุกอย่างอื่นพร้อมหมดแล้ว
+**ลิงก์เอกสารสาธารณะ `/doc/[share_key]`:** ลูกค้าเห็นเอกสาร + QR พร้อมเพย์ยอดค้าง + อัปสลิปเอง → ระบบตรวจ EasySlip + ตัดยอด + ลงบัญชีอัตโนมัติ (บันทึกเฉพาะสลิปที่ตรวจผ่านจริงและยอดไม่เกินค้าง)
 
-**วิธีแก้ (2 นาที)**:
-1. เข้า https://sudochatbot.online/login → ล็อกอิน
-2. ไป `/dashboard/admin` → ใส่ API key อย่างน้อย 1 ค่าย (แนะนำ Gemini เพราะมี free tier — เอาจาก aistudio.google.com หรือ Anthropic/OpenAI ก็ได้)
-3. ไป `/dashboard/products` → เพิ่มสินค้าอย่างน้อย 1 ตัว
-4. ทดสอบที่ `/dashboard/playground` — คุยกับบอทตัวเองได้ทันที ไม่หักเครดิต ไม่ต้องเชื่อมเพจก่อน
+**ผู้ช่วยบัญชี AI (`/dashboard/assistant`):** 18 tools ครอบทุกงาน — เรียก action ชุดเดียวกับ UI (saveDoc/recordPayment/convertDoc/voidDoc) จึงลง GL/สต๊อก/audit ครบเสมอ · แนบรูปบิลในแชท → `/api/finance/extract` (Mistral OCR→Gemini→Claude→GPT) → AI บันทึกให้ · โควตา 100 ข้อความ/วัน/ร้าน + extract 60 ไฟล์/วัน
 
----
+## 🔴 สิ่งเดียวที่บล็อกการใช้งาน AI (เหมือนเดิมจากรอบก่อน)
+**`ai_provider_keys` = 0 แถว** — เจ้าของต้องเข้า `/dashboard/admin` ใส่ API key อย่างน้อย 1 ค่าย (แนะนำ Gemini ฟรี aistudio.google.com หรือ Mistral สำหรับ OCR บิล) · ระบบเอกสาร/บัญชี/รายงาน **ใช้ได้เต็มโดยไม่ต้องมี key** (คีย์มือ) — key จำเป็นเฉพาะผู้ช่วย AI + อ่านบิล
 
-## ✅ ฟีเจอร์ที่มีและยืนยันด้วยการทดสอบจริงแล้ว (ไม่ใช่แค่เขียนโค้ด)
+## 🔲 งานถัดไป (เรียงตามผลกระทบ)
+1. **ทดสอบ end-to-end บน production**: สมัคร → ตั้งกิจการ → ออก INV → ลิงก์ลูกค้า → สลิป → ดูสมุดรายวัน/รายงาน
+2. **แพ็กเกจ/ราคาใน DB**: ตาราง `plans` ยังใช้ชื่อ field เดิม (included_replies ฯลฯ) — ตีความใหม่เป็น "งาน AI/เดือน" แล้ว copy หน้า billing อัปเดตแล้ว แต่ยังไม่ได้ปรับตัวเลขแพ็กใน DB ให้เหมาะ positioning ใหม่
+3. **Approval flow** (ผู้มีอำนาจอนุมัติก่อนจ่าย/ยื่นภาษี + ลายเซ็นดิจิทัล) — โครง role มีแล้ว ยังไม่มี UI อนุมัติ
+4. **แจ้งเตือน due date** เข้าอีเมล/LINE (ตอนนี้เห็นในหน้าภาพรวม) — มี Resend infra เดิมอยู่
+5. ไฟล์ .txt ภ.ง.ด. เป็น pipe-format ทั่วไป — เทียบกับโปรแกรมโอนย้ายข้อมูลของสรรพากรก่อนยื่นจริงรอบแรก
+6. ลบ edge functions ค้างบน Supabase dashboard + พิจารณา drop ตารางแชทบอทเก่าเมื่อแน่ใจ
+7. Facebook App "SudoLogin" ยังใช้กับ OAuth login ได้ตามเดิม — ส่วน Meta review สำหรับ chatbot ไม่ต้องทำแล้ว
 
-**Auth**: สมัคร/ล็อกอินอีเมล (autoconfirm, ไม่ติด rate limit) · Google OAuth ✅ · Facebook OAuth ✅ (ใช้ได้กับ admin/tester ของแอพ Meta — เปิดสาธารณะรอ Business Verification ดูข้อ 2) · error message แปลไทยครบ + เช็ค provider ก่อน redirect กันเจอ JSON error ดิบ
+### ⚠️ ความปลอดภัย (ค้างจากรอบก่อน — ยังแนะนำ rotate)
+Vercel token · Supabase management token · Facebook App Secret · รหัสบัญชีทดสอบ
 
-**Core**: RBAC (owner/admin/agent/viewer) · RLS แยกร้านทุกตาราง (PDPA-safe) · onboarding กันสร้างร้านซ้ำแล้ว
+## 🗂️ RPC ใหม่ที่สำคัญ
+`next_fin_doc_number(shop, type)` เลขรันเอกสาร/JV · `seed_expense_categories` / `seed_chart_of_accounts` (trigger ตอนสร้างร้าน) · เดิมที่ยังใช้: `credit_wallet`, `billing_summary`, `run_plan_billing`, `decrement_stock` (qty ติดลบ=คืน), `is_platform_admin`, `store/get_ai_key`, `get_purpose_ai_key`, `store/get_shop_slip_key`, `admin_confirm_topup`, `next_invoice_number` (ใบเสร็จแพลตฟอร์ม)
 
-**บอทขาย**: AI 10 ค่ายเลือกได้ต่อ tier (ประหยัด/มาตรฐาน/พรีเมียม) · **หน้า "ทดลองบอท" (Playground)** ไม่หักเครดิต ไม่ต้องเชื่อมเพจ · ค้นสินค้า/คลังความรู้แบบ semantic search
-
-**ช่องทาง**: LINE เต็มรูปแบบ (มี wizard ทีละขั้นในแอป) · Facebook/IG คลิกเดียวเชื่อม (จำกัดเฉพาะเพจของ admin/tester จนกว่าจะผ่าน App Review) · TikTok webhook พร้อม (รอ TikTok อนุมัติ partner)
-
-**ออเดอร์/เงิน**: ตัด/คืนสต๊อกอัตโนมัติ (แก้บั๊กคืนสต๊อกไม่ได้แล้ว) · **หน้าคลังสลิป** (`/dashboard/slips`) รวมสลิปทุกออเดอร์ · เติมเงิน PromptPay+ตรวจสลิป (ใช้อยู่ตอนนี้) หรือ Omise auto (โค้ดพร้อม รอเปิดทีหลัง) · ใบกำกับภาษี VAT 7% เลขที่ INV อัตโนมัติ
-
-**แจ้งเตือน**: เครดิตใกล้หมด/บอทหยุด/**ออเดอร์ใหม่**/**ลูกค้าขอคุยกับคน (handoff)** — dashboard + อีเมล Resend (เมื่อตั้ง key)
-
-**UX/Ops**: Setup Checklist 5 ขั้นในหน้าภาพรวม · press feedback ทั้งแอป · confirm()/alert() ดิบเปลี่ยนเป็น modal ในแอปหมดแล้ว · SEO เต็มชุด + คู่มือแอดมินในแอป (`/dashboard/help`) · `/api/health` เช็คสุขภาพระบบ · perf: Vercel function รันที่สิงคโปร์ (latency ต่ำ)
-
----
-
-## 🔲 งานที่เหลือจริง ๆ (เรียงตามผลกระทบ หลังข้อ 🔴 ด้านบน)
-
-### 2. เปิด Facebook/IG ให้ **ร้านค้าอื่น** เชื่อมเพจของตัวเองได้ (ไม่บล็อกการขาย — LINE ใช้เต็มรูปแบบอยู่แล้ว)
-ต้องผ่าน **Facebook App Review** ขอ `pages_messaging`/`pages_show_list`/`instagram_manage_messages` — **มีคู่มือ+สคริปต์อัดวิดีโอพร้อมยื่นแล้วที่ `docs/META-REVIEW.md`** ก่อนหน้านั้นต้องผ่าน **Business Verification** (ต้องมีเอกสารธุรกิจ) รอ 2-7 วันทำการ ทำคู่ขนานได้ ไม่ต้องรีบ
-
-### 3. Google Document AI (OCR ไฟล์ในคลังความรู้) — optional
-ไม่มีก็ใช้ได้ปกติ (พิมพ์ข้อความ/FAQ แทน OCR ได้) วิธีตั้งอยู่ `docs/GO-LIVE.md` ขั้น 4
-
-### 4. Omise/Resend/VAT ของแพลตฟอร์ม — optional จนกว่าจะรับเงินจริงเกิน manual slip
-ใส่ใน Admin → Billing แล้วตั้ง webhook Omise ชี้ `https://sudochatbot.online/api/billing/omise/webhook`
-
-### 5. Supabase ยัง Free plan
-ใช้งานได้สบายตอนนี้ (usage ต่ำมาก) — อัปเป็น **Pro ($25/เดือน)** เมื่อมีลูกค้าจ่ายเงินจริง เพื่อปลดล็อก backup อัตโนมัติ + leaked-password-protection + ไม่ต้องกังวลโดน pause
-
-### 6. Roadmap ฟีเจอร์แข่งขัน (จากการวิเคราะห์เทียบคู่แข่งไทย 2026-07-19 — เรียงตามผลต่อยอดขายลูกค้า)
-สิ่งที่คู่แข่งในตลาดไทย (เพจแม่ค้า F-commerce) มีแล้วเรายังไม่มี — ตัดสินใจแล้วว่าเป็นงานหลังมีผู้ใช้จริงกลุ่มแรก:
-1. **ดูดคอมเมนต์ → ทัก inbox อัตโนมัติ (private reply)** — พฤติกรรมหลักของการขายบน Facebook ไทยคือลูกค้าคอมเมนต์ใต้โพสต์ ไม่ทักแชทเอง ต้องขอ `pages_manage_engagement` + webhook `feed` เพิ่ม (ยื่น review รอบสองได้)
-2. **CF ไลฟ์สด** — ดูดคอมเมนต์ "CF/F" ใต้ไลฟ์เป็นออเดอร์อัตโนมัติ ตลาดใหญ่มากในไทย (ต่อยอดจากข้อ 1)
-3. **เลขพัสดุ + เชื่อมขนส่ง** — ใส่เลข tracking ในออเดอร์ → บอทแจ้งลูกค้าอัตโนมัติ ต่อ API Flash/J&T ทีหลัง
-4. **Broadcast/ข้อความติดตาม** — ทวงตะกร้าค้าง (ลูกค้าคุยแล้วหาย) + โปรโมชันหาลูกค้าเก่า (ระวังนโยบาย 24h window ของ Meta)
-5. **PWA + push notification มือถือ** — แม่ค้าอยู่บนมือถือ ไม่เปิดเว็บค้าง แจ้ง handoff/ออเดอร์ใหม่ต้องเด้งถึงมือถือ
-6. Shopee/Lazada sync สต๊อก — ไกลสุด ทำเมื่อมีลูกค้าเรียกร้องจริง
-
-### ⚠️ ความปลอดภัย — ทำก่อนแจกงานให้คนอื่น/session อื่น
-ระหว่าง debug เคยแชร์ credentials ชั่วคราวในแชตหลายตัว **แนะนำ rotate ทั้งหมด**:
-- Vercel token: `vercel.com/account/settings/tokens`
-- Supabase management token: `supabase.com/dashboard/account/tokens`
-- Facebook App Secret: Meta App → ข้อมูลพื้นฐาน → รีเซ็ต (ต้องอัปเดต `META_APP_SECRET` ใน Vercel ทันทีถ้ารีเซ็ต)
-- รหัสผ่านบัญชีทดสอบที่ตั้งไว้ตอน debug — เปลี่ยนใหม่
-
----
-
-## 🗂️ RPC สำคัญ (Postgres functions)
-`bill_bot_reply` · `credit_wallet` · `billing_summary` · `run_plan_billing` · `decrement_stock(prod,variant,qty)` (qty ติดลบ=คืนสต๊อก) · `match_knowledge_chunks/match_products/search_products` · `is_platform_admin` · `claim_platform_admin` · `store_ai_key/get_ai_key` · `admin_confirm_topup` · `platform_revenue` · `queue_send/read/delete/archive` · `store/get_channel_token` · `store/get_platform_omise_key` · `store_platform_resend_key` · `send_platform_email` · `notify_bot_blocked/notify_low_credit` · `check_shop_rate_limit` · `next_invoice_number`
-
-## 🧪 วิธีทดสอบ (SQL synthetic tenant)
-สร้าง auth.users (**ต้องใส่ token columns เช่น `confirmation_token` เป็น `''` ไม่ใช่ NULL** — เคยทำ NULL แล้ว auth ทั้งระบบพังทั้งหมดมาแล้วครั้งหนึ่ง เป็นบทเรียนสำคัญ) → shop → ทดสอบ → ลบทิ้ง ผ่าน Supabase SQL Editor/MCP
+## 🧪 ทดสอบ SQL
+สร้าง auth.users ต้องใส่ token columns เช่น `confirmation_token` เป็น `''` ไม่ใช่ NULL (เคยทำ auth พังทั้งระบบมาแล้ว)

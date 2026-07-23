@@ -5,9 +5,9 @@ import SubmitButton from "./submit-button";
 
 // ข้อความ error จาก trigger กันสมัครซ้ำ (บังคับระดับ DB)
 const SIGNUP_ERRORS: Record<string, string> = {
-  duplicate: "บัญชีนี้เคยสร้างร้านแล้ว — 1 อีเมลใช้ได้ 1 ร้าน หากต้องการเปิดร้านเพิ่ม กรุณาอัปเกรดแพ็กเกจหรือติดต่อทีมงาน",
+  duplicate: "บัญชีนี้มีกิจการครบเพดานแล้ว (20 กิจการ/บัญชี) — ติดต่อทีมงานเพื่อขยาย",
   disposable: "ไม่รองรับอีเมลชั่วคราว/ทิ้งขว้าง กรุณาใช้อีเมลจริง (Gmail, อีเมลบริษัท ฯลฯ) เพื่อสมัคร",
-  unknown: "สร้างร้านไม่สำเร็จ ลองใหม่อีกครั้ง หรือติดต่อทีมงาน",
+  unknown: "สร้างกิจการไม่สำเร็จ ลองใหม่อีกครั้ง หรือติดต่อทีมงาน",
 };
 
 async function createShop(formData: FormData) {
@@ -45,20 +45,20 @@ export default async function Onboarding({ searchParams }: { searchParams: Promi
   return (
     <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <form action={createShop} className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-8">
-        <h1 className="text-lg font-bold">สร้างร้านของคุณ</h1>
-        <p className="mt-1 text-sm text-neutral-500">ข้อมูลนี้จะช่วยให้ AI แนะนำตัวกับลูกค้าได้ถูกต้อง</p>
+        <h1 className="text-lg font-bold">สร้างกิจการของคุณ</h1>
+        <p className="mt-1 text-sm text-neutral-500">เอกสาร บัญชี ภาษี ของแต่ละกิจการแยกจากกันทั้งหมด — เพิ่มกิจการอื่นทีหลังได้</p>
         {errorMsg && <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{errorMsg}</p>}
         <div className="mt-6 space-y-4">
           <div>
-            <Label htmlFor="name">ชื่อร้าน *</Label>
-            <Input id="name" name="name" required placeholder="เช่น ร้านครีมใสเกาหลี" />
+            <Label htmlFor="name">ชื่อกิจการ/บริษัท *</Label>
+            <Input id="name" name="name" required placeholder="เช่น บริษัท ตัวอย่างการค้า จำกัด" />
           </div>
           <div>
-            <Label htmlFor="description">แนะนำร้านสั้นๆ</Label>
-            <Textarea id="description" name="description" placeholder="ขายอะไร จุดเด่นคืออะไร ส่งจากที่ไหน" />
+            <Label htmlFor="description">ธุรกิจทำอะไร (ไม่บังคับ)</Label>
+            <Textarea id="description" name="description" placeholder="เช่น ขายส่งอุปกรณ์ก่อสร้าง / รับทำบัญชี" />
           </div>
         </div>
-        <SubmitButton pendingText="กำลังสร้างร้าน...">สร้างร้านและเข้าแดชบอร์ด</SubmitButton>
+        <SubmitButton pendingText="กำลังสร้างกิจการ...">สร้างกิจการและเข้าแดชบอร์ด</SubmitButton>
       </form>
     </main>
   );

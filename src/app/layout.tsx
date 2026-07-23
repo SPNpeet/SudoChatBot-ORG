@@ -9,14 +9,14 @@ const SITE = "https://sudochatbot.online";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "SudoChatBot — AI ปิดการขายอัตโนมัติ สำหรับ Facebook / IG / LINE",
+    default: "SudoChatBot — ระบบบัญชี + ผู้ช่วย AI ออกเอกสาร ภาษี ครบวงจร",
     template: "%s | SudoChatBot",
   },
-  description: "แชทบอท AI ที่ตอบลูกค้า แนะนำสินค้า สรุปออเดอร์ ส่ง QR พร้อมเพย์ และตรวจสลิปปิดการขายให้ร้านคุณ อัตโนมัติ 24 ชม. เริ่มฟรี 30 ข้อความ/วัน ไม่ต้องใช้บัตรเครดิต",
+  description: "ระบบบัญชีหลังบ้านที่สั่งด้วยภาษาคน: ออกใบแจ้งหนี้-ใบกำกับภาษี เก็บเงินผ่าน QR ตรวจสลิปอัตโนมัติ ถ่ายรูปบิลให้ AI ลงบัญชี สมุดรายวันอัตโนมัติ รายงาน ภ.พ.30/ภ.ง.ด. พร้อมยื่น — เริ่มฟรี",
   keywords: [
-    "แชทบอท", "แชทบอทตอบลูกค้า", "บอทขายของ", "แชทบอท facebook", "บอทตอบแชท line",
-    "ระบบตอบแชทอัตโนมัติ", "AI ตอบลูกค้า", "ปิดการขายอัตโนมัติ", "แชทบอทร้านค้าออนไลน์",
-    "chatbot ภาษาไทย", "ตรวจสลิปอัตโนมัติ", "แชทบอทขายของออนไลน์",
+    "โปรแกรมบัญชี", "โปรแกรมบัญชีออนไลน์", "ออกใบกำกับภาษี", "ออกใบแจ้งหนี้", "ระบบบัญชี AI",
+    "AP AR automation", "กระทบยอด statement", "ตรวจสลิปอัตโนมัติ", "หัก ณ ที่จ่าย 50 ทวิ",
+    "ภ.พ.30", "ภ.ง.ด.3", "ภ.ง.ด.53", "สำนักงานบัญชี", "โปรแกรมบัญชี SME",
   ],
   alternates: { canonical: SITE },
   openGraph: {
@@ -24,13 +24,13 @@ export const metadata: Metadata = {
     locale: "th_TH",
     url: SITE,
     siteName: "SudoChatBot",
-    title: "SudoChatBot — AI ปิดการขายให้ร้านคุณ ตั้งแต่ทักจนโอนเงิน",
-    description: "เชื่อมเพจ Facebook, IG, LINE แล้วปล่อยให้ AI ตอบลูกค้า สรุปยอด ส่ง QR พร้อมเพย์ ตรวจสลิป — อัตโนมัติทั้งหมด เริ่มฟรี",
+    title: "SudoChatBot — บัญชีทั้งบริษัท เสร็จด้วยการพิมพ์สั่ง",
+    description: "ออกเอกสาร เก็บเงิน ตรวจสลิป ลงบัญชี สรุปภาษีพร้อมยื่น — ผู้ช่วยบัญชี AI ทำให้ครบในระบบเดียว เริ่มฟรี",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SudoChatBot — AI ปิดการขายอัตโนมัติ",
-    description: "แชทบอท AI ขายของแทนคุณบน Facebook / IG / LINE ตอบไว เช็กสต๊อกจริง เก็บเงินจริง",
+    title: "SudoChatBot — ระบบบัญชี + ผู้ช่วย AI",
+    description: "ถ่ายรูปบิล = ลงบัญชีเสร็จ · ใบแจ้งหนี้ + QR เก็บเงิน · ภาษีพร้อมยื่น",
   },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } },
   manifest: "/manifest.webmanifest",
@@ -45,7 +45,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-// JSON-LD ให้ Google เข้าใจว่าเราคือ SaaS แชทบอทขายของ (โผล่ใน rich results ได้)
+// JSON-LD ให้ Google เข้าใจว่าเราคือ SaaS ระบบบัญชี AI (โผล่ใน rich results ได้)
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -55,8 +55,8 @@ const jsonLd = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       url: SITE,
-      description: "แชทบอท AI ปิดการขายอัตโนมัติสำหรับร้านค้าออนไลน์ไทย บน Facebook Messenger, Instagram DM และ LINE OA",
-      offers: { "@type": "Offer", price: "0", priceCurrency: "THB", description: "เริ่มฟรี ตอบ 30 ข้อความ/วัน ไม่มีค่าใช้จ่าย" },
+      description: "ระบบบัญชีและออกเอกสารครบวงจรสำหรับธุรกิจไทย พร้อมผู้ช่วย AI: ใบแจ้งหนี้ ใบกำกับภาษี ตรวจสลิป สมุดรายวันอัตโนมัติ รายงานภาษีพร้อมยื่น",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "THB", description: "เริ่มฟรี ไม่ต้องใช้บัตรเครดิต" },
       inLanguage: "th",
     },
     {

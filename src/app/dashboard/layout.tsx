@@ -3,26 +3,26 @@ import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import {
-  LayoutDashboard, MessageSquare, ShoppingBag, Package,
-  BookOpen, Share2, Settings, LogOut, ShieldCheck, Wallet, Sparkles, Receipt, CircleHelp, BarChart3, Landmark,
-  Store, MessagesSquare, ScrollText, Megaphone, BrainCircuit,
+  LayoutDashboard, Package, Settings, LogOut, ShieldCheck, Wallet, Receipt, CircleHelp,
+  BarChart3, Landmark, Store, MessagesSquare, ScrollText, Calculator, FileText,
+  Users, Banknote, BookOpenText, PieChart,
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
 import FeedbackWidget from "./feedback-widget";
+import CompanySwitcher from "./company-switcher";
 import { Logo } from "@/components/logo";
 
 const nav = [
   { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
-  { href: "/dashboard/assistant", label: "ผู้จัดการร้าน AI", icon: BrainCircuit },
-  { href: "/dashboard/playground", label: "ทดลองบอท", icon: Sparkles },
-  { href: "/dashboard/chats", label: "แชท", icon: MessageSquare },
-  { href: "/dashboard/orders", label: "ออเดอร์", icon: ShoppingBag },
-  { href: "/dashboard/slips", label: "คลังสลิป", icon: Receipt },
-  { href: "/dashboard/products", label: "สินค้า", icon: Package },
-  { href: "/dashboard/knowledge", label: "คลังความรู้", icon: BookOpen },
-  { href: "/dashboard/channels", label: "ช่องทาง", icon: Share2 },
-  { href: "/dashboard/ads", label: "ยิงแอด AI", icon: Megaphone },
+  { href: "/dashboard/assistant", label: "ผู้ช่วยบัญชี AI", icon: Calculator },
+  { href: "/dashboard/sales", label: "เอกสารขาย", icon: FileText },
+  { href: "/dashboard/expenses", label: "ค่าใช้จ่าย", icon: Receipt },
+  { href: "/dashboard/money", label: "การเงิน/กระทบยอด", icon: Banknote },
+  { href: "/dashboard/contacts", label: "ผู้ติดต่อ", icon: Users },
+  { href: "/dashboard/products", label: "สินค้า/บริการ", icon: Package },
+  { href: "/dashboard/journal", label: "สมุดรายวัน", icon: BookOpenText },
+  { href: "/dashboard/reports", label: "รายงาน + ภาษี", icon: PieChart },
   { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
   { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
   { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },
@@ -36,17 +36,20 @@ async function signOut() {
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [{ shop }, isAdmin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
+  const [{ shop, memberships }, isAdmin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
+  const companies = memberships.map((m) => ({ id: m.shop.id, name: m.shop.name, role: m.role }));
 
   return (
     <div className="min-h-screen">
       {/* Sidebar — เดสก์ท็อป */}
       <aside className="fixed inset-y-0 z-30 hidden w-56 flex-col border-r border-neutral-200 bg-white md:flex">
-        <div className="px-5 py-5">
-          <Logo />
-          <p className="mt-1.5 truncate text-xs text-neutral-400">{shop.name}</p>
+        <div className="px-4 py-4">
+          <div className="px-1"><Logo /></div>
+          <div className="mt-3">
+            <CompanySwitcher companies={companies} currentId={shop.id} />
+          </div>
         </div>
-        <nav className="flex-1 space-y-0.5 px-3">
+        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3">
           {nav.map((item) => (
             <Link key={item.href} href={item.href}
               className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900">
@@ -69,7 +72,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </Link>
               <Link href="/dashboard/admin/shops"
                 className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
-                <Store className="h-4 w-4" /> จัดการร้านค้า
+                <Store className="h-4 w-4" /> จัดการผู้ใช้ระบบ
               </Link>
               <Link href="/dashboard/admin/feedback"
                 className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
@@ -90,9 +93,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       {/* Header — มือถือ */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
         <Logo />
-        <span className="max-w-[45%] truncate text-xs text-neutral-400">{shop.name}</span>
+        <div className="w-44">
+          <CompanySwitcher companies={companies} currentId={shop.id} />
+        </div>
       </header>
 
       {/* เนื้อหา */}

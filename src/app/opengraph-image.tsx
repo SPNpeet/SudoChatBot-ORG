@@ -25,10 +25,10 @@ export default function OpengraphImage() {
           </div>
         </div>
         <div style={{ fontSize: 34, marginTop: 20, color: "#d1fae5", display: "flex" }}>
-          AI Sales Chatbot — Facebook / Instagram / LINE
+          AI Accounting & Back-Office — ระบบบัญชีสั่งด้วยภาษาคน
         </div>
         <div style={{ fontSize: 26, marginTop: 36, padding: "14px 36px", borderRadius: 999, background: "rgba(255,255,255,0.15)", display: "flex" }}>
-          Reply · Sell · PromptPay QR · Slip Verify — 24/7
+          Invoice · Tax · PromptPay QR · Slip Verify · Auto GL
         </div>
       </div>
     ),
