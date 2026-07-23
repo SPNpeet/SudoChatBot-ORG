@@ -15,8 +15,10 @@ export const DEFAULT_CHAT_MODEL: Record<Provider, string> = {
   mistral: "mistral-small-latest",
 };
 
+export type AiPurpose = "assistant" | "chat" | "ocr";
+
 /** คีย์เฉพาะงาน (ai_purpose_keys) — แอดมินตั้งไว้ = ใช้ก่อนคีย์รวมเสมอ · null = ไม่ได้ตั้ง */
-export async function resolvePurposeKey(svc: SupabaseClient, purpose: "assistant" | "chat"): Promise<ChatConfig | null> {
+export async function resolvePurposeKey(svc: SupabaseClient, purpose: AiPurpose): Promise<ChatConfig | null> {
   try {
     const { data } = await svc.rpc("get_purpose_ai_key", { p_purpose: purpose });
     const pk = data as { provider?: Provider; model?: string | null; key?: string } | null;

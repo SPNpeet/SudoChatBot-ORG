@@ -47,41 +47,16 @@ export async function deleteProviderKey(provider: Provider) {
   revalidatePath("/dashboard/admin");
 }
 
-/** เลือกค่าย+โมเดล ต่อระดับคุณภาพ */
-export async function saveRouting(formData: FormData) {
-  const { user } = await assertPlatformAdmin();
-  const svc = createServiceClient();
-  const rows: { purpose: string; tier: string; provider: string; model: string; updated_by: string }[] = [];
-  for (const tier of ["economy", "standard", "premium"]) {
-    const provider = String(formData.get(`chat_${tier}_provider`) ?? "");
-    const model = String(formData.get(`chat_${tier}_model`) ?? "");
-    if (provider && model) rows.push({ purpose: "chat", tier, provider, model, updated_by: user.id });
-  }
-  const embProvider = String(formData.get("embed_provider") ?? "");
-  const embModel = String(formData.get("embed_model") ?? "");
-  if (embProvider && embModel) rows.push({ purpose: "embedding", tier: "default", provider: embProvider, model: embModel, updated_by: user.id });
+// ---------- คีย์ตามงาน (Function-Centric: ผู้ช่วยบัญชี AI / อ่านบิล OCR) ----------
+export type PurposeKeyPurpose = "assistant" | "chat" | "ocr";
 
-  for (const r of rows) {
-    const { error } = await svc.from("ai_settings").upsert({ ...r, updated_at: new Date().toISOString() }, { onConflict: "purpose,tier" });
-    if (error) throw new Error(error.message);
-  }
-  await svc.from("audit_logs").insert({
-    actor_type: "user", actor_id: user.id, action: "ai_routing_updated", resource_type: "ai_settings",
-    details: { rows: rows.map((r) => `${r.purpose}/${r.tier}=${r.provider}:${r.model}`) },
-  });
-  revalidatePath("/dashboard/admin");
-}
-
-// ---------- คีย์เฉพาะงาน (แยกผู้จัดการร้าน AI / บอทตอบลูกค้า) ----------
-export type PurposeKeyPurpose = "assistant" | "chat";
-
-/** บันทึกคีย์เฉพาะงาน — RPC เช็ค is_platform_admin() ภายใน ต้องเรียกผ่าน user client */
+/** บันทึกการตั้งค่างาน AI — key เว้นว่างได้ถ้าเคยบันทึกแล้ว (= แก้เฉพาะค่าย/ชื่อโมเดล ไม่ต้องวาง key ซ้ำ) */
 export async function savePurposeKey(purpose: PurposeKeyPurpose, provider: Provider, model: string, key: string) {
   const { supabase } = await assertPlatformAdmin();
   const trimmed = key.trim();
-  if (trimmed.length < 10) throw new Error("API key สั้นเกินไป");
+  if (trimmed && trimmed.length < 10) throw new Error("API key สั้นเกินไป");
   const { error } = await supabase.rpc("store_purpose_ai_key", {
-    p_purpose: purpose, p_provider: provider, p_model: model.trim(), p_key: trimmed,
+    p_purpose: purpose, p_provider: provider, p_model: model.trim(), p_key: trimmed || null,
   });
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");

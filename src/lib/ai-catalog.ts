@@ -69,11 +69,10 @@ export const EMBED_MODELS: Record<string, { id: string; label: string }[]> = {
   ],
 };
 
-export const TIERS: { id: string; label: string; desc: string }[] = [
-  { id: "economy", label: "ประหยัด", desc: "บอทร้านที่ตั้งค่าโมเดล 'ประหยัด'" },
-  { id: "standard", label: "มาตรฐาน", desc: "ค่าเริ่มต้นของทุกร้าน" },
-  { id: "premium", label: "พรีเมียม", desc: "ร้านที่ต้องการคุณภาพสูงสุด" },
-];
+/** โมเดลแนะนำต่อค่าย เฉพาะงานอ่านเอกสาร/บิล (OCR) — ต่างจาก DEFAULT_CHAT_MODEL เพราะ OCR ต้องการโมเดลที่อ่านภาพ/เอกสารได้ดีที่สุด */
+export const OCR_DEFAULT_MODEL: Record<string, string> = {
+  mistral: "mistral-ocr-latest", google: "gemini-2.5-flash", anthropic: "claude-haiku-4-5-20251001", openai: "gpt-4o-mini",
+};
 
 export function providerLabel(p: string) { return PROVIDERS.find((x) => x.id === p)?.label ?? p; }
 

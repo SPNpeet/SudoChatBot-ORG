@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
+import { resolvePurposeKey } from "@/lib/ai-config";
+import { OCR_DEFAULT_MODEL } from "@/lib/ai-catalog";
 
 // ============================================================
 //  AI อ่านเอกสารการเงิน (บิล/ใบเสร็จ/ใบกำกับภาษี/ใบแจ้งหนี้) -> JSON
-//  ลำดับเอนจิน: Mistral OCR -> Gemini -> Claude -> GPT (ตาม key ที่มี)
+//  ลำดับเอนจิน (Auto-Fallback): การ์ด "AI อ่านบิล" -> การ์ด "ผู้ช่วยบัญชี" ->
+//  คีย์สำรอง (ai_provider_keys) — ค่ายหลักล่มเมื่อไหร่ ระบบสลับให้เองทันที
 //  อัปโหลดไฟล์เก็บใน bucket slips ให้ด้วย (แนบกับเอกสารที่บันทึก)
 // ============================================================
 
@@ -72,13 +75,13 @@ function parseBill(raw: string): ExtractedBill {
   };
 }
 
-async function extractWithMistral(key: string, b64: string, mime: string): Promise<ExtractedBill> {
+async function extractWithMistral(key: string, b64: string, mime: string, model = "mistral-ocr-latest"): Promise<ExtractedBill> {
   const kind = mime === "application/pdf" ? "document_url" : "image_url";
   const ocrRes = await fetch("https://api.mistral.ai/v1/ocr", {
     method: "POST",
     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "mistral-ocr-latest",
+      model,
       document: kind === "document_url"
         ? { type: "document_url", document_url: `data:${mime};base64,${b64}` }
         : { type: "image_url", image_url: `data:${mime};base64,${b64}` },
@@ -107,9 +110,9 @@ async function extractWithMistral(key: string, b64: string, mime: string): Promi
   return parseBill(j.choices?.[0]?.message?.content ?? "");
 }
 
-async function extractWithGemini(key: string, b64: string, mime: string): Promise<ExtractedBill> {
+async function extractWithGemini(key: string, b64: string, mime: string, model = "gemini-2.5-flash"): Promise<ExtractedBill> {
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -125,7 +128,7 @@ async function extractWithGemini(key: string, b64: string, mime: string): Promis
   return parseBill(text);
 }
 
-async function extractWithAnthropic(key: string, b64: string, mime: string): Promise<ExtractedBill> {
+async function extractWithAnthropic(key: string, b64: string, mime: string, model = "claude-haiku-4-5-20251001"): Promise<ExtractedBill> {
   const block = mime === "application/pdf"
     ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }
     : { type: "image", source: { type: "base64", media_type: mime, data: b64 } };
@@ -133,7 +136,7 @@ async function extractWithAnthropic(key: string, b64: string, mime: string): Pro
     method: "POST",
     headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001", max_tokens: 4000,
+      model, max_tokens: 4000,
       messages: [{ role: "user", content: [block, { type: "text", text: EXTRACT_PROMPT }] }],
     }),
   });
@@ -143,7 +146,7 @@ async function extractWithAnthropic(key: string, b64: string, mime: string): Pro
   return parseBill(text);
 }
 
-async function extractWithOpenAI(key: string, b64: string, mime: string): Promise<ExtractedBill> {
+async function extractWithOpenAI(key: string, b64: string, mime: string, model = "gpt-4o-mini"): Promise<ExtractedBill> {
   const part = mime === "application/pdf"
     ? { type: "file", file: { filename: "bill.pdf", file_data: `data:application/pdf;base64,${b64}` } }
     : { type: "image_url", image_url: { url: `data:${mime};base64,${b64}` } };
@@ -151,7 +154,7 @@ async function extractWithOpenAI(key: string, b64: string, mime: string): Promis
     method: "POST",
     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model,
       messages: [{ role: "user", content: [part, { type: "text", text: EXTRACT_PROMPT }] }],
       max_completion_tokens: 4000,
     }),
@@ -193,19 +196,34 @@ export async function POST(request: Request) {
     const path = `${shopId}/finance/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-ก-๙]/g, "_")}`;
     await svc.storage.from("slips").upload(path, buf, { contentType: mime });
 
-    const keyOf = async (p: string) => (await svc.rpc("get_ai_key", { p_provider: p })).data as string | null;
+    // ---- สร้างลำดับเอนจิน (Auto-Fallback) ----
+    // 1) การ์ด "AI อ่านบิล" (purpose ocr) — ค่าย+โมเดลที่แอดมินตั้งเอง
+    // 2) การ์ด "ผู้ช่วยบัญชี" (purpose assistant) — ใช้ค่ายเดียวกันอ่านภาพแทนได้
+    // 3) คีย์สำรอง ai_provider_keys (ขั้นสูง) — เผื่อค่ายหลักล่ม/ปิดปรับปรุง
     const engines: { name: string; run: () => Promise<ExtractedBill> }[] = [];
-    const mistral = await keyOf("mistral");
-    if (mistral) engines.push({ name: "mistral-ocr", run: () => extractWithMistral(mistral, b64, mime) });
-    const google = await keyOf("google");
-    if (google) engines.push({ name: "gemini", run: () => extractWithGemini(google, b64, mime) });
-    const anthropic = await keyOf("anthropic");
-    if (anthropic) engines.push({ name: "claude", run: () => extractWithAnthropic(anthropic, b64, mime) });
-    const openai = await keyOf("openai");
-    if (openai) engines.push({ name: "gpt", run: () => extractWithOpenAI(openai, b64, mime) });
+    const seen = new Set<string>();
+    const addEngine = (label: string, provider: string, key: string | null | undefined, model?: string | null) => {
+      if (!key || seen.has(provider)) return;
+      const m = model || OCR_DEFAULT_MODEL[provider];
+      if (!m) return; // ค่ายที่ไม่มีโมเดลอ่านภาพ (deepseek ฯลฯ) ข้าม
+      seen.add(provider);
+      if (provider === "mistral") engines.push({ name: label, run: () => extractWithMistral(key, b64, mime, m) });
+      else if (provider === "google") engines.push({ name: label, run: () => extractWithGemini(key, b64, mime, m) });
+      else if (provider === "anthropic") engines.push({ name: label, run: () => extractWithAnthropic(key, b64, mime, m) });
+      else if (provider === "openai") engines.push({ name: label, run: () => extractWithOpenAI(key, b64, mime, m) });
+    };
+
+    const ocrCfg = await resolvePurposeKey(svc, "ocr");
+    if (ocrCfg) addEngine(`ocr:${ocrCfg.provider}`, ocrCfg.provider, ocrCfg.apiKey, ocrCfg.model);
+    const asstCfg = await resolvePurposeKey(svc, "assistant");
+    if (asstCfg) addEngine(`fallback-assistant:${asstCfg.provider}`, asstCfg.provider, asstCfg.apiKey, null);
+    const keyOf = async (p: string) => (await svc.rpc("get_ai_key", { p_provider: p })).data as string | null;
+    for (const p of ["mistral", "google", "anthropic", "openai"]) {
+      if (!seen.has(p)) addEngine(`fallback-key:${p}`, p, await keyOf(p), null);
+    }
 
     if (!engines.length) {
-      return NextResponse.json({ ok: false, error: "ยังไม่มี AI key ที่อ่านไฟล์ได้ — ผู้ดูแลแพลตฟอร์มต้องใส่ key ของ Mistral / Gemini / Claude / GPT อย่างน้อย 1 ค่าย ในหน้า ศูนย์ AI (Admin)", file_path: path });
+      return NextResponse.json({ ok: false, error: "ยังไม่ได้ตั้งค่า AI อ่านบิล — ผู้ดูแลแพลตฟอร์มตั้งได้ที่ ศูนย์ AI (Admin) การ์ด 'AI อ่านบิล (OCR)'", file_path: path });
     }
 
     let lastErr = "";

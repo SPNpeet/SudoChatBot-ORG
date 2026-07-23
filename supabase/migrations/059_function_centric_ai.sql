@@ -1,0 +1,4 @@
+﻿-- 059: Function-Centric AI setup (apply บน production แล้ว)
+-- ai_purpose_keys เพิ่ม purpose 'ocr' + store_purpose_ai_key รับ p_key เป็น optional
+-- (แก้ค่าย/ชื่อโมเดลโดยไม่ต้องวาง key ซ้ำ) + seed ocr key จาก mistral provider key เดิม
+-- ศูนย์ AI ใหม่ = 2 การ์ด (assistant / ocr) + คีย์สำรอง ai_provider_keys เป็น Auto-Fallback

@@ -9,13 +9,35 @@ export async function POST(request: Request) {
   const { data: isAdmin } = await supabase.rpc("is_platform_admin");
   if (!isAdmin) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
 
-  const { provider, model } = await request.json();
+  const body = await request.json();
   const svc = createServiceClient();
-  const { data: key } = await svc.rpc("get_ai_key", { p_provider: provider });
+
+  // โหมด purpose: ทดสอบคีย์ของการ์ดงาน (ผู้ช่วยบัญชี/อ่านบิล) โดยตรง
+  let provider: string = body.provider;
+  let model: string = body.model;
+  let key: string | null = null;
+  if (body.purpose) {
+    const { data: pk } = await svc.rpc("get_purpose_ai_key", { p_purpose: String(body.purpose) });
+    const cfg = pk as { provider?: string; model?: string | null; key?: string } | null;
+    if (!cfg?.key) return NextResponse.json({ ok: false, error: "ยังไม่ได้บันทึก API key ของงานนี้" });
+    provider = cfg.provider ?? provider;
+    model = body.model || cfg.model || "";
+    key = cfg.key;
+  } else {
+    const { data } = await svc.rpc("get_ai_key", { p_provider: provider });
+    key = data as string | null;
+  }
   if (!key) return NextResponse.json({ ok: false, error: "ยังไม่ได้บันทึก API key ของค่ายนี้" });
 
   try {
     let ok = false; let detail = "";
+    // โมเดล OCR ของ Mistral ทดสอบผ่าน chat ไม่ได้ — เช็คความถูกต้องของ key ด้วย endpoint รายชื่อโมเดลแทน
+    if (provider === "mistral" && String(model).includes("ocr")) {
+      const res = await fetch("https://api.mistral.ai/v1/models", { headers: { "Authorization": `Bearer ${key}` } });
+      ok = res.ok; if (!ok) detail = (await res.text()).slice(0, 200);
+      const friendlyOcr = ok ? "เชื่อมต่อสำเร็จ" : friendlyAiError(detail);
+      return NextResponse.json({ ok, error: ok ? undefined : friendlyOcr });
+    }
     if (provider === "anthropic") {
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
@@ -51,9 +73,11 @@ export async function POST(request: Request) {
     }
 
     const friendly = ok ? "เชื่อมต่อสำเร็จ" : friendlyAiError(detail);
-    await svc.from("ai_provider_keys").update({
-      test_status: ok ? "ok" : "failed", test_message: friendly, tested_at: new Date().toISOString(),
-    }).eq("provider", provider);
+    if (!body.purpose) {
+      await svc.from("ai_provider_keys").update({
+        test_status: ok ? "ok" : "failed", test_message: friendly, tested_at: new Date().toISOString(),
+      }).eq("provider", provider);
+    }
 
     return NextResponse.json({ ok, error: ok ? undefined : friendly });
   } catch (e) {

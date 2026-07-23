@@ -62,6 +62,13 @@
 - **Vercel timeout**: เลือกใช้ maxDuration ต่อ route (60-120s, Vercel ปรับตามแพลนอัตโนมัติ) แทน Edge/streaming — โครง tool-loop 3 ค่าย + Supabase service ทำงานบน Node ได้เสถียรกว่า streaming refactor (streaming เป็น optimization เฟสถัดไป ถ้าเจอ timeout จริงบน Hobby ให้เปิด Fluid Compute ใน Vercel dashboard)
 - หมายเหตุ: ระบบเชิญทีม (Unlimited Users) มีอยู่แล้วที่ ตั้งค่า → ทีมงาน (อีเมล + บทบาท, RLS แยกต่อกิจการ)
 
+## 🆕 รอบสี่ 2026-07-24 — ศูนย์ AI แบบ Function-Centric (mig 059)
+- **UI ใหม่เหลือ 2 การ์ด**: ① ผู้ช่วยบัญชี AI (สมองหลัก — ค่าย google/openai/anthropic) ② AI อ่านบิล OCR (mistral/google/openai/anthropic) — แต่ละการ์ด: dropdown ค่าย + **ช่องพิมพ์ชื่อโมเดลเองได้** (datalist แนะนำ) + key masked ••••1234 + badge 🟢/🔴 + ปุ่มทดสอบ (test-ai รองรับ `purpose`)
+- **แก้โมเดลไม่ต้องวาง key ซ้ำ**: store_purpose_ai_key รับ p_key optional — ค่ายออกรุ่นใหม่ก็แก้ชื่อแล้วบันทึก จบ
+- **Auto-Fallback อ่านบิล**: extract route ไล่ลำดับ การ์ด OCR → การ์ดผู้ช่วย → คีย์สำรอง (ai_provider_keys ทั้ง 8 ค่าย พับเก็บใน "ขั้นสูง") — ค่ายหลักล่มระบบสลับเองทันที
+- **ตัดทิ้ง**: UI routing tiers (ขั้นที่ 2 เดิม ประหยัด/มาตรฐาน/พรีเมียม + embedding) + action saveRouting — ตาราง ai_settings ยังอยู่เป็น fallback data ของ resolveDefaultAiConfig เฉย ๆ
+- **Seed แล้วบน production**: การ์ดผู้ช่วย = google/gemini-2.5-flash · การ์ด OCR = mistral/mistral-ocr-latest (คัดลอกจาก key เดิม ไม่ต้องกรอกใหม่) — **ทั้งสองการ์ดขึ้น 🟢 พร้อมใช้แล้ว**
+
 ## 🔲 งานถัดไป (เรียงตามผลกระทบ)
 1. **ทดสอบ end-to-end บน production**: สมัคร → ตั้งกิจการ → ออก INV → ลิงก์ลูกค้า → สลิป → ดูสมุดรายวัน/รายงาน
 2. **แพ็กเกจ/ราคาใน DB**: ตาราง `plans` ยังใช้ชื่อ field เดิม (included_replies ฯลฯ) — ตีความใหม่เป็น "งาน AI/เดือน" แล้ว copy หน้า billing อัปเดตแล้ว แต่ยังไม่ได้ปรับตัวเลขแพ็กใน DB ให้เหมาะ positioning ใหม่
