@@ -39,6 +39,10 @@ export async function POST(request: Request) {
     if (!pay?.slip_provider || pay.slip_provider === "manual" || !slipKey) {
       return NextResponse.json({ ok: false, error: "ร้านยังไม่เปิดตรวจสลิปอัตโนมัติ — ส่งสลิปให้ร้านโดยตรงได้เลย" });
     }
+    const { data: slipQuota } = await svc.rpc("check_slip_quota", { p_shop_id: doc.shop_id });
+    if ((slipQuota as { allowed?: boolean } | null)?.allowed === false) {
+      return NextResponse.json({ ok: false, error: "ระบบตรวจสลิปอัตโนมัติของร้านเต็มโควตาชั่วคราว — ส่งสลิปให้ร้านยืนยันโดยตรงได้เลย" });
+    }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
     const verify = await verifySlip(pay.slip_provider, slipKey as string, bytes);

@@ -425,12 +425,17 @@ export async function recordPayment(shopId: string, input: RecordPaymentInput): 
     // ---- ตรวจสลิปอัตโนมัติ (ถ้าแนบสลิป + ร้านตั้ง provider) ----
     let verify: SlipResult | null = null;
     let verifyStatus: "unverified" | "verified" | "failed" | "manual" = input.slip_path ? "unverified" : "manual";
+    let quotaNote: string | null = null;
     if (input.slip_path && input.direction === "in") {
-      const [{ data: pay }, { data: slipKey }] = await Promise.all([
+      const [{ data: pay }, { data: slipKey }, { data: slipQuota }] = await Promise.all([
         svc.from("shop_payment_settings").select("slip_provider").eq("shop_id", shopId).maybeSingle(),
         svc.rpc("get_shop_slip_key", { p_shop_id: shopId }),
+        svc.rpc("check_slip_quota", { p_shop_id: shopId }),
       ]);
-      if (pay?.slip_provider && pay.slip_provider !== "manual" && slipKey) {
+      const sq = slipQuota as { allowed?: boolean; used?: number; cap?: number } | null;
+      if (sq && sq.allowed === false) {
+        quotaNote = `โควตาตรวจสลิปอัตโนมัติเดือนนี้ครบแล้ว (${sq.used}/${sq.cap}) — บันทึกแบบตรวจเอง หรืออัปเกรดแพ็กเกจเพื่อตรวจอัตโนมัติต่อ`;
+      } else if (pay?.slip_provider && pay.slip_provider !== "manual" && slipKey) {
         const { data: file } = await svc.storage.from("slips").download(input.slip_path);
         if (file) {
           verify = await verifySlip(pay.slip_provider, slipKey as string, new Uint8Array(await file.arrayBuffer()));
@@ -465,7 +470,7 @@ export async function recordPayment(shopId: string, input: RecordPaymentInput): 
       verify_status: verifyStatus,
       verify_note: verifyStatus === "failed"
         ? (verify?.verified ? `ยอดในสลิป ${verify.amount} ไม่ตรงกับที่บันทึก ${amount}` : verify?.error ?? null)
-        : null,
+        : quotaNote,
       matched_by: doc ? "manual" : null,
       statement_ref: input.statement_ref ?? null,
       created_by: user.id,
@@ -515,13 +520,17 @@ export async function uploadAndMatchSlip(shopId: string, formData: FormData): Pr
     if (!up.ok) return up;
     const svc = createServiceClient();
 
-    // ตรวจสลิป
+    // ตรวจสลิป (ภายใต้โควตาตรวจสลิปของแพ็กเกจ — นับรวมทุกกิจการของเจ้าของ)
     let verify: SlipResult | null = null;
-    const [{ data: pay }, { data: slipKey }] = await Promise.all([
+    const [{ data: pay }, { data: slipKey }, { data: slipQuota }] = await Promise.all([
       svc.from("shop_payment_settings").select("slip_provider").eq("shop_id", shopId).maybeSingle(),
       svc.rpc("get_shop_slip_key", { p_shop_id: shopId }),
+      svc.rpc("check_slip_quota", { p_shop_id: shopId }),
     ]);
-    if (pay?.slip_provider && pay.slip_provider !== "manual" && slipKey) {
+    const sq = slipQuota as { allowed?: boolean; used?: number; cap?: number } | null;
+    if (sq && sq.allowed === false) {
+      verify = { ok: true, verified: false, error: `โควตาตรวจสลิปเดือนนี้ครบแล้ว (${sq.used}/${sq.cap}) — เลือกเอกสารเองด้านล่าง หรืออัปเกรดแพ็กเกจ` };
+    } else if (pay?.slip_provider && pay.slip_provider !== "manual" && slipKey) {
       const { data: file } = await svc.storage.from("slips").download(up.path);
       if (file) verify = await verifySlip(pay.slip_provider, slipKey as string, new Uint8Array(await file.arrayBuffer()));
     }

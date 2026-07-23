@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
-import { Card, CardContent, CardHeader, CardTitle, Button, Input, Label, Select, Badge } from "@/components/ui";
-import { CHAT_MODELS, EMBED_MODELS, PROVIDERS, TIERS, providerLabel, type Provider } from "@/lib/ai-catalog";
+import { Button, Input, Label, Select, Badge } from "@/components/ui";
+import { CHAT_MODELS, PROVIDERS, TIERS, providerLabel, type Provider } from "@/lib/ai-catalog";
 import { saveProviderKey, deleteProviderKey, saveRouting, savePurposeKey, deletePurposeKey, type PurposeKeyPurpose } from "./actions";
 import { KeyRound, CheckCircle2, XCircle, Cpu, Save, Trash2, ExternalLink, SplitSquareHorizontal, BrainCircuit, MessageSquare } from "lucide-react";
 
@@ -10,6 +10,30 @@ interface SettingRow { purpose: string; tier: string; provider: string; model: s
 interface ProviderMeta { id: Provider; label: string; keyHint: string; keyUrl: string }
 export interface PurposeKeyRow { purpose: string; provider: string; model: string | null; key_last4: string | null; updated_at: string }
 
+/** การ์ดพับ/กางได้ พร้อม badge สถานะเขียว/แดง — ให้แอดมินเช็คได้ด้วยตาเปล่าว่าหมวดไหนพร้อม */
+function AccordionCard({ title, icon: Icon, ready, readyLabel, notReadyLabel, defaultOpen, children }: {
+  title: string; icon: typeof KeyRound; ready: boolean; readyLabel: string; notReadyLabel: string;
+  defaultOpen?: boolean; children: React.ReactNode;
+}) {
+  return (
+    <details open={defaultOpen} className="group rounded-2xl border border-neutral-200 bg-white">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 marker:content-none">
+        <span className="flex items-center gap-2 text-sm font-semibold text-neutral-900">
+          <Icon className="h-4 w-4 text-emerald-600" /> {title}
+        </span>
+        <span className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${ready ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+            <span className={`inline-block h-2 w-2 rounded-full ${ready ? "bg-emerald-500" : "bg-red-500"}`} />
+            {ready ? readyLabel : notReadyLabel}
+          </span>
+          <span className="text-neutral-300 transition-transform group-open:rotate-180">▾</span>
+        </span>
+      </summary>
+      <div className="border-t border-neutral-100 px-5 py-4">{children}</div>
+    </details>
+  );
+}
+
 export default function AdminAiCenter({
   keys, settings, providers, userEmail, purposeKeys,
 }: {
@@ -17,56 +41,60 @@ export default function AdminAiCenter({
 }) {
   const keyMap = Object.fromEntries(keys.map((k) => [k.provider, k]));
   const setMap = Object.fromEntries(settings.map((s) => [`${s.purpose}_${s.tier}`, s]));
+  const connectedCount = keys.length;
+  const hasWorkingKey = keys.some((k) => k.test_status !== "failed");
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-3xl space-y-4">
       <div>
         <h1 className="text-xl font-bold">ศูนย์จัดการ AI (ผู้ดูแลแพลตฟอร์ม)</h1>
-        <p className="text-sm text-neutral-400">เลือกค่าย → เลือกโมเดล → ใส่ API key เอง · {userEmail}</p>
-        <a href="/dashboard/admin/billing" className="mt-2 inline-block text-sm text-emerald-600 hover:underline">→ ภาพรวมรายได้ + ยืนยันการเติมเงิน</a>
+        <p className="text-sm text-neutral-400">เชื่อมค่าย AI → เลือกโมเดล → ระบบพร้อมใช้ · {userEmail}</p>
+        <a href="/dashboard/admin/billing" className="mt-2 inline-block text-sm text-emerald-600 hover:underline">→ ภาพรวมรายได้ + ยืนยันการชำระเงิน/สลิป</a>
       </div>
 
-      {/* ===== ขั้น 1-2: API Keys ต่อค่าย ===== */}
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><KeyRound className="h-4 w-4 text-emerald-600" /> ขั้นที่ 1 — เชื่อมต่อค่าย AI (ใส่ API Key)</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
+      <AccordionCard title="ขั้นที่ 1 — API Keys ค่าย AI" icon={KeyRound}
+        ready={connectedCount > 0 && hasWorkingKey}
+        readyLabel={`เชื่อมแล้ว ${connectedCount} ค่าย`} notReadyLabel="ยังไม่มี key"
+        defaultOpen={connectedCount === 0}>
+        <div className="space-y-3">
           {providers.map((p) => (
             <ProviderKeyRow key={p.id} meta={p} row={keyMap[p.id]} />
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </AccordionCard>
 
-      {/* ===== ขั้น 3: เลือกค่าย+โมเดล ต่อระดับ ===== */}
-      <RoutingForm setMap={setMap} keyMap={keyMap} />
+      <AccordionCard title="ขั้นที่ 2 — โมเดลเริ่มต้นของระบบ" icon={Cpu}
+        ready={Object.keys(setMap).some((k) => k.startsWith("chat_"))}
+        readyLabel="ตั้งค่าแล้ว" notReadyLabel="ยังไม่ตั้ง">
+        <RoutingForm setMap={setMap} keyMap={keyMap} />
+      </AccordionCard>
 
-      {/* ===== ทางเลือก: แยกคีย์ตามงาน ===== */}
-      <PurposeKeysCard purposeKeys={purposeKeys} providers={providers} />
+      <AccordionCard title="ทางเลือก — แยกคีย์ตามงาน" icon={SplitSquareHorizontal}
+        ready={purposeKeys.length > 0}
+        readyLabel={`ตั้งคีย์แยก ${purposeKeys.length} งาน`} notReadyLabel="ใช้คีย์รวม">
+        <PurposeKeysBody purposeKeys={purposeKeys} providers={providers} />
+      </AccordionCard>
     </div>
   );
 }
 
-// แยกคีย์ "ผู้จัดการร้าน AI" ออกจาก "บอทตอบลูกค้า" — กันโควตาชนกัน + เลือกโมเดลต่างกันได้
-function PurposeKeysCard({ purposeKeys, providers }: { purposeKeys: PurposeKeyRow[]; providers: ProviderMeta[] }) {
+// แยกคีย์ "ผู้ช่วยบัญชี AI" ออกจากงานเริ่มต้นระบบ — กันโควตาค่ายชนกัน + เลือกโมเดลต่างกันได้
+function PurposeKeysBody({ purposeKeys, providers }: { purposeKeys: PurposeKeyRow[]; providers: ProviderMeta[] }) {
   const rowMap = Object.fromEntries(purposeKeys.map((k) => [k.purpose, k]));
   const slots: { purpose: PurposeKeyPurpose; label: string; desc: string; icon: typeof BrainCircuit }[] = [
-    { purpose: "assistant", label: "ผู้จัดการร้าน AI", desc: "ใช้กับแชทสั่งงานของเจ้าของร้าน — แนะนำโมเดลฉลาด", icon: BrainCircuit },
-    { purpose: "chat", label: "บอทตอบลูกค้า", desc: "ใช้กับแชทลูกค้าจริง + คอมเมนต์ + ทดลองบอท — แนะนำตัวเร็ว/ประหยัด", icon: MessageSquare },
+    { purpose: "assistant", label: "ผู้ช่วยบัญชี AI", desc: "แชทสั่งงานบัญชีของผู้ใช้ — แนะนำโมเดลฉลาด tool แม่น (เช่น Claude Haiku)", icon: BrainCircuit },
+    { purpose: "chat", label: "งานเริ่มต้นระบบ (default)", desc: "งาน AI อื่น ๆ เมื่อไม่ตั้งคีย์แยก — แนะนำตัวเร็ว/ประหยัด", icon: MessageSquare },
   ];
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2"><SplitSquareHorizontal className="h-4 w-4 text-emerald-600" /> ทางเลือก — แยกคีย์ตามงาน</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-xs text-neutral-400">
-          ไม่ตั้ง = ทุกงานใช้คีย์รวมจากขั้นที่ 1 ตามเดิม · ตั้งไว้ = งานนั้นใช้คีย์นี้ก่อนเสมอ
-          (แยกโควตา rate limit ของค่าย AI ไม่ให้ผู้จัดการร้านเบียดบอทตอบลูกค้า และดูค่าใช้จ่ายแยกฝั่งได้ที่แดชบอร์ดค่าย)
-        </p>
-        {slots.map((s) => (
-          <PurposeKeyRowUI key={s.purpose} slot={s} row={rowMap[s.purpose]} providers={providers} />
-        ))}
-      </CardContent>
-    </Card>
+    <div className="space-y-3">
+      <p className="text-xs text-neutral-400">
+        ไม่ตั้ง = ทุกงานใช้คีย์รวมจากขั้นที่ 1 ตามเดิม · ตั้งไว้ = งานนั้นใช้คีย์นี้ก่อนเสมอ
+        (แยก rate limit ของค่าย AI และดูค่าใช้จ่ายแยกฝั่งได้ที่แดชบอร์ดค่าย)
+      </p>
+      {slots.map((s) => (
+        <PurposeKeyRowUI key={s.purpose} slot={s} row={rowMap[s.purpose]} providers={providers} />
+      ))}
+    </div>
   );
 }
 
@@ -180,9 +208,9 @@ function ProviderKeyRow({ meta, row }: { meta: ProviderMeta; row?: KeyRow }) {
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold">{meta.label}</span>
           {row ? (
-            <Badge tone="green">เชื่อมแล้ว ••••{row.key_last4}</Badge>
+            <Badge tone="green"><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /><span className="font-mono">••••••••{row.key_last4}</span></Badge>
           ) : (
-            <Badge tone="neutral">ยังไม่เชื่อม</Badge>
+            <Badge tone="red"><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-red-400" />ยังไม่ตั้งค่า</Badge>
           )}
           {row?.test_status === "ok" && <span title="ทดสอบผ่าน"><CheckCircle2 className="h-4 w-4 text-emerald-600" /></span>}
           {row?.test_status === "failed" && <span title={row.test_message ?? ""}><XCircle className="h-4 w-4 text-red-500" /></span>}
@@ -230,8 +258,6 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
   const [economy, setEconomy] = useState<{ provider: string; model: string }>(initChat("economy"));
   const [standard, setStandard] = useState<{ provider: string; model: string }>(initChat("standard"));
   const [premium, setPremium] = useState<{ provider: string; model: string }>(initChat("premium"));
-  const initEmb = setMap["embedding_default"] ?? { provider: "google", model: "gemini-embedding-001" };
-  const [embed, setEmbed] = useState<{ provider: string; model: string }>(initEmb);
 
   const tierState: Record<string, [{ provider: string; model: string }, (v: { provider: string; model: string }) => void]> = {
     economy: [economy, setEconomy], standard: [standard, setStandard], premium: [premium, setPremium],
@@ -247,11 +273,8 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
   }
 
   return (
-    <Card>
-      <CardHeader><CardTitle className="flex items-center gap-2"><Cpu className="h-4 w-4 text-emerald-600" /> ขั้นที่ 2 — เลือกค่าย + โมเดล ให้บอทตอบลูกค้า</CardTitle></CardHeader>
-      <CardContent>
-        <form action={submit} className="space-y-4">
-          <p className="text-xs text-neutral-400">ร้านค้าเลือกได้ว่าจะใช้ระดับไหน (ในหน้าตั้งค่าของร้าน) — คุณกำหนดว่าแต่ละระดับใช้ค่าย/โมเดลอะไร</p>
+    <form action={submit} className="space-y-4">
+      <p className="text-xs text-neutral-400">โมเดลที่ระบบใช้เมื่อไม่ได้ตั้งคีย์แยกตามงาน — ระดับ &quot;มาตรฐาน&quot; คือค่าเริ่มต้นของผู้ช่วยบัญชี AI</p>
 
           {(["economy", "standard", "premium"] as const).map((tier) => {
             const [st, setSt] = tierState[tier];
@@ -269,32 +292,16 @@ function RoutingForm({ setMap, keyMap }: { setMap: Record<string, SettingRow>; k
                     {models.map((m) => <option key={m.id} value={m.id}>{m.label}{m.note ? ` — ${m.note}` : ""}</option>)}
                   </Select>
                 </div>
-                {!hasKey && <p className="mt-1.5 text-[11px] text-amber-600">⚠️ ยังไม่ได้ใส่ API key ของค่ายนี้ในขั้นที่ 1 — บอทจะใช้ค่าย fallback จนกว่าจะใส่</p>}
+                {!hasKey && <p className="mt-1.5 text-[11px] text-amber-600">⚠️ ยังไม่ได้ใส่ API key ของค่ายนี้ในขั้นที่ 1 — ระบบจะใช้ค่าย fallback จนกว่าจะใส่</p>}
               </div>
             );
           })}
 
-          <div className="rounded-xl border border-neutral-100 p-3">
-            <p className="mb-2 text-xs font-semibold text-neutral-600">ระบบค้นหาความรู้ (Embedding)</p>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Select name="embed_provider" value={embed.provider}
-                onChange={(e) => setEmbed({ provider: e.target.value, model: (EMBED_MODELS[e.target.value] ?? [])[0]?.id ?? "" })}>
-                {Object.keys(EMBED_MODELS).map((p) => <option key={p} value={p}>{providerLabel(p)}</option>)}
-              </Select>
-              <Select name="embed_model" value={embed.model} onChange={(e) => setEmbed({ ...embed, model: e.target.value })}>
-                {(EMBED_MODELS[embed.provider] ?? []).map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-              </Select>
-            </div>
-            <p className="mt-1.5 text-[11px] text-neutral-400">ทุกโมเดลถูกบังคับเป็น 1536 มิติ ให้เข้ากับฐานข้อมูลเดิม (เปลี่ยนค่ายได้โดยไม่ต้อง migrate)</p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button disabled={pending}><Save className="h-4 w-4" /> {pending ? "กำลังบันทึก..." : "บันทึกการตั้งค่า AI"}</Button>
-            {saved && <span className="text-sm text-emerald-600">บันทึกแล้ว ✓</span>}
-            {error && <span className="text-sm text-red-600">{error}</span>}
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      <div className="flex items-center gap-3">
+        <Button disabled={pending}><Save className="h-4 w-4" /> {pending ? "กำลังบันทึก..." : "บันทึกการตั้งค่า AI"}</Button>
+        {saved && <span className="text-sm text-emerald-600">บันทึกแล้ว ✓</span>}
+        {error && <span className="text-sm text-red-600">{error}</span>}
+      </div>
+    </form>
   );
 }

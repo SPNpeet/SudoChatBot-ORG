@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { compressImage } from "@/lib/compress-image";
 // แชทผู้ช่วยบัญชี AI — สั่งงานบัญชีทั้งระบบ + แนบรูปบิลให้บันทึกเองได้จากแชท
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -65,7 +66,8 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     }
   }
 
-  async function attachFile(f: File) {
+  async function attachFile(fRaw: File) {
+    const f = await compressImage(fRaw);
     if (busy || reading) return;
     setError(null);
     setReading(true);

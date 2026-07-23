@@ -3,10 +3,11 @@
 //  สรุปกำไร · ลูกหนี้/เจ้าหนี้ค้าง (Aging) · ภาษีซื้อ-ขาย (ภ.พ.30) ·
 //  หัก ณ ที่จ่าย (ภ.ง.ด.3/53 + ไฟล์ยื่น) · งบทดลอง
 // ============================================================
-import { getCurrentShop } from "@/lib/shop";
+import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td, Badge } from "@/components/ui";
 import { baht, bahtDoc, dateOnlyTH, cn } from "@/lib/utils";
 import { agingBucket, AGING_LABEL_TH, docOutstanding } from "@/lib/finance";
+import { rdClean, rdDateBE, rdAmount } from "@/lib/rd";
 import type { FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
 import ExportButtons from "./export-buttons";
@@ -54,10 +55,12 @@ function parsePeriod(raw: string | undefined): Period {
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ t?: string; period?: string; m?: string }> }) {
-  const { supabase, shop } = await getCurrentShop();
+  const [{ supabase, shop }, admin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
   const sp = await searchParams;
   const t = TABS.some((x) => x.id === sp.t) ? sp.t! : "summary";
   const period = parsePeriod(sp.period ?? sp.m);
+  // ไฟล์ยื่นสรรพากร .txt ปลดล็อกที่แพ็ก AI Executive ขึ้นไป (platform admin ใช้ได้เสมอ)
+  const rdAllowed = admin || ["executive", "agency"].includes(shop.plan);
 
   return (
     <div className="space-y-5">
@@ -83,8 +86,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
       {t === "summary" && <SummaryTab shopId={shop.id} supabase={supabase} period={period} />}
       {t === "aging" && <AgingTab shopId={shop.id} supabase={supabase} />}
-      {t === "vat" && <VatTab shopId={shop.id} supabase={supabase} period={period} shopName={shop.billing_name || shop.name} shopTaxId={shop.tax_id ?? ""} />}
-      {t === "wht" && <WhtTab shopId={shop.id} supabase={supabase} period={period} shopName={shop.billing_name || shop.name} shopTaxId={shop.tax_id ?? ""} />}
+      {t === "vat" && <VatTab shopId={shop.id} supabase={supabase} period={period} shopName={shop.billing_name || shop.name} shopTaxId={shop.tax_id ?? ""} rdAllowed={rdAllowed} />}
+      {t === "wht" && <WhtTab shopId={shop.id} supabase={supabase} period={period} shopName={shop.billing_name || shop.name} shopTaxId={shop.tax_id ?? ""} rdAllowed={rdAllowed} />}
       {t === "trial" && <TrialTab shopId={shop.id} supabase={supabase} period={period} />}
     </div>
   );
@@ -257,8 +260,8 @@ async function AgingTab({ shopId, supabase }: { shopId: string; supabase: SB }) 
 }
 
 // ---------- VAT (ภ.พ.30) ----------
-async function VatTab({ shopId, supabase, period, shopName, shopTaxId }: {
-  shopId: string; supabase: SB; period: Period; shopName: string; shopTaxId: string;
+async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed }: {
+  shopId: string; supabase: SB; period: Period; shopName: string; shopTaxId: string; rdAllowed: boolean;
 }) {
   const { data } = await supabase.from("fin_docs")
     .select("id,doc_type,doc_number,contact_name,contact_tax_id,issue_date,total,vat_amount,vat_mode,ref_doc_id")
@@ -283,6 +286,11 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId }: {
     "ชื่อผู้ซื้อ/ผู้ขาย": d.contact_name ?? "", "เลขผู้เสียภาษี": d.contact_tax_id ?? "",
     "มูลค่าสินค้า/บริการ": Number(d.total) - Number(d.vat_amount), "ภาษีมูลค่าเพิ่ม": Number(d.vat_amount),
   }));
+  // ไฟล์โอนย้ายรายงานภาษีซื้อ-ขาย: ลำดับ|วันที่(พ.ศ.)|เลขที่ใบกำกับ|ชื่อคู่ค้า|เลขผู้เสียภาษี|สาขา|มูลค่า|VAT
+  const txtOf = (list: FinDoc[]) => list.map((d, i) =>
+    [i + 1, rdDateBE(d.issue_date), rdClean(d.doc_number), rdClean(d.contact_name), rdClean(d.contact_tax_id), "00000",
+      rdAmount(Number(d.total) - Number(d.vat_amount)), rdAmount(d.vat_amount)].join("|"),
+  ).join("\r\n");
 
   return (
     <div className="space-y-4">
@@ -303,11 +311,12 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId }: {
         </CardContent>
       </Card>
 
-      {[{ title: "รายงานภาษีขาย", list: salesTax, name: `vat-sales-${period.key}.xlsx` }, { title: "รายงานภาษีซื้อ", list: buyTax, name: `vat-buy-${period.key}.xlsx` }].map((sec) => (
+      {[{ title: "รายงานภาษีขาย", list: salesTax, base: `vat-sales-${period.key}` }, { title: "รายงานภาษีซื้อ", list: buyTax, base: `vat-buy-${period.key}` }].map((sec) => (
         <Card key={sec.title}>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{sec.title} ({sec.list.length} ใบ)</CardTitle>
-            <ExportButtons xlsxName={sec.name} rows={mkRows(sec.list)} />
+            <ExportButtons xlsxName={`${sec.base}.xlsx`} rows={mkRows(sec.list)}
+              txtName={`${sec.base}.txt`} txtContent={txtOf(sec.list)} txtLocked={!rdAllowed} />
           </CardHeader>
           <CardContent className="px-0 pb-0">
             {sec.list.length === 0 ? (
@@ -341,8 +350,8 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId }: {
 }
 
 // ---------- WHT (ภ.ง.ด.3/53) ----------
-async function WhtTab({ shopId, supabase, period, shopName, shopTaxId }: {
-  shopId: string; supabase: SB; period: Period; shopName: string; shopTaxId: string;
+async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed }: {
+  shopId: string; supabase: SB; period: Period; shopName: string; shopTaxId: string; rdAllowed: boolean;
 }) {
   const { data } = await supabase.from("fin_docs")
     .select("id,doc_type,doc_number,contact_name,contact_tax_id,contact_address,issue_date,total,vat_amount,wht_rate,wht_amount")
@@ -366,10 +375,11 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId }: {
     "ยอดเงินที่จ่าย": Number(d.total) - Number(d.vat_amount), "ภาษีที่หัก": Number(d.wht_amount),
     "เอกสารอ้างอิง": d.doc_number,
   }));
+  // ไฟล์โอนย้าย ภ.ง.ด.: ลำดับ|เลขผู้เสียภาษี|สาขา|ชื่อผู้ถูกหัก|ที่อยู่|วันที่จ่าย(พ.ศ.)|ประเภทเงินได้|อัตรา|ยอดจ่าย|ภาษีหัก|เงื่อนไข(1=หัก ณ ที่จ่าย)
   const txtOf = (list: FinDoc[]) => list.map((d, i) =>
-    [i + 1, d.contact_tax_id ?? "", (d.contact_name ?? "").replace(/\|/g, " "), (d.contact_address ?? "").replace(/\|/g, " "),
-      d.issue_date, "ค่าสินค้า/บริการ", Number(d.wht_rate).toFixed(2),
-      (Number(d.total) - Number(d.vat_amount)).toFixed(2), Number(d.wht_amount).toFixed(2)].join("|"),
+    [i + 1, rdClean(d.contact_tax_id), "00000", rdClean(d.contact_name), rdClean(d.contact_address),
+      rdDateBE(d.issue_date), "ค่าสินค้า/บริการ", rdAmount(d.wht_rate),
+      rdAmount(Number(d.total) - Number(d.vat_amount)), rdAmount(d.wht_amount), "1"].join("|"),
   ).join("\r\n");
 
   return (
@@ -391,7 +401,7 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId }: {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{sec.title} ({sec.list.length})</CardTitle>
             <ExportButtons xlsxName={`${sec.base}.xlsx`} rows={mkRows(sec.list)}
-              txtName={`${sec.base}.txt`} txtContent={txtOf(sec.list)} />
+              txtName={`${sec.base}.txt`} txtContent={txtOf(sec.list)} txtLocked={!rdAllowed} />
           </CardHeader>
           <CardContent className="px-0 pb-0">
             {sec.list.length === 0 ? (
@@ -441,7 +451,8 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId }: {
         </Card>
       )}
       <p className="text-[11px] text-neutral-400">
-        ภ.ง.ด.3/53 ยื่นรายเดือน — ไฟล์ .txt เป็นรูปแบบโอนย้ายข้อมูลแนบแบบ (คั่นด้วย |) ตรวจกับโปรแกรมโอนย้ายฯ ของกรมสรรพากรก่อนยื่นจริง · หนังสือรับรอง 50 ทวิ พิมพ์ได้จากตาราง
+        ภ.ง.ด.3/53 ยื่นรายเดือน — ไฟล์ .txt คั่นด้วย | เข้ารหัส TIS-620 วันที่ พ.ศ. (มาตรฐานโปรแกรมโอนย้ายข้อมูลสรรพากร) ·
+        ก่อนยื่นรอบแรกให้ทดลองนำเข้าโปรแกรม RD Prep 1 ครั้งเพื่อยืนยันลำดับคอลัมน์ตรงเวอร์ชันล่าสุด · หนังสือรับรอง 50 ทวิ พิมพ์ได้จากตาราง
       </p>
     </div>
   );

@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { compressImage } from "@/lib/compress-image";
 // ============================================================
 //  แพ็กเกจ/เครดิต — โหมดหลัก: "จ่ายค่าแพ็กเกจตรง" สแกน QR ยอดเท่าราคาแพ็กพอดี
 //  สลิปผ่าน (อัตโนมัติ/แอดมินยืนยัน) = แพ็กเปิดทันที ไม่ต้องเข้าใจระบบเครดิต
@@ -10,7 +11,11 @@ import { baht, cn } from "@/lib/utils";
 import { createTopup, createOmiseTopup, getTopupStatus, changePlan, purchasePlan } from "./actions";
 import { Check, Wallet, Upload, X } from "lucide-react";
 
-interface Plan { code: string; name: string; price_monthly: number; included_replies: number; price_per_extra_reply: number; features: string[]; daily_reply_cap?: number | null }
+interface Plan {
+  code: string; name: string; price_monthly: number; included_replies: number;
+  price_per_extra_reply: number; features: string[]; daily_reply_cap?: number | null;
+  max_companies?: number | null; slip_quota?: number | null;
+}
 interface TopupState { topupId: string; qrUrl: string; promptpayId?: string; accountName?: string; amount: number; gateway?: "omise"; planName?: string }
 
 export default function BillingClient({
@@ -61,7 +66,8 @@ export default function BillingClient({
     });
   }
 
-  async function uploadSlip(file: File) {
+  async function uploadSlip(fileRaw: File) {
+    const file = await compressImage(fileRaw);
     if (!topup) return;
     setUploading(true); setSlipMsg(null);
     try {
@@ -96,11 +102,13 @@ export default function BillingClient({
                   {current && <Badge tone="green" className="mb-2 self-start">แพ็กเกจปัจจุบัน</Badge>}
                   <p className="font-bold">{p.name}</p>
                   <p className="mt-1"><span className="text-xl font-bold">{paid ? baht(p.price_monthly) : "ฟรี"}</span>{paid ? <span className="text-xs text-neutral-400">/เดือน</span> : ""}</p>
-                  {p.code === "free" ? (
-                    <p className="mt-1 text-[11px] text-neutral-400">งาน AI ฟรี {(p.daily_reply_cap ?? 30).toLocaleString()} ครั้ง/วัน (รีเซ็ตทุกวัน) · คีย์เองไม่จำกัด</p>
-                  ) : (
-                    <p className="mt-1 text-[11px] text-neutral-400">งาน AI {p.included_replies.toLocaleString()} ครั้ง/เดือน{p.daily_reply_cap ? ` · สูงสุด ${p.daily_reply_cap.toLocaleString()}/วัน` : ""} · คีย์เองไม่จำกัด</p>
-                  )}
+                  <p className="mt-1 text-[11px] text-neutral-400">
+                    🏢 {p.max_companies ? `${p.max_companies} กิจการ` : "ไม่จำกัดกิจการ"} · 👥 พนักงานไม่จำกัด
+                  </p>
+                  <p className="text-[11px] text-neutral-400">
+                    🤖 AI {p.code === "free" ? `${(p.daily_reply_cap ?? 30).toLocaleString()}/วัน` : `${p.included_replies.toLocaleString()}/เดือน`}
+                    {" · "}🧾 สลิป {p.slip_quota ? `${p.slip_quota.toLocaleString()}/เดือน` : "ไม่จำกัด"}
+                  </p>
                   <ul className="mt-3 flex-1 space-y-1.5">
                     {(p.features ?? []).map((f, i) => (
                       <li key={i} className="flex items-start gap-1.5 text-[11px] text-neutral-600"><Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" /> {f}</li>

@@ -6,6 +6,7 @@ import { Printer, Link2, ArrowRightLeft, Banknote, Ban, X, Check } from "lucide-
 import { Button, Input, Label, Select } from "@/components/ui";
 import { baht } from "@/lib/utils";
 import { recordPayment, convertDoc, voidDoc, uploadFinFile } from "./actions";
+import { compressImage } from "@/lib/compress-image";
 import type { DocStatus, DocType } from "@/lib/types/finance";
 
 export interface DocActionsProps {
@@ -40,7 +41,7 @@ export default function DocActions({ doc }: DocActionsProps) {
       let slipPath: string | null = null;
       if (slipFile) {
         const fd = new FormData();
-        fd.append("file", slipFile);
+        fd.append("file", await compressImage(slipFile));
         const up = await uploadFinFile(doc.shopId, fd);
         if (!up.ok) { setError(up.error); return; }
         slipPath = up.path;

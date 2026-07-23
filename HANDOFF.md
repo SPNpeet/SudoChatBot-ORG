@@ -50,6 +50,18 @@
 - **จ่ายแพ็กเกจตรง (migration 056)**: ปุ่ม "สมัคร — จ่าย 990" → QR ยอดเท่าราคาแพ็ก → สลิปผ่าน (อัตโนมัติ/แอดมินยืนยัน) → RPC `apply_plan_purchase` เปิดแพ็ก+ตัดค่าแพ็ก+ตั้งรอบบิล +1 เดือนทันที (idempotent, ต่อยอดเครื่อง run_plan_billing เดิม) · เติมเครดิตพับเป็นตัวเลือกเสริม
 - **UX**: Empty state ทุกหน้ามี icon+ปุ่ม CTA · ปุ่มดาวน์โหลด template statement CSV · แชท AI ตอบพร้อม **ปุ่มลิงก์เอกสาร** (เปิด/พิมพ์/ลิงก์ลูกค้า) · แถวเอกสาร void ขีดฆ่าจาง + หน้า detail บอก "ยกเลิกโดยใคร เมื่อไหร่"
 
+## 🆕 รอบสาม 2026-07-23 — Commercial-ready
+- **ราคาใหม่ 4 แพ็ก (migration 058)**: Starter 990 (1 กิจการ, AI 150/ด, สลิป 300/ด) · Professional 1,990 ⭐ (3 กิจการ, AI 500, สลิป 1,000) · AI Executive 3,990 (5 กิจการ, AI 2,000, สลิปไม่จำกัด, ปลดล็อกไฟล์ยื่นภาษี) · Agency 9,900 (ไม่จำกัดกิจการ, AI 10,000) · free = ทดลองใช้ · **จุดขาย: พนักงานไม่จำกัดทุกแพ็ก** · migrate pro→professional, mini→starter, enterprise→agency แล้ว
+- **โควตาสลิป/เดือน ต่อเจ้าของ** (RPC `check_slip_quota`) บังคับ 3 ทางเข้า (recordPayment, uploadAndMatchSlip, public slip) — เต็มแล้ว auto-verify ปิด แต่ยืนยัน manual ได้เสมอ
+- **ลิมิตจำนวนกิจการตามแพ็ก** (RPC `can_create_company`) เช็คตอน createShop พร้อมข้อความชวนอัปเกรด
+- **ไฟล์ยื่นสรรพากรมาตรฐาน RD Prep** (`src/lib/rd.ts`): pipe | เท่านั้น + rdClean ล้าง |/newline/tab + วันที่ DD/MM/YYYY **พ.ศ.** + เข้ารหัส **TIS-620** + CRLF · เพิ่ม .txt ให้รายงานภาษีซื้อ-ขายด้วย · **gate แพ็ก**: .txt ปลดล็อก executive/agency (platform admin ใช้ได้เสมอ) — ก่อนยื่นจริงรอบแรกให้ทดลอง import เข้าโปรแกรม RD Prep ยืนยันลำดับคอลัมน์
+- **ศูนย์ AI (Admin)**: จัดกลุ่ม Accordion พับ/กาง + badge 🟢/🔴 ทุกหมวด + key แสดง masked ••••1234 + ตัด Embedding UI (ไม่ใช้หลัง pivot)
+- **จัดการผู้ใช้ระบบ**: คอลัมน์ตั้งเพดานโควตา AI/วัน รายกิจการ (ai_quota_override) พร้อมปุ่มบันทึก
+- **บีบอัดรูปก่อนอัปโหลดทุกจุด** (`src/lib/compress-image.ts` canvas ล้วน ไม่มี dependency ใหม่): สลิป/บิล/รูปสินค้า → JPEG ≤~300KB, ยาวสุด 1600px — ประหยัด Supabase Storage 1GB ได้หลักแสนใบ
+- **กันบั๊ก padding มือถือ**: main pb ลดเหลือ 4.5rem+safe-area พอดี bottom nav (viewport-fit=cover อยู่แล้ว)
+- **Vercel timeout**: เลือกใช้ maxDuration ต่อ route (60-120s, Vercel ปรับตามแพลนอัตโนมัติ) แทน Edge/streaming — โครง tool-loop 3 ค่าย + Supabase service ทำงานบน Node ได้เสถียรกว่า streaming refactor (streaming เป็น optimization เฟสถัดไป ถ้าเจอ timeout จริงบน Hobby ให้เปิด Fluid Compute ใน Vercel dashboard)
+- หมายเหตุ: ระบบเชิญทีม (Unlimited Users) มีอยู่แล้วที่ ตั้งค่า → ทีมงาน (อีเมล + บทบาท, RLS แยกต่อกิจการ)
+
 ## 🔲 งานถัดไป (เรียงตามผลกระทบ)
 1. **ทดสอบ end-to-end บน production**: สมัคร → ตั้งกิจการ → ออก INV → ลิงก์ลูกค้า → สลิป → ดูสมุดรายวัน/รายงาน
 2. **แพ็กเกจ/ราคาใน DB**: ตาราง `plans` ยังใช้ชื่อ field เดิม (included_replies ฯลฯ) — ตีความใหม่เป็น "งาน AI/เดือน" แล้ว copy หน้า billing อัปเดตแล้ว แต่ยังไม่ได้ปรับตัวเลขแพ็กใน DB ให้เหมาะ positioning ใหม่

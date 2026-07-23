@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { compressImage } from "@/lib/compress-image";
 import { useState, useTransition } from "react";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import type { Product } from "@/lib/types/db";
@@ -16,7 +17,8 @@ export default function ProductForm({
   const [uploading, setUploading] = useState(false);
   const [trackStock, setTrackStock] = useState(product?.track_stock ?? false);
 
-  async function pickImage(file: File) {
+  async function pickImage(fileRaw: File) {
+    const file = await compressImage(fileRaw);
     setUploading(true); setError(null);
     const fd = new FormData();
     fd.append("shop_id", shopId);

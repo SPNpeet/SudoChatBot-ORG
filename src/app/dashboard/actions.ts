@@ -210,6 +210,13 @@ export async function createShop(formData: FormData): Promise<ActionResult> {
     if (!name) return { ok: false, error: "ตั้งชื่อกิจการก่อน" };
 
     const svc = createServiceClient();
+    // ลิมิตจำนวนกิจการตามแพ็ก (Starter 1 · Professional 3 · Executive 5 · Agency ไม่จำกัด)
+    const { data: canCreate } = await svc.rpc("can_create_company", { p_owner: user.id });
+    const cc = canCreate as { allowed?: boolean; used?: number; cap?: number; plan?: string } | null;
+    if (cc && cc.allowed === false) {
+      return { ok: false, error: `แพ็กเกจ ${cc.plan ?? "ปัจจุบัน"} รองรับ ${cc.cap} กิจการ (ใช้ครบแล้ว) — อัปเกรดที่หน้า แพ็กเกจ/เครดิต เพื่อเพิ่มกิจการ (Professional = 3 · AI Executive = 5 · Agency = ไม่จำกัด)` };
+    }
+
     const { data: shop, error } = await svc.from("shops").insert({ owner_id: user.id, name, plan: "free", status: "active" }).select("id").single();
     if (error || !shop) return { ok: false, error: error?.message ?? "สร้างไม่สำเร็จ" };
     const { error: memErr } = await svc.from("shop_members").insert({ shop_id: shop.id, user_id: user.id, role: "owner" });

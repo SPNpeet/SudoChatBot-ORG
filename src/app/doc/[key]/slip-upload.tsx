@@ -2,6 +2,7 @@
 // ลูกค้าอัปสลิปเอง — ระบบตรวจสลิปจริง/ยอดตรง แล้วตัดยอดให้ร้านทันที
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { compressImage } from "@/lib/compress-image";
 
 export default function PublicSlipUpload({ docKey, autoVerify }: { docKey: string; autoVerify: boolean }) {
   const [busy, setBusy] = useState(false);
@@ -9,9 +10,10 @@ export default function PublicSlipUpload({ docKey, autoVerify }: { docKey: strin
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  async function onFile(f: File) {
+  async function onFile(fRaw: File) {
     setBusy(true); setMsg(null);
     try {
+      const f = await compressImage(fRaw);
       const fd = new FormData();
       fd.append("key", docKey);
       fd.append("file", f);

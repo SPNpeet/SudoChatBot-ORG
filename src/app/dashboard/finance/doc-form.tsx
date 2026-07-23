@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { compressImage } from "@/lib/compress-image";
 // ============================================================
 //  ฟอร์มเอกสารกลาง — ใบเสนอราคา/ใบแจ้งหนี้/ใบเสร็จ/ค่าใช้จ่าย
 //  คำนวณ VAT (แยกนอก/รวมใน) + หัก ณ ที่จ่าย สดทุกครั้งที่พิมพ์
@@ -70,7 +71,8 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
     else setRow(i, { name, product_id: null });
   }
 
-  async function attachFile(f: File, runAi: boolean) {
+  async function attachFile(fRaw: File, runAi: boolean) {
+    const f = await compressImage(fRaw);
     setError(null);
     const fd = new FormData();
     fd.append("file", f);

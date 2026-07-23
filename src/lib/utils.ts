@@ -40,6 +40,8 @@ export function timeAgo(d: string | Date | null | undefined): string {
   return `${Math.floor(diff / 86400)} วันที่แล้ว`;
 }
 
-export const PLAN_TH: Record<string, string> = { free: "ทดลองใช้", mini: "มินิ", starter: "เริ่มต้น", pro: "โปร", enterprise: "องค์กร" };
+export const PLAN_TH: Record<string, string> = {
+  free: "ทดลองใช้", starter: "Starter", professional: "Professional", executive: "AI Executive", agency: "Agency",
+};
 
 export const SHOP_STATUS_TH: Record<string, string> = { active: "ใช้งานอยู่", suspended: "ระงับชั่วคราว", closed: "ปิดแล้ว" };

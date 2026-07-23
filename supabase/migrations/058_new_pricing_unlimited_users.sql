@@ -1,0 +1,4 @@
+﻿-- 058: โครงสร้างราคาใหม่ (apply บน production แล้ว) — พนักงานไม่จำกัดทุกแพ็ก จำกัดที่ AI/สลิป/จำนวนกิจการ
+-- plans: +max_companies +slip_quota · แพ็กใหม่ starter 990 / professional 1990 / executive 3990 / agency 9900
+-- free = ทดลองใช้ (AI 30/วัน, สลิป 30/ด, 1 กิจการ) · migrate pro->professional, mini->starter, enterprise->agency
+-- RPC: check_slip_quota(shop) ถังกลางต่อเจ้าของ · can_create_company(owner) ลิมิตกิจการตามแพ็ก

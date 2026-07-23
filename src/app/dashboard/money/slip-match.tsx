@@ -1,4 +1,5 @@
-"use client";
+﻿"use client";
+import { compressImage } from "@/lib/compress-image";
 // อัปสลิป -> ระบบตรวจ (EasySlip/SlipOK) + หาใบแจ้งหนี้ที่ยอดตรง -> ยืนยันบันทึกรับเงิน
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -17,7 +18,8 @@ export default function SlipMatch({ shopId }: { shopId: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  async function onFile(f: File) {
+  async function onFile(fRaw: File) {
+    const f = await compressImage(fRaw);
     setError(null); setResult(null); setDone(null); setBusy(true);
     try {
       const fd = new FormData();

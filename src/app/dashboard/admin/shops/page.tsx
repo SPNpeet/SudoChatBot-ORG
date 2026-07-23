@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/shop";
+import { createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, Table, Th, Input, Button } from "@/components/ui";
 import ShopRow from "./shop-row";
@@ -25,11 +26,19 @@ export default async function AdminShopsPage({ searchParams }: { searchParams: P
   const total = result?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
+  // เพดานโควตา AI override รายกิจการ (คอลัมน์ ai_quota_override)
+  const svc = createServiceClient();
+  const overrideMap = new Map<string, number | null>();
+  if (rows.length) {
+    const { data: ov } = await svc.from("shops").select("id, ai_quota_override").in("id", rows.map((r) => r.id));
+    for (const o of ov ?? []) overrideMap.set(o.id, o.ai_quota_override);
+  }
+
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold">จัดการร้านค้า</h1>
-        <p className="text-sm text-neutral-400">ทั้งหมด {total} ร้าน — ระงับ/ปิดร้าน หรือเปลี่ยนแพ็กแบบ manual ได้ที่นี่</p>
+        <h1 className="text-xl font-bold">จัดการผู้ใช้ระบบ</h1>
+        <p className="text-sm text-neutral-400">ทั้งหมด {total} กิจการ — เปลี่ยนแพ็ก/ระงับ/ตั้งเพดานโควตา AI รายกิจการได้ที่นี่</p>
       </div>
 
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">โหลดรายชื่อร้านไม่สำเร็จ: {error.message}</p>}
@@ -45,10 +54,11 @@ export default async function AdminShopsPage({ searchParams }: { searchParams: P
             <p className="py-14 text-center text-sm text-neutral-400">ไม่พบร้านค้า</p>
           ) : (
             <Table>
-              <thead><tr><Th>ร้าน</Th><Th>เจ้าของ</Th><Th>แพ็ก</Th><Th>สถานะ</Th><Th>สมัครเมื่อ</Th></tr></thead>
+              <thead><tr><Th>กิจการ</Th><Th>เจ้าของ</Th><Th>แพ็ก</Th><Th>โควตา AI/วัน</Th><Th>สถานะ</Th><Th>สมัครเมื่อ</Th></tr></thead>
               <tbody>
                 {rows.map((r) => (
-                  <ShopRow key={r.id} id={r.id} name={r.name} ownerEmail={r.owner_email} plan={r.plan} status={r.status} createdAt={r.created_at} />
+                  <ShopRow key={r.id} id={r.id} name={r.name} ownerEmail={r.owner_email} plan={r.plan} status={r.status} createdAt={r.created_at}
+                    quotaOverride={overrideMap.get(r.id) ?? null} />
                 ))}
               </tbody>
             </Table>
