@@ -7,7 +7,8 @@
 // ============================================================
 
 const TARGET_KB = 300;
-const MAX_DIM = 1600; // พอสำหรับ OCR/EasySlip อ่านชัด
+const MAX_DIM = 1920; // คมพอให้ AI OCR/EasySlip อ่านตัวหนังสือบนบิล-สลิปแม่นยำ
+// หมายเหตุ: เลือก JPEG (ไม่ใช่ WebP) เพราะ EasySlip/SlipOK รับ JPEG แน่นอน — WebP เสี่ยงตรวจสลิปไม่ผ่าน
 
 export async function compressImage(file: File): Promise<File> {
   try {

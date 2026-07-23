@@ -72,13 +72,13 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
   }
 
   async function attachFile(fRaw: File, runAi: boolean) {
-    const f = await compressImage(fRaw);
     setError(null);
+    setAiBusy(true); // เปิด spinner ก่อนเริ่มบีบอัด — กันผู้ใช้คิดว่าเว็บค้าง
+    const f = await compressImage(fRaw);
     const fd = new FormData();
     fd.append("file", f);
     if (runAi) {
       // ให้ AI อ่านบิล -> กรอกฟอร์ม (อัปโหลดเก็บไฟล์ด้วยในตัว)
-      setAiBusy(true);
       try {
         fd.append("shop_id", shopId);
         fd.append("kind", "expense");
@@ -111,9 +111,13 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
         setAiBusy(false);
       }
     } else {
-      const r = await uploadFinFile(shopId, fd);
-      if (r.ok) { setFilePath(r.path); setFileName(f.name); }
-      else setError(r.error);
+      try {
+        const r = await uploadFinFile(shopId, fd);
+        if (r.ok) { setFilePath(r.path); setFileName(f.name); }
+        else setError(r.error);
+      } finally {
+        setAiBusy(false);
+      }
     }
   }
 

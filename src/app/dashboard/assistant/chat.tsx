@@ -67,11 +67,11 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   }
 
   async function attachFile(fRaw: File) {
-    const f = await compressImage(fRaw);
     if (busy || reading) return;
     setError(null);
-    setReading(true);
+    setReading(true); // spinner หมุนตั้งแต่เริ่มบีบอัด — กันกดซ้ำ/คิดว่าเว็บค้าง
     try {
+      const f = await compressImage(fRaw);
       const fd = new FormData();
       fd.append("shop_id", shopId);
       fd.append("file", f);

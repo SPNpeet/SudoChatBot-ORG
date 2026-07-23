@@ -18,15 +18,18 @@ export default function ProductForm({
   const [trackStock, setTrackStock] = useState(product?.track_stock ?? false);
 
   async function pickImage(fileRaw: File) {
-    const file = await compressImage(fileRaw);
-    setUploading(true); setError(null);
-    const fd = new FormData();
-    fd.append("shop_id", shopId);
-    fd.append("file", file);
-    const r = await uploadProductImage(shopId, fd);
-    if (!r.ok) { setError(r.error); setUploading(false); return; }
-    setImages((im) => [...im, r.url]);
-    setUploading(false);
+    setUploading(true); setError(null); // spinner หมุนตั้งแต่เริ่มบีบอัด
+    try {
+      const file = await compressImage(fileRaw);
+      const fd = new FormData();
+      fd.append("shop_id", shopId);
+      fd.append("file", file);
+      const r = await uploadProductImage(shopId, fd);
+      if (!r.ok) { setError(r.error); return; }
+      setImages((im) => [...im, r.url]);
+    } finally {
+      setUploading(false);
+    }
   }
 
   function submit(fd: FormData) {

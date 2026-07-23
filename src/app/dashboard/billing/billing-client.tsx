@@ -67,10 +67,10 @@ export default function BillingClient({
   }
 
   async function uploadSlip(fileRaw: File) {
-    const file = await compressImage(fileRaw);
     if (!topup) return;
-    setUploading(true); setSlipMsg(null);
+    setUploading(true); setSlipMsg(null); // spinner หมุนตั้งแต่เริ่มบีบอัด
     try {
+      const file = await compressImage(fileRaw);
       const fd = new FormData();
       fd.append("topup_id", topup.topupId);
       fd.append("slip", file);

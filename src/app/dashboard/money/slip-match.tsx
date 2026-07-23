@@ -19,9 +19,9 @@ export default function SlipMatch({ shopId }: { shopId: string }) {
   const router = useRouter();
 
   async function onFile(fRaw: File) {
-    const f = await compressImage(fRaw);
-    setError(null); setResult(null); setDone(null); setBusy(true);
+    setError(null); setResult(null); setDone(null); setBusy(true); // spinner หมุนตั้งแต่เริ่มบีบอัด
     try {
+      const f = await compressImage(fRaw);
       const fd = new FormData();
       fd.append("file", f);
       const r = await uploadAndMatchSlip(shopId, fd);
