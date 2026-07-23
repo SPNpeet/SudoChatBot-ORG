@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { FileText, ScanLine, BookOpenText, Landmark, Building2, ShieldCheck, ArrowRight, Sparkles, Check, Calculator } from "lucide-react";
+import LandingSandboxChat from "./landing-sandbox-chat";
 
 const features = [
   { icon: Calculator, title: "ผู้ช่วยบัญชี AI สั่งเป็นภาษาคน", desc: "\"ออกใบแจ้งหนี้ 5,000 ให้บริษัท A บวก VAT\" — พิมพ์แค่นี้ เอกสารออก บัญชีลงให้ครบ" },
@@ -102,6 +103,7 @@ export default function Landing() {
               </div>
               <p className="mt-3 text-center text-[10px] text-neutral-400">ตัวอย่างการใช้งานจริง — สมัครแล้วลองสั่งได้ทันที</p>
             </div>
+            <LandingSandboxChat />
           </div>
         </div>
 

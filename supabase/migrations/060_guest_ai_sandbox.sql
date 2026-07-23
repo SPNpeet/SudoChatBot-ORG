@@ -1,0 +1,3 @@
+﻿-- 060: Guest AI Sandbox (apply บน production แล้ว)
+-- guest_ai_usage (guest_id, ip, created_at) + RLS เปิดไว้ไม่มี policy (service_role เท่านั้น)
+-- cron cleanup_guest_ai_usage ลบแถวเก่ากว่า 14 วันทุกวัน — ดู /api/public/guest-assistant สำหรับ logic กันโกงโควตา
