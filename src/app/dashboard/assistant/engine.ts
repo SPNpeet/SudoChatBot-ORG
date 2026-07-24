@@ -582,6 +582,7 @@ function buildSystemPrompt(ctx: AssistantCtx): string {
 ## กติกาเหล็ก
 1. ตัวเลขทุกตัวต้องมาจาก tool เท่านั้น — ห้ามเดายอดเงิน สถานะ หรือข้อมูลใดๆ
 2. คำสั่งที่ชัดเจนครบถ้วนทำทันทีแล้วรายงานผล — เจ้าของสั่งเอง ไม่ต้องถามซ้ำ · คำสั่งกำกวม (ไม่รู้ยอด/ไม่รู้ใบไหน) ให้ค้นด้วย tool ก่อน แล้วทวนให้ชัด 1 ครั้งค่อยลงมือ
+   ⚠️ "ทำ" = เรียก tool เขียน (create_expense/create_sales_doc/record_payment ฯลฯ) แล้วได้ผล ok กลับมาเท่านั้น — ห้ามตอบว่า "บันทึกแล้ว/ออกให้แล้ว/เรียบร้อย" โดยที่ยังไม่ได้เรียก tool เขียนในเทิร์นนี้เด็ดขาด · บันทึกค่าใช้จ่ายไม่ต้องเรียก get_expense_categories ก่อน — ใส่ชื่อหมวดใน create_expense ได้เลย ระบบจับคู่ให้เอง
 3. การออกเอกสาร/บันทึกเงินทุกครั้ง ระบบลงสมุดรายวัน (เดบิต/เครดิต) ตัดสต๊อก และ audit log ให้อัตโนมัติ — บอกผู้ใช้ได้ว่าตรวจย้อนหลังได้ที่หน้าสมุดรายวัน
 4. ความรู้ภาษีไทยที่ใช้แนะนำ: VAT 7% (แยกนอก/รวมใน) · หัก ณ ที่จ่ายทั่วไป: ค่าบริการ/จ้างทำ 3%, ค่าเช่า 5%, ค่าขนส่ง 1%, ค่าโฆษณา 2% · แนะนำได้แต่ตัดสินใจแทนสรรพากรไม่ได้ เรื่องซับซ้อนให้แนะนำปรึกษานักบัญชี
 5. ถ้าผู้ใช้แนบไฟล์บิลมา (มีข้อความ [ไฟล์แนบ...] พร้อมข้อมูลที่ AI อ่านได้) ให้สรุปสั้นๆ ว่าจะบันทึกอะไร ถ้าข้อมูลครบให้บันทึกเลยด้วย create_expense (ใส่ file_path ที่ให้มา) แล้วรายงานเลขเอกสาร
@@ -706,16 +707,49 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
 }
 
 // ---------- main ----------
+// tool ที่ "เขียน" ข้อมูลจริง — ใช้ตรวจจับคำตอบหลอกว่าสำเร็จทั้งที่ไม่ได้ทำ
+const WRITE_TOOLS = new Set([
+  "create_sales_doc", "create_expense", "record_payment", "convert_doc", "void_doc",
+  "create_contact", "upsert_product", "update_shop_info", "update_payment_settings",
+]);
+// อ้างว่าทำรายการสำเร็จ (เช่น "บันทึก...เรียบร้อยแล้ว") แต่ไม่นับประโยคปฏิเสธ
+const CLAIM_RE = /(บันทึก|ออกใบ|สร้างใบ|ลงบัญชี|ตั้งหนี้|ยกเลิกเอกสาร|แปลงเป็น|รับชำระ|จ่ายเงิน)[^\n]{0,60}(แล้ว|เรียบร้อย|สำเร็จ)/;
+const DENY_RE = /ไม่สำเร็จ|ไม่ได้|ล้มเหลว|ขัดข้อง|ยังไม่/;
+
 export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> {
   // คีย์เฉพาะ 'assistant' (แอดมินตั้งในศูนย์ AI) — ไม่ตั้งใช้ routing กลาง
   const cfg = (await resolvePurposeKey(ctx.svc, "assistant")) ?? (await resolveDefaultAiConfig(ctx.svc, "standard"));
   const system = buildSystemPrompt(ctx);
 
-  let r: LoopResult;
-  const compatBase = OPENAI_COMPAT_BASE[cfg.provider];
-  if (cfg.provider === "openai" || compatBase) r = await runOpenAI(ctx, cfg.model, cfg.apiKey, system, compatBase);
-  else if (cfg.provider === "google") r = await runGemini(ctx, cfg.model, cfg.apiKey, system);
-  else r = await runAnthropic(ctx, cfg.model, cfg.apiKey, system);
+  const dispatch = (c: AssistantCtx): Promise<LoopResult> => {
+    const compatBase = OPENAI_COMPAT_BASE[cfg.provider];
+    if (cfg.provider === "openai" || compatBase) return runOpenAI(c, cfg.model, cfg.apiKey, system, compatBase);
+    if (cfg.provider === "google") return runGemini(c, cfg.model, cfg.apiKey, system);
+    return runAnthropic(c, cfg.model, cfg.apiKey, system);
+  };
+
+  let r = await dispatch(ctx);
+
+  // ตาข่ายกันโกหก (เจอจริงบน production: Gemini เรียกแค่ tool อ่าน แล้วอ้างว่า "บันทึกแล้ว"):
+  // ถ้าคำตอบอ้างว่าทำรายการสำเร็จ แต่ไม่มี tool เขียนถูกเรียกเลย -> บังคับวนอีกรอบให้ทำจริง
+  const didWrite = r.toolCalls.some((c) => WRITE_TOOLS.has(c.name));
+  if (!didWrite && r.text && CLAIM_RE.test(r.text) && !DENY_RE.test(r.text)) {
+    const nudged: AssistantCtx = {
+      ...ctx,
+      history: [
+        ...ctx.history,
+        { role: "assistant", content: r.text },
+        { role: "user", content: "[ระบบตรวจสอบอัตโนมัติ] เทิร์นที่แล้วคุณอ้างว่าทำรายการสำเร็จ แต่ระบบไม่พบการเรียกเครื่องมือบันทึกใดๆ เลย — ถ้ายังไม่ได้ทำ ให้เรียกเครื่องมือที่ถูกต้อง (เช่น create_expense) เดี๋ยวนี้แล้วรายงานผลจริง ถ้าทำไม่ได้ให้บอกผู้ใช้ตรงๆ ห้ามอ้างว่าสำเร็จ" },
+      ],
+    };
+    const r2 = await dispatch(nudged);
+    r = {
+      text: r2.text || r.text,
+      inTok: r.inTok + r2.inTok, outTok: r.outTok + r2.outTok,
+      toolCalls: [...r.toolCalls, ...r2.toolCalls],
+      artifacts: [...r.artifacts, ...r2.artifacts],
+    };
+  }
 
   await ctx.svc.from("ai_usage_logs").insert({
     shop_id: ctx.shopId, purpose: "assistant", model: `${cfg.provider}/${cfg.model}`,
