@@ -1,7 +1,7 @@
 "use client";
 // สลับกิจการ (สำนักงานบัญชีดูแลหลายบริษัทในบัญชีเดียว) + สร้างกิจการใหม่
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Building2, ChevronDown, Plus, X } from "lucide-react";
 import { Button, Input, Label } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,11 @@ export default function CompanySwitcher({ companies, currentId }: { companies: C
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
+  const path = usePathname();
   const current = companies.find((c) => c.id === currentId);
+
+  // component นี้อยู่ใน layout (ไม่ remount ตอนเปลี่ยนหน้า) — ปิด dropdown/modal ค้างทุกครั้งที่นำทาง
+  useEffect(() => { setOpen(false); setCreateOpen(false); }, [path]);
 
   function choose(id: string) {
     if (id === currentId) { setOpen(false); return; }
@@ -63,8 +67,8 @@ export default function CompanySwitcher({ companies, currentId }: { companies: C
       )}
 
       {createOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setCreateOpen(false)}>
-          <div className="w-full rounded-t-2xl bg-white p-5 sm:max-w-sm sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 pb-10 pt-14 sm:items-center" onClick={() => setCreateOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">เพิ่มกิจการใหม่</h2>
               <button onClick={() => setCreateOpen(false)} className="rounded-lg p-1 hover:bg-neutral-100"><X className="h-4 w-4" /></button>

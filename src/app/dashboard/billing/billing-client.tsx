@@ -164,8 +164,8 @@ export default function BillingClient({
 
       {/* ===== Modal QR ชำระเงิน (ใช้ร่วมทั้งซื้อแพ็กและเติมเครดิต) ===== */}
       {topup && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => { setTopup(null); setSlipMsg(null); }}>
-          <div className="max-h-[92svh] w-full overflow-y-auto rounded-t-2xl bg-white p-5 sm:max-w-md sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 pb-10 pt-14 sm:items-center" onClick={() => { setTopup(null); setSlipMsg(null); }}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-2 flex items-center justify-between">
               <h2 className="font-semibold">{topup.planName ? `ชำระค่าแพ็กเกจ "${topup.planName}"` : "เติมเครดิต"}</h2>
               <button onClick={() => { setTopup(null); setSlipMsg(null); }} className="rounded-lg p-1 hover:bg-neutral-100"><X className="h-4 w-4" /></button>

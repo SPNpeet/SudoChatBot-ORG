@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import DocActions from "../../finance/doc-actions";
+import ApprovalActions from "../approval-actions";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -56,7 +57,11 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
           <p className="text-xs text-neutral-400"><Link href="/dashboard/expenses" className="hover:underline">ค่าใช้จ่าย</Link> / {doc.doc_number}</p>
           <h1 className="mt-1 flex items-center gap-2 text-xl font-bold">
             {doc.doc_number}
-            <Badge tone={docStatusTone(doc.status as DocStatus)}>{DOC_STATUS_TH[doc.status as DocStatus]}</Badge>
+            {doc.approval_status === "pending"
+              ? <Badge tone="amber">รออนุมัติ</Badge>
+              : doc.approval_status === "rejected"
+                ? <Badge tone="red">ถูกปฏิเสธ</Badge>
+                : <Badge tone={docStatusTone(doc.status as DocStatus)}>{DOC_STATUS_TH[doc.status as DocStatus]}</Badge>}
           </h1>
           <p className="text-sm text-neutral-400">
             {doc.contact_name ?? "ไม่ระบุผู้ขาย"} · {doc.expense_categories?.name ?? "ไม่ระบุหมวด"} · {dateOnlyTH(doc.issue_date)}
@@ -68,6 +73,20 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
           status: doc.status as DocStatus, outstanding, shareKey: null, whtAmount: Number(doc.wht_amount),
         }} />}
       </div>
+
+      {doc.approval_status === "pending" && ["owner", "admin"].includes(role) && (
+        <ApprovalActions shopId={shop.id} docId={doc.id} />
+      )}
+      {doc.approval_status === "pending" && !["owner", "admin"].includes(role) && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
+          ⏳ ส่งขออนุมัติแล้ว — รอเจ้าของ/ผู้ดูแลอนุมัติ ระบบจะลงบัญชีให้อัตโนมัติทันทีที่อนุมัติ
+        </p>
+      )}
+      {doc.approval_status === "rejected" && (
+        <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          ❌ รายการนี้ถูกปฏิเสธ{doc.approval_note ? ` — เหตุผล: ${doc.approval_note}` : ""}
+        </p>
+      )}
 
       {doc.status === "void" && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">

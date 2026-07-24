@@ -73,7 +73,7 @@ export default function Landing() {
               ใช้ง่ายทั้งเจ้าของกิจการและสำนักงานบัญชี
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start justify-center">
-              <Link href="/login" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500">
+              <Link href="/signup" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500">
                 เริ่มใช้ฟรี <ArrowRight className="h-4 w-4" />
               </Link>
               <span className="text-xs text-neutral-400">ไม่ต้องมีความรู้บัญชี · ไม่ต้องเขียนโค้ด</span>
@@ -156,7 +156,7 @@ export default function Landing() {
                   </li>
                 ))}
               </ul>
-              <Link href="/login" className={`mt-5 block rounded-xl py-2.5 text-center text-sm font-medium ${p.hot ? "bg-emerald-600 text-white hover:bg-emerald-500" : "border border-neutral-300 text-neutral-700 hover:bg-neutral-50"}`}>
+              <Link href="/signup" className={`mt-5 block rounded-xl py-2.5 text-center text-sm font-medium ${p.hot ? "bg-emerald-600 text-white hover:bg-emerald-500" : "border border-neutral-300 text-neutral-700 hover:bg-neutral-50"}`}>
                 {p.cta}
               </Link>
             </div>
@@ -188,7 +188,7 @@ export default function Landing() {
       <section className="mx-auto max-w-3xl px-6 py-16 text-center">
         <h2 className="text-2xl font-bold tracking-tight">พร้อมให้บัญชีเสร็จเองทั้งระบบ?</h2>
         <p className="mt-2 text-sm text-neutral-500">สมัครฟรี ออกเอกสารใบแรกได้ใน 3 นาที — สั่งผู้ช่วย AI เป็นภาษาคนได้ทันที</p>
-        <Link href="/login" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500">
+        <Link href="/signup" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500">
           เริ่มเลย <ArrowRight className="h-4 w-4" />
         </Link>
       </section>

@@ -35,6 +35,8 @@ export interface FinDoc {
   status: DocStatus; source: string;
   file_path: string | null; ref_doc_id: string | null;
   notes: string | null; share_key?: string; created_at: string;
+  approval_status?: "none" | "pending" | "approved" | "rejected";
+  approval_by?: string | null; approval_at?: string | null; approval_note?: string | null;
   fin_doc_items?: FinDocItem[];
   contacts?: Contact | null;
   expense_categories?: ExpenseCategory | null;

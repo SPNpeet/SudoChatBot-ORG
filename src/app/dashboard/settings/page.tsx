@@ -1,8 +1,10 @@
 import { getCurrentShop } from "@/lib/shop";
+import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import PaymentSettingsForm from "./payment-settings-form";
 import TaxInfoForm from "./tax-info-form";
 import TeamForm from "./team-form";
+import NotifySettingsForm from "./notify-settings-form";
 import type { ShopPaymentSettings } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
@@ -10,10 +12,13 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const { supabase, shop, role } = await getCurrentShop();
   const canEdit = role === "owner" || role === "admin";
-  const [{ data: pay }, { data: members }, { data: taxInfo }] = await Promise.all([
+  const svc = createServiceClient();
+  const [{ data: pay }, { data: members }, { data: taxInfo }, { data: notify }] = await Promise.all([
     supabase.from("shop_payment_settings").select("*").eq("shop_id", shop.id).maybeSingle(),
     supabase.from("shop_members").select("id, role, profiles(display_name, email)").eq("shop_id", shop.id),
     supabase.from("shops").select("billing_name,billing_address,tax_id").eq("id", shop.id).maybeSingle(),
+    // token อยู่หลัง RLS (service เท่านั้น) — ส่งลง client แค่ "มี/ไม่มี" ไม่ส่งค่าจริง
+    svc.from("shop_notify_settings").select("line_channel_token,line_to_id,notify_approval").eq("shop_id", shop.id).maybeSingle(),
   ]);
   const p = (pay ?? {}) as Partial<ShopPaymentSettings>;
   const memberRows = (members ?? []).map((m) => {
@@ -44,6 +49,16 @@ export default async function SettingsPage() {
           <Card>
             <CardHeader><CardTitle>💸 การรับเงิน + ตรวจสลิปอัตโนมัติ</CardTitle></CardHeader>
             <CardContent><PaymentSettingsForm shopId={shop.id} p={p} /></CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>🔔 แจ้งเตือนเข้า LINE (เอกสารรออนุมัติ ฯลฯ)</CardTitle></CardHeader>
+            <CardContent>
+              <NotifySettingsForm shopId={shop.id}
+                hasToken={!!notify?.line_channel_token}
+                toId={notify?.line_to_id ?? null}
+                notifyApproval={notify?.notify_approval ?? true} />
+            </CardContent>
           </Card>
         </>
       )}

@@ -230,3 +230,46 @@ export async function createShop(formData: FormData): Promise<ActionResult> {
     return { ok: false, error: friendly(e, "สร้างกิจการไม่สำเร็จ") };
   }
 }
+
+// ---------- แจ้งเตือน LINE (Messaging API — LINE Notify ปิดบริการแล้ว) ----------
+export async function saveNotifySettings(shopId: string, formData: FormData): Promise<ActionResult> {
+  try {
+    await assertMember(shopId, ["owner", "admin"]);
+    const svc = createServiceClient();
+    const token = String(formData.get("line_channel_token") ?? "").trim();
+    const toId = String(formData.get("line_to_id") ?? "").trim().slice(0, 100);
+    const patch: Record<string, unknown> = {
+      shop_id: shopId,
+      line_to_id: toId || null,
+      notify_approval: formData.get("notify_approval") === "on",
+      updated_at: new Date().toISOString(),
+    };
+    // ช่อง token ว่าง = คงค่าเดิม (หน้าเว็บโชว์แค่ masked)
+    if (token) patch.line_channel_token = token.slice(0, 500);
+    if (token === "__clear__") patch.line_channel_token = null;
+    const { error } = await svc.from("shop_notify_settings").upsert(patch, { onConflict: "shop_id" });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/dashboard/settings");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "บันทึกการแจ้งเตือนไม่สำเร็จ") };
+  }
+}
+
+export async function testLineNotify(shopId: string): Promise<ActionResult> {
+  try {
+    await assertMember(shopId, ["owner", "admin"]);
+    const svc = createServiceClient();
+    const { data: s } = await svc.from("shop_notify_settings")
+      .select("line_channel_token,line_to_id").eq("shop_id", shopId).maybeSingle();
+    if (!s?.line_channel_token || !s?.line_to_id) {
+      return { ok: false, error: "ใส่ Channel access token และ User/Group ID แล้วกดบันทึกก่อนนะ" };
+    }
+    const { pushLineMessage } = await import("@/lib/line");
+    const ok = await pushLineMessage(s.line_channel_token, s.line_to_id,
+      "✅ SudoChatBot เชื่อมต่อ LINE สำเร็จ! การแจ้งเตือน (เช่น ค่าใช้จ่ายรออนุมัติ) จะส่งเข้าห้องนี้ค่ะ");
+    return ok ? { ok: true } : { ok: false, error: "ส่งไม่สำเร็จ — เช็ค token และ ID อีกครั้ง (บอทต้องเป็นเพื่อน/อยู่ในกลุ่มปลายทางแล้ว)" };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ทดสอบไม่สำเร็จ") };
+  }
+}

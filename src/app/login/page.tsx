@@ -5,7 +5,6 @@ import { Logo } from "@/components/logo";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState<string | null>(null);
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -40,19 +39,9 @@ export default function LoginPage() {
     setLoading("email"); setMsg(null);
     const supabase = createClient();
     try {
-      if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(), password,
-          options: { emailRedirectTo: `${location.origin}/auth/callback` },
-        });
-        if (error) throw error;
-        if (data.session) { window.location.href = "/dashboard"; return; }
-        setMsg({ ok: true, text: "สมัครสำเร็จ! ตรวจอีเมลเพื่อยืนยันบัญชี แล้วกลับมาเข้าสู่ระบบ" });
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw error;
-        window.location.href = "/dashboard";
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) throw error;
+      window.location.href = "/dashboard";
     } catch (err) {
       const m = (err as Error).message;
       const th = m.includes("Invalid login") ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง"
@@ -70,9 +59,7 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8">
         <Logo className="justify-center" />
-        <p className="mt-2 text-center text-sm text-neutral-500">
-          {mode === "signin" ? "เข้าสู่ระบบเพื่อจัดการร้านของคุณ" : "สร้างบัญชีใหม่เพื่อเริ่มใช้งาน"}
-        </p>
+        <p className="mt-2 text-center text-sm text-neutral-500">เข้าสู่ระบบเพื่อจัดการกิจการของคุณ</p>
 
         {/* อีเมล/รหัสผ่าน */}
         <form onSubmit={emailAuth} className="mt-6 space-y-3">
@@ -83,14 +70,14 @@ export default function LoginPage() {
           />
           <input
             type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-            placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            placeholder="รหัสผ่าน" autoComplete="current-password"
             className="h-11 w-full rounded-xl border border-neutral-300 px-3.5 text-base outline-none focus:border-emerald-500 sm:text-sm"
           />
           <button
             type="submit" disabled={!!loading}
             className="h-11 w-full rounded-xl bg-emerald-600 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
           >
-            {loading === "email" ? "กำลังดำเนินการ..." : mode === "signin" ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
+            {loading === "email" ? "กำลังดำเนินการ..." : "เข้าสู่ระบบ"}
           </button>
         </form>
 
@@ -99,14 +86,7 @@ export default function LoginPage() {
         )}
 
         <p className="mt-3 text-center text-xs text-neutral-500">
-          {mode === "signin" ? "ยังไม่มีบัญชี? " : "มีบัญชีแล้ว? "}
-          <button
-            type="button"
-            onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setMsg(null); }}
-            className="font-medium text-emerald-600 hover:underline"
-          >
-            {mode === "signin" ? "สมัครสมาชิก" : "เข้าสู่ระบบ"}
-          </button>
+          ยังไม่มีบัญชี? <a href="/signup" className="font-medium text-emerald-600 hover:underline">สมัครสมาชิกฟรี</a>
         </p>
 
         {/* ตัวคั่น */}

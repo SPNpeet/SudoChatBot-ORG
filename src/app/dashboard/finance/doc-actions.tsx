@@ -110,8 +110,8 @@ export default function DocActions({ doc }: DocActionsProps) {
 
       {/* modal บันทึกเงิน */}
       {payOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setPayOpen(false)}>
-          <div className="w-full rounded-t-2xl bg-white p-5 sm:max-w-md sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 pb-10 pt-14 sm:items-center" onClick={() => setPayOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">{isExpense ? "บันทึกจ่ายเงิน" : "บันทึกรับเงิน"} {doc.docNumber}</h2>
               <button onClick={() => setPayOpen(false)} className="rounded-lg p-1 hover:bg-neutral-100"><X className="h-4 w-4" /></button>
@@ -158,8 +158,8 @@ export default function DocActions({ doc }: DocActionsProps) {
 
       {/* modal ยกเลิก */}
       {voidOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center" onClick={() => setVoidOpen(false)}>
-          <div className="w-full rounded-t-2xl bg-white p-5 sm:max-w-md sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 pb-10 pt-14 sm:items-center" onClick={() => setVoidOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <h2 className="font-semibold">ยกเลิก {doc.docNumber}?</h2>
             <p className="mt-1 text-sm text-neutral-500">ระบบจะกลับรายการบัญชี (เดบิต/เครดิต) และคืนสต๊อกให้อัตโนมัติ — เอกสารยังอยู่ให้ตรวจย้อนหลัง</p>
             <Input className="mt-3" placeholder="เหตุผล (ไม่บังคับ)" value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />

@@ -83,8 +83,9 @@ export async function POST(request: Request) {
     const rawIp = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
     const ipHash = hashIp(rawIp);
 
-    const { data: pf } = await svc.from("platform_billing_settings").select("ai_kill_switch").eq("id", true).maybeSingle();
-    if (pf?.ai_kill_switch) {
+    // เกราะแพลตฟอร์ม: kill switch + เพดานค่า AI/วัน ใน RPC เดียว
+    const { data: pfOk } = await svc.rpc("platform_ai_ok");
+    if (pfOk === false) {
       return json({ ok: false, error: "ระบบ AI ปิดปรับปรุงชั่วคราว — สมัครสมาชิกไว้ก่อนได้เลยค่ะ" }, guestId, needsCookie, 503);
     }
 

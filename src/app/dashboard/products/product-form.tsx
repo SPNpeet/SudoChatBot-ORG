@@ -53,11 +53,11 @@ export default function ProductForm({
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 pb-10 pt-14 sm:items-center" onClick={() => setOpen(false)}>
           <form
             action={submit}
             onClick={(e) => e.stopPropagation()}
-            className="max-h-[92vh] w-full space-y-4 overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:max-w-lg sm:rounded-2xl sm:p-6"
+            className="w-full space-y-4 rounded-2xl bg-white p-5 shadow-xl sm:max-w-lg sm:p-6"
           >
             <h2 className="font-bold">{product ? "แก้ไขสินค้า/บริการ" : "เพิ่มสินค้า/บริการ"}</h2>
             <input type="hidden" name="shop_id" value={shopId} />

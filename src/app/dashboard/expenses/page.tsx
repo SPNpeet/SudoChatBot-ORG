@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 const TABS = [
   { id: "all", label: "ทั้งหมด" },
+  { id: "pending", label: "รออนุมัติ" },
   { id: "unpaid", label: "ค้างจ่าย" },
   { id: "paid", label: "จ่ายแล้ว" },
 ] as const;
@@ -25,6 +26,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   let q = supabase.from("fin_docs").select("*, expense_categories(name)")
     .eq("shop_id", shop.id).eq("doc_type", "expense")
     .order("created_at", { ascending: false }).limit(200);
+  if (t === "pending") q = q.eq("approval_status", "pending");
   if (t === "unpaid") q = q.in("status", ["awaiting", "partial"]);
   if (t === "paid") q = q.eq("status", "paid");
   const { data } = await q;
@@ -78,7 +80,11 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                     <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
                     <Td className="text-right">{baht(d.total)}</Td>
                     <Td className="text-right">{["awaiting", "partial"].includes(d.status) ? <span className="font-medium text-red-600">{baht(docOutstanding(d))}</span> : "-"}</Td>
-                    <Td><Badge tone={docStatusTone(d.status as DocStatus)}>{DOC_STATUS_TH[d.status as DocStatus]}</Badge></Td>
+                    <Td>{d.approval_status === "pending"
+                      ? <Badge tone="amber">รออนุมัติ</Badge>
+                      : d.approval_status === "rejected"
+                        ? <Badge tone="red">ถูกปฏิเสธ</Badge>
+                        : <Badge tone={docStatusTone(d.status as DocStatus)}>{DOC_STATUS_TH[d.status as DocStatus]}</Badge>}</Td>
                   </tr>
                 ))}
               </tbody>

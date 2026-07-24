@@ -106,8 +106,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </header>
 
       {/* เนื้อหา */}
-      {/* pb มือถือ = สูงพอดีกับ bottom nav + safe area — ไม่เผื่อเกินจนดูโหว่ (บั๊กยอดฮิตบน iPhone) */}
-      <main className="px-4 py-5 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:ml-56 md:px-8 md:py-7 md:pb-7">
+      {/* pb มือถือ = bottom nav + ระยะปุ่มลอยติชม — ปุ่มแถวล่างสุดต้องกดได้เสมอ ไม่โดนอะไรบัง */}
+      <main className="px-4 py-5 pb-[calc(7.75rem+env(safe-area-inset-bottom))] md:ml-56 md:px-8 md:py-7 md:pb-7">
         <Notifications />
         {children}
       </main>

@@ -11,10 +11,11 @@ import { revalidatePath } from "next/cache";
 import { calcDocTotals, docOutstanding } from "@/lib/finance";
 import { postJournal, reverseJournalOf, applyPaymentToDoc, bkkToday, ACC } from "@/lib/finance-server";
 import { verifySlip, type SlipResult } from "@/lib/slip-verify";
+import { notifyShopLine } from "@/lib/line";
 import type { DocType, VatMode, FinDoc } from "@/lib/types/finance";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-export type DocResult = { ok: true; docId: string; docNumber: string } | { ok: false; error: string };
+export type DocResult = { ok: true; docId: string; docNumber: string; approvalPending?: boolean } | { ok: false; error: string };
 
 function friendly(e: unknown, fallback: string): string {
   const m = (e as Error).message ?? String(e);
@@ -161,11 +162,17 @@ async function restoreStock(svc: ReturnType<typeof createServiceClient>, shopId:
 
 export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocResult> {
   try {
-    const { user } = await assertMember(shopId, ["owner", "admin", "agent"]);
+    const { user, role } = await assertMember(shopId, ["owner", "admin", "agent"]);
     const svc = createServiceClient();
 
+    // Approval Flow: พนักงาน (agent) บันทึกค่าใช้จ่าย -> เข้าคิวรออนุมัติ ยังไม่ลงบัญชี
+    // owner/admin ทำเอง = ผ่านทันที (ธุรกิจคนเดียวไม่ต้องอนุมัติตัวเอง)
+    const needsApproval = input.doc_type === "expense" && role === "agent" && input.status !== "draft";
+    if (needsApproval) input = { ...input, status: "draft", paid_now: false };
+
+    // qty ไม่ระบุ = 1 (AI/ฟอร์มบางทีส่งมาแค่ชื่อ+ราคา) — ตัดทิ้งเฉพาะที่ตั้งใจใส่ 0/ติดลบ
     const items = (input.items ?? [])
-      .filter((it) => it && String(it.name ?? "").trim() && Number(it.qty) > 0)
+      .filter((it) => it && String(it.name ?? "").trim() && (it.qty == null || Number(it.qty) > 0))
       .slice(0, 100)
       .map((it) => ({
         name: String(it.name).trim().slice(0, 300),
@@ -214,6 +221,7 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       file_path: input.file_path || null,
       ref_doc_id: input.ref_doc_id || null,
       notes: String(input.notes ?? "").trim().slice(0, 1000) || null,
+      approval_status: needsApproval ? "pending" : "none",
       updated_at: new Date().toISOString(),
     };
 
@@ -321,13 +329,76 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       // quotation: ไม่ลงบัญชี ไม่ตัดสต๊อก
     }
 
-    await audit(svc, shopId, user.id, input.id ? "fin_doc_updated" : "fin_doc_created", "fin_doc", docId, { doc_number: docNumber, doc_type: input.doc_type, total: t.total, status });
+    await audit(svc, shopId, user.id, input.id ? "fin_doc_updated" : "fin_doc_created", "fin_doc", docId, { doc_number: docNumber, doc_type: input.doc_type, total: t.total, status, approval: needsApproval ? "pending" : undefined });
+    if (needsApproval) {
+      await notifyShopLine(svc, shopId,
+        `🔔 มีค่าใช้จ่ายรออนุมัติ\n${docNumber}${contactName ? ` — ${contactName}` : ""}\nยอด ${t.total.toLocaleString()} บาท\nอนุมัติได้ที่ /dashboard/expenses/${docId}`);
+    }
     revalidatePath("/dashboard/sales");
     revalidatePath("/dashboard/expenses");
     revalidatePath("/dashboard");
-    return { ok: true, docId, docNumber };
+    return { ok: true, docId, docNumber, approvalPending: needsApproval };
   } catch (e) {
     return { ok: false, error: friendly(e, "บันทึกเอกสารไม่สำเร็จ") };
+  }
+}
+
+/** อนุมัติค่าใช้จ่ายที่พนักงานส่งมา -> ตั้งหนี้ลงสมุดรายวันตอนนี้ (อนุมัติก่อน ค่อยทำจ่าย) */
+export async function approveExpense(shopId: string, docId: string): Promise<ActionResult> {
+  try {
+    const { user } = await assertMember(shopId, ["owner", "admin"]);
+    const svc = createServiceClient();
+    const { data: doc } = await svc.from("fin_docs").select("*").eq("id", docId).eq("shop_id", shopId).eq("doc_type", "expense").maybeSingle();
+    if (!doc) return { ok: false, error: "ไม่พบเอกสาร" };
+    if (doc.approval_status !== "pending") return { ok: false, error: "เอกสารนี้ไม่ได้อยู่ในสถานะรออนุมัติ" };
+
+    let expAcc: string = ACC.OTHER_EXPENSE;
+    if (doc.category_id) {
+      const { data: cat } = await svc.from("expense_categories").select("account_code").eq("id", doc.category_id).eq("shop_id", shopId).maybeSingle();
+      if (cat?.account_code) expAcc = cat.account_code;
+    }
+    const exVat = Number(doc.subtotal) - Number(doc.discount);
+    await postJournal(svc, shopId, user.id, {
+      date: doc.issue_date, memo: `ตั้งหนี้ค่าใช้จ่าย ${doc.doc_number}${doc.contact_name ? ` — ${doc.contact_name}` : ""} (อนุมัติแล้ว)`,
+      sourceType: "expense", sourceId: docId,
+      lines: [
+        { code: expAcc, debit: exVat },
+        { code: ACC.VAT_IN, debit: Number(doc.vat_amount) },
+        { code: ACC.AP, credit: Number(doc.total) },
+      ],
+    });
+    await svc.from("fin_docs").update({
+      status: "awaiting", approval_status: "approved",
+      approval_by: user.id, approval_at: new Date().toISOString(), approval_note: null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", docId);
+    await audit(svc, shopId, user.id, "expense_approved", "fin_doc", docId, { doc_number: doc.doc_number, total: doc.total });
+    revalidatePath("/dashboard/expenses");
+    revalidatePath("/dashboard");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "อนุมัติไม่สำเร็จ") };
+  }
+}
+
+/** ปฏิเสธค่าใช้จ่ายที่รออนุมัติ — เอกสารคงเป็นร่าง พนักงานแก้แล้วส่งใหม่ได้ */
+export async function rejectExpense(shopId: string, docId: string, reason: string): Promise<ActionResult> {
+  try {
+    const { user } = await assertMember(shopId, ["owner", "admin"]);
+    const svc = createServiceClient();
+    const { data: doc } = await svc.from("fin_docs").select("id,doc_number,approval_status").eq("id", docId).eq("shop_id", shopId).eq("doc_type", "expense").maybeSingle();
+    if (!doc) return { ok: false, error: "ไม่พบเอกสาร" };
+    if (doc.approval_status !== "pending") return { ok: false, error: "เอกสารนี้ไม่ได้อยู่ในสถานะรออนุมัติ" };
+    await svc.from("fin_docs").update({
+      approval_status: "rejected", approval_by: user.id, approval_at: new Date().toISOString(),
+      approval_note: String(reason ?? "").trim().slice(0, 300) || null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", docId);
+    await audit(svc, shopId, user.id, "expense_rejected", "fin_doc", docId, { doc_number: doc.doc_number, reason });
+    revalidatePath("/dashboard/expenses");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ปฏิเสธไม่สำเร็จ") };
   }
 }
 

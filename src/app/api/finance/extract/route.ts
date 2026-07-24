@@ -180,6 +180,12 @@ export async function POST(request: Request) {
     const b64 = buf.toString("base64");
     const svc = createServiceClient();
 
+    // ด่าน 0: เกราะแพลตฟอร์ม (kill switch + เพดานค่า AI/วัน) — เช็คก่อนกินโควตาผู้ใช้
+    const { data: pfOk } = await svc.rpc("platform_ai_ok");
+    if (pfOk === false) {
+      return NextResponse.json({ ok: false, error: "ระบบ AI ปิดปรับปรุงชั่วคราวโดยผู้ดูแลแพลตฟอร์ม — คีย์ข้อมูลเองได้ตามปกติค่ะ" });
+    }
+
     // โควตากลางต่อ "เจ้าของ" (นับรวมทุกกิจการ กันปั๊มโควตาหลายบริษัท) + แจ้งเตือน 80%/95% อัตโนมัติ
     const { data: quota } = await svc.rpc("consume_ai_quota", { p_shop_id: shopId });
     const q = quota as { allowed?: boolean; reason?: string } | null;

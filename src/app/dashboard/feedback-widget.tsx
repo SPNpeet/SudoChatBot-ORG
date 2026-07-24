@@ -26,14 +26,17 @@ export default function FeedbackWidget({ shopId }: { shopId: string }) {
     });
   }
 
+  // หน้าแชทผู้ช่วย AI มีปุ่มส่งข้อความมุมเดียวกัน — ซ่อน FAB กันบังปุ่มใช้งานจริง
+  if (path?.startsWith("/dashboard/assistant")) return null;
+
   return (
     <>
       <button onClick={() => setOpen(true)} aria-label="แนะนำ/ติชม"
-        className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 flex h-11 w-11 items-center justify-center rounded-full bg-neutral-900 text-white shadow-lg transition hover:bg-neutral-700 active:scale-95 md:bottom-6">
+        className="fixed right-3 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[35] flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900/90 text-white shadow-lg transition hover:bg-neutral-700 active:scale-95 md:right-4 md:bottom-6 md:h-11 md:w-11">
         <MessageCirclePlus className="h-5 w-5" />
       </button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30 p-4 sm:items-center" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 px-4 pb-10 pt-14 sm:items-center" onClick={() => setOpen(false)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <p className="font-bold">แนะนำ/ติชม ถึงทีมงาน</p>

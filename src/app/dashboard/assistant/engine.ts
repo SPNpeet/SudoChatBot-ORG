@@ -121,6 +121,7 @@ const TOOLS = [
       properties: {
         vendor_name: { type: "string" },
         items: DOC_ITEM_SCHEMA,
+        total_amount: { type: "number", description: "ยอดรวมตามบิล — ใช้แทนได้เมื่อไม่มีรายละเอียดรายบรรทัด ระบบจะลงเป็นรายการเดียว" },
         category: { type: "string", description: "ชื่อหมวดค่าใช้จ่าย เช่น ค่าเช่า, ค่าขนส่ง/เดินทาง (ดูจาก get_expense_categories)" },
         vat_mode: { type: "string", enum: ["none", "exclusive", "inclusive"], description: "บิลมี VAT ในราคาแล้ว = inclusive" },
         wht_rate: { type: "number", description: "% ที่เราหักผู้ขาย (ค่าบริการ 3, ค่าเช่า 5, ขนส่ง 1)" },
@@ -130,7 +131,6 @@ const TOOLS = [
         file_path: { type: "string", description: "path ไฟล์บิลที่แนบมากับข้อความ (ถ้ามี)" },
         notes: { type: "string" },
       },
-      required: ["items"],
     },
   },
   {
@@ -351,10 +351,18 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
             .ilike("name", `%${input.category.trim().replace(/[%,()]/g, "")}%`).limit(1).maybeSingle();
           categoryId = cat?.id ?? null;
         }
+        // ตาข่ายกันพลาด: บางโมเดลส่ง items ไม่มา/ว่าง — ถ้ามียอดรวม ลงเป็นรายการเดียวแทน (ดีกว่าตีกลับให้ผู้ใช้งง)
+        let expItems = ((input.items as SaveDocInput["items"]) ?? []).filter((it) => it && String(it.name ?? "").trim());
+        if (!expItems.length) {
+          const total = Number(input.total_amount);
+          if (!(total > 0)) return JSON.stringify({ error: "ต้องระบุ items หรือ total_amount อย่างใดอย่างหนึ่ง — ลองส่ง total_amount เป็นยอดรวมตามบิล" });
+          const label = [String(input.category ?? "").trim() || "ค่าใช้จ่าย", input.vendor_name ? `— ${String(input.vendor_name).trim()}` : ""].join(" ").trim();
+          expItems = [{ name: label.slice(0, 300), qty: 1, unit_price: total }];
+        }
         const r = await saveDoc(ctx.shopId, {
           doc_type: "expense",
           contact_id: contact.id, contact_name: contact.name,
-          items: (input.items as SaveDocInput["items"]) ?? [],
+          items: expItems,
           category_id: categoryId,
           vat_mode: (input.vat_mode as VatMode) ?? "none",
           wht_rate: Number(input.wht_rate) || 0,
@@ -367,7 +375,10 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         });
         if (!r.ok) return JSON.stringify({ error: r.error });
         await audit(ctx, "expense_created", "fin_doc", r.docId, { doc_number: r.docNumber });
-        return JSON.stringify({ ok: true, doc_number: r.docNumber, view_link: `/dashboard/expenses/${r.docId}`, note: `บันทึกค่าใช้จ่าย ${r.docNumber} แล้ว${input.paid_now === false ? " (ตั้งหนี้รอจ่าย)" : " (จ่ายแล้ว)"} ลงบัญชีเรียบร้อย` });
+        const note = r.approvalPending
+          ? `บันทึก ${r.docNumber} และส่งขออนุมัติแล้ว — เจ้าของ/ผู้ดูแลจะได้รับแจ้ง อนุมัติเมื่อไหร่ระบบลงบัญชีให้ทันที`
+          : `บันทึกค่าใช้จ่าย ${r.docNumber} แล้ว${input.paid_now === false ? " (ตั้งหนี้รอจ่าย)" : " (จ่ายแล้ว)"} ลงบัญชีเรียบร้อย`;
+        return JSON.stringify({ ok: true, doc_number: r.docNumber, view_link: `/dashboard/expenses/${r.docId}`, note });
       }
       case "record_payment": {
         const doc = await findDocByNumber(ctx, String(input.doc_number ?? ""));

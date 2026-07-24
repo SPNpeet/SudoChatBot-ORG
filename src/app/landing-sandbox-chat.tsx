@@ -87,7 +87,7 @@ export default function LandingSandboxChat() {
       </div>
 
       {locked ? (
-        <Link href="/login" className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">
+        <Link href="/signup" className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">
           สมัครใช้ฟรี เพื่อคุยต่อไม่จำกัด <ArrowRight className="h-4 w-4" />
         </Link>
       ) : (
