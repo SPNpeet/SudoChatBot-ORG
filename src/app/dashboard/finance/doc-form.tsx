@@ -53,8 +53,11 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
   const [notes, setNotes] = useState(draft?.notes ?? "");
   const [paidNow, setPaidNow] = useState(isExpense);
   const [payMethod, setPayMethod] = useState("transfer");
-  const [filePath, setFilePath] = useState<string | null>(draft?.file_path ?? null);
-  const [fileName, setFileName] = useState<string | null>(null);
+  // แนบได้หลายใบ (บิลหลายหน้า / บิล+สลิป) — ผู้ใช้แจ้งว่าเลือกได้ใบเดียวไม่พอ
+  // ใบแรกเก็บลง fin_docs.file_path (ของเดิม) ที่เหลือลงตาราง fin_doc_files
+  const [files, setFiles] = useState<{ path: string; name: string }[]>(
+    draft?.file_path ? [{ path: draft.file_path, name: "ไฟล์แนบเดิม" }] : [],
+  );
   const fileRef = useRef<HTMLInputElement>(null);
 
   const totals = useMemo(() => calcDocTotals(
@@ -93,7 +96,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
           unclear?: string[]; issues?: string[];
         };
         setAiWarn([...(d.issues ?? []), ...(d.unclear ?? [])]);
-        if (j.file_path) { setFilePath(j.file_path); setFileName(f.name); }
+        if (j.file_path) setFiles((prev) => (prev.some((x) => x.path === j.file_path) ? prev : [...prev, { path: j.file_path as string, name: f.name }]));
         if (d.vendor_name) { setContactName(d.vendor_name); setContactId(""); }
         if (d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) setIssueDate(d.date);
         if (d.items?.length) {
@@ -119,7 +122,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
     } else {
       try {
         const r = await uploadFinFile(shopId, fd);
-        if (r.ok) { setFilePath(r.path); setFileName(f.name); }
+        if (r.ok) setFiles((prev) => (prev.some((x) => x.path === r.path) ? prev : [...prev, { path: r.path, name: f.name }]));
         else setError(r.error);
       } finally {
         setAiBusy(false);
@@ -143,7 +146,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
       category_id: isExpense ? categoryId || null : null,
       items, discount: Number(discount) || 0,
       vat_mode: vatMode, wht_rate: Number(whtRate) || 0,
-      notes, file_path: filePath, status,
+      notes, file_path: files[0]?.path ?? null, extra_files: files.slice(1).map((f) => f.path), status,
       paid_now: isExpense ? paidNow : undefined,
       pay_method: payMethod,
     };
@@ -159,13 +162,24 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
       {isExpense && (
         <Card className="border-dashed">
           <CardContent className="flex flex-wrap items-center gap-3 pt-4">
-            <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) attachFile(f, true); e.target.value = ""; }} />
+            <input ref={fileRef} type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden"
+              onChange={async (e) => { const fs = [...(e.target.files ?? [])]; e.target.value = ""; for (const f of fs) await attachFile(f, true); }} />
             <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} disabled={aiBusy}>
               <Sparkles className="h-4 w-4 text-emerald-600" /> {aiBusy ? "AI กำลังอ่านบิล..." : "ถ่ายรูป/อัปโหลดบิล ให้ AI กรอกให้"}
             </Button>
-            <p className="text-xs text-neutral-400">รองรับรูปถ่ายบิล ใบเสร็จ ใบกำกับภาษี PDF — AI อ่านผู้ขาย ยอด VAT แล้วกรอกฟอร์มให้ ตรวจก่อนบันทึกได้</p>
-            {fileName && <p className="w-full text-xs text-emerald-700"><Paperclip className="mr-1 inline h-3 w-3" />แนบไฟล์แล้ว: {fileName}</p>}
+            <p className="text-xs text-neutral-400">เลือกได้หลายใบพร้อมกัน (บิลหลายหน้า/บิล+สลิป) — AI อ่านใบล่าสุดมากรอกฟอร์มให้ ตรวจก่อนบันทึกได้</p>
+            {files.length > 0 && (
+              <div className="w-full space-y-1">
+                {files.map((f, i) => (
+                  <div key={f.path} className="flex items-center gap-2 text-xs text-emerald-700">
+                    <Paperclip className="h-3 w-3 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{f.name}{i === 0 && files.length > 1 ? " (ไฟล์หลัก)" : ""}</span>
+                    <button type="button" onClick={() => setFiles((prev) => prev.filter((x) => x.path !== f.path))}
+                      className="shrink-0 text-neutral-400 hover:text-red-600">เอาออก</button>
+                  </div>
+                ))}
+              </div>
+            )}
             {aiWarn.length > 0 && (
               <div className="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
                 <p className="text-xs font-semibold text-amber-800">⚠️ ตรวจตัวเลขก่อนบันทึกนะ — บิลนี้อ่านได้ไม่ชัดทั้งหมด</p>

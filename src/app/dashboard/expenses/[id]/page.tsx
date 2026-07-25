@@ -42,11 +42,13 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
     }
   }
 
-  let fileUrl: string | null = null;
-  if (doc.file_path) {
-    const { data: signed } = await svc.storage.from("slips").createSignedUrl(doc.file_path, 3600);
-    fileUrl = signed?.signedUrl ?? null;
-  }
+  // ไฟล์แนบทั้งหมด (บิลหลายหน้า/บิล+สลิป) — ของเก่าที่มีแค่ file_path ก็ยังแสดงได้
+  const { data: fileRows } = await svc.from("fin_doc_files").select("path").eq("doc_id", id).order("created_at");
+  const paths = [...new Set([...(fileRows ?? []).map((f) => f.path as string), ...(doc.file_path ? [doc.file_path] : [])])];
+  const attachments = (await Promise.all(paths.map(async (p) => {
+    const { data: signed } = await svc.storage.from("slips").createSignedUrl(p, 3600);
+    return signed?.signedUrl ? { path: p, url: signed.signedUrl } : null;
+  }))).filter((a): a is { path: string; url: string } => !!a);
 
   const outstanding = docOutstanding(doc);
 
@@ -127,18 +129,24 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
         </CardContent>
       </Card>
 
-      {fileUrl && (
+      {attachments.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>บิล/เอกสารแนบ</CardTitle></CardHeader>
+          <CardHeader><CardTitle>บิล/เอกสารแนบ{attachments.length > 1 ? ` (${attachments.length} ไฟล์)` : ""}</CardTitle></CardHeader>
           <CardContent>
-            <a href={fileUrl} target="_blank" rel="noreferrer" className="block max-w-xs">
-              {doc.file_path?.endsWith(".pdf") ? (
-                <span className="text-sm text-emerald-700 hover:underline">เปิดไฟล์ PDF</span>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={fileUrl} alt="บิล" className="max-h-72 rounded-xl border border-neutral-200 object-contain" />
-              )}
-            </a>
+            <div className="flex flex-wrap gap-3">
+              {attachments.map((a, i) => (
+                <a key={a.path} href={a.url} target="_blank" rel="noreferrer" className="block">
+                  {a.path.toLowerCase().endsWith(".pdf") ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 px-3 py-2 text-sm text-emerald-700 hover:bg-neutral-50">
+                      <FileText className="h-4 w-4" /> เปิดไฟล์ PDF {attachments.length > 1 ? i + 1 : ""}
+                    </span>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={a.url} alt={`บิล ${i + 1}`} className="max-h-60 rounded-xl border border-neutral-200 object-contain" />
+                  )}
+                </a>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

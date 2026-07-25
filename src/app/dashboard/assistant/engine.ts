@@ -20,11 +20,14 @@ export interface AssistantCtx {
 }
 
 export interface AssistantArtifact { label: string; href: string }
+/** ตัวเลือกให้ผู้ใช้กดตอบ (quick reply) — กดแล้วส่ง reply กลับเป็นข้อความถัดไป */
+export interface AssistantChoice { label: string; reply: string; hint?: string }
 
 export interface AssistantResult {
   text: string;
   toolCalls: { name: string; label: string }[];
   artifacts: AssistantArtifact[];   // ลิงก์เอกสาร/หน้าที่ AI เพิ่งสร้าง — หน้าบ้านโชว์เป็นปุ่มกดได้ทันที
+  choices: AssistantChoice[];       // AI ถามอะไรที่มีคำตอบชัดเจน -> โชว์เป็นปุ่มกด ไม่ต้องพิมพ์
   model: string;
   input_tokens: number;
   output_tokens: number;
@@ -39,7 +42,19 @@ function collectArtifacts(r: LoopResult, resultStr: string) {
     if (typeof j.view_link === "string") r.artifacts.push({ label: `เปิด ${doc}`, href: j.view_link });
     if (typeof j.print_link === "string") r.artifacts.push({ label: `พิมพ์/PDF ${doc}`, href: j.print_link });
     if (typeof j.share_link === "string") r.artifacts.push({ label: `ลิงก์ส่งลูกค้า ${doc}`, href: j.share_link });
+    // ปุ่มทำต่อหลังออกเอกสารเสร็จ — ผู้ใช้ไม่ต้องคิดเองว่าขั้นถัดไปพิมพ์อะไร
+    if (typeof j.next_choices === "string") {
+      try { r.choices.push(...(JSON.parse(j.next_choices) as AssistantChoice[])); } catch { /* ข้าม */ }
+    }
   } catch { /* ผลลัพธ์ไม่ใช่ JSON — ข้าม */ }
+}
+
+/** ดึงตัวเลือกจาก tool ask_user มาโชว์เป็นปุ่ม */
+function collectChoices(r: LoopResult, resultStr: string) {
+  try {
+    const j = JSON.parse(resultStr) as { __choices?: AssistantChoice[] };
+    if (Array.isArray(j?.__choices)) r.choices.push(...j.__choices);
+  } catch { /* ข้าม */ }
 }
 
 // วันธุรกิจไทย (UTC+7) — server รันเป็น UTC
@@ -72,6 +87,29 @@ const DOC_ITEM_SCHEMA = {
 };
 
 const TOOLS = [
+  {
+    name: "ask_user",
+    description: "ถามเจ้าของเมื่อไม่แน่ใจ พร้อมตัวเลือกให้กดตอบ (2-4 ตัวเลือก) — ใช้แทนการเดาเสมอ เช่น บิลนี้เป็นค่าใช้จ่ายที่จ่ายแล้ว/ตั้งหนี้/เบิกคืนพนักงาน/ใบขายให้ลูกค้า · ยอดไหนถูก · ลูกค้าคนไหน · เรียกใช้แล้วให้ตอบเป็นคำถามสั้นๆ แล้วหยุดรอคำตอบ ห้ามเรียก tool บันทึกต่อในเทิร์นเดียวกัน",
+    input_schema: {
+      type: "object",
+      properties: {
+        question: { type: "string", description: "คำถามสั้นๆ ภาษาไทย" },
+        options: {
+          type: "array",
+          description: "2-4 ตัวเลือก",
+          items: {
+            type: "object",
+            properties: {
+              label: { type: "string", description: "ข้อความบนปุ่ม สั้นๆ ไม่เกิน 30 ตัวอักษร" },
+              reply: { type: "string", description: "ข้อความที่จะถูกส่งกลับมาเมื่อกดปุ่มนี้ เขียนให้ชัดเจนพอที่คุณจะทำงานต่อได้ทันที" },
+            },
+            required: ["label", "reply"],
+          },
+        },
+      },
+      required: ["question", "options"],
+    },
+  },
   {
     name: "get_overview",
     description: "ภาพรวมธุรกิจตอนนี้: รายได้/ค่าใช้จ่าย/กำไรเดือนนี้ เงินเข้า-ออก ยอดลูกหนี้ค้างรับ เจ้าหนี้ค้างจ่าย เอกสารเกินกำหนด และเครดิต AI",
@@ -125,11 +163,12 @@ const TOOLS = [
         category: { type: "string", description: "ชื่อหมวดค่าใช้จ่าย เช่น ค่าเช่า, ค่าขนส่ง/เดินทาง (ดูจาก get_expense_categories)" },
         vat_mode: { type: "string", enum: ["none", "exclusive", "inclusive"], description: "บิลมี VAT ในราคาแล้ว = inclusive" },
         wht_rate: { type: "number", description: "% ที่เราหักผู้ขาย (ค่าบริการ 3, ค่าเช่า 5, ขนส่ง 1)" },
-        paid_now: { type: "boolean", description: "true = จ่ายแล้ว (default) / false = ตั้งหนี้รอจ่าย" },
+        paid_now: { type: "boolean", description: "true = จ่ายแล้ว (default) / false = ตั้งหนี้รอจ่าย (รวมถึงกรณีเบิกคืนพนักงาน — ใส่ชื่อพนักงานเป็น vendor_name)" },
         due_date: { type: "string" },
         issue_date: { type: "string", description: "วันที่ในบิล YYYY-MM-DD" },
         file_path: { type: "string", description: "path ไฟล์บิลที่แนบมากับข้อความ (ถ้ามี)" },
         notes: { type: "string" },
+        confirm_duplicate: { type: "boolean", description: "ใส่ true เฉพาะเมื่อเจ้าของยืนยันแล้วว่าไม่ใช่บิลซ้ำ (ระบบเตือน duplicate_suspected มาก่อน)" },
       },
     },
   },
@@ -238,6 +277,7 @@ const TOOLS = [
 ];
 
 export const ASSISTANT_TOOL_LABEL_TH: Record<string, string> = {
+  ask_user: "ขอคำยืนยัน",
   get_overview: "ดูภาพรวมธุรกิจ", list_docs: "ค้นเอกสาร", get_doc: "เปิดเอกสาร",
   create_sales_doc: "ออกเอกสารขาย", create_expense: "บันทึกค่าใช้จ่าย",
   record_payment: "บันทึกรับ/จ่ายเงิน", convert_doc: "แปลงเอกสาร", void_doc: "ยกเลิกเอกสาร",
@@ -268,6 +308,18 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
   const s = ctx.svc;
   try {
     switch (name) {
+      case "ask_user": {
+        const opts = (Array.isArray(input.options) ? input.options : [])
+          .map((o) => o as { label?: unknown; reply?: unknown })
+          .filter((o) => String(o.label ?? "").trim() && String(o.reply ?? "").trim())
+          .slice(0, 4)
+          .map((o) => ({ label: String(o.label).slice(0, 40), reply: String(o.reply).slice(0, 300) }));
+        if (!opts.length) return JSON.stringify({ error: "ต้องมีอย่างน้อย 1 ตัวเลือก" });
+        return JSON.stringify({
+          ok: true, __choices: opts,
+          note: "แสดงปุ่มให้ผู้ใช้แล้ว — ตอบเป็นคำถามสั้นๆ ตามที่ระบุ แล้วหยุดรอคำตอบ ห้ามเรียก tool บันทึกต่อ",
+        });
+      }
       // ================= อ่าน =================
       case "get_overview": {
         const monthStart = bkkDayStart().slice(0, 7) + "-01";
@@ -341,6 +393,15 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
           view_link: `/dashboard/sales/${r.docId}`,
           share_link: created?.share_key && docType !== "quotation" ? `/doc/${created.share_key}` : undefined,
           print_link: `/dashboard/print/${r.docId}`,
+          // ปุ่มทำต่อ — ผู้ใช้กดสั่งงานถัดไปได้เลย ไม่ต้องพิมพ์
+          next_choices: JSON.stringify(
+            docType === "quotation"
+              ? [{ label: "แปลงเป็นใบแจ้งหนี้", reply: `แปลง ${r.docNumber} เป็นใบแจ้งหนี้` }]
+              : [
+                { label: "รับเงินแล้ว บันทึกเลย", reply: `บันทึกรับเงินเต็มยอดของ ${r.docNumber}` },
+                { label: "ออกอีกใบให้ลูกค้าเดิม", reply: `ออก${DOC_TYPE_TH[docType]}ใบใหม่ให้ลูกค้าเดิมของ ${r.docNumber}` },
+              ],
+          ),
         });
       }
       case "create_expense": {
@@ -356,8 +417,33 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         if (!expItems.length) {
           const total = Number(input.total_amount);
           if (!(total > 0)) return JSON.stringify({ error: "ต้องระบุ items หรือ total_amount อย่างใดอย่างหนึ่ง — ลองส่ง total_amount เป็นยอดรวมตามบิล" });
-          const label = [String(input.category ?? "").trim() || "ค่าใช้จ่าย", input.vendor_name ? `— ${String(input.vendor_name).trim()}` : ""].join(" ").trim();
+          const cat = String(input.category ?? "").trim();
+          // ห้ามตั้งชื่อรายการว่า "อื่น ๆ — <ชื่อร้าน>" (เคยเกิดจริง อ่านย้อนหลังไม่รู้ว่าค่าอะไร)
+          const label = cat && cat !== "อื่น ๆ" && cat !== "อื่นๆ"
+            ? [cat, input.vendor_name ? `— ${String(input.vendor_name).trim()}` : ""].join(" ").trim()
+            : `ค่าใช้จ่าย${input.vendor_name ? ` — ${String(input.vendor_name).trim()}` : ""}`;
           expItems = [{ name: label.slice(0, 300), qty: 1, unit_price: total }];
+        }
+
+        // กันบันทึกซ้ำ (เกิดจริง: สลิปใบเดียวถูกลงเป็น 2 เอกสาร) — ยอดเท่ากัน + คู่ค้าเดิม + ภายใน 3 วัน
+        const dupTotal = expItems.reduce((a, it) => a + (it.qty ?? 1) * (it.unit_price ?? 0), 0);
+        if (dupTotal > 0 && input.confirm_duplicate !== true) {
+          const since = new Date(Date.now() - 3 * 864e5).toISOString().slice(0, 10);
+          const { data: dups } = await s.from("fin_docs")
+            .select("doc_number,total,issue_date,contact_name")
+            .eq("shop_id", ctx.shopId).eq("doc_type", "expense").neq("status", "void")
+            .gte("issue_date", since).limit(20);
+          const vendorRaw = String(input.vendor_name ?? "").trim();
+          const hit = (dups ?? []).find((d) =>
+            Math.abs(Number(d.total) - dupTotal) < 0.01 &&
+            (!vendorRaw || (d.contact_name ?? "").trim() === vendorRaw));
+          if (hit) {
+            return JSON.stringify({
+              duplicate_suspected: true,
+              existing: { doc_number: hit.doc_number, total: hit.total, date: hit.issue_date, vendor: hit.contact_name },
+              instruction: "มีเอกสารยอดเท่ากันของคู่ค้าเดียวกันอยู่แล้วในช่วง 3 วันนี้ — อาจเป็นบิลใบเดิม ห้ามบันทึกซ้ำเอง ให้ใช้ ask_user ถามเจ้าของก่อน: ตัวเลือก 'ใช่ ใบเดิม ไม่ต้องบันทึกซ้ำ' กับ 'คนละใบ บันทึกเพิ่มเลย (confirm_duplicate)' แล้วรอคำตอบ",
+            });
+          }
         }
         const r = await saveDoc(ctx.shopId, {
           doc_type: "expense",
@@ -378,7 +464,14 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         const note = r.approvalPending
           ? `บันทึก ${r.docNumber} และส่งขออนุมัติแล้ว — เจ้าของ/ผู้ดูแลจะได้รับแจ้ง อนุมัติเมื่อไหร่ระบบลงบัญชีให้ทันที`
           : `บันทึกค่าใช้จ่าย ${r.docNumber} แล้ว${input.paid_now === false ? " (ตั้งหนี้รอจ่าย)" : " (จ่ายแล้ว)"} ลงบัญชีเรียบร้อย`;
-        return JSON.stringify({ ok: true, doc_number: r.docNumber, view_link: `/dashboard/expenses/${r.docId}`, note });
+        return JSON.stringify({
+          ok: true, doc_number: r.docNumber, view_link: `/dashboard/expenses/${r.docId}`, note,
+          next_choices: JSON.stringify(
+            input.paid_now === false
+              ? [{ label: "จ่ายแล้ว บันทึกเลย", reply: `บันทึกจ่ายเงินเต็มยอดของ ${r.docNumber}` }, { label: "แนบบิลใบต่อไป", reply: "ขอแนบบิลใบต่อไป" }]
+              : [{ label: "แนบบิลใบต่อไป", reply: "ขอแนบบิลใบต่อไป" }, { label: "ดูยอดค่าใช้จ่ายเดือนนี้", reply: "เดือนนี้จ่ายอะไรไปบ้าง รวมเท่าไหร่" }],
+          ),
+        });
       }
       case "record_payment": {
         const doc = await findDocByNumber(ctx, String(input.doc_number ?? ""));
@@ -586,10 +679,15 @@ function buildSystemPrompt(ctx: AssistantCtx): string {
 3. การออกเอกสาร/บันทึกเงินทุกครั้ง ระบบลงสมุดรายวัน (เดบิต/เครดิต) ตัดสต๊อก และ audit log ให้อัตโนมัติ — บอกผู้ใช้ได้ว่าตรวจย้อนหลังได้ที่หน้าสมุดรายวัน
 4. ความรู้ภาษีไทยที่ใช้แนะนำ: VAT 7% (แยกนอก/รวมใน) · หัก ณ ที่จ่ายทั่วไป: ค่าบริการ/จ้างทำ 3%, ค่าเช่า 5%, ค่าขนส่ง 1%, ค่าโฆษณา 2% · แนะนำได้แต่ตัดสินใจแทนสรรพากรไม่ได้ เรื่องซับซ้อนให้แนะนำปรึกษานักบัญชี
 5. ไฟล์บิลที่แนบมา (ข้อความ [ไฟล์แนบ...] + ข้อมูลที่ระบบอ่านได้):
-   - ถ้าข้อมูลมี "needs_confirm": true หรือมี unclear/issues → **ห้ามบันทึกเด็ดขาด** ให้ทวนเลขที่อ่านได้ แล้วถามกลับเฉพาะจุดที่ไม่ชัดแบบสั้นๆ เจาะจง (เช่น "ยอดรวมในบิลคือ 27,490 หรือ 27,500 คะ" / "ราคานี้รวม VAT แล้วหรือบวกเพิ่มคะ") — ถามครั้งเดียวรวบทุกประเด็น พอผู้ใช้ตอบค่อยบันทึก
-   - ถ้าเลขครบและลงตัว → บันทึกเลยด้วย create_expense (ใส่ file_path ที่ให้มา) แล้วรายงานเลขเอกสาร + ทวนยอดให้ตรวจ
-   - ถ้าผู้ใช้พิมพ์สั่งมาพร้อมรูป (เช่น "อันนี้ค่าเช่า ยังไม่จ่าย" / "ออกเป็นใบแจ้งหนี้ให้ลูกค้า") ให้ยึดคำสั่งของคนเหนือกว่าที่ AI เดาจากบิลเสมอ
-   - เลขที่ผู้ใช้พิมพ์บอกเอง = ความจริง ห้ามแก้เป็นเลขที่ OCR อ่านได้
+   - **ถ้าผู้ใช้ไม่ได้สั่งกำกับมาว่าเอกสารนี้คืออะไร ให้ ask_user ถามก่อนเสมอ** ด้วยตัวเลือก 4 ข้อ:
+     "ค่าใช้จ่าย — จ่ายแล้ว" / "ค่าใช้จ่าย — ยังไม่จ่าย (ตั้งหนี้)" / "พนักงานสำรองจ่าย ขอเบิกคืน" / "บิลที่เราขายให้ลูกค้า"
+     (เบิกคืน = create_expense paid_now:false ใส่ชื่อพนักงานเป็น vendor_name + notes ว่าเบิกคืน · ขายให้ลูกค้า = create_sales_doc)
+   - doc_kind = "slip" คือสลิปโอนเงิน ไม่ใช่บิลสินค้า — ชื่อในสลิปคือคนรับโอน ไม่ใช่ชื่อรายการค่าใช้จ่าย **ต้อง ask_user ถามว่าโอนค่าอะไร** ห้ามลงเป็น "อื่น ๆ" เด็ดขาด
+   - needs_confirm = true หรือมี unclear/issues → **ห้ามบันทึก** ทวนเลขที่อ่านได้แล้ว ask_user ถามเฉพาะจุดที่ไม่ชัด (เช่น ตัวเลือก "27,490" / "27,500" / "ขอพิมพ์เอง")
+   - duplicate_suspected = true → **ห้ามบันทึกซ้ำเอง** ask_user ถามก่อนตามที่ instruction บอก
+   - ครบและลงตัวและรู้ประเภทแน่ชัดแล้ว → บันทึกเลย (ใส่ file_path ที่ให้มา) แล้วรายงานเลขเอกสาร + ทวนยอด
+   - คำสั่งที่ผู้ใช้พิมพ์เอง (เช่น "อันนี้ค่าเช่า ยังไม่จ่าย") **ชนะข้อมูล OCR เสมอ** — เลขที่ผู้ใช้บอกเองคือความจริง ห้ามแก้กลับ
+11. **ask_user คือเครื่องมือหลัก ไม่ใช่ทางเลือกสุดท้าย** — ทุกครั้งที่คำตอบมีตัวเลือกชัดเจน 2-4 แบบ ให้ถามด้วยปุ่มแทนการให้ผู้ใช้พิมพ์เอง (ลูกค้าใช้มือถือ พิมพ์ยาก) เช่น เลือกลูกค้าจากรายชื่อที่ค้นเจอ · ยืนยันก่อนยกเลิกเอกสาร · เลือกว่าจะรับเงินเต็มยอดหรือบางส่วน · ถามหมวดค่าใช้จ่ายเมื่อเดาไม่ได้ · แต่ถ้าคำสั่งชัดอยู่แล้วให้ทำเลย ห้ามถามซ้ำซาก
 6. ยกเลิกเอกสาร (void_doc) เฉพาะเมื่อผู้ใช้สั่งชัดเจน และทวนเลขเอกสารก่อนเสมอ
 7. สิ่งที่ไม่มี tool (ลบข้อมูลถาวร เติมเงิน อัปเกรดแพ็กเกจ ตั้งค่า EasySlip) — บอกตรงๆ ว่าทำที่หน้าไหน อย่าแกล้งทำ
 8. ตอบภาษาไทยสั้น กระชับ เป็นมืออาชีพแต่เป็นกันเอง ห้ามใช้ markdown ตัวเลขเงินใส่ "บาท" เสมอ ลิงก์ให้บอกเป็น path เช่น /dashboard/reports
@@ -598,11 +696,11 @@ function buildSystemPrompt(ctx: AssistantCtx): string {
 }
 
 // ---------- provider loops ----------
-interface LoopResult { text: string; inTok: number; outTok: number; toolCalls: { name: string; label: string }[]; artifacts: AssistantArtifact[] }
+interface LoopResult { text: string; inTok: number; outTok: number; toolCalls: { name: string; label: string }[]; artifacts: AssistantArtifact[]; choices: AssistantChoice[] }
 
 async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, system: string): Promise<LoopResult> {
   const messages: Record<string, unknown>[] = ctx.history.map((h) => ({ role: h.role, content: h.content }));
-  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [] };
+  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [], choices: [] };
   for (let i = 0; i < 10; i++) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -623,6 +721,7 @@ async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, sy
       r.toolCalls.push({ name: tu.name, label: ASSISTANT_TOOL_LABEL_TH[tu.name] ?? tu.name });
       const out = await executeTool(ctx, tu.name, tu.input ?? {});
       collectArtifacts(r, out);
+      collectChoices(r, out);
       results.push({ type: "tool_result", tool_use_id: tu.id, content: out });
     }
     messages.push({ role: "user", content: results });
@@ -636,7 +735,7 @@ async function runOpenAI(ctx: AssistantCtx, model: string, apiKey: string, syste
     ...ctx.history.map((h) => ({ role: h.role, content: h.content })),
   ];
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
-  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [] };
+  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [], choices: [] };
   const tokenParam = baseUrl ? { max_tokens: 1500 } : { max_completion_tokens: 1500 };
   for (let i = 0; i < 10; i++) {
     const res = await fetch(`${baseUrl ?? "https://api.openai.com/v1"}/chat/completions`, {
@@ -661,6 +760,7 @@ async function runOpenAI(ctx: AssistantCtx, model: string, apiKey: string, syste
       r.toolCalls.push({ name, label: ASSISTANT_TOOL_LABEL_TH[name] ?? name });
       const out = await executeTool(ctx, name, input);
       collectArtifacts(r, out);
+      collectChoices(r, out);
       messages.push({ role: "tool", tool_call_id: tc.id, content: out });
     }
   }
@@ -673,7 +773,7 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
     parts: [{ text: h.content }],
   }));
   const tools = [{ functionDeclarations: TOOLS.map((t) => ({ name: t.name, description: t.description, parameters: t.input_schema })) }];
-  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [] };
+  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [], choices: [] };
   for (let i = 0; i < 10; i++) {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -703,6 +803,7 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
       r.toolCalls.push({ name: fc.name, label: ASSISTANT_TOOL_LABEL_TH[fc.name] ?? fc.name });
       const out = await executeTool(ctx, fc.name, fc.args ?? {});
       collectArtifacts(r, out);
+      collectChoices(r, out);
       respParts.push({ functionResponse: { name: fc.name, response: { result: out } } });
     }
     contents.push({ role: "user", parts: respParts });
@@ -736,8 +837,9 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
 
   // ตาข่ายกันโกหก (เจอจริงบน production: Gemini เรียกแค่ tool อ่าน แล้วอ้างว่า "บันทึกแล้ว"):
   // ถ้าคำตอบอ้างว่าทำรายการสำเร็จ แต่ไม่มี tool เขียนถูกเรียกเลย -> บังคับวนอีกรอบให้ทำจริง
+  // (ยกเว้นตอนกำลังถามผู้ใช้อยู่ — ยังไม่ต้องทำอะไร รอคำตอบก่อน)
   const didWrite = r.toolCalls.some((c) => WRITE_TOOLS.has(c.name));
-  if (!didWrite && r.text && CLAIM_RE.test(r.text) && !DENY_RE.test(r.text)) {
+  if (!didWrite && !r.choices.length && r.text && CLAIM_RE.test(r.text) && !DENY_RE.test(r.text)) {
     const nudged: AssistantCtx = {
       ...ctx,
       history: [
@@ -752,6 +854,7 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
       inTok: r.inTok + r2.inTok, outTok: r.outTok + r2.outTok,
       toolCalls: [...r.toolCalls, ...r2.toolCalls],
       artifacts: [...r.artifacts, ...r2.artifacts],
+      choices: [...r.choices, ...r2.choices],
     };
   }
 
@@ -765,6 +868,7 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
     text: r.text || "ขอโทษค่ะ ลองพิมพ์ใหม่อีกครั้งนะคะ",
     toolCalls: r.toolCalls,
     artifacts: r.artifacts.slice(0, 6),
+    choices: r.choices.slice(0, 4),
     model: `${cfg.provider}/${cfg.model}`, input_tokens: r.inTok, output_tokens: r.outTok,
   };
 }

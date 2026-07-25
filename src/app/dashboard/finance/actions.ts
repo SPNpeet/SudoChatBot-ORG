@@ -117,6 +117,7 @@ export interface SaveDocInput {
   wht_rate?: number;
   notes?: string;
   file_path?: string | null;
+  extra_files?: string[];        // ไฟล์แนบใบที่ 2 ขึ้นไป (fin_doc_files)
   status?: "draft" | "awaiting";
   paid_now?: boolean;            // expense/receipt: เงินออก/เข้าแล้วทันที
   pay_method?: string;           // cash/transfer/promptpay/card/other
@@ -252,6 +253,13 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       product_id: it.product_id, sort: i,
     })));
     if (itemErr) return { ok: false, error: itemErr.message };
+
+    // ไฟล์แนบทั้งหมด (ใบแรกอยู่ใน file_path อยู่แล้ว) — เขียนใหม่ทุกครั้งให้ตรงกับที่ผู้ใช้เห็นบนฟอร์ม
+    const allFiles = [input.file_path, ...(input.extra_files ?? [])].filter((p): p is string => !!p);
+    await svc.from("fin_doc_files").delete().eq("doc_id", docId);
+    if (allFiles.length) {
+      await svc.from("fin_doc_files").insert(allFiles.map((path) => ({ doc_id: docId, shop_id: shopId, path })));
+    }
 
     // ---- ออกเอกสารจริง (ไม่ใช่ร่าง) -> ลงบัญชี + ตัดสต๊อก ----
     if (status === "awaiting") {

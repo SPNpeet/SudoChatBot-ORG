@@ -16,6 +16,7 @@ export interface AssistantReply {
   text?: string;
   toolCalls?: { name: string; label: string }[];
   artifacts?: { label: string; href: string }[];   // ปุ่มลิงก์เอกสารที่ AI เพิ่งสร้าง
+  choices?: { label: string; reply: string }[];    // ปุ่มตอบคำถาม AI / ปุ่มทำต่อ — ไม่ต้องพิมพ์เอง
   error?: string;
   quotaExceeded?: boolean;   // โควตา AI หมด -> หน้าบ้านโชว์ paywall สวยๆ ไม่ใช่ error
 }
@@ -61,7 +62,7 @@ export async function assistantReply(shopId: string, history: AssistantTurn[]): 
       svc, shopId, shopName: shop.name, userId: user.id, history: trimmed,
     };
     const r = await runAssistant(ctx);
-    return { ok: true, text: r.text, toolCalls: r.toolCalls, artifacts: r.artifacts };
+    return { ok: true, text: r.text, toolCalls: r.toolCalls, artifacts: r.artifacts, choices: r.choices };
   } catch (e) {
     const m = (e as Error).message;
     if (m === "AI_NOT_CONFIGURED") return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่า AI — ผู้ดูแลระบบต้องใส่ API key ก่อน" };
