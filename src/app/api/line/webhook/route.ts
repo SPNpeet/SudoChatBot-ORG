@@ -25,8 +25,8 @@ export const maxDuration = 30;
 let cachedCfg: { token: string; secret: string; at: number } | null = null;
 const CFG_TTL = 5 * 60_000;
 
-async function getCfg() {
-  if (cachedCfg && Date.now() - cachedCfg.at < CFG_TTL) return cachedCfg;
+async function getCfg(force = false) {
+  if (!force && cachedCfg && Date.now() - cachedCfg.at < CFG_TTL) return cachedCfg;
   const { data } = await createServiceClient()
     .from("platform_billing_settings").select("line_oa_token,line_oa_channel_secret").eq("id", true).maybeSingle();
   if (!data?.line_oa_token || !data?.line_oa_channel_secret) return null;
@@ -82,11 +82,16 @@ interface LineEvent {
 }
 
 async function handle(raw: string, signature: string | null) {
-  const cfg = await getCfg();
+  let cfg = await getCfg();
   if (!cfg) return;                                   // ยังไม่ตั้งค่า — เงียบไว้
   if (!verify(raw, signature, cfg.secret)) {
-    console.warn("line webhook: bad signature — ไม่ประมวลผล");
-    return;
+    // ลายเซ็นไม่ผ่านอาจเพราะเพิ่ง rotate secret แล้ว cache ยังเป็นตัวเก่า — โหลดใหม่ลองอีกรอบ
+    // (ไม่งั้นหลัง rotate ระบบจะเงียบไปจนกว่า cache หมดอายุ)
+    cfg = await getCfg(true);
+    if (!cfg || !verify(raw, signature, cfg.secret)) {
+      console.warn("line webhook: bad signature — ไม่ประมวลผล");
+      return;
+    }
   }
   const { events } = JSON.parse(raw || "{}") as { events?: LineEvent[] };
   if (!events?.length) return;                        // test ping ของ LINE ไม่มี event
