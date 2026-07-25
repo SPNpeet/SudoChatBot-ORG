@@ -3,7 +3,7 @@ import { compressImage } from "@/lib/compress-image";
 // แชทผู้ช่วยบัญชี AI — สั่งงานบัญชีทั้งระบบ + แนบรูปบิลให้บันทึกเองได้จากแชท
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Calculator, Sparkles, Paperclip } from "lucide-react";
+import { Send, Calculator, Sparkles, Paperclip, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { assistantReply, type AssistantTurn } from "./actions";
 
@@ -23,6 +23,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);   // แนบค้างไว้ พิมพ์สั่งกำกับได้ก่อนส่ง
   const [error, setError] = useState<string | null>(null);
   const [quotaWall, setQuotaWall] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -66,7 +67,8 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     }
   }
 
-  async function attachFile(fRaw: File) {
+  /** ส่งบิลที่แนบไว้ + คำสั่งที่ผู้ใช้พิมพ์กำกับ (ถ้ามี) ในข้อความเดียว */
+  async function sendWithFile(fRaw: File, note: string) {
     if (busy || reading) return;
     setError(null);
     setReading(true); // spinner หมุนตั้งแต่เริ่มบีบอัด — กันกดซ้ำ/คิดว่าเว็บค้าง
@@ -78,13 +80,23 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
       const res = await fetch("/api/finance/extract", { method: "POST", body: fd });
       const j = await res.json();
       if (!j.ok) { setError(j.error ?? "อ่านไฟล์ไม่สำเร็จ"); return; }
-      const summary = `[ไฟล์แนบ: ${f.name}${j.file_path ? ` · file_path: ${j.file_path}` : ""}]\nข้อมูลที่ AI อ่านได้จากเอกสาร: ${JSON.stringify(j.data)}\nช่วยตรวจและบันทึกเข้าระบบให้หน่อย`;
-      await send(summary);
+      setPendingFile(null);
+      setInput("");
+      const order = note.trim()
+        ? `คำสั่งจากเจ้าของ (ยึดตามนี้ก่อนข้อมูลที่ OCR อ่านได้เสมอ): ${note.trim()}`
+        : "ช่วยตรวจและบันทึกเข้าระบบให้หน่อย ถ้าตัวเลขไม่ชัดหรือไม่ลงตัวให้ถามก่อน อย่าเดา";
+      await send(`[ไฟล์แนบ: ${f.name}${j.file_path ? ` · file_path: ${j.file_path}` : ""}]\nข้อมูลที่ระบบอ่านได้จากเอกสาร: ${JSON.stringify(j.data)}\n${order}`);
     } catch {
       setError("อ่านไฟล์ไม่สำเร็จ ลองใหม่อีกครั้ง");
     } finally {
       setReading(false);
     }
+  }
+
+  function submitForm(e: React.FormEvent) {
+    e.preventDefault();
+    if (pendingFile) sendWithFile(pendingFile, input);
+    else send(input);
   }
 
   return (
@@ -97,7 +109,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
               สั่งได้ทุกเรื่องบัญชี — ออกเอกสาร บันทึกรายจ่าย รับเงิน ดูยอดค้าง สรุปภาษี
             </p>
             <p className="mx-auto mt-1 flex max-w-sm items-center justify-center gap-1 text-[11px] text-neutral-400">
-              <Sparkles className="h-3 w-3 shrink-0" /> แนบรูปบิลได้เลย เดี๋ยวอ่านและลงบัญชีให้ · ทุกรายการตรวจย้อนหลังได้ในสมุดรายวัน
+              <Sparkles className="h-3 w-3 shrink-0" /> แนบรูปบิลแล้วพิมพ์สั่งกำกับได้เลย เช่น &ldquo;ค่าเช่า ยังไม่จ่าย&rdquo; · ตัวเลขไม่ชัดระบบจะถามก่อนบันทึกเสมอ
             </p>
             <div className="mx-auto mt-4 flex max-w-md flex-wrap justify-center gap-1.5">
               {STARTERS.map((s) => (
@@ -149,18 +161,28 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
         <div ref={bottomRef} />
       </div>
       <div className="border-t border-neutral-100 p-3">
-        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); send(input); }}>
+        {pendingFile && (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
+            <Paperclip className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+            <span className="min-w-0 flex-1 truncate text-xs text-emerald-800">{pendingFile.name}</span>
+            <span className="hidden shrink-0 text-[11px] text-emerald-600 sm:block">พิมพ์สั่งเพิ่มได้ เช่น &ldquo;ยังไม่จ่าย&rdquo;</span>
+            <button type="button" onClick={() => setPendingFile(null)} aria-label="เอาไฟล์ออก"
+              className="shrink-0 rounded-lg p-1 text-emerald-700 hover:bg-emerald-100"><X className="h-3.5 w-3.5" /></button>
+          </div>
+        )}
+        <form className="flex gap-2" onSubmit={submitForm}>
           <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) attachFile(f); e.target.value = ""; }} />
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) { setPendingFile(f); setError(null); } e.target.value = ""; }} />
           <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || reading}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-neutral-300 text-neutral-500 hover:border-emerald-400 hover:text-emerald-600 disabled:opacity-40"
             title="แนบรูปบิล/เอกสาร ให้ AI อ่านและบันทึก">
             <Paperclip className="h-4 w-4" />
           </button>
-          <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="สั่งงานบัญชี เช่น ออกใบแจ้งหนี้ 5,000 ให้คุณสมชาย..."
+          <input value={input} onChange={(e) => setInput(e.target.value)}
+            placeholder={pendingFile ? "สั่งกำกับบิลนี้ (ไม่พิมพ์ก็ได้) เช่น ค่าเช่า ยังไม่จ่าย" : "สั่งงานบัญชี เช่น ออกใบแจ้งหนี้ 5,000 ให้คุณสมชาย..."}
             className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
-          <button disabled={busy || !input.trim()}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
+          <button disabled={busy || reading || (!input.trim() && !pendingFile)}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
             <Send className="h-4 w-4" />
           </button>
         </form>

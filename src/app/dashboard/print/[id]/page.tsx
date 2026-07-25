@@ -46,13 +46,29 @@ export default async function PrintDocPage({ params, searchParams }: {
       : DOC_TYPE_TH[doc.doc_type as DocType];
 
   return (
-    <div className="min-h-screen bg-neutral-100 py-6 print:bg-white print:py-0">
-      <div className="mx-auto mb-4 flex max-w-[210mm] items-center justify-between px-4 print:hidden">
-        <p className="text-sm text-neutral-500">พรีวิวเอกสาร — กดพิมพ์แล้วเลือก Save as PDF ได้</p>
+    <div className="min-h-screen bg-neutral-100 py-4 sm:py-6 print:bg-white print:py-0">
+      {/* มือถือจอแคบกว่ากระดาษ A4 (210mm) — ย่อทั้งใบด้วย CSS scale ให้เห็นเต็มหน้าโดยตัวหนังสือไม่แตก
+          และไม่ต้องเลื่อนซ้าย-ขวา · ตอนพิมพ์จริง scale กลับเป็น 1 เสมอ */}
+      <style>{`
+        .sheet-wrap { --sheet-scale: 1; }
+        @media (max-width: 820px) {
+          .sheet-wrap { --sheet-scale: calc((100vw - 1.5rem) / 210mm); }
+          .sheet-wrap { height: calc(297mm * var(--sheet-scale)); }
+          .sheet { transform: scale(var(--sheet-scale)); transform-origin: top center; }
+        }
+        @media print {
+          .sheet-wrap { height: auto !important; }
+          .sheet { transform: none !important; box-shadow: none !important; }
+        }
+      `}</style>
+
+      <div className="mx-auto mb-3 flex max-w-[210mm] flex-wrap items-center justify-between gap-2 px-3 print:hidden">
+        <p className="text-xs text-neutral-500 sm:text-sm">พรีวิวเอกสาร — กดพิมพ์แล้วเลือก Save as PDF ได้</p>
         <PrintButton />
       </div>
 
-      <div className="mx-auto min-h-[297mm] max-w-[210mm] bg-white p-[15mm] text-[13px] leading-relaxed text-neutral-900 shadow print:shadow-none">
+      <div className="sheet-wrap mx-auto w-[210mm] max-w-[210mm]">
+      <div className="sheet mx-auto min-h-[297mm] w-[210mm] bg-white p-[15mm] text-[13px] leading-relaxed text-neutral-900 shadow print:shadow-none">
         {isWhtForm ? (
           <WhtCert doc={doc} shopName={shopName} shopTaxId={shop.tax_id ?? null} shopAddress={shop.billing_address ?? null} />
         ) : (
@@ -87,25 +103,28 @@ export default async function PrintDocPage({ params, searchParams }: {
               </table>
             </div>
 
-            {/* ตารางรายการ */}
-            <table className="mt-5 w-full border-collapse">
+            {/* ตารางรายการ — คอลัมน์กว้างคงที่ + ตัวเลข tabular-nums ให้หลักตรงกันทุกบรรทัด */}
+            <table className="mt-5 w-full table-fixed border-collapse">
+              <colgroup>
+                <col className="w-[7%]" /><col /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-[18%]" />
+              </colgroup>
               <thead>
                 <tr className="border-b border-t border-neutral-900 text-[11px]">
-                  <th className="py-2 text-left">#</th>
-                  <th className="py-2 text-left">รายการ</th>
-                  <th className="py-2 text-right">จำนวน</th>
-                  <th className="py-2 text-right">ราคา/หน่วย</th>
-                  <th className="py-2 text-right">จำนวนเงิน</th>
+                  <th className="py-2 text-left font-semibold">#</th>
+                  <th className="py-2 text-left font-semibold">รายการ</th>
+                  <th className="py-2 text-right font-semibold">จำนวน</th>
+                  <th className="py-2 text-right font-semibold">ราคา/หน่วย</th>
+                  <th className="py-2 text-right font-semibold">จำนวนเงิน</th>
                 </tr>
               </thead>
               <tbody>
                 {(doc.fin_doc_items ?? []).map((it, i) => (
                   <tr key={i} className="border-b border-neutral-100 align-top">
-                    <td className="py-1.5 pr-2 text-neutral-400">{i + 1}</td>
-                    <td className="py-1.5 pr-2">{it.name}</td>
-                    <td className="py-1.5 text-right">{Number(it.qty).toLocaleString()}{it.unit ? ` ${it.unit}` : ""}</td>
-                    <td className="py-1.5 text-right">{bahtDoc(it.unit_price)}</td>
-                    <td className="py-1.5 text-right">{bahtDoc(it.amount)}</td>
+                    <td className="py-1.5 pr-2 tabular-nums text-neutral-400">{i + 1}</td>
+                    <td className="py-1.5 pr-2 break-words">{it.name}</td>
+                    <td className="py-1.5 text-right tabular-nums">{Number(it.qty).toLocaleString()}{it.unit ? ` ${it.unit}` : ""}</td>
+                    <td className="py-1.5 text-right tabular-nums">{bahtDoc(it.unit_price)}</td>
+                    <td className="py-1.5 text-right tabular-nums">{bahtDoc(it.amount)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -130,7 +149,7 @@ export default async function PrintDocPage({ params, searchParams }: {
                   </div>
                 )}
               </div>
-              <table className="min-w-[220px]">
+              <table className="w-[250px] shrink-0 tabular-nums">
                 <tbody>
                   <tr><td className="py-0.5 pr-4 text-neutral-500">รวมเป็นเงิน</td><td className="py-0.5 text-right">{bahtDoc(Number(doc.subtotal) - Number(doc.discount))}</td></tr>
                   {Number(doc.discount) > 0 && <tr><td className="py-0.5 pr-4 text-neutral-500">ส่วนลด</td><td className="py-0.5 text-right">-{bahtDoc(doc.discount)}</td></tr>}
@@ -144,7 +163,10 @@ export default async function PrintDocPage({ params, searchParams }: {
                     <td className="py-1.5 pr-4">ยอดรวมสุทธิ</td><td className="py-1.5 text-right">{bahtDoc(doc.total)}</td>
                   </tr>
                   {Number(doc.wht_amount) > 0 && (
-                    <tr><td className="py-0.5 pr-4 text-neutral-500">หัก ณ ที่จ่าย {Number(doc.wht_rate)}%</td><td className="py-0.5 text-right">-{bahtDoc(doc.wht_amount)}</td></tr>
+                    <>
+                      <tr><td className="py-0.5 pr-4 text-neutral-500">หัก ณ ที่จ่าย {Number(doc.wht_rate)}%</td><td className="py-0.5 text-right">-{bahtDoc(doc.wht_amount)}</td></tr>
+                      <tr className="border-t border-neutral-300 font-semibold"><td className="py-1 pr-4">ยอดชำระจริง</td><td className="py-1 text-right">{bahtDoc(Number(doc.total) - Number(doc.wht_amount))}</td></tr>
+                    </>
                   )}
                 </tbody>
               </table>
@@ -163,6 +185,7 @@ export default async function PrintDocPage({ params, searchParams }: {
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );

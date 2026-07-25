@@ -23,10 +23,44 @@ export interface ExtractedBill {
   doc_ref?: string;
   items?: { name: string; qty?: number; unit_price?: number }[];
   subtotal?: number;
+  discount?: number;
+  vat_mode?: "none" | "exclusive" | "inclusive";
   vat_amount?: number;
   wht_rate?: number;
   total?: number;
   category?: string;           // หมวดค่าใช้จ่ายที่เดา
+  unclear?: string[];          // จุดที่ AI อ่านไม่ชัด — ต้องถามเจ้าของก่อนบันทึก
+  issues?: string[];           // ผลตรวจเลขฝั่งเรา (ยอดไม่ลงตัว/ขาดข้อมูล)
+  needs_confirm?: boolean;     // true = ห้ามบันทึกทันที ต้องให้คนยืนยันก่อน
+}
+
+/**
+ * ตรวจเลขที่ AI อ่านมาว่า "บวกกันลงตัว" จริงไหม — จับเคสอ่านผิดก่อนถึงมือผู้ใช้
+ * ไม่แก้ตัวเลขให้เอง (แก้เอง = ซ่อนความผิดพลาด) แต่ตั้งธงให้ผู้ช่วย AI ถามกลับ
+ */
+function reconcile(b: ExtractedBill): ExtractedBill {
+  const issues: string[] = [];
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const close = (a: number, b2: number) => Math.abs(a - b2) <= Math.max(1, a * 0.01); // ยอมคลาด 1 บาท/1%
+
+  const itemSum = (b.items ?? []).reduce((a, it) => a + (it.qty ?? 1) * (it.unit_price ?? 0), 0);
+  const sub = b.subtotal, vat = b.vat_amount ?? 0, disc = b.discount ?? 0, total = b.total;
+
+  if (b.items?.length && sub != null && !close(itemSum, sub)) {
+    issues.push(`ผลรวมรายการ ${r2(itemSum).toLocaleString()} ไม่ตรงกับยอดก่อนภาษี ${r2(sub).toLocaleString()} ที่อ่านได้จากบิล`);
+  }
+  if (sub != null && total != null) {
+    const expect = b.vat_mode === "inclusive" ? sub - disc : sub - disc + vat;
+    if (!close(expect, total)) {
+      issues.push(`ยอดรวมไม่ลงตัว: ${r2(sub).toLocaleString()}${disc ? ` - ส่วนลด ${r2(disc).toLocaleString()}` : ""}${b.vat_mode === "exclusive" && vat ? ` + VAT ${r2(vat).toLocaleString()}` : ""} = ${r2(expect).toLocaleString()} แต่บิลระบุยอดสุทธิ ${r2(total).toLocaleString()}`);
+    }
+  }
+  if (total == null) issues.push("อ่านยอดรวมสุทธิจากบิลไม่ได้");
+  if (!b.items?.length && total == null) issues.push("อ่านรายการสินค้าไม่ได้เลย");
+  if (vat > 0 && !b.vat_mode) issues.push("มี VAT แต่ระบุไม่ได้ว่าราคารวม VAT แล้วหรือบวกเพิ่ม");
+
+  const all = [...(b.unclear ?? []), ...issues];
+  return { ...b, issues: issues.length ? issues : undefined, needs_confirm: all.length > 0 };
 }
 
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -37,12 +71,18 @@ const OK_TYPES: Record<string, string> = {
 
 const EXTRACT_PROMPT = `คุณคือระบบอ่านเอกสารการเงินไทย (บิล ใบเสร็จ ใบกำกับภาษี ใบแจ้งหนี้ สลิปโอนเงิน) ตอบเป็น JSON เท่านั้น (ไม่มีข้อความอื่น ไม่มี markdown fence)
 อ่านเอกสารแล้วตอบตาม schema:
-{"doc_kind": "expense_bill|invoice|receipt|slip|unknown", "vendor_name": "ชื่อผู้ขาย/ร้านที่ออกบิล", "vendor_tax_id": "เลขผู้เสียภาษี 13 หลักถ้ามี", "date": "วันที่เอกสาร YYYY-MM-DD", "doc_ref": "เลขที่เอกสารถ้ามี", "items": [{"name": "รายการ", "qty": จำนวน, "unit_price": ราคาต่อหน่วย}], "subtotal": มูลค่าก่อน VAT, "vat_amount": ยอด VAT (0 ถ้าไม่มี), "wht_rate": อัตราหัก ณ ที่จ่าย % (0 ถ้าไม่มี), "total": ยอดรวมสุทธิ, "category": "หมวดค่าใช้จ่ายที่เหมาะสุด เลือกจาก: ซื้อสินค้า/วัตถุดิบ, เงินเดือน/ค่าจ้าง, ค่าเช่า, ค่าน้ำ/ค่าไฟ/อินเทอร์เน็ต, ค่าขนส่ง/เดินทาง, การตลาด/โฆษณา, ค่าธรรมเนียม/บริการ, วัสดุ/อุปกรณ์สำนักงาน, ภาษี/ประกันสังคม, อื่น ๆ"}
-กติกา:
+{"doc_kind": "expense_bill|invoice|receipt|slip|unknown", "vendor_name": "ชื่อผู้ขาย/ร้านที่ออกบิล", "vendor_tax_id": "เลขผู้เสียภาษี 13 หลักถ้ามี", "date": "วันที่เอกสาร YYYY-MM-DD", "doc_ref": "เลขที่เอกสารถ้ามี", "items": [{"name": "รายการ", "qty": จำนวน, "unit_price": ราคาต่อหน่วย}], "subtotal": มูลค่าสินค้ารวมก่อน VAT, "discount": ส่วนลด (0 ถ้าไม่มี), "vat_mode": "none|exclusive|inclusive", "vat_amount": ยอด VAT (0 ถ้าไม่มี), "wht_rate": อัตราหัก ณ ที่จ่าย % (0 ถ้าไม่มี), "total": ยอดรวมสุทธิที่ต้องจ่ายตามบิล, "category": "หมวดค่าใช้จ่ายที่เหมาะสุด เลือกจาก: ซื้อสินค้า/วัตถุดิบ, เงินเดือน/ค่าจ้าง, ค่าเช่า, ค่าน้ำ/ค่าไฟ/อินเทอร์เน็ต, ค่าขนส่ง/เดินทาง, การตลาด/โฆษณา, ค่าธรรมเนียม/บริการ, วัสดุ/อุปกรณ์สำนักงาน, ภาษี/ประกันสังคม, อื่น ๆ", "unclear": ["สิ่งที่อ่านไม่ชัด/ไม่แน่ใจ เป็นข้อความสั้นๆ ภาษาไทย"]}
+กติกาสำคัญ (ตัวเลขผิด = ลูกค้าเสียหาย ต้องระวังสูงสุด):
 - ตัวเลขตัดสัญลักษณ์สกุลเงิน/คอมมาให้เหลือตัวเลข เช่น "1,290.50 บาท" -> 1290.5
 - วันที่ไทย พ.ศ. ให้แปลงเป็น ค.ศ. (เช่น 2569 -> 2026)
-- ห้ามแต่งข้อมูลที่ไม่มีในเอกสาร ช่องที่ไม่รู้ให้เว้น
-- ถ้ารายการเยอะ/อ่านไม่ครบ ใส่เฉพาะที่อ่านได้ชัด แล้วให้ total ตรงกับยอดรวมจริงในบิล`;
+- total = ยอดที่ต้องจ่ายจริงตามที่พิมพ์ในบิล ห้ามคำนวณเอง ถ้าบิลพิมพ์ยอดสุทธิไว้ให้ใช้ตัวนั้นเสมอ
+- vat_mode: บิลเขียน "ราคารวม VAT แล้ว" = inclusive · บิลบวก VAT เพิ่มท้ายบิล = exclusive · ไม่มี VAT = none
+- ตรวจเลขให้ตรงกันก่อนตอบ: ผลรวม (qty x unit_price) ทุกบรรทัด ต้องเท่ากับ subtotal และ
+  ถ้า exclusive: subtotal - discount + vat_amount = total · ถ้า inclusive: subtotal - discount = total
+  ถ้าไม่ลงตัวแปลว่าคุณอ่านผิด — ให้กลับไปอ่านใหม่ ห้ามแต่งตัวเลขให้ครบเอง
+- ห้ามเดา/แต่งข้อมูลที่ไม่มีในเอกสาร ช่องที่ไม่รู้ให้เว้น (ห้ามใส่ 0 แทนคำว่าไม่รู้)
+- ตัวเลขไหนอ่านไม่ชัด เบลอ โดนบัง หรือไม่แน่ใจ ให้เว้นช่องนั้นไว้ แล้วเขียนบอกใน unclear เช่น "ยอดรวมเบลอ อ่านได้แค่ 27,4xx"
+- unclear ต้องมีทุกครั้งที่ไม่ชัด — ระบบจะเอาไปถามเจ้าของก่อนบันทึก ดีกว่าเดาผิดแล้วบัญชีเพี้ยน`;
 
 function parseBill(raw: string): ExtractedBill {
   let s = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
@@ -54,8 +94,8 @@ function parseBill(raw: string): ExtractedBill {
   } catch {
     throw new Error("AI ตอบข้อมูลที่อ่านไม่ได้ — ลองใหม่หรือถ่ายรูปให้ชัดขึ้น");
   }
-  const num = (v: unknown) => (v === null || v === undefined || Number.isNaN(Number(v)) ? undefined : Math.abs(Number(v)));
-  return {
+  const num = (v: unknown) => (v === null || v === undefined || v === "" || Number.isNaN(Number(v)) ? undefined : Math.abs(Number(v)));
+  return reconcile({
     doc_kind: ["expense_bill", "invoice", "receipt", "slip"].includes(String(parsed.doc_kind)) ? parsed.doc_kind as ExtractedBill["doc_kind"] : "unknown",
     vendor_name: parsed.vendor_name ? String(parsed.vendor_name).slice(0, 200) : undefined,
     vendor_tax_id: parsed.vendor_tax_id ? String(parsed.vendor_tax_id).replace(/[^0-9]/g, "").slice(0, 13) : undefined,
@@ -68,11 +108,16 @@ function parseBill(raw: string): ExtractedBill {
         .map((it) => ({ name: String(it.name).slice(0, 200), qty: num(it.qty) ?? 1, unit_price: num(it.unit_price) ?? 0 }))
       : undefined,
     subtotal: num(parsed.subtotal),
+    discount: num(parsed.discount),
+    vat_mode: ["none", "exclusive", "inclusive"].includes(String(parsed.vat_mode)) ? parsed.vat_mode as ExtractedBill["vat_mode"] : undefined,
     vat_amount: num(parsed.vat_amount),
     wht_rate: num(parsed.wht_rate),
     total: num(parsed.total),
     category: parsed.category ? String(parsed.category).slice(0, 100) : undefined,
-  };
+    unclear: Array.isArray(parsed.unclear)
+      ? (parsed.unclear as unknown[]).map((u) => String(u).slice(0, 200)).filter(Boolean).slice(0, 8)
+      : undefined,
+  });
 }
 
 async function extractWithMistral(key: string, b64: string, mime: string, model = "mistral-ocr-latest"): Promise<ExtractedBill> {

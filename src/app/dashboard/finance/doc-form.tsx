@@ -35,6 +35,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
+  const [aiWarn, setAiWarn] = useState<string[]>([]);   // จุดที่ AI อ่านไม่ชัด/ยอดไม่ลงตัว — ให้คนตรวจก่อนบันทึก
 
   const [rows, setRows] = useState<Row[]>(
     draft?.fin_doc_items?.length
@@ -87,8 +88,11 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
         if (!j.ok) { setError(j.error ?? "AI อ่านไฟล์ไม่สำเร็จ"); return; }
         const d = j.data as {
           vendor_name?: string; date?: string; items?: { name: string; qty?: number; unit_price?: number }[];
-          subtotal?: number; vat_amount?: number; total?: number; wht_rate?: number; category?: string;
+          subtotal?: number; discount?: number; vat_mode?: "none" | "exclusive" | "inclusive";
+          vat_amount?: number; total?: number; wht_rate?: number; category?: string;
+          unclear?: string[]; issues?: string[];
         };
+        setAiWarn([...(d.issues ?? []), ...(d.unclear ?? [])]);
         if (j.file_path) { setFilePath(j.file_path); setFileName(f.name); }
         if (d.vendor_name) { setContactName(d.vendor_name); setContactId(""); }
         if (d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) setIssueDate(d.date);
@@ -100,8 +104,10 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
         } else if (d.total) {
           setRows([{ name: d.vendor_name ? `ค่าใช้จ่าย — ${d.vendor_name}` : "ค่าใช้จ่ายตามบิล", qty: "1", unit: "", unit_price: String(d.total), product_id: null }]);
         }
-        // มี VAT ในบิล -> ตีเป็นราคารวม VAT
-        if ((d.vat_amount ?? 0) > 0) setVatMode("inclusive");
+        // ใช้โหมด VAT ที่อ่านได้จริงจากบิล (บิลบวก VAT ท้ายบิล = exclusive) — เดาผิดทำให้ยอดเพี้ยนทั้งใบ
+        if (d.vat_mode) setVatMode(d.vat_mode);
+        else if ((d.vat_amount ?? 0) > 0) setVatMode("inclusive");
+        if ((d.discount ?? 0) > 0) setDiscount(String(d.discount));
         if (d.wht_rate) setWhtRate(String(d.wht_rate));
         if (d.category && categories.length) {
           const cat = categories.find((c) => c.name.includes(d.category!) || d.category!.includes(c.name));
@@ -160,6 +166,14 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
             </Button>
             <p className="text-xs text-neutral-400">รองรับรูปถ่ายบิล ใบเสร็จ ใบกำกับภาษี PDF — AI อ่านผู้ขาย ยอด VAT แล้วกรอกฟอร์มให้ ตรวจก่อนบันทึกได้</p>
             {fileName && <p className="w-full text-xs text-emerald-700"><Paperclip className="mr-1 inline h-3 w-3" />แนบไฟล์แล้ว: {fileName}</p>}
+            {aiWarn.length > 0 && (
+              <div className="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <p className="text-xs font-semibold text-amber-800">⚠️ ตรวจตัวเลขก่อนบันทึกนะ — บิลนี้อ่านได้ไม่ชัดทั้งหมด</p>
+                <ul className="mt-1 space-y-0.5">
+                  {aiWarn.map((w, i) => <li key={i} className="text-[11px] leading-relaxed text-amber-700">• {w}</li>)}
+                </ul>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
