@@ -1,9 +1,15 @@
-﻿"use client";
+"use client";
 import { compressImage } from "@/lib/compress-image";
-// แชทผู้ช่วยบัญชี AI — สั่งงานบัญชีทั้งระบบ + แนบรูปบิลให้บันทึกเองได้จากแชท
+// ============================================================
+//  แชทผู้ช่วยบัญชี AI — สั่งงานบัญชีทั้งระบบ + แนบรูปบิลหลายใบให้บันทึกเองได้
+//  หลักการ UX ที่ต้องคงไว้ (มาจากปัญหาที่ผู้ใช้เจอจริง):
+//   1. กดส่งแล้วต้องเห็นข้อความ+รูปของตัวเองทันที ห้ามรอ OCR เสร็จก่อน (ไม่งั้นเหมือนกดแล้วไม่ติด)
+//   2. สลับไปหน้าอื่นแล้วกลับมา แชทต้องยังอยู่ (เก็บใน sessionStorage แยกตามกิจการ)
+//   3. รูปที่แนบต้องโชว์เป็นรูปจริงในบับเบิล ไม่ใช่ path ยาวๆ
+// ============================================================
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Calculator, Sparkles, Paperclip, X } from "lucide-react";
+import { Send, Calculator, Sparkles, Paperclip, X, Loader2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { assistantReply, type AssistantTurn } from "./actions";
 
@@ -17,70 +23,109 @@ const STARTERS = [
 ];
 
 interface Msg extends AssistantTurn {
+  display?: string;                                // ข้อความที่ "คนเห็น" (content คือที่ส่งให้ AI)
+  images?: string[];                               // รูปย่อที่แนบมากับข้อความนี้
+  fileNames?: string[];
   toolCalls?: { name: string; label: string }[];
   artifacts?: { label: string; href: string }[];
-  choices?: { label: string; reply: string }[];   // ปุ่มตอบ AI — กดแล้วส่งคำตอบให้เลย ไม่ต้องพิมพ์
+  choices?: { label: string; reply: string }[];    // ปุ่มตอบ AI — กดแล้วส่งคำตอบให้เลย ไม่ต้องพิมพ์
 }
+
+const MAX_FILES = 8;
+const MAX_KEEP = 20;   // เก็บแชทล่าสุด 20 ข้อความ — เกินแล้วตัดอันเก่าสุดออกทีละอัน
+const storeKey = (shopId: string) => `sc_chat_${shopId}`;
+/** ตัดให้เหลือ 20 ล่าสุดเสมอ (ทั้งบนจอและที่เก็บไว้) */
+const keepLast = <T,>(list: T[]) => (list.length > MAX_KEEP ? list.slice(-MAX_KEEP) : list);
 
 export default function AssistantChat({ shopId }: { shopId: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [restored, setRestored] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [reading, setReading] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);   // แนบค้างไว้หลายใบได้ พิมพ์สั่งกำกับก่อนส่ง
-  const [readProgress, setReadProgress] = useState("");
+  const [reading, setReading] = useState("");                    // ข้อความความคืบหน้าตอนอ่านบิล
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);  // แนบค้างไว้หลายใบ พิมพ์สั่งกำกับก่อนส่ง
   const [error, setError] = useState<string | null>(null);
   const [quotaWall, setQuotaWall] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  // กู้แชทเดิมกลับมาเมื่อสลับหน้าไป-กลับ (เก็บใน sessionStorage: ปิดแท็บแล้วเริ่มใหม่ ไม่ค้างข้ามวัน)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storeKey(shopId));
+      if (raw) setMsgs(keepLast(JSON.parse(raw) as Msg[]));
+    } catch { /* อ่านไม่ได้ = เริ่มใหม่ */ }
+    setRestored(true);
+  }, [shopId]);
+
+  useEffect(() => {
+    if (!restored) return;
+    try {
+      // ไม่เก็บ blob url ของรูป (ตายเมื่อรีเฟรช) — เก็บแค่ชื่อไฟล์ไว้ให้รู้ว่าเคยแนบอะไร
+      const slim = keepLast(msgs).map(({ images: _img, ...m }) => m);
+      sessionStorage.setItem(storeKey(shopId), JSON.stringify(slim));
+    } catch { /* เต็ม/ปิดไว้ = ข้าม */ }
+  }, [msgs, shopId, restored]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs, busy, reading]);
 
-  async function send(text: string) {
-    const t = text.trim();
-    if (!t || busy) return;
-    setError(null);
-    const next: Msg[] = [...msgs, { role: "user", content: t }];
-    setMsgs(next);
-    setInput("");
+  /** ยิงข้อความให้ AI แล้วต่อคำตอบเข้าแชท — userMsg ต้องถูกใส่ใน msgs มาก่อนแล้ว */
+  async function askAi(history: Msg[]) {
     setBusy(true);
     try {
-      const r = await assistantReply(shopId, next.map(({ role, content }) => ({ role, content })));
+      const r = await assistantReply(shopId, history.map(({ role, content }) => ({ role, content })));
       if (r.ok && r.text) {
-        setMsgs([...next, { role: "assistant", content: r.text, toolCalls: r.toolCalls, artifacts: r.artifacts, choices: r.choices }]);
-        // ถ้ามีการแก้ไขข้อมูล ให้หน้าอื่นเห็นค่าล่าสุดตอนสลับไป
+        setMsgs(keepLast([...history, { role: "assistant", content: r.text, toolCalls: r.toolCalls, artifacts: r.artifacts, choices: r.choices }]));
         if (r.toolCalls?.some((c) => !c.name.startsWith("get_") && !c.name.startsWith("search_") && !c.name.startsWith("list_"))) {
-          router.refresh();
+          router.refresh();   // มีการแก้ข้อมูล -> หน้าอื่นเห็นค่าล่าสุด
         }
       } else if (r.quotaExceeded) {
         setQuotaWall(r.error ?? "โควตางาน AI เต็มแล้ว");
-        setMsgs(msgs);
       } else {
         setError(r.error ?? "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
-        setMsgs(msgs);
-        setInput(t);
       }
     } catch {
       setError("เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง");
-      setMsgs(msgs);
-      setInput(t);
     } finally {
       setBusy(false);
     }
   }
 
-  /** อ่านบิลที่แนบไว้ทุกใบ (ทีละใบเพื่อไม่ให้ AI สับสน) + คำสั่งที่ผู้ใช้พิมพ์กำกับ */
+  /** ส่งข้อความล้วน */
+  async function send(text: string) {
+    const t = text.trim();
+    if (!t || busy || reading) return;
+    setError(null);
+    setInput("");
+    const next: Msg[] = keepLast([...msgs, { role: "user", content: t } as Msg]);
+    setMsgs(next);
+    await askAi(next);
+  }
+
+  /** ส่งบิลที่แนบไว้ + คำสั่งกำกับ — ขึ้นบับเบิลพร้อมรูปทันที แล้วค่อยอ่านบิลเบื้องหลัง */
   async function sendWithFiles(files: File[], note: string) {
     if (busy || reading) return;
     setError(null);
-    setReading(true); // spinner หมุนตั้งแต่เริ่มบีบอัด — กันกดซ้ำ/คิดว่าเว็บค้าง
+    const names = files.map((f) => f.name);
+    const previews = files.filter((f) => f.type.startsWith("image/")).map((f) => URL.createObjectURL(f));
+    const shown: Msg[] = keepLast([...msgs, {
+      role: "user",
+      content: "",                     // เดี๋ยวเติมหลังอ่านบิลเสร็จ
+      display: note.trim() || `แนบบิล ${files.length} ใบ`,
+      images: previews, fileNames: names,
+    } as Msg]);
+    setMsgs(shown);
+    setPendingFiles([]);
+    setInput("");
+    setReading(files.length > 1 ? `กำลังอ่านบิลใบที่ 1/${files.length}...` : "กำลังอ่านบิลด้วย AI...");
+
     try {
       const parts: string[] = [];
       for (let i = 0; i < files.length; i++) {
-        setReadProgress(files.length > 1 ? `กำลังอ่านบิลใบที่ ${i + 1}/${files.length}...` : "");
+        setReading(files.length > 1 ? `กำลังอ่านบิลใบที่ ${i + 1}/${files.length}...` : "กำลังอ่านบิลด้วย AI...");
         const f = await compressImage(files[i]);
         const fd = new FormData();
         fd.append("shop_id", shopId);
@@ -88,22 +133,22 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
         const res = await fetch("/api/finance/extract", { method: "POST", body: fd });
         const j = await res.json();
         if (!j.ok) { setError(j.error ?? `อ่านไฟล์ ${f.name} ไม่สำเร็จ`); return; }
-        parts.push(`[ไฟล์แนบ${files.length > 1 ? ` ${i + 1}/${files.length}` : ""}: ${f.name}${j.file_path ? ` · file_path: ${j.file_path}` : ""}]
-ข้อมูลที่ระบบอ่านได้: ${JSON.stringify(j.data)}`);
+        parts.push(`[ไฟล์แนบ${files.length > 1 ? ` ${i + 1}/${files.length}` : ""}: ${f.name}${j.file_path ? ` · file_path: ${j.file_path}` : ""}]\nข้อมูลที่ระบบอ่านได้: ${JSON.stringify(j.data)}`);
       }
-      setPendingFiles([]);
-      setInput("");
       const order = note.trim()
         ? `คำสั่งจากเจ้าของ (ยึดตามนี้ก่อนข้อมูลที่ OCR อ่านได้เสมอ): ${note.trim()}`
         : files.length > 1
-          ? "ช่วยตรวจและบันทึกให้ทีละใบ ถ้าใบไหนไม่ชัดหรือไม่รู้ว่าเป็นค่าใช้จ่ายแบบไหน ให้ถามก่อน อย่าเดา"
+          ? `บิล ${files.length} ใบนี้ส่งมาพร้อมกัน — ถามรวบครั้งเดียวว่าทั้งชุดจะบันทึกเป็นอะไร (มีตัวเลือก "คละกัน แยกทีละใบ" ด้วย) แล้วค่อยบันทึกรวดเดียว ห้ามไล่ถามทีละใบถ้าไม่จำเป็น`
           : "ช่วยตรวจและบันทึกเข้าระบบให้หน่อย ถ้าตัวเลขไม่ชัดหรือไม่รู้ว่าเอกสารนี้คืออะไร ให้ถามก่อน อย่าเดา";
-      await send([...parts, order].join("\n\n"));
+      const withContent = shown.map((m, i) =>
+        i === shown.length - 1 ? { ...m, content: [...parts, order].join("\n\n") } : m);
+      setMsgs(withContent);
+      setReading("");
+      await askAi(withContent);
     } catch {
       setError("อ่านไฟล์ไม่สำเร็จ ลองใหม่อีกครั้ง");
     } finally {
-      setReading(false);
-      setReadProgress("");
+      setReading("");
     }
   }
 
@@ -111,6 +156,13 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     e.preventDefault();
     if (pendingFiles.length) sendWithFiles(pendingFiles, input);
     else send(input);
+  }
+
+  function clearChat() {
+    setMsgs([]);
+    setError(null);
+    setQuotaWall(null);
+    try { sessionStorage.removeItem(storeKey(shopId)); } catch { /* ข้าม */ }
   }
 
   return (
@@ -135,13 +187,38 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
             </div>
           </div>
         )}
+
+        {msgs.length > 0 && (
+          <div className="flex justify-end">
+            <button onClick={clearChat} className="inline-flex items-center gap-1 text-[11px] text-neutral-400 hover:text-red-600">
+              <Trash2 className="h-3 w-3" /> ล้างแชท
+            </button>
+          </div>
+        )}
+
         {msgs.map((m, i) => (
           <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
             <div className={cn(
               "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm",
               m.role === "user" ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-800",
             )}>
-              <p className="whitespace-pre-wrap break-words">{m.role === "user" && m.content.startsWith("[ไฟล์แนบ") ? m.content.split("\n")[0] : m.content}</p>
+              {/* รูปบิลที่แนบ — โชว์เป็นรูปจริง ไม่ใช่ path */}
+              {m.images && m.images.length > 0 && (
+                <div className="mb-1.5 flex flex-wrap gap-1.5">
+                  {m.images.map((src, j) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img key={j} src={src} alt={`บิล ${j + 1}`} className="h-20 w-20 rounded-lg border border-white/20 object-cover" />
+                  ))}
+                </div>
+              )}
+              {!m.images?.length && m.fileNames && m.fileNames.length > 0 && (
+                <p className="mb-1 flex items-center gap-1 text-[11px] opacity-70">
+                  <Paperclip className="h-3 w-3" /> {m.fileNames.join(", ")}
+                </p>
+              )}
+              <p className="whitespace-pre-wrap break-words">
+                {m.display ?? (m.role === "user" && m.content.startsWith("[ไฟล์แนบ") ? m.content.split("\n")[0] : m.content)}
+              </p>
               {m.artifacts && m.artifacts.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {m.artifacts.map((a, j) => (
@@ -156,7 +233,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
                 <p className="mt-1 text-[10px] text-neutral-400">{m.toolCalls.map((t) => t.label).join(" · ")}</p>
               )}
               {/* ปุ่มตอบ AI — โชว์เฉพาะข้อความล่าสุด กันกดย้อนอดีตแล้วสับสน */}
-              {m.choices && m.choices.length > 0 && i === msgs.length - 1 && !busy && (
+              {m.choices && m.choices.length > 0 && i === msgs.length - 1 && !busy && !reading && (
                 <div className="mt-2 flex flex-col gap-1.5">
                   {m.choices.map((c, j) => (
                     <button key={j} type="button" onClick={() => send(c.reply)}
@@ -170,8 +247,17 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
             </div>
           </div>
         ))}
-        {reading && <p className="text-xs text-neutral-400">{readProgress || "กำลังอ่านไฟล์ด้วย AI..."}</p>}
-        {busy && <p className="text-xs text-neutral-400">ผู้ช่วยบัญชีกำลังจัดการให้...</p>}
+
+        {reading && (
+          <p className="flex items-center gap-1.5 text-xs text-neutral-400">
+            <Loader2 className="h-3 w-3 animate-spin" /> {reading}
+          </p>
+        )}
+        {busy && !reading && (
+          <p className="flex items-center gap-1.5 text-xs text-neutral-400">
+            <Loader2 className="h-3 w-3 animate-spin" /> ผู้ช่วยบัญชีกำลังจัดการให้...
+          </p>
+        )}
         {error && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-600">{error}</p>}
         {quotaWall && (
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 text-center">
@@ -186,28 +272,37 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
         )}
         <div ref={bottomRef} />
       </div>
+
       <div className="border-t border-neutral-100 p-3">
         {pendingFiles.length > 0 && (
-          <div className="mb-2 space-y-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2">
-            <div className="flex items-center justify-between gap-2">
+          <div className="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
               <p className="text-[11px] font-semibold text-emerald-800">แนบไว้ {pendingFiles.length} ใบ — พิมพ์สั่งกำกับได้ เช่น &ldquo;ทั้งหมดยังไม่จ่าย&rdquo;</p>
               <button type="button" onClick={() => setPendingFiles([])} className="shrink-0 text-[11px] text-emerald-700 underline">เอาออกทั้งหมด</button>
             </div>
-            {pendingFiles.map((f, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Paperclip className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                <span className="min-w-0 flex-1 truncate text-xs text-emerald-800">{f.name}</span>
-                <button type="button" aria-label="เอาไฟล์นี้ออก"
-                  onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
-                  className="shrink-0 rounded-lg p-1 text-emerald-700 hover:bg-emerald-100"><X className="h-3.5 w-3.5" /></button>
-              </div>
-            ))}
+            <div className="flex flex-wrap gap-1.5">
+              {pendingFiles.map((f, i) => (
+                <div key={i} className="relative">
+                  {f.type.startsWith("image/") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={URL.createObjectURL(f)} alt={f.name} className="h-14 w-14 rounded-lg border border-emerald-200 object-cover" />
+                  ) : (
+                    <div className="grid h-14 w-14 place-items-center rounded-lg border border-emerald-200 bg-white text-[9px] text-emerald-700">PDF</div>
+                  )}
+                  <button type="button" aria-label="เอาไฟล์นี้ออก"
+                    onClick={() => setPendingFiles((prev) => prev.filter((_, j) => j !== i))}
+                    className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-neutral-900 text-white shadow">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         <form className="flex gap-2" onSubmit={submitForm}>
           <input ref={fileRef} type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden"
-            onChange={(e) => { const fs = [...(e.target.files ?? [])]; if (fs.length) { setPendingFiles((prev) => [...prev, ...fs].slice(0, 8)); setError(null); } e.target.value = ""; }} />
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || reading}
+            onChange={(e) => { const fs = [...(e.target.files ?? [])]; if (fs.length) { setPendingFiles((prev) => [...prev, ...fs].slice(0, MAX_FILES)); setError(null); } e.target.value = ""; }} />
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || !!reading}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-neutral-300 text-neutral-500 hover:border-emerald-400 hover:text-emerald-600 disabled:opacity-40"
             title="แนบรูปบิล/เอกสาร เลือกได้หลายใบพร้อมกัน">
             <Paperclip className="h-4 w-4" />
@@ -215,9 +310,9 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
           <input value={input} onChange={(e) => setInput(e.target.value)}
             placeholder={pendingFiles.length ? "สั่งกำกับบิล (ไม่พิมพ์ก็ได้) เช่น ค่าเช่า ยังไม่จ่าย" : "สั่งงานบัญชี เช่น ออกใบแจ้งหนี้ 5,000 ให้คุณสมชาย..."}
             className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
-          <button disabled={busy || reading || (!input.trim() && !pendingFiles.length)}
+          <button disabled={busy || !!reading || (!input.trim() && !pendingFiles.length)}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
-            <Send className="h-4 w-4" />
+            {busy || reading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </form>
       </div>

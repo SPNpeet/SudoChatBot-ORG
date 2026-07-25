@@ -163,7 +163,7 @@ const TOOLS = [
         category: { type: "string", description: "ชื่อหมวดค่าใช้จ่าย เช่น ค่าเช่า, ค่าขนส่ง/เดินทาง (ดูจาก get_expense_categories)" },
         vat_mode: { type: "string", enum: ["none", "exclusive", "inclusive"], description: "บิลมี VAT ในราคาแล้ว = inclusive" },
         wht_rate: { type: "number", description: "% ที่เราหักผู้ขาย (ค่าบริการ 3, ค่าเช่า 5, ขนส่ง 1)" },
-        paid_now: { type: "boolean", description: "true = จ่ายแล้ว (default) / false = ตั้งหนี้รอจ่าย (รวมถึงกรณีเบิกคืนพนักงาน — ใส่ชื่อพนักงานเป็น vendor_name)" },
+        paid_now: { type: "boolean", description: "**บังคับ** true = จ่ายแล้ว / false = ยังไม่จ่าย ตั้งหนี้ไว้ (รวมถึงเบิกคืนพนักงาน — ใส่ชื่อพนักงานเป็น vendor_name) · ไม่รู้ห้ามเดา ให้ ask_user ถามก่อน" },
         due_date: { type: "string" },
         issue_date: { type: "string", description: "วันที่ในบิล YYYY-MM-DD" },
         file_path: { type: "string", description: "path ไฟล์บิลที่แนบมากับข้อความ (ถ้ามี)" },
@@ -405,6 +405,14 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         });
       }
       case "create_expense": {
+        // ด่านบังคับ (ไม่พึ่ง prompt): ไม่ระบุว่าจ่ายแล้วหรือยัง = ตีกลับให้ไปถามเจ้าของก่อน
+        // เพราะเดาผิด = เงินสด/เจ้าหนี้ในงบเพี้ยนทันที และเจ้าของไม่มีทางรู้ว่าเพี้ยน
+        if (typeof input.paid_now !== "boolean") {
+          return JSON.stringify({
+            need_paid_status: true,
+            instruction: "ยังไม่รู้ว่ารายการนี้จ่ายแล้วหรือยัง — ห้ามบันทึก ให้เรียก ask_user ถามก่อน ตัวเลือก: 'จ่ายแล้ว' (paid_now:true) / 'ยังไม่จ่าย ตั้งหนี้ไว้' (paid_now:false) / 'พนักงานสำรองจ่าย ขอเบิกคืน' (paid_now:false + ชื่อพนักงานเป็น vendor_name) แล้วค่อยเรียก create_expense อีกครั้งพร้อม paid_now",
+          });
+        }
         const contact = await matchContact(ctx, input.vendor_name as string | undefined, "vendor");
         let categoryId: string | null = null;
         if (typeof input.category === "string" && input.category.trim()) {
@@ -682,6 +690,10 @@ function buildSystemPrompt(ctx: AssistantCtx): string {
    - **ถ้าผู้ใช้ไม่ได้สั่งกำกับมาว่าเอกสารนี้คืออะไร ให้ ask_user ถามก่อนเสมอ** ด้วยตัวเลือก 4 ข้อ:
      "ค่าใช้จ่าย — จ่ายแล้ว" / "ค่าใช้จ่าย — ยังไม่จ่าย (ตั้งหนี้)" / "พนักงานสำรองจ่าย ขอเบิกคืน" / "บิลที่เราขายให้ลูกค้า"
      (เบิกคืน = create_expense paid_now:false ใส่ชื่อพนักงานเป็น vendor_name + notes ว่าเบิกคืน · ขายให้ลูกค้า = create_sales_doc)
+   - **แนบมาหลายใบพร้อมกัน = ถามรวบครั้งเดียวสำหรับทั้งชุด** ("บิล 4 ใบนี้บันทึกเป็นอะไรทั้งหมด") พร้อมสรุปสั้นๆ ว่าอ่านได้ใบไหนยอดเท่าไหร่บ้าง
+     ตัวเลือก: จ่ายแล้วทั้งหมด / ยังไม่จ่ายทั้งหมด / เบิกคืนทั้งหมด / **"คละกัน ขอเลือกทีละใบ"**
+     เลือกแบบเดียว → บันทึกรวดเดียวทุกใบแล้วสรุปเป็นรายการเดียว · เลือก "คละกัน" เท่านั้นจึงค่อยไล่ถามทีละใบ
+     **ห้ามยิงคำถามทีละใบตั้งแต่แรก** — ผู้ใช้ต้องกดตอบหลายรอบโดยไม่จำเป็น
    - doc_kind = "slip" คือสลิปโอนเงิน ไม่ใช่บิลสินค้า — ชื่อในสลิปคือคนรับโอน ไม่ใช่ชื่อรายการค่าใช้จ่าย **ต้อง ask_user ถามว่าโอนค่าอะไร** ห้ามลงเป็น "อื่น ๆ" เด็ดขาด
    - needs_confirm = true หรือมี unclear/issues → **ห้ามบันทึก** ทวนเลขที่อ่านได้แล้ว ask_user ถามเฉพาะจุดที่ไม่ชัด (เช่น ตัวเลือก "27,490" / "27,500" / "ขอพิมพ์เอง")
    - duplicate_suspected = true → **ห้ามบันทึกซ้ำเอง** ask_user ถามก่อนตามที่ instruction บอก
