@@ -22,6 +22,30 @@ const STARTERS = [
   "สินค้าตัวไหนใกล้หมดสต๊อก",
 ];
 
+/**
+ * ย่อรูปเป็น data URL เล็ก ๆ เพื่อเก็บลงประวัติแชท
+ * ต้องเล็กจริง เพราะ sessionStorage มีเพดานราว 5MB และเราเก็บ 20 ข้อความ
+ * 144px คุณภาพ 0.55 ≈ 4-8KB ต่อรูป — พอให้จำได้ว่าเป็นบิลใบไหนโดยไม่กินที่
+ */
+async function makeThumbs(files: File[], max = 4): Promise<string[]> {
+  const imgs = files.filter((f) => f.type.startsWith("image/")).slice(0, max);
+  const out: string[] = [];
+  for (const f of imgs) {
+    try {
+      const bmp = await createImageBitmap(f);
+      const scale = Math.min(1, 144 / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * scale));
+      const h = Math.max(1, Math.round(bmp.height * scale));
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      cv.getContext("2d")?.drawImage(bmp, 0, 0, w, h);
+      bmp.close();
+      out.push(cv.toDataURL("image/jpeg", 0.55));
+    } catch { /* ย่อไม่ได้ก็ข้ามรูปนั้น ไม่ทำให้การส่งล้ม */ }
+  }
+  return out;
+}
+
 interface Msg extends AssistantTurn {
   display?: string;                                // ข้อความที่ "คนเห็น" (content คือที่ส่งให้ AI)
   images?: string[];                               // รูปย่อที่แนบมากับข้อความนี้
@@ -61,11 +85,18 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
 
   useEffect(() => {
     if (!restored) return;
+    // เก็บรูปย่อ (data URL) ไปด้วย — เดิมลบทิ้งเพราะเก็บ blob url ที่ตายเมื่อรีเฟรช
+    // ผลคือย้อนดูประวัติแล้วเห็นแต่ชื่อไฟล์ ไม่รู้ว่าส่งบิลใบไหนไป
+    const keep = keepLast(msgs);
     try {
-      // ไม่เก็บ blob url ของรูป (ตายเมื่อรีเฟรช) — เก็บแค่ชื่อไฟล์ไว้ให้รู้ว่าเคยแนบอะไร
-      const slim = keepLast(msgs).map(({ images: _img, ...m }) => m);
-      sessionStorage.setItem(storeKey(shopId), JSON.stringify(slim));
-    } catch { /* เต็ม/ปิดไว้ = ข้าม */ }
+      sessionStorage.setItem(storeKey(shopId), JSON.stringify(keep));
+    } catch {
+      // พื้นที่เต็ม (รูปกินที่) — ทิ้งรูปของข้อความเก่า เก็บแค่ 3 ข้อความล่าสุดที่มีรูป
+      try {
+        const trimmed = keep.map((m, i) => (i < keep.length - 3 ? { ...m, images: undefined } : m));
+        sessionStorage.setItem(storeKey(shopId), JSON.stringify(trimmed));
+      } catch { /* ยังไม่พออีก = ข้ามไป ไม่ทำให้แชทพัง */ }
+    }
   }, [msgs, shopId, restored]);
 
   useEffect(() => {
@@ -110,6 +141,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     if (busy || reading) return;
     setError(null);
     const names = files.map((f) => f.name);
+    // blob url ขึ้นทันที (เร็ว) — แล้วค่อยแทนด้วยภาพย่อถาวรเบื้องหลัง
     const previews = files.filter((f) => f.type.startsWith("image/")).map((f) => URL.createObjectURL(f));
     const shown: Msg[] = keepLast([...msgs, {
       role: "user",
@@ -118,6 +150,13 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
       images: previews, fileNames: names,
     } as Msg]);
     setMsgs(shown);
+
+    // แปลงเป็นภาพย่อ data URL เพื่อให้ย้อนดูประวัติแล้วยังเห็นว่าส่งบิลใบไหนไป
+    void makeThumbs(files).then((thumbs) => {
+      if (!thumbs.length) return;
+      setMsgs((cur) => cur.map((m, i) => (i === cur.length - 1 && m.role === "user" ? { ...m, images: thumbs } : m)));
+      previews.forEach((u) => URL.revokeObjectURL(u));
+    });
     setPendingFiles([]);
     setInput("");
     setReading(files.length > 1 ? `กำลังอ่านบิลใบที่ 1/${files.length}...` : "กำลังอ่านบิลด้วย AI...");
