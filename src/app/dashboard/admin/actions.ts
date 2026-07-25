@@ -100,6 +100,7 @@ export async function savePlatformLine(formData: FormData): Promise<{ ok: true }
     put("login_channel_id", "line_login_channel_id", 40);
     put("login_channel_secret", "line_login_channel_secret");
     put("oa_token", "line_oa_token", 1000);
+    put("oa_channel_secret", "line_oa_channel_secret", 200);
     const basic = String(formData.get("oa_basic_id") ?? "").trim();
     patch.line_oa_basic_id = basic ? basic.slice(0, 40) : null;
     const { error } = await svc.from("platform_billing_settings").upsert(patch, { onConflict: "id" });

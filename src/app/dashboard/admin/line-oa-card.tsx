@@ -60,9 +60,15 @@ export default function LineOaCard({ configured, basicId }: { configured: boolea
               <Input name="login_channel_secret" type="password" autoComplete="off" placeholder={configured ? "••••••••" : "วาง secret"} />
             </div>
           </div>
-          <div>
-            <Label>Messaging API — Channel access token (long-lived)</Label>
-            <Input name="oa_token" type="password" autoComplete="off" placeholder={configured ? "••••••••" : "วาง token ของ OA กลาง"} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label>Messaging API — Channel access token (long-lived)</Label>
+              <Input name="oa_token" type="password" autoComplete="off" placeholder={configured ? "••••••••" : "วาง token ของ OA กลาง"} />
+            </div>
+            <div>
+              <Label>Messaging API — Channel secret (ตรวจลายเซ็น webhook)</Label>
+              <Input name="oa_channel_secret" type="password" autoComplete="off" placeholder={configured ? "••••••••" : "วาง secret ของ Messaging channel"} />
+            </div>
           </div>
           <div>
             <Label>Basic ID ของ OA (ไว้โชว์ให้ผู้ใช้เพิ่มเพื่อน)</Label>
