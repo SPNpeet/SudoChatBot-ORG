@@ -47,18 +47,14 @@ export default async function PrintDocPage({ params, searchParams }: {
 
   return (
     <div className="min-h-screen bg-neutral-100 py-4 sm:py-6 print:bg-white print:py-0">
-      {/* มือถือจอแคบกว่ากระดาษ A4 (210mm) — ย่อทั้งใบด้วย CSS scale ให้เห็นเต็มหน้าโดยตัวหนังสือไม่แตก
-          และไม่ต้องเลื่อนซ้าย-ขวา · ตอนพิมพ์จริง scale กลับเป็น 1 เสมอ */}
+      {/* บนจอ: กระดาษยืดตามความกว้างจอ (มือถืออ่านได้เต็มตา ไม่ต้องเลื่อนซ้าย-ขวา ตัวหนังสือไม่ถูกย่อจนมองไม่เห็น)
+          ตอนพิมพ์/บันทึก PDF: บังคับกลับเป็น A4 210x297mm ขอบ 15mm เป๊ะเสมอ */}
       <style>{`
-        .sheet-wrap { --sheet-scale: 1; }
-        @media (max-width: 820px) {
-          .sheet-wrap { --sheet-scale: calc((100vw - 1.5rem) / 210mm); }
-          .sheet-wrap { height: calc(297mm * var(--sheet-scale)); }
-          .sheet { transform: scale(var(--sheet-scale)); transform-origin: top center; }
-        }
+        .sheet { width: 100%; max-width: 210mm; padding: 1.15rem 1rem; font-size: 11.5px; }
+        @media (min-width: 640px) { .sheet { padding: 15mm; font-size: 13px; min-height: 297mm; } }
         @media print {
-          .sheet-wrap { height: auto !important; }
-          .sheet { transform: none !important; box-shadow: none !important; }
+          .sheet { width: 210mm !important; max-width: none !important; min-height: 297mm !important;
+                   padding: 15mm !important; font-size: 13px !important; box-shadow: none !important; }
         }
       `}</style>
 
@@ -67,34 +63,34 @@ export default async function PrintDocPage({ params, searchParams }: {
         <PrintButton />
       </div>
 
-      <div className="sheet-wrap mx-auto w-[210mm] max-w-[210mm]">
-      <div className="sheet mx-auto min-h-[297mm] w-[210mm] bg-white p-[15mm] text-[13px] leading-relaxed text-neutral-900 shadow print:shadow-none">
+      <div className="mx-auto px-3 sm:px-0 print:px-0">
+      <div className="sheet mx-auto bg-white leading-relaxed text-neutral-900 shadow print:shadow-none">
         {isWhtForm ? (
           <WhtCert doc={doc} shopName={shopName} shopTaxId={shop.tax_id ?? null} shopAddress={shop.billing_address ?? null} />
         ) : (
           <>
             {/* หัวเอกสาร */}
-            <div className="flex items-start justify-between gap-6 border-b-2 border-neutral-900 pb-4">
-              <div>
-                <p className="text-lg font-bold">{shopName}</p>
+            <div className="flex items-start justify-between gap-3 border-b-2 border-neutral-900 pb-4 sm:gap-6">
+              <div className="min-w-0">
+                <p className="text-base font-bold sm:text-lg">{shopName}</p>
                 {shop.billing_address && <p className="whitespace-pre-wrap text-neutral-600">{shop.billing_address}</p>}
                 {shop.tax_id && <p className="text-neutral-600">เลขประจำตัวผู้เสียภาษี {shop.tax_id}</p>}
               </div>
-              <div className="text-right">
-                <p className="text-xl font-bold">{title}</p>
+              <div className="shrink-0 text-right">
+                <p className="text-base font-bold leading-tight sm:text-xl">{title}</p>
                 {doc.vat_mode !== "none" && doc.doc_type === "receipt" && <p className="text-[11px] text-neutral-500">ต้นฉบับ</p>}
               </div>
             </div>
 
             {/* ข้อมูลเอกสาร + ลูกค้า */}
-            <div className="mt-4 flex justify-between gap-6">
-              <div className="max-w-[60%]">
+            <div className="mt-4 flex justify-between gap-3 sm:gap-6">
+              <div className="min-w-0 max-w-[58%]">
                 <p className="text-[11px] font-semibold text-neutral-400">ลูกค้า</p>
-                <p className="font-semibold">{doc.contact_name ?? "-"}</p>
-                {doc.contact_address && <p className="whitespace-pre-wrap text-neutral-600">{doc.contact_address}</p>}
+                <p className="break-words font-semibold">{doc.contact_name ?? "-"}</p>
+                {doc.contact_address && <p className="whitespace-pre-wrap break-words text-neutral-600">{doc.contact_address}</p>}
                 {doc.contact_tax_id && <p className="text-neutral-600">เลขประจำตัวผู้เสียภาษี {doc.contact_tax_id}</p>}
               </div>
-              <table className="text-right">
+              <table className="shrink-0 text-right">
                 <tbody>
                   <tr><td className="pr-3 text-neutral-400">เลขที่</td><td className="font-semibold">{doc.doc_number}</td></tr>
                   <tr><td className="pr-3 text-neutral-400">วันที่</td><td>{dateOnlyTH(doc.issue_date)}</td></tr>
@@ -130,8 +126,8 @@ export default async function PrintDocPage({ params, searchParams }: {
               </tbody>
             </table>
 
-            {/* สรุปยอด */}
-            <div className="mt-4 flex items-start justify-between gap-6">
+            {/* สรุปยอด — มือถือวางซ้อนกัน (ตารางยอดอยู่บน อ่านก่อน) จอใหญ่วางคู่กันซ้าย-ขวา */}
+            <div className="mt-4 flex flex-col-reverse gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
               <div className="flex-1">
                 <p className="rounded bg-neutral-50 px-3 py-2 text-[12px]">
                   ({bahtText(Number(doc.total))})
@@ -149,7 +145,7 @@ export default async function PrintDocPage({ params, searchParams }: {
                   </div>
                 )}
               </div>
-              <table className="w-[250px] shrink-0 tabular-nums">
+              <table className="w-full shrink-0 tabular-nums sm:w-[250px]">
                 <tbody>
                   <tr><td className="py-0.5 pr-4 text-neutral-500">รวมเป็นเงิน</td><td className="py-0.5 text-right">{bahtDoc(Number(doc.subtotal) - Number(doc.discount))}</td></tr>
                   {Number(doc.discount) > 0 && <tr><td className="py-0.5 pr-4 text-neutral-500">ส่วนลด</td><td className="py-0.5 text-right">-{bahtDoc(doc.discount)}</td></tr>}
@@ -173,14 +169,14 @@ export default async function PrintDocPage({ params, searchParams }: {
             </div>
 
             {/* ช่องเซ็น */}
-            <div className="mt-16 grid grid-cols-2 gap-10 text-center text-[12px]">
+            <div className="mt-10 grid grid-cols-2 gap-4 text-center text-[11px] sm:mt-16 sm:gap-10 sm:text-[12px]">
               <div>
-                <div className="mx-auto w-56 border-b border-dotted border-neutral-400 pb-8" />
+                <div className="mx-auto w-full max-w-56 border-b border-dotted border-neutral-400 pb-8" />
                 <p className="mt-2">ผู้รับเอกสาร / วันที่</p>
               </div>
               <div>
-                <div className="mx-auto w-56 border-b border-dotted border-neutral-400 pb-8" />
-                <p className="mt-2">ผู้มีอำนาจลงนาม ({shopName})</p>
+                <div className="mx-auto w-full max-w-56 border-b border-dotted border-neutral-400 pb-8" />
+                <p className="mt-2 break-words">ผู้มีอำนาจลงนาม ({shopName})</p>
               </div>
             </div>
           </>
