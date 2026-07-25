@@ -13,6 +13,7 @@ import { postJournal, reverseJournalOf, applyPaymentToDoc, bkkToday, ACC } from 
 import { verifySlip, type SlipResult } from "@/lib/slip-verify";
 import { notifyShopLine } from "@/lib/line";
 import type { DocType, VatMode, FinDoc } from "@/lib/types/finance";
+import { WHT_INCOME_TYPES, DEFAULT_WHT_INCOME } from "@/lib/tax-th";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type DocResult = { ok: true; docId: string; docNumber: string; approvalPending?: boolean } | { ok: false; error: string };
@@ -115,6 +116,7 @@ export interface SaveDocInput {
   discount?: number;
   vat_mode?: VatMode;
   wht_rate?: number;
+  wht_income_type?: string | null;   // ประเภทเงินได้ ม.40 — ใช้ออก 50 ทวิ + ไฟล์ยื่น ภ.ง.ด.
   notes?: string;
   file_path?: string | null;
   extra_files?: string[];        // ไฟล์แนบใบที่ 2 ขึ้นไป (fin_doc_files)
@@ -192,13 +194,16 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
 
     // snapshot ผู้ติดต่อ
     let contactName = String(input.contact_name ?? "").trim().slice(0, 200) || null;
-    let contactTaxId: string | null = null, contactAddress: string | null = null;
+    let contactTaxId: string | null = null, contactAddress: string | null = null, contactBranch: string | null = null;
     if (input.contact_id) {
       const { data: c } = await svc.from("contacts").select("name,tax_id,address,branch").eq("id", input.contact_id).eq("shop_id", shopId).maybeSingle();
       if (c) {
         contactName = c.name;
         contactTaxId = c.tax_id;
-        contactAddress = [c.address, c.branch ? `(${c.branch})` : null].filter(Boolean).join(" ") || null;
+        contactAddress = c.address || null;
+        // สาขาเก็บแยกช่อง ไม่ยัดต่อท้ายที่อยู่ — ใบกำกับภาษีต้องพิมพ์ "สำนักงานใหญ่/สาขาที่ NNNNN"
+        // ในรูปแบบมาตรฐาน ถ้าปนอยู่ในที่อยู่จะจัดรูปแบบให้ถูกกฎหมายไม่ได้
+        contactBranch = c.branch || null;
       }
     }
 
@@ -209,6 +214,7 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       contact_name: contactName,
       contact_tax_id: contactTaxId,
       contact_address: contactAddress,
+      contact_branch: contactBranch,
       issue_date: issueDate,
       due_date: input.due_date || null,
       category_id: input.doc_type === "expense" ? (input.category_id || null) : null,
@@ -216,6 +222,10 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       discount: Number(input.discount) || 0,
       vat_mode: vatMode, vat_amount: t.vat,
       wht_rate: whtRate, wht_amount: t.wht,
+      // รับเฉพาะรหัสที่รู้จักจริง กัน client ยัดค่ามั่วเข้าไฟล์ยื่นสรรพากร
+      wht_income_type: whtRate > 0
+        ? (WHT_INCOME_TYPES.some((x) => x.code === input.wht_income_type) ? input.wht_income_type! : DEFAULT_WHT_INCOME)
+        : null,
       total: t.total,
       status,
       source: input.source ?? "manual",

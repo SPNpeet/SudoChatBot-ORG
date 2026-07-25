@@ -10,7 +10,10 @@ import { bahtText, DOC_TYPE_TH } from "@/lib/finance";
 import { promptPayPayload } from "@/lib/promptpay";
 import { docOutstanding } from "@/lib/finance";
 import type { DocType, FinDoc } from "@/lib/types/finance";
+import { branchLabel, checkTaxInvoice, formatTaxId, WHT_INCOME_TYPES } from "@/lib/tax-th";
+import { TriangleAlert } from "lucide-react";
 import PrintButton from "./print-button";
+import { rdFormFor } from "@/lib/tax-th";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +33,16 @@ export default async function PrintDocPage({ params, searchParams }: {
 
   const shopName = shop.billing_name || shop.name;
   const isWhtForm = form === "wht" && Number(doc.wht_amount) > 0;
+  // "ใบกำกับภาษี" = ใบเสร็จที่คิด VAT เท่านั้น — ใบเสนอราคา/ใบแจ้งหนี้ไม่ใช่ใบกำกับภาษี
+  const isTaxInvoice = !isWhtForm && doc.doc_type === "receipt" && doc.vat_mode !== "none";
+  // ตรวจตาม ม.86/4 ก่อนพิมพ์ ขาดข้อไหนต้องบอกบนจอ ไม่ปล่อยให้พิมพ์ใบที่ใช้ไม่ได้ออกไปเงียบ ๆ
+  const taxIssues = isTaxInvoice
+    ? checkTaxInvoice({
+        sellerName: shopName, sellerAddress: shop.billing_address, sellerTaxId: shop.tax_id,
+        buyerName: doc.contact_name, buyerAddress: doc.contact_address, buyerTaxId: doc.contact_tax_id,
+        docNumber: doc.doc_number, issueDate: doc.issue_date, itemCount: (doc.fin_doc_items ?? []).length,
+      })
+    : [];
 
   // QR พร้อมเพย์ยอดค้าง (เฉพาะใบแจ้งหนี้ที่ยังไม่จ่ายครบ)
   let qrDataUrl: string | null = null;
@@ -63,6 +76,27 @@ export default async function PrintDocPage({ params, searchParams }: {
         <PrintButton />
       </div>
 
+      {/* ใบกำกับภาษีที่ข้อมูลไม่ครบตาม ม.86/4 = ผู้ซื้อขอคืนภาษีซื้อไม่ได้ และผู้ขายเสี่ยงเบี้ยปรับ
+          ต้องเตือนบนจอก่อนพิมพ์เสมอ (ไม่พิมพ์ลงกระดาษ เพราะเป็นคำเตือนถึงผู้ใช้ ไม่ใช่ส่วนของเอกสาร) */}
+      {taxIssues.length > 0 && (
+        <div className="mx-auto mb-3 max-w-[210mm] rounded-2xl border border-red-300 bg-red-50 px-4 py-3 print:hidden">
+          <p className="flex items-center gap-2 text-sm font-bold text-red-700">
+            <TriangleAlert className="h-4 w-4 shrink-0" />
+            ใบกำกับภาษีใบนี้ยังไม่ครบตามกฎหมาย — ลูกค้าเอาไปขอคืนภาษีซื้อไม่ได้
+          </p>
+          <ul className="mt-2 space-y-1">
+            {taxIssues.map((x) => (
+              <li key={x.field} className="text-[12px] leading-relaxed text-red-700">
+                <b>ขาด{x.field}</b> — {x.why}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] text-red-600">
+            เติมข้อมูลให้ครบแล้วเปิดหน้านี้ใหม่ ระบบจะออกใบที่ใช้ได้จริงให้ทันที
+          </p>
+        </div>
+      )}
+
       <div className="mx-auto px-3 sm:px-0 print:px-0">
       <div className="sheet mx-auto bg-white leading-relaxed text-neutral-900 shadow print:shadow-none">
         {isWhtForm ? (
@@ -74,11 +108,21 @@ export default async function PrintDocPage({ params, searchParams }: {
               <div className="min-w-0">
                 <p className="text-base font-bold sm:text-lg">{shopName}</p>
                 {shop.billing_address && <p className="whitespace-pre-wrap text-neutral-600">{shop.billing_address}</p>}
-                {shop.tax_id && <p className="text-neutral-600">เลขประจำตัวผู้เสียภาษี {shop.tax_id}</p>}
+                {shop.tax_id && (
+                  <p className="text-neutral-600">
+                    เลขประจำตัวผู้เสียภาษี {formatTaxId(shop.tax_id)}
+                    {/* ประกาศอธิบดีฯ ฉบับที่ 199 บังคับระบุสำนักงานใหญ่/สาขา บนใบกำกับภาษีเต็มรูป
+                        ขาดข้อความนี้ = ผู้ซื้อขอคืนภาษีซื้อไม่ได้ */}
+                    {isTaxInvoice && <span className="font-semibold"> ({branchLabel(shop.branch)})</span>}
+                  </p>
+                )}
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-base font-bold leading-tight sm:text-xl">{title}</p>
-                {doc.vat_mode !== "none" && doc.doc_type === "receipt" && <p className="text-[11px] text-neutral-500">ต้นฉบับ</p>}
+                {/* พิมพ์แค่ "ต้นฉบับ" เท่านั้น — ข้อความ "เอกสารออกเป็นชุด" ใช้ได้เฉพาะกรณีที่
+                    ออกใบกำกับภาษีรวมชุดกับใบส่งของ/ใบเสร็จในการพิมพ์ครั้งเดียว ซึ่งระบบนี้ไม่ได้ทำ
+                    ถ้าพิมพ์ทั้งที่ไม่ได้ออกเป็นชุด = ข้อความบนเอกสารไม่ตรงความจริง */}
+                {isTaxInvoice && <p className="text-[11px] font-medium text-neutral-500">ต้นฉบับ</p>}
               </div>
             </div>
 
@@ -88,7 +132,12 @@ export default async function PrintDocPage({ params, searchParams }: {
                 <p className="text-[11px] font-semibold text-neutral-400">ลูกค้า</p>
                 <p className="break-words font-semibold">{doc.contact_name ?? "-"}</p>
                 {doc.contact_address && <p className="whitespace-pre-wrap break-words text-neutral-600">{doc.contact_address}</p>}
-                {doc.contact_tax_id && <p className="text-neutral-600">เลขประจำตัวผู้เสียภาษี {doc.contact_tax_id}</p>}
+                {doc.contact_tax_id && (
+                  <p className="text-neutral-600">
+                    เลขประจำตัวผู้เสียภาษี {formatTaxId(doc.contact_tax_id)}
+                    {isTaxInvoice && <span className="font-semibold"> ({branchLabel(doc.contact_branch)})</span>}
+                  </p>
+                )}
               </div>
               <table className="shrink-0 text-right">
                 <tbody>
@@ -192,10 +241,23 @@ function WhtCert({ doc, shopName, shopTaxId, shopAddress }: {
   doc: FinDoc; shopName: string; shopTaxId: string | null; shopAddress: string | null;
 }) {
   const exVat = Number(doc.total) - Number(doc.vat_amount);
+  const income = WHT_INCOME_TYPES.find((t) => t.code === doc.wht_income_type);
+  const incomeLabel = income?.label ?? doc.wht_income_type ?? "40(8) ธุรกิจ พาณิชย์ บริการอื่น ๆ";
+  // ใช้กฎกลางเดียวกับหน้ารายงาน/ไฟล์ยื่น — ห้ามเขียนซ้ำ ไม่งั้นเอกสารกับแบบที่ยื่นจะไม่ตรงกัน
+  const rdForm = rdFormFor(doc.contact_tax_id, doc.wht_income_type);
   return (
     <div>
-      <p className="text-center text-lg font-bold">หนังสือรับรองการหักภาษี ณ ที่จ่าย</p>
-      <p className="text-center text-[12px] text-neutral-500">ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร</p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1 text-center">
+          <p className="text-lg font-bold">หนังสือรับรองการหักภาษี ณ ที่จ่าย</p>
+          <p className="text-[12px] text-neutral-500">ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร</p>
+        </div>
+        {/* เลขที่อ้างอิง — ผู้สอบบัญชี/สรรพากรใช้โยงกลับหาเอกสารต้นทางได้ */}
+        <div className="shrink-0 border border-neutral-300 px-3 py-1.5 text-right text-[11px]">
+          <p className="text-neutral-400">เลขที่</p>
+          <p className="font-semibold">{doc.doc_number}</p>
+        </div>
+      </div>
 
       <div className="mt-6 space-y-4">
         <section className="rounded border border-neutral-300 p-4">
@@ -212,30 +274,65 @@ function WhtCert({ doc, shopName, shopTaxId, shopAddress }: {
           {doc.contact_tax_id && <p className="text-neutral-600">เลขประจำตัวผู้เสียภาษี {doc.contact_tax_id}</p>}
         </section>
 
+        {/* แบบยื่นที่เกี่ยวข้อง — แบบราชการมีช่องนี้ นักบัญชีใช้ตัดสินว่ารายการนี้เข้าแบบไหน */}
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px]">
+          {["ภ.ง.ด.1ก", "ภ.ง.ด.2", "ภ.ง.ด.3", "ภ.ง.ด.53"].map((f) => (
+            <span key={f} className="inline-flex items-center gap-1.5">
+              <span className={`inline-block h-3 w-3 border border-neutral-700 text-center text-[9px] leading-[10px] ${rdForm === f ? "font-bold" : ""}`}>
+                {rdForm === f ? "✓" : ""}
+              </span>
+              {f}
+            </span>
+          ))}
+        </div>
+
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-t border-neutral-900 text-[11px]">
-              <th className="py-2 text-left">ประเภทเงินได้ที่จ่าย</th>
+              <th className="py-2 text-left">ประเภทเงินได้พึงประเมินที่จ่าย</th>
               <th className="py-2 text-right">วันที่จ่าย</th>
               <th className="py-2 text-right">จำนวนเงินที่จ่าย</th>
               <th className="py-2 text-right">อัตรา</th>
-              <th className="py-2 text-right">ภาษีที่หักไว้</th>
+              <th className="py-2 text-right">ภาษีที่หักและนำส่งไว้</th>
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-neutral-200">
-              <td className="py-2">{(doc.fin_doc_items ?? []).map((i) => i.name).join(", ").slice(0, 120) || "ค่าสินค้า/บริการ"} (อ้างอิง {doc.doc_number})</td>
+            <tr className="border-b border-neutral-200 align-top">
+              <td className="py-2">
+                {/* ประเภทเงินได้ตาม ม.40 — เดิมพิมพ์แค่ชื่อรายการ ทำให้นักบัญชีต้องมาจัดประเภทเองทุกใบ */}
+                <span className="font-semibold">{incomeLabel}</span>
+                <span className="block text-[11px] text-neutral-500">
+                  {(doc.fin_doc_items ?? []).map((i) => i.name).join(", ").slice(0, 110) || "ค่าสินค้า/บริการ"}
+                  {" · อ้างอิง "}{doc.doc_number}
+                </span>
+              </td>
               <td className="py-2 text-right">{dateOnlyTH(doc.issue_date)}</td>
-              <td className="py-2 text-right">{bahtDoc(exVat)}</td>
-              <td className="py-2 text-right">{Number(doc.wht_rate)}%</td>
-              <td className="py-2 text-right font-semibold">{bahtDoc(doc.wht_amount)}</td>
+              <td className="py-2 text-right tabular-nums">{bahtDoc(exVat)}</td>
+              <td className="py-2 text-right tabular-nums">{Number(doc.wht_rate)}%</td>
+              <td className="py-2 text-right font-semibold tabular-nums">{bahtDoc(doc.wht_amount)}</td>
             </tr>
             <tr className="font-bold">
-              <td className="py-2" colSpan={4}>รวมภาษีที่หักนำส่ง ({bahtText(Number(doc.wht_amount))})</td>
-              <td className="py-2 text-right">{bahtDoc(doc.wht_amount)}</td>
+              <td className="py-2" colSpan={4}>รวมเงินภาษีที่หักและนำส่ง ({bahtText(Number(doc.wht_amount))})</td>
+              <td className="py-2 text-right tabular-nums">{bahtDoc(doc.wht_amount)}</td>
             </tr>
           </tbody>
         </table>
+
+        {/* เงื่อนไขการหัก — แบบราชการบังคับให้ระบุ ระบบเราหักจากยอดจ่ายเสมอจึงติ๊กข้อ (1) ให้ */}
+        <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px]">
+          <span className="text-neutral-500">ผู้จ่ายเงิน:</span>
+          {[
+            { n: "1", t: "หัก ณ ที่จ่าย", on: true },
+            { n: "2", t: "ออกให้ตลอดไป", on: false },
+            { n: "3", t: "ออกให้ครั้งเดียว", on: false },
+            { n: "4", t: "อื่น ๆ", on: false },
+          ].map((o) => (
+            <span key={o.n} className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-3 w-3 border border-neutral-700 text-center text-[9px] leading-[10px]">{o.on ? "✓" : ""}</span>
+              ({o.n}) {o.t}
+            </span>
+          ))}
+        </div>
 
         <p className="text-[12px] text-neutral-500">
           ขอรับรองว่าข้อความและตัวเลขดังกล่าวข้างต้นถูกต้องตรงกับความจริงทุกประการ

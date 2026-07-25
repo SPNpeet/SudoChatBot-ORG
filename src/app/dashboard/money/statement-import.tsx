@@ -63,23 +63,28 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
     setRows([]);
     if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") { await onPdf(f); return; }
     try {
-      const XLSX = await import("xlsx");
-      const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
-      if (!raw.length) { setError("อ่านไฟล์ไม่ได้หรือไฟล์ว่าง"); return; }
+      const { readSheet } = await import("@/lib/excel");
+      const aoa = await readSheet(f);
+      if (aoa.length < 2) { setError("อ่านไฟล์ไม่ได้ หรือไฟล์มีแต่หัวตาราง"); return; }
 
       // เดาคอลัมน์: วันที่ / รายละเอียด / ยอดเงินเข้า (รองรับหัวตารางไทย-อังกฤษของธนาคารทั่วไป)
-      const keys = Object.keys(raw[0]);
-      const findKey = (cands: string[]) => keys.find((k) => cands.some((c) => k.toLowerCase().replace(/\s/g, "").includes(c)));
-      const dateKey = findKey(["date", "วันที่", "วัน/เดือน/ปี"]) ?? keys[0];
-      const descKey = findKey(["desc", "รายละเอียด", "รายการ", "detail", "memo", "หมายเหตุ", "channel"]) ?? keys[1];
-      const inKey = findKey(["deposit", "credit", "ฝาก", "เงินเข้า", "รับ"]) ?? findKey(["amount", "จำนวนเงิน", "ยอด"]);
+      const headers = aoa[0].map((h) => String(h ?? ""));
+      const findIdx = (cands: string[]) =>
+        headers.findIndex((h) => cands.some((c) => h.toLowerCase().replace(/\s/g, "").includes(c)));
+      const at = (i: number, fb: number) => (i >= 0 ? i : fb);
+      const dateIdx = at(findIdx(["date", "วันที่", "วัน/เดือน/ปี"]), 0);
+      const descIdx = at(findIdx(["desc", "รายละเอียด", "รายการ", "detail", "memo", "หมายเหตุ", "channel"]), 1);
+      const inIdx = at(findIdx(["deposit", "credit", "ฝาก", "เงินเข้า", "รับ"]), findIdx(["amount", "จำนวนเงิน", "ยอด"]));
 
-      const parsed: StmtRow[] = raw.map((r, i) => {
-        const amtRaw = String(inKey ? r[inKey] : "").replace(/[^0-9.\-]/g, "");
+      const parsed: StmtRow[] = aoa.slice(1).map((r, i) => {
+        const amtRaw = String(inIdx >= 0 ? r[inIdx] ?? "" : "").replace(/[^0-9.\-]/g, "");
         const amount = Math.round((Number(amtRaw) || 0) * 100) / 100;
-        return { idx: i, date: String(r[dateKey] ?? "").slice(0, 20), desc: String(r[descKey] ?? "").slice(0, 80), amount, docId: "" };
+        return {
+          idx: i,
+          date: String(r[dateIdx] ?? "").slice(0, 20),
+          desc: String(r[descIdx] ?? "").slice(0, 80),
+          amount, docId: "",
+        };
       }).filter((r) => r.amount > 0).slice(0, 100);
 
       if (!parsed.length) { setError("ไม่พบแถวเงินเข้า (ยอด > 0) ในไฟล์ — เช็คว่ามีคอลัมน์ยอดเงินฝาก/เงินเข้า"); return; }

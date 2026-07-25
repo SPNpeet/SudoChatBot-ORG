@@ -38,7 +38,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const [{ data: pay }, { data: members }, { data: taxInfo }, { data: notify }, { data: platform }] = await Promise.all([
     supabase.from("shop_payment_settings").select("*").eq("shop_id", shop.id).maybeSingle(),
     supabase.from("shop_members").select("id, role, profiles(display_name, email)").eq("shop_id", shop.id),
-    supabase.from("shops").select("billing_name,billing_address,tax_id").eq("id", shop.id).maybeSingle(),
+    supabase.from("shops").select("billing_name,billing_address,tax_id,branch").eq("id", shop.id).maybeSingle(),
     // token อยู่หลัง RLS (service เท่านั้น) — ส่งลง client แค่ "มี/ไม่มี" ไม่ส่งค่าจริง
     svc.from("shop_notify_settings").select("line_channel_token,line_to_id,notify_approval,link_source,line_display_name").eq("shop_id", shop.id).maybeSingle(),
     svc.from("platform_billing_settings").select("line_login_channel_id,line_oa_token,line_oa_basic_id").eq("id", true).maybeSingle(),

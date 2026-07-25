@@ -7,6 +7,7 @@
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { assertMember } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
+import { branchLabel } from "@/lib/tax-th";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -179,9 +180,13 @@ export async function saveTaxInfo(shopId: string, formData: FormData): Promise<A
       billing_name: String(formData.get("billing_name") ?? "").trim() || null,
       billing_address: String(formData.get("billing_address") ?? "").trim() || null,
       tax_id: String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null,
+      // แปลงเป็นรูปแบบที่กฎหมายรับ ("สำนักงานใหญ่" / "สาขาที่ 00001") ตั้งแต่ตอนบันทึก
+      // ผู้ใช้จะพิมพ์ "1" หรือ "สาขา 1" มาก็ได้ ไม่ต้องรู้รูปแบบราชการ
+      branch: branchLabel(String(formData.get("branch") ?? "")),
     }).eq("id", shopId);
     if (error) return { ok: false, error: error.message };
     revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/print", "layout");
     return { ok: true };
   } catch (e) {
     return { ok: false, error: friendly(e, "บันทึกข้อมูลกิจการไม่สำเร็จ") };

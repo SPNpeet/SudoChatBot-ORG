@@ -25,7 +25,8 @@ export interface FinDocItem {
 export interface FinDoc {
   id: string; shop_id: string; doc_type: DocType; doc_number: string;
   contact_id: string | null; contact_name: string | null;
-  contact_tax_id: string | null; contact_address: string | null;
+  contact_tax_id: string | null; contact_address: string | null; contact_branch: string | null;
+  wht_income_type: string | null;   // ประเภทเงินได้ ม.40 — ใช้บน 50 ทวิ + ไฟล์ยื่น ภ.ง.ด.
   issue_date: string; due_date: string | null;
   category_id: string | null;
   subtotal: number; discount: number;

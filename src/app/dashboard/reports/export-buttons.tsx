@@ -17,11 +17,8 @@ export default function ExportButtons({ rows, xlsxName, txtName, txtContent, txt
 
   async function downloadXlsx() {
     if (!rows.length) return;
-    const XLSX = await import("xlsx");
-    const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "รายงาน");
-    XLSX.writeFile(wb, xlsxName);
+    const { downloadSheet } = await import("@/lib/excel");
+    await downloadSheet(rows, xlsxName);
   }
 
   function downloadTxt() {

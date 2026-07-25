@@ -92,10 +92,8 @@ export default function ImportClient({ shopId }: { shopId: string }) {
     if (["csv", "xlsx", "xls"].includes(ext)) {
       try {
         setStep("reading");
-        const XLSX = await import("xlsx");
-        const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
+        const { readSheet } = await import("@/lib/excel");
+        const aoa = await readSheet(file);
         const nonEmpty = aoa.filter((r) => r.some((c) => String(c ?? "").trim()));
         if (nonEmpty.length < 2) { setErr("ไฟล์ว่างหรือมีแต่หัวตาราง — ต้องมีข้อมูลอย่างน้อย 1 แถว"); setStep("pick"); return; }
         const hd = nonEmpty[0].map((h) => String(h ?? ""));

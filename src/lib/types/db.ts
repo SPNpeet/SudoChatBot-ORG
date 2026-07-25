@@ -3,6 +3,8 @@ export interface Shop {
   id: string; owner_id: string; name: string; description: string | null;
   logo_url: string | null; plan: string; status: string; currency: string;
   billing_name?: string | null; billing_address?: string | null; tax_id?: string | null;
+  /** "สำนักงานใหญ่" หรือ "สาขาที่ NNNNN" — บังคับบนใบกำกับภาษีเต็มรูป (ประกาศอธิบดีฯ 199) */
+  branch?: string | null;
   created_at: string;
 }
 export interface Product {

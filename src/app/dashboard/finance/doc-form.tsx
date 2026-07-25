@@ -9,8 +9,9 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, ScanLine, Paperclip, TriangleAlert } from "lucide-react";
 import { Button, Card, CardContent, Input, Label, Select, Textarea } from "@/components/ui";
-import { baht } from "@/lib/utils";
+import { baht, cn } from "@/lib/utils";
 import { calcDocTotals, DOC_TYPE_TH, WHT_RATES } from "@/lib/finance";
+import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME } from "@/lib/tax-th";
 import type { DocType, VatMode, ExpenseCategory, Contact, FinDoc } from "@/lib/types/finance";
 import { saveDoc, uploadFinFile, type SaveDocInput } from "./actions";
 
@@ -48,6 +49,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
   const [discount, setDiscount] = useState(draft ? String(draft.discount || "") : "");
   const [vatMode, setVatMode] = useState<VatMode>(draft?.vat_mode ?? "none");
   const [whtRate, setWhtRate] = useState(draft ? String(draft.wht_rate || 0) : "0");
+  const [incomeType, setIncomeType] = useState(draft?.wht_income_type ?? DEFAULT_WHT_INCOME);
   const [issueDate, setIssueDate] = useState(draft?.issue_date ?? new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState(draft?.due_date ?? "");
   const [categoryId, setCategoryId] = useState(draft?.category_id ?? "");
@@ -159,6 +161,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
       category_id: isExpense ? categoryId || null : null,
       items, discount: Number(discount) || 0,
       vat_mode: vatMode, wht_rate: Number(whtRate) || 0,
+      wht_income_type: Number(whtRate) > 0 ? incomeType : null,
       notes, file_path: files[0]?.path ?? null, extra_files: files.slice(1).map((f) => f.path), status,
       paid_now: isExpense ? paidNow : undefined,
       pay_method: payMethod,
@@ -304,6 +307,56 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
               </Select>
             </div>
           </div>
+
+          {/* ประเภทเงินได้ตาม ม.40 — จำเป็นบนหนังสือรับรอง 50 ทวิ และไฟล์ยื่น ภ.ง.ด.3/53
+              ไม่มีข้อมูลนี้ นักบัญชีต้องมานั่งจัดประเภทเองทุกใบตอนสิ้นเดือน */}
+          {/* ปุ่มลัดงานที่เจอบ่อย — กดปุ๊บเติมทั้งอัตราและประเภทเงินได้ให้เลย
+              ผู้ใช้ไม่ต้องจำว่าค่าขนส่งหัก 1% ค่าเช่าหัก 5% */}
+          {isExpense && (
+            <div>
+              <Label>งานนี้เป็นค่าอะไร (กดแล้วเติมอัตราหัก ณ ที่จ่ายให้อัตโนมัติ)</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {WHT_PRESETS.map((p) => {
+                  const on = incomeType === p.income && Number(whtRate) === p.rate;
+                  return (
+                    <button key={p.key} type="button" title={p.note}
+                      onClick={() => { setIncomeType(p.income); setWhtRate(String(p.rate)); }}
+                      className={cn(
+                        "inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 text-xs transition-colors",
+                        on ? "border-emerald-500 bg-emerald-50 font-semibold text-emerald-700"
+                           : "border-neutral-200 bg-white text-neutral-600 hover:border-emerald-300 hover:text-emerald-700",
+                      )}>
+                      {p.label}<span className="tabular-nums opacity-70">{p.rate}%</span>
+                    </button>
+                  );
+                })}
+                <button type="button" onClick={() => { setWhtRate("0"); }}
+                  className={cn(
+                    "inline-flex min-h-[36px] items-center rounded-full border px-3 text-xs transition-colors",
+                    Number(whtRate) === 0 ? "border-neutral-900 bg-neutral-900 font-semibold text-white"
+                                          : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50",
+                  )}>
+                  ไม่ต้องหัก
+                </button>
+              </div>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-400">
+                อัตราพวกนี้เป็น <b>ตัวช่วยกรอกสำหรับกรณีที่เจอบ่อย</b> — อัตราจริงขึ้นกับว่าผู้รับเงินเป็นบุคคลธรรมดาหรือนิติบุคคลด้วย
+                ปรับเองได้ที่ช่อง &ldquo;หัก ณ ที่จ่าย&rdquo; และควรให้ผู้ทำบัญชียืนยันก่อนยื่น
+              </p>
+            </div>
+          )}
+
+          {Number(whtRate) > 0 && (
+            <div>
+              <Label>ประเภทเงินได้ตามมาตรา 40 (พิมพ์บน 50 ทวิ และไฟล์ยื่น ภ.ง.ด.)</Label>
+              <Select value={incomeType} onChange={(e) => setIncomeType(e.target.value)}>
+                {WHT_INCOME_TYPES.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
+              </Select>
+              <p className="mt-1 text-[11px] text-neutral-400">
+                ไม่แน่ใจให้เลือก <b>40(8)</b> — ค่าบริการทั่วไปของธุรกิจเข้าหมวดนี้เกือบทั้งหมด
+              </p>
+            </div>
+          )}
 
           {isExpense && (
             <div className="flex flex-wrap items-center gap-3 rounded-xl bg-neutral-50 px-3 py-2.5">

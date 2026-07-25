@@ -13,6 +13,7 @@ import Link from "next/link";
 import { LineChart, CheckCircle2, FileText, FileSpreadsheet, BookOpenText } from "lucide-react";
 import ExportButtons from "./export-buttons";
 import PeriodPicker from "./period-picker";
+import { whtIncomeLabel, whtIncomeDesc, branchCode, isJuristicPerson } from "@/lib/tax-th";
 
 export const dynamic = "force-dynamic";
 
@@ -364,21 +365,24 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
   const received = docs.filter((d) => d.doc_type !== "expense");
   const sumPaid = paid.reduce((a, d) => a + Number(d.wht_amount), 0);
 
-  const isCompany = (taxId: string | null) => !!taxId && taxId.startsWith("0");
-  const pnd53 = paid.filter((d) => isCompany(d.contact_tax_id));
-  const pnd3 = paid.filter((d) => !isCompany(d.contact_tax_id));
+  // ใช้กฎกลางตัวเดียวกับที่หนังสือ 50 ทวิ ใช้ — ถ้าแยกกันเขียน สองที่จะบอกแบบยื่นคนละแบบ
+  const pnd53 = paid.filter((d) => isJuristicPerson(d.contact_tax_id));
+  const pnd3 = paid.filter((d) => !isJuristicPerson(d.contact_tax_id));
 
   const mkRows = (list: FinDoc[]) => list.map((d, i) => ({
     "ลำดับ": i + 1, "เลขผู้เสียภาษี": d.contact_tax_id ?? "", "ชื่อผู้ถูกหัก": d.contact_name ?? "",
     "ที่อยู่": d.contact_address ?? "", "วันที่จ่าย": d.issue_date,
-    "ประเภทเงินได้": "ค่าสินค้า/บริการ", "อัตรา (%)": Number(d.wht_rate),
+    "ประเภทเงินได้": whtIncomeLabel(d.wht_income_type) || "40(8) ธุรกิจ พาณิชย์ บริการอื่น ๆ",
+    "สาขาผู้ถูกหัก": branchCode(d.contact_branch), "อัตรา (%)": Number(d.wht_rate),
     "ยอดเงินที่จ่าย": Number(d.total) - Number(d.vat_amount), "ภาษีที่หัก": Number(d.wht_amount),
     "เอกสารอ้างอิง": d.doc_number,
   }));
   // ไฟล์โอนย้าย ภ.ง.ด.: ลำดับ|เลขผู้เสียภาษี|สาขา|ชื่อผู้ถูกหัก|ที่อยู่|วันที่จ่าย(พ.ศ.)|ประเภทเงินได้|อัตรา|ยอดจ่าย|ภาษีหัก|เงื่อนไข(1=หัก ณ ที่จ่าย)
   const txtOf = (list: FinDoc[]) => list.map((d, i) =>
-    [i + 1, rdClean(d.contact_tax_id), "00000", rdClean(d.contact_name), rdClean(d.contact_address),
-      rdDateBE(d.issue_date), "ค่าสินค้า/บริการ", rdAmount(d.wht_rate),
+    // สาขาและประเภทเงินได้ต้องเป็นค่าจริงของแต่ละราย — เดิมฮาร์ดโค้ดทั้งคู่
+    // ทำให้ไฟล์ที่ยื่นเข้าระบบสรรพากรมีข้อมูลผิดทุกบรรทัด นักบัญชีต้องมานั่งแก้เอง
+    [i + 1, rdClean(d.contact_tax_id), branchCode(d.contact_branch), rdClean(d.contact_name), rdClean(d.contact_address),
+      rdDateBE(d.issue_date), rdClean(whtIncomeDesc(d.wht_income_type)), rdAmount(d.wht_rate),
       rdAmount(Number(d.total) - Number(d.vat_amount)), rdAmount(d.wht_amount), "1"].join("|"),
   ).join("\r\n");
 
