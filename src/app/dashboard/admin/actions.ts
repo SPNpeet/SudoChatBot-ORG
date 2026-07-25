@@ -111,3 +111,45 @@ export async function savePlatformLine(formData: FormData): Promise<{ ok: true }
     return { ok: false, error: (e as Error).message };
   }
 }
+
+/** ประกาศปัญหา/สถานะระบบถึงผู้ใช้ทุกคน — ยิงทั้ง Web Push และ LINE */
+export async function broadcastSystemAlert(formData: FormData): Promise<{ ok: true; push: number; line: number } | { ok: false; error: string }> {
+  try {
+    const { user } = await assertPlatformAdmin();
+    const level = String(formData.get("level") ?? "info");
+    const title = String(formData.get("title") ?? "").trim().slice(0, 120);
+    const body = String(formData.get("body") ?? "").trim().slice(0, 500);
+    if (!title) return { ok: false, error: "ใส่หัวข้อก่อน" };
+    if (!["info", "warning", "critical"].includes(level)) return { ok: false, error: "ระดับไม่ถูกต้อง" };
+
+    const svc = createServiceClient();
+    const { data: alert, error } = await svc.from("system_alerts")
+      .insert({ level, title, body: body || null, created_by: user.id, active: true })
+      .select("id").single();
+    if (error || !alert) return { ok: false, error: error?.message ?? "บันทึกประกาศไม่สำเร็จ" };
+
+    const { notifyEveryone } = await import("@/lib/notify");
+    const icon = level === "critical" ? "🚨" : level === "warning" ? "⚠️" : "📢";
+    const sent = await notifyEveryone(svc, { title: `${icon} ${title}`, body: body || "", url: "/dashboard", tag: "system-alert" });
+    await svc.from("system_alerts").update({ pushed: true }).eq("id", alert.id);
+
+    revalidatePath("/dashboard", "layout");
+    return { ok: true, push: sent.push, line: sent.line };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+/** ปิดประกาศ (แบนเนอร์หายจากหน้าลูกค้า) */
+export async function closeSystemAlert(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await assertPlatformAdmin();
+    const svc = createServiceClient();
+    const { error } = await svc.from("system_alerts").update({ active: false }).eq("id", id);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/dashboard", "layout");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}

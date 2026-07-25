@@ -7,6 +7,7 @@ import { claimAdmin } from "./actions";
 import AdminAiCenter from "./ai-center";
 import AiGuardCard, { type AiGuardStatus } from "./ai-guard-card";
 import LineOaCard from "./line-oa-card";
+import SystemAlertCard, { type AlertRow } from "./system-alert-card";
 import { ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +49,8 @@ export default async function AdminPage() {
     supabase.rpc("platform_ai_guard_status"),
     svc.from("platform_billing_settings").select("line_login_channel_id,line_oa_token,line_oa_basic_id").eq("id", true).maybeSingle(),
   ]);
+  const { data: alerts } = await svc.from("system_alerts")
+    .select("id,level,title,body,created_at").eq("active", true).order("created_at", { ascending: false }).limit(5);
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -58,6 +61,7 @@ export default async function AdminPage() {
         purposeKeys={purposeKeys ?? []}
       />
       {guard && <AiGuardCard status={guard as unknown as AiGuardStatus} />}
+      <SystemAlertCard active={(alerts ?? []) as AlertRow[]} />
       <LineOaCard
         configured={!!pfLine?.line_login_channel_id && !!pfLine?.line_oa_token}
         basicId={pfLine?.line_oa_basic_id ?? null}

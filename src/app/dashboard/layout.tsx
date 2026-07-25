@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
+import SystemAlertBanner from "./system-alert-banner";
 import FeedbackWidget from "./feedback-widget";
 import CompanySwitcher from "./company-switcher";
 import AiQuotaBar, { type AiQuota } from "./ai-quota-bar";
@@ -108,6 +109,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* เนื้อหา */}
       {/* pb มือถือ = bottom nav + ระยะปุ่มลอยติชม — ปุ่มแถวล่างสุดต้องกดได้เสมอ ไม่โดนอะไรบัง */}
       <main className="px-4 py-5 pb-[calc(7.75rem+env(safe-area-inset-bottom))] md:ml-56 md:px-8 md:py-7 md:pb-7">
+        <SystemAlertBanner />
         <Notifications />
         {children}
       </main>

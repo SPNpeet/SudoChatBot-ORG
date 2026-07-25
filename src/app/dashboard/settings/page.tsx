@@ -5,6 +5,7 @@ import PaymentSettingsForm from "./payment-settings-form";
 import TaxInfoForm from "./tax-info-form";
 import TeamForm from "./team-form";
 import NotifySettingsForm from "./notify-settings-form";
+import PushToggle from "./push-toggle";
 import type { ShopPaymentSettings } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
@@ -54,8 +55,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>🔔 แจ้งเตือนเข้า LINE (เอกสารรออนุมัติ ฯลฯ)</CardTitle></CardHeader>
-            <CardContent>
+            <CardHeader><CardTitle>🔔 การแจ้งเตือน — LINE + บนเครื่อง</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <PushToggle shopId={shop.id} />
               <NotifySettingsForm shopId={shop.id}
                 platformReady={!!platform?.line_login_channel_id && !!platform?.line_oa_token}
                 oaBasicId={platform?.line_oa_basic_id ?? null}
