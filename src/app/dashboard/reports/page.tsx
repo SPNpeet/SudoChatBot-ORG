@@ -4,7 +4,7 @@
 //  หัก ณ ที่จ่าย (ภ.ง.ด.3/53 + ไฟล์ยื่น) · งบทดลอง
 // ============================================================
 import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
-import { Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td, Badge } from "@/components/ui";
+import { Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td, Badge, PageHeader } from "@/components/ui";
 import { baht, bahtDoc, dateOnlyTH, cn } from "@/lib/utils";
 import { agingBucket, AGING_LABEL_TH, docOutstanding } from "@/lib/finance";
 import { rdClean, rdDateBE, rdAmount } from "@/lib/rd";
@@ -64,13 +64,12 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">รายงาน + ภาษี</h1>
-          <p className="text-sm text-neutral-400">ข้อมูลจากสมุดรายวันจริง — พร้อมส่งให้นักบัญชี/ยื่นสรรพากร · กำลังดู{period.label}</p>
-        </div>
-        <PeriodPicker tab={t} period={period.key} />
-      </div>
+      <PageHeader
+        title="รายงาน + ภาษี"
+        lead={<>กำลังดู{period.label}</>}
+        help="ตัวเลขทุกช่องมาจากเอกสารจริงที่คุณบันทึกไว้ ไม่ต้องรอปิดงบ — ดูกำไร-ขาดทุน ใครค้างเรานานแค่ไหน และภาษีที่ต้องยื่นเดือนนี้ · โหลดเป็น Excel ส่งนักบัญชี หรือโหลดไฟล์ยื่นสรรพากรได้เลย"
+        action={<PeriodPicker tab={t} period={period.key} />}
+      />
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((x) => (

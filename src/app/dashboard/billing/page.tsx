@@ -1,6 +1,6 @@
 import { getCurrentShop } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle, Badge } from "@/components/ui";
+import { Card, CardContent, CardHeader, CardTitle, Badge, PageHeader } from "@/components/ui";
 import { baht, dateTH } from "@/lib/utils";
 import BillingClient from "./billing-client";
 
@@ -38,10 +38,11 @@ export default async function BillingPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">แพ็กเกจและเครดิต</h1>
-        <p className="text-sm text-neutral-400">เติมเงิน จัดการแพ็กเกจ และดูการใช้งาน AI ของ {shop.name} — คีย์เอกสารเองไม่จำกัดทุกแพ็ก</p>
-      </div>
+      <PageHeader
+        title="แพ็กเกจและเครดิต"
+        lead={<>จัดการแพ็กเกจของ {shop.name}</>}
+        help="ค่าบริการคิดตามแพ็กเกจที่เลือก ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด · ที่จำกัดคือ “งาน AI” (ผู้ช่วย + อ่านบิล) เท่านั้น — การออกเอกสาร ลงบัญชี และดูรายงานเองใช้ได้ไม่จำกัดทุกแพ็ก แม้โควตา AI หมด"
+      />
 
       {dailyCap && quotaUsed >= quotaMax && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentShop } from "@/lib/shop";
-import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td } from "@/components/ui";
+import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader } from "@/components/ui";
 import { FileUp } from "lucide-react";
 import { baht, dateTH } from "@/lib/utils";
 import { upsertProduct } from "../actions";
@@ -25,20 +25,18 @@ export default async function ProductsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-xl font-bold">สินค้า/บริการ</h1>
-          <p className="text-sm text-neutral-400">รายการที่ใช้ออกเอกสาร — ดึงราคาอัตโนมัติ ตัดสต๊อกเมื่อขาย คิดต้นทุน (COGS) ให้เอง</p>
-        </div>
-        {canEdit && (
-          <div className="flex items-center gap-2">
+      <PageHeader
+        title="สินค้า / บริการ"
+        help="ใส่ของที่ขายประจำไว้ที่นี่ — ตอนออกเอกสารแค่เลือกชื่อ ราคาขึ้นเอง ไม่ต้องพิมพ์ซ้ำทุกครั้ง · ถ้าใส่ต้นทุนไว้ด้วย ระบบจะคำนวณกำไรและตัดสต๊อกให้อัตโนมัติเมื่อขาย"
+        action={canEdit && (
+          <div className="flex flex-wrap items-center gap-2">
             <Link href="/dashboard/products/import">
               <Button variant="outline"><FileUp className="h-4 w-4" /> นำเข้าไฟล์</Button>
             </Link>
             <ProductForm shopId={shop.id} action={save} />
           </div>
         )}
-      </div>
+      />
       {!canEdit && (
         <p className="rounded-xl bg-neutral-50 px-4 py-2.5 text-sm text-neutral-500">
           คุณดูรายการได้ แต่แก้ไข/เพิ่มได้เฉพาะเจ้าของ/ผู้ดูแล

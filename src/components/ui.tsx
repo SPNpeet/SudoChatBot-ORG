@@ -59,6 +59,34 @@ export function StatCard({ label, value, hint, icon, tone = "neutral", className
   );
 }
 
+/**
+ * หัวหน้าเพจมาตรฐาน — ทุกหน้าหน้าตาเหมือนกัน ผู้ใช้เรียนรู้ครั้งเดียวใช้ได้ทั้งแอป
+ *  · title  = ชื่อหน้า
+ *  · lead   = ตัวเลขสำคัญของหน้านี้ (เห็นปุ๊บรู้สถานะ)
+ *  · help   = "หน้านี้ใช้ทำอะไร" ภาษาชาวบ้าน — สำคัญมากกับคนที่ไม่เคยใช้โปรแกรมบัญชี
+ *  · action = ปุ่มหลัก 1 ปุ่ม (มือถือเต็มความกว้าง นิ้วกดง่าย)
+ */
+export function PageHeader({ title, lead, help, action }: {
+  title: string; lead?: React.ReactNode; help?: React.ReactNode; action?: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight">{title}</h1>
+          {lead && <p className="mt-0.5 text-sm text-neutral-600">{lead}</p>}
+        </div>
+        {action && <div className="w-full sm:w-auto [&_a]:w-full [&_button]:w-full sm:[&_a]:w-auto sm:[&_button]:w-auto">{action}</div>}
+      </div>
+      {help && (
+        <p className="flex items-start gap-1.5 rounded-xl bg-neutral-50 px-3 py-2 text-[12px] leading-relaxed text-neutral-500">
+          <span aria-hidden className="mt-px">💡</span><span>{help}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
 type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "brand" | "outline" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";

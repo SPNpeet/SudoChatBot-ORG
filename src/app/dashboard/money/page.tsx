@@ -4,7 +4,7 @@
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
-import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td } from "@/components/ui";
+import { Badge, Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td, PageHeader } from "@/components/ui";
 import { baht, dateTH, cn } from "@/lib/utils";
 import { PAY_METHOD_TH, docOutstanding } from "@/lib/finance";
 import type { FinPayment } from "@/lib/types/finance";
@@ -60,14 +60,11 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold">การเงิน / กระทบยอด</h1>
-        <p className="text-sm text-neutral-400">
-          เดือนนี้ เงินเข้า <span className="font-semibold text-emerald-600">{baht(inMonth)}</span> ·
-          เงินออก <span className="font-semibold text-red-600">{baht(outMonth)}</span> ·
-          ทุกรายการลงสมุดรายวันอัตโนมัติ
-        </p>
-      </div>
+      <PageHeader
+        title="การเงิน / กระทบยอด"
+        lead={<>เดือนนี้เงินเข้า <b className="text-emerald-600">{baht(inMonth)}</b> · เงินออก <b className="text-red-600">{baht(outMonth)}</b></>}
+        help="ที่นี่ไว้เช็คว่าเงินที่เข้าบัญชีจริง ตรงกับเอกสารที่ออกไปไหม — อัปสลิปที่ลูกค้าโอนมา ระบบจะจับคู่กับใบแจ้งหนี้และตัดยอดให้เอง หรือโหลดรายการเดินบัญชีจากแอปธนาคารมาเทียบทีเดียวทั้งเดือนก็ได้"
+      />
 
       {canEdit && (
         <div className="grid gap-4 lg:grid-cols-2">

@@ -1,6 +1,6 @@
 import { getCurrentShop } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { Card, CardContent, CardHeader, CardTitle, PageHeader } from "@/components/ui";
 import PaymentSettingsForm from "./payment-settings-form";
 import TaxInfoForm from "./tax-info-form";
 import TeamForm from "./team-form";
@@ -31,10 +31,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">ตั้งค่า</h1>
-        <p className="text-sm text-neutral-400">ข้อมูลกิจการ การรับเงิน และทีมของ {shop.name}</p>
-      </div>
+      <PageHeader
+        title="ตั้งค่า"
+        lead={<>ข้อมูลกิจการ การรับเงิน และทีมของ {shop.name}</>}
+        help="ตั้งครั้งเดียวใช้ตลอด — ชื่อกิจการกับเลขผู้เสียภาษีจะขึ้นบนหัวเอกสารทุกใบ · ใส่พร้อมเพย์แล้ว QR จะโผล่บนใบแจ้งหนี้ให้ลูกค้าสแกนจ่ายได้เลย"
+      />
 
       {!canEdit && (
         <p className="rounded-xl bg-neutral-50 px-4 py-2.5 text-sm text-neutral-500">

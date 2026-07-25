@@ -1,5 +1,5 @@
 // คู่มือใช้งาน — ภาพการทำงานจริงครบทุกโมดูล อ่านจบใช้เป็น
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { Card, CardContent, CardHeader, CardTitle, PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -65,10 +65,11 @@ const SECTIONS: { title: string; items: { q: string; a: string }[] }[] = [
 export default function HelpPage() {
   return (
     <div className="max-w-3xl space-y-6">
-      <div>
-        <h1 className="text-xl font-bold">คู่มือใช้งาน</h1>
-        <p className="text-sm text-neutral-400">ภาพการทำงานจริงทั้งระบบ — หน้าบ้านใช้ง่าย หลังบ้านบัญชีครบ</p>
-      </div>
+      <PageHeader
+        title="คู่มือใช้งาน"
+        lead="ตอบคำถามที่คนใช้ครั้งแรกถามบ่อยที่สุด"
+        help="ไม่ต้องอ่านทั้งหมดก็ได้ — ถ้าติดตรงไหน พิมพ์ถามผู้ช่วยบัญชี AI ได้เลย หรือกดปุ่มข้อความมุมขวาล่างเพื่อส่งคำถามถึงทีมงานโดยตรง"
+      />
       {SECTIONS.map((sec) => (
         <Card key={sec.title}>
           <CardHeader><CardTitle>{sec.title}</CardTitle></CardHeader>

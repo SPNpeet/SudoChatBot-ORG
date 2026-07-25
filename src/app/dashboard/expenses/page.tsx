@@ -2,7 +2,7 @@
 //  ค่าใช้จ่าย/รายจ่าย (AP) — ตั้งหนี้ · ทำจ่าย · แนบบิล · AI อ่านบิลให้
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
-import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td } from "@/components/ui";
+import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader } from "@/components/ui";
 import { baht, dateOnlyTH, cn } from "@/lib/utils";
 import { DOC_STATUS_TH, docStatusTone, docOutstanding } from "@/lib/finance";
 import type { DocStatus, FinDoc } from "@/lib/types/finance";
@@ -36,19 +36,16 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">ค่าใช้จ่าย</h1>
-          <p className="text-sm text-neutral-400">
-            ถ่ายรูปบิลให้ AI ลงบัญชีให้ หรือคีย์เอง · ค้างจ่ายตอนนี้ <span className="font-semibold text-red-600">{baht(unpaidTotal)}</span>
-          </p>
-        </div>
-        {canEdit && (
+      <PageHeader
+        title="ค่าใช้จ่าย"
+        lead={<>บิลที่เรายังไม่ได้จ่าย <b className="text-red-600">{baht(unpaidTotal)}</b></>}
+        help="ทุกบาทที่จ่ายออกไปบันทึกที่นี่ — ถ่ายรูปบิลให้ AI อ่านให้ก็ได้ ไม่ต้องพิมพ์เอง · ระบบแยก VAT ภาษีซื้อ และหัก ณ ที่จ่ายให้อัตโนมัติ เอาไปใช้ลดภาษีตอนสิ้นเดือนได้เลย"
+        action={canEdit && (
           <Link href="/dashboard/expenses/new">
             <Button><Plus className="h-4 w-4" /> บันทึกค่าใช้จ่าย <Sparkles className="h-3.5 w-3.5 opacity-70" /></Button>
           </Link>
         )}
-      </div>
+      />
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((x) => (

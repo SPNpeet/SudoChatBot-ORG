@@ -2,7 +2,7 @@
 //  ผู้ติดต่อ — ลูกค้า/ผู้ขายในที่เดียว ใช้ออกเอกสารและดูยอดค้างรายคน
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
-import { Card, CardContent, EmptyState, Badge } from "@/components/ui";
+import { Card, CardContent, EmptyState, Badge, PageHeader } from "@/components/ui";
 import { baht } from "@/lib/utils";
 import { docOutstanding } from "@/lib/finance";
 import { cn } from "@/lib/utils";
@@ -47,13 +47,12 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">ผู้ติดต่อ</h1>
-          <p className="text-sm text-neutral-400">ลูกค้าและผู้ขายของ {shop.name} — เห็นยอดค้างรับ/ค้างจ่ายรายคน</p>
-        </div>
-        {canEdit && <ContactForm shopId={shop.id} />}
-      </div>
+      <PageHeader
+        title="ผู้ติดต่อ"
+        lead={<>ลูกค้าและผู้ขายทั้งหมดของ {shop.name}</>}
+        help="เก็บชื่อ เลขผู้เสียภาษี และที่อยู่ของคู่ค้าไว้ครั้งเดียว — ครั้งต่อไปออกเอกสารแค่เลือกชื่อ ระบบเติมให้ครบเอง ออกใบกำกับภาษีเต็มรูปได้ทันที และเห็นด้วยว่าใครค้างเราอยู่เท่าไหร่"
+        action={canEdit && <ContactForm shopId={shop.id} />}
+      />
 
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((t) => (

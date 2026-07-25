@@ -3,7 +3,7 @@
 //  นักบัญชีเข้ามารีวิว/เพิ่มรายการปรับปรุง (JV) ได้ ไม่ต้องคีย์ซ้ำ
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
-import { Badge, Card, CardContent, EmptyState } from "@/components/ui";
+import { Badge, Card, CardContent, EmptyState, PageHeader } from "@/components/ui";
 import { bahtDoc, dateOnlyTH } from "@/lib/utils";
 import type { Account, JournalEntry } from "@/lib/types/finance";
 import ManualJournalForm from "./manual-form";
@@ -37,9 +37,11 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">สมุดรายวัน</h1>
-          <p className="text-sm text-neutral-400">
-            ระบบลงเดบิต/เครดิตให้อัตโนมัติทุกธุรกรรม — นักบัญชีรีวิวได้เลย ไม่ต้องคีย์ซ้ำ · งบทดลองดูที่หน้ารายงาน
+          <h1 className="text-xl font-bold tracking-tight">สมุดรายวัน</h1>
+          <p className="mt-0.5 text-sm text-neutral-600">บันทึกบัญชีของทุกธุรกรรม เรียงตามวันที่</p>
+          <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-neutral-50 px-3 py-2 text-[12px] leading-relaxed text-neutral-500">
+            <span aria-hidden className="mt-px">💡</span>
+            <span>หน้านี้ไม่ต้องทำอะไรเลย — ทุกครั้งที่ออกเอกสารหรือบันทึกเงิน ระบบลงเดบิต/เครดิตให้เองตามหลักบัญชีคู่ · ส่งหน้านี้ให้นักบัญชีดูได้ทันที ถ้าอยากลงรายการเองก็กด “บันทึกรายการเอง”</span>
           </p>
         </div>
         <div className="flex items-center gap-2">

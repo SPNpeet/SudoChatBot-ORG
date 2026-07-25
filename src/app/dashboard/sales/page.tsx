@@ -2,7 +2,7 @@
 //  เอกสารขาย (AR) — ใบเสนอราคา / ใบแจ้งหนี้ / ใบเสร็จรับเงิน
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
-import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td } from "@/components/ui";
+import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader } from "@/components/ui";
 import { baht, dateOnlyTH, cn } from "@/lib/utils";
 import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding } from "@/lib/finance";
 import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
@@ -38,21 +38,18 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold">เอกสารขาย</h1>
-          <p className="text-sm text-neutral-400">
-            ใบเสนอราคา → ใบแจ้งหนี้ → ใบเสร็จ/ใบกำกับภาษี · ยอดค้างรับตอนนี้ <span className="font-semibold text-amber-600">{baht(outstandingTotal)}</span>
-          </p>
-        </div>
-        {canEdit && (
-          <div className="flex gap-2">
+      <PageHeader
+        title="เอกสารขาย"
+        lead={<>ลูกค้ายังค้างเราอยู่ <b className="text-amber-600">{baht(outstandingTotal)}</b></>}
+        help="ขายของ/บริการแล้วออกเอกสารที่นี่ — ได้เงินแล้วเลือก “ขายสด/ใบเสร็จ” · ให้เครดิตเลือก “ใบแจ้งหนี้” ระบบจะตามยอดค้างให้เอง · ยังไม่ตกลงราคาเลือก “ใบเสนอราคา” แล้วแปลงเป็นใบแจ้งหนี้ทีหลังได้ ไม่ต้องพิมพ์ใหม่"
+        action={canEdit && (
+          <div className="flex flex-wrap gap-2">
             <Link href="/dashboard/sales/new?type=quotation"><Button variant="outline" size="sm">ใบเสนอราคา</Button></Link>
             <Link href="/dashboard/sales/new?type=invoice"><Button variant="outline" size="sm">ใบแจ้งหนี้</Button></Link>
             <Link href="/dashboard/sales/new?type=receipt"><Button size="sm"><Plus className="h-4 w-4" /> ขายสด/ใบเสร็จ</Button></Link>
           </div>
         )}
-      </div>
+      />
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((x) => (
