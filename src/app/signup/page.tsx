@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/logo";
 import { Eye, EyeOff, Check, Sparkles } from "lucide-react";
 import { signUpDirect } from "./actions";
+import OAuthButtons from "@/components/oauth-buttons";
 
 const PERKS = ["เริ่มฟรี ไม่ต้องใช้บัตรเครดิต", "ผู้ช่วยบัญชี AI + ถ่ายรูปบิลลงบัญชีให้", "ออกใบแจ้งหนี้/ใบกำกับภาษีได้ทันที"];
 
@@ -57,7 +58,18 @@ export default function SignupPage() {
             ))}
           </ul>
 
-          <form onSubmit={submit} className="mt-5 space-y-3">
+          {/* Google = ช่องทางที่คนใช้เยอะสุด วางไว้บนสุด กดครั้งเดียวจบ ไม่ต้องตั้งรหัสผ่าน */}
+          <div className="mt-5">
+            <OAuthButtons mode="signup" providers={["google"]} />
+          </div>
+
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-neutral-200" />
+            <span className="text-[11px] text-neutral-400">หรือสมัครด้วยอีเมล</span>
+            <div className="h-px flex-1 bg-neutral-200" />
+          </div>
+
+          <form onSubmit={submit} className="space-y-3">
             <input type="text" required value={name} onChange={(e) => setName(e.target.value)}
               placeholder="ชื่อของคุณ / ชื่อเล่นก็ได้" autoComplete="name" className={inputCls} />
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
@@ -86,8 +98,8 @@ export default function SignupPage() {
 
           {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-xs text-red-600">{error}</p>}
 
-          <p className="mt-4 text-center text-xs text-neutral-500">
-            มีบัญชีแล้ว? <Link href="/login" className="font-medium text-emerald-600 hover:underline">เข้าสู่ระบบ</Link>
+          <p className="mt-5 rounded-xl bg-neutral-50 px-3 py-2.5 text-center text-xs text-neutral-500">
+            มีบัญชีอยู่แล้ว? <Link href="/login" className="font-semibold text-emerald-600 hover:underline">เข้าสู่ระบบ</Link>
           </p>
         </div>
         <p className="mt-4 text-center text-[11px] leading-relaxed text-neutral-400">

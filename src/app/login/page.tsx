@@ -1,119 +1,98 @@
 "use client";
+// ============================================================
+//  เข้าสู่ระบบ — สำหรับคนที่ "มีบัญชีอยู่แล้ว" เท่านั้น
+//  แยกจากหน้าสมัคร (/signup) ชัดเจน ไม่มีปุ่มสมัครปนในฟอร์ม
+//  Facebook อยู่ใต้ "ช่องทางอื่น" — เหลือผู้ใช้เดิมแค่บัญชีเดียวจากยุคก่อน pivot
+//  ไม่โชว์ในหน้าสมัคร เพราะไม่ใช่ช่องทางที่เราอยากให้คนใหม่ใช้
+// ============================================================
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
+import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { Eye, EyeOff } from "lucide-react";
+import OAuthButtons from "@/components/oauth-buttons";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [showPw, setShowPw] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function oauth(provider: "facebook" | "google") {
-    setLoading(provider); setMsg(null);
-    // เช็คก่อน redirect: ค่ายที่ยังไม่เปิดใน Supabase จะพาไปเจอหน้า JSON error ดิบ — กันไว้ตรงนี้
-    try {
-      const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/settings`, {
-        headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
-      });
-      const s = await r.json();
-      if (!s?.external?.[provider]) {
-        setLoading(null);
-        setMsg({ ok: false, text: `เข้าสู่ระบบด้วย ${provider === "google" ? "Google" : "Facebook"} ยังไม่เปิดใช้งาน — ใช้อีเมล/รหัสผ่าน หรือช่องทางอื่นได้เลยค่ะ` });
-        return;
-      }
-    } catch { /* เช็คไม่ได้ให้ลองต่อตามปกติ */ }
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: `${location.origin}/auth/callback` },
-    });
-    if (error) {
-      setLoading(null);
-      setMsg({ ok: false, text: "ช่องทางนี้ยังไม่เปิดใช้งาน — ใช้อีเมล/รหัสผ่านด้านล่างได้เลย" });
-    }
-  }
-
-  async function emailAuth(e: React.FormEvent) {
+  async function emailLogin(e: React.FormEvent) {
     e.preventDefault();
-    setLoading("email"); setMsg(null);
-    const supabase = createClient();
+    setLoading(true); setError(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (error) throw error;
+      const supabase = createClient();
+      const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password });
+      if (err) throw err;
       window.location.href = "/dashboard";
     } catch (err) {
       const m = (err as Error).message;
-      const th = m.includes("Invalid login") ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง"
-        : m.includes("already registered") ? "อีเมลนี้มีบัญชีแล้ว — กดเข้าสู่ระบบ"
-        : m.includes("Email not confirmed") ? "ยังไม่ได้ยืนยันอีเมล — ตรวจกล่องอีเมลของคุณ"
-        : m.includes("rate limit") ? "ระบบส่งอีเมลถี่เกินไป — รอสักครู่แล้วลองใหม่ หรือติดต่อผู้ดูแลระบบ"
-        : m.includes("at least") || m.includes("Password") ? "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"
-        : m.includes("invalid format") || m.includes("is invalid") ? "รูปแบบอีเมลไม่ถูกต้อง"
-        : m;
-      setMsg({ ok: false, text: th });
-    } finally { setLoading(null); }
+      setError(
+        m.includes("Invalid login") ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง — ถ้ายังไม่เคยสมัคร กดสมัครสมาชิกฟรีด้านล่าง"
+          : m.includes("Email not confirmed") ? "ยังไม่ได้ยืนยันอีเมล — ตรวจกล่องอีเมลของคุณ"
+            : m.includes("rate limit") ? "ลองถี่เกินไป — รอสักครู่แล้วลองใหม่"
+              : m,
+      );
+    } finally { setLoading(false); }
   }
 
+  const field = "h-11 w-full rounded-xl border border-neutral-300 bg-white px-3.5 text-base outline-none transition-colors focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15 sm:text-sm";
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-200 bg-white p-8">
-        <Logo className="justify-center" />
-        <p className="mt-2 text-center text-sm text-neutral-500">เข้าสู่ระบบเพื่อจัดการกิจการของคุณ</p>
+    <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 py-8">
+      <div className="w-full max-w-sm">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-[0_1px_3px_rgba(16,24,40,0.06)]">
+          <Logo className="justify-center" />
+          <h1 className="mt-4 text-center text-lg font-bold tracking-tight">เข้าสู่ระบบ</h1>
+          <p className="mt-1 text-center text-xs text-neutral-500">สำหรับผู้ที่มีบัญชีอยู่แล้ว</p>
 
-        {/* อีเมล/รหัสผ่าน */}
-        <form onSubmit={emailAuth} className="mt-6 space-y-3">
-          <input
-            type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-            placeholder="อีเมล" autoComplete="email"
-            className="h-11 w-full rounded-xl border border-neutral-300 px-3.5 text-base outline-none focus:border-emerald-500 sm:text-sm"
-          />
-          <input
-            type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
-            placeholder="รหัสผ่าน" autoComplete="current-password"
-            className="h-11 w-full rounded-xl border border-neutral-300 px-3.5 text-base outline-none focus:border-emerald-500 sm:text-sm"
-          />
-          <button
-            type="submit" disabled={!!loading}
-            className="h-11 w-full rounded-xl bg-emerald-600 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-60"
-          >
-            {loading === "email" ? "กำลังดำเนินการ..." : "เข้าสู่ระบบ"}
-          </button>
-        </form>
+          <div className="mt-6">
+            <OAuthButtons mode="signin" providers={["google"]} />
+          </div>
 
-        {msg && (
-          <p className={`mt-3 text-center text-xs ${msg.ok ? "text-emerald-600" : "text-red-600"}`}>{msg.text}</p>
-        )}
+          <div className="my-5 flex items-center gap-3">
+            <div className="h-px flex-1 bg-neutral-200" />
+            <span className="text-[11px] text-neutral-400">หรือใช้อีเมล</span>
+            <div className="h-px flex-1 bg-neutral-200" />
+          </div>
 
-        <p className="mt-3 text-center text-xs text-neutral-500">
-          ยังไม่มีบัญชี? <a href="/signup" className="font-medium text-emerald-600 hover:underline">สมัครสมาชิกฟรี</a>
-        </p>
+          <form onSubmit={emailLogin} className="space-y-3">
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="อีเมล" autoComplete="email" className={field} />
+            <div className="relative">
+              <input type={showPw ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)}
+                placeholder="รหัสผ่าน" autoComplete="current-password" className={`${field} pr-11`} />
+              <button type="button" onClick={() => setShowPw((v) => !v)} tabIndex={-1}
+                aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+                {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <button type="submit" disabled={loading}
+              className="h-11 w-full rounded-xl bg-neutral-900 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:opacity-60">
+              {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+            </button>
+          </form>
 
-        {/* ตัวคั่น */}
-        <div className="my-6 flex items-center gap-3">
-          <div className="h-px flex-1 bg-neutral-200" />
-          <span className="text-[11px] text-neutral-400">หรือ</span>
-          <div className="h-px flex-1 bg-neutral-200" />
+          {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-xs text-red-600">{error}</p>}
+
+          <p className="mt-5 rounded-xl bg-neutral-50 px-3 py-2.5 text-center text-xs text-neutral-500">
+            ยังไม่มีบัญชี? <Link href="/signup" className="font-semibold text-emerald-600 hover:underline">สมัครสมาชิกฟรี</Link>
+          </p>
+
+          <details className="mt-3">
+            <summary className="cursor-pointer text-center text-[11px] text-neutral-400 hover:text-neutral-600">ช่องทางอื่น (ผู้ใช้เดิม)</summary>
+            <div className="mt-2.5">
+              <OAuthButtons mode="signin" providers={["facebook"]} />
+              <p className="mt-1.5 text-center text-[10px] text-neutral-400">สำหรับบัญชีที่เคยสมัครด้วย Facebook ไว้ก่อนหน้า</p>
+            </div>
+          </details>
         </div>
 
-        {/* OAuth */}
-        <div className="space-y-3">
-          <button
-            onClick={() => oauth("facebook")} disabled={!!loading}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1877F2] text-sm font-medium text-white hover:opacity-90 disabled:opacity-60"
-          >
-            {loading === "facebook" ? "กำลังเชื่อมต่อ..." : "เข้าสู่ระบบด้วย Facebook"}
-          </button>
-          <button
-            onClick={() => oauth("google")} disabled={!!loading}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white text-sm font-medium text-neutral-800 hover:bg-neutral-50 disabled:opacity-60"
-          >
-            {loading === "google" ? "กำลังเชื่อมต่อ..." : "เข้าสู่ระบบด้วย Google"}
-          </button>
-        </div>
-
-        <p className="mt-6 text-center text-[11px] leading-relaxed text-neutral-400">
-          การเข้าสู่ระบบถือว่ายอมรับเงื่อนไขการใช้งาน<br />ใช้ Facebook ที่เป็นแอดมินเพจ เพื่อเชื่อมต่อเพจได้ทันที
+        <p className="mt-4 text-center text-[11px] text-neutral-400">
+          การเข้าสู่ระบบถือว่ายอมรับ<Link href="/terms" className="underline">เงื่อนไขการใช้งาน</Link>
         </p>
       </div>
     </main>
