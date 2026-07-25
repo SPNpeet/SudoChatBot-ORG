@@ -47,7 +47,17 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
         <Td className="font-medium">{name}</Td>
         <Td className="text-neutral-500">{ownerEmail ?? "-"}</Td>
         <Td>
-          <Select disabled={pending} defaultValue={plan} onChange={(e) => changePlan(e.target.value)} className="h-8 text-xs">
+          {/* เปลี่ยนแพ็กลูกค้าคือของจริงที่กระทบเงิน — ต้องยืนยันก่อน ไม่งั้นเลื่อนนิ้วโดนบนมือถือก็เปลี่ยนแล้ว */}
+          <Select disabled={pending} value={plan} className="h-9 text-xs"
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next === plan) return;
+              if (!confirm(`เปลี่ยนแพ็กเกจของ "${name}" จาก ${planOptions[plan] ?? plan} เป็น ${planOptions[next] ?? next} ใช่ไหม?`)) {
+                e.target.value = plan;   // ผู้ใช้ยกเลิก — ดีดกลับค่าเดิม
+                return;
+              }
+              changePlan(next);
+            }}>
             {Object.entries(planOptions).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
           </Select>
         </Td>
@@ -65,7 +75,16 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
         <Td>
           <div className="flex items-center gap-2">
             <Badge tone={STATUS_TONE[status] ?? "neutral"}>{SHOP_STATUS_TH[status] ?? status}</Badge>
-            <Select disabled={pending} defaultValue={status} onChange={(e) => changeStatus(e.target.value)} className="h-8 w-28 text-xs">
+            <Select disabled={pending} value={status} className="h-9 w-28 text-xs"
+              onChange={(e) => {
+                const next = e.target.value;
+                if (next === status) return;
+                if (!confirm(`เปลี่ยนสถานะของ "${name}" เป็น "${SHOP_STATUS_TH[next] ?? next}" ใช่ไหม?`)) {
+                  e.target.value = status;
+                  return;
+                }
+                changeStatus(next);
+              }}>
               {Object.entries(SHOP_STATUS_TH).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
             </Select>
           </div>

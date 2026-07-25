@@ -137,18 +137,18 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {/* การ์ดพวกนี้หน้าตาเหมือน StatCard บนแดชบอร์ดที่กดได้ ผู้ใช้จึงคาดหวังว่ากดได้ด้วย — ใส่ปลายทางให้ทุกใบ */}
         {[
-          { label: `รายได้ ${period.label}`, value: baht(periodIncome), tone: "text-emerald-700" },
-          { label: `ค่าใช้จ่าย ${period.label}`, value: baht(periodExpense), tone: "text-red-600" },
-          { label: `กำไร (ก่อนภาษี) ${period.label}`, value: baht(periodIncome - periodExpense), tone: periodIncome - periodExpense >= 0 ? "text-emerald-700" : "text-red-600" },
-          { label: "ค้างรับ − ค้างจ่าย (ปัจจุบัน)", value: `${baht(ar)} / ${baht(ap)}`, tone: "text-neutral-800" },
+          { label: `รายได้ ${period.label}`, value: baht(periodIncome), tone: "text-emerald-700", href: "/dashboard/sales" },
+          { label: `ค่าใช้จ่าย ${period.label}`, value: baht(periodExpense), tone: "text-red-600", href: "/dashboard/expenses" },
+          { label: `กำไร (ก่อนภาษี) ${period.label}`, value: baht(periodIncome - periodExpense), tone: periodIncome - periodExpense >= 0 ? "text-emerald-700" : "text-red-600", href: "/dashboard/journal" },
+          { label: "ค้างรับ / ค้างจ่าย ตอนนี้", value: `${baht(ar)} / ${baht(ap)}`, tone: "text-neutral-800", href: `/dashboard/reports?t=aging&period=${period.key}` },
         ].map((s) => (
-          <Card key={s.label}>
-            <CardContent className="pt-5">
-              <p className="text-xs text-neutral-400">{s.label}</p>
-              <p className={cn("mt-1 text-xl font-bold tracking-tight", s.tone)}>{s.value}</p>
-            </CardContent>
-          </Card>
+          <Link key={s.label} href={s.href}
+            className="block rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)] transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md">
+            <p className="text-xs font-medium text-neutral-500">{s.label}</p>
+            <p className={cn("mt-2 text-xl font-bold tabular-nums tracking-tight", s.tone)}>{s.value}</p>
+          </Link>
         ))}
       </div>
 

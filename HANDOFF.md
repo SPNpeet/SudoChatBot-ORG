@@ -1,7 +1,46 @@
 # 🚀 SudoChatBot (ระบบบัญชี AI) — เอกสารส่งต่อ
 
 > เปิด repo นี้ใน Claude Code แล้วสั่ง "อ่าน HANDOFF.md แล้วทำงานที่ค้างต่อ" ได้เลย
-> อัปเดตล่าสุด: 2026-07-23 — **PIVOT ครั้งใหญ่: จาก AI Chatbot ขายของ → ระบบบัญชี + ออกเอกสารครบวงจร (Full Cloud Accounting) ชื่อเดิม SudoChatBot (โดเมนเช่าแล้ว)**
+> อัปเดตล่าสุด: 2026-07-26 — **ยกเครื่อง UI/UX ทั้งระบบ** (commit `1696bd9`)
+> ก่อนหน้า: 2026-07-23 PIVOT ครั้งใหญ่ จาก AI Chatbot ขายของ → ระบบบัญชีครบวงจร (ชื่อ/โดเมนเดิม)
+
+## 🎨 2026-07-26 — ยกเครื่อง UI/UX (commit `1696bd9`)
+
+**โจทย์จากเจ้าของ:** "ห้ามมีจุดไหนที่ดูออกว่า AI ทำ · มืออาชีพแบบ Gen Z แต่เนี๊ยบ เข้าถึงทุกวัย · กดแล้วต้องมี action ทุกจุด"
+
+**กติกาหน้าตาที่ต้องยึดต่อจากนี้ (ห้ามหลุด):**
+| ด้าน | กติกา |
+|---|---|
+| อิโมจิ | **ห้ามใช้ใน UI เด็ดขาด** — ใช้ Lucide เท่านั้น · ยกเว้นข้อความที่ส่งเข้า LINE (เป็นธรรมชาติของแชท) |
+| `Sparkles` | **ห้ามใช้** — เป็นสัญลักษณ์ที่บอกว่า "AI generate" ชัดที่สุด เลือกไอคอนที่สื่อความหมายจริงแทน |
+| ไอคอน | Lucide เส้น 1.5 · ในหัวข้อการ์ดใช้ `CardTitleIcon` (กล่อง 32px พื้นเทา) |
+| ฟอนต์ | `IBM_Plex_Sans_Thai` — ห้ามเปลี่ยนกลับ Noto (ตัวเลขไม่กว้างเท่ากัน คอลัมน์เงินเบี้ยว) |
+| สี | เทา/ขาวเป็นฐาน เขียว emerald เป็น accent เดียว ใช้เฉพาะจุดสำคัญ |
+| Empty state | ต้อง**สอนงาน** ด้วย `steps` 3 ข้อ ห้ามบอกแค่ "ไม่มีข้อมูล" |
+| อะไรที่มี hover | ต้องกดได้จริง — ไม่งั้นตัด hover ออก |
+
+**component ใหม่ที่ต้องใช้ซ้ำ (อย่าเขียนใหม่):**
+- `src/components/row-link.tsx` — แถวตารางกดได้ทั้งแถว (ยังต้องคง `<Link>` บนคอลัมน์แรกไว้ให้คีย์บอร์ด)
+- `src/components/toast.tsx` — `useToast()` popup + ปุ่มเลิกทำ (mount ที่ dashboard layout แล้ว)
+- `src/components/skeleton.tsx` — `ListSkeleton` / `DashboardSkeleton` / `FormSkeleton` ใช้ใน `loading.tsx`
+- `src/components/ui.tsx` — เพิ่ม `CardTitleIcon`, `BackLink`, `StatCard(href)`, `EmptyState(steps/secondary)`
+- `src/app/dashboard/command-palette.tsx` — Ctrl+K ค้นเอกสาร/ผู้ติดต่อ/เมนู
+- `src/app/dashboard/nav-shell.tsx` — context สถานะพับเมนู (`useNav()`) ใช้ร่วมกันระหว่าง sidebar กับ main
+
+**ของใหม่เชิงฟังก์ชัน:**
+- นำเข้ารายการเดินบัญชีรองรับ **PDF** — `src/app/dashboard/money/statement-actions.ts` (แกะฝั่งเซิร์ฟเวอร์ด้วย `unpdf`, ไม่มี worker ให้พัง) · อ่านมาเสนออย่างเดียว ผู้ใช้กดยืนยันรายแถวเสมอ
+- **ตัวจับผิด OCR** ใน `doc-form.tsx` — ทานยอดท้ายบิลที่ AI อ่านได้ กับผลรวมที่ฟอร์มคำนวณเอง ต่างเกิน 1 บาท = ขึ้นเตือนแดง
+- สมุดรายวันอ่านออกโดยไม่ต้องรู้บัญชี — คำแปลภาษาคน + ป้ายประเภทบัญชี + ลิงก์เอกสารต้นทาง + ตรา "ลงตัว"
+- หน้าตั้งค่าแยก 4 แท็บผ่าน URL (`?s=business|payment|notify|team`)
+
+**⚠️ ยังค้าง (subagent ตรวจเจอ แต่ยังไม่ได้แก้):**
+- แถวตารางที่ยังไม่ได้ใช้ `RowLink`: `dashboard/page.tsx:171`, `money/page.tsx:108`, `reports/page.tsx:242,333,416`, `products/page.tsx:61`
+- `/dashboard/billing/receipt/[id]` เป็น **orphan route** — ไม่มีที่ไหนลิงก์ไป ควรลิงก์จากแถวประวัติเติมเงิน `billing/page.tsx:104`
+- การ์ดสรุปในหน้ารายงาน หน้าตาเหมือน `StatCard` ที่กดได้ แต่กดไม่ได้ — ควรใส่ `href` หรือเปลี่ยนหน้าตา
+- `admin/shops/shop-row.tsx:50,68` — `<Select onChange>` เปลี่ยนแพ็ก/สถานะลูกค้าทันทีโดยไม่ถามยืนยัน (เสี่ยงบนมือถือ)
+- `admin/ai-center.tsx:208,263` — ปุ่มลบ key ไม่มี disabled ระหว่างรอ กดรัวได้
+- `useToast()` ต่อสายแล้วเฉพาะ statement import — ที่อื่นยังไม่มี feedback ตอนบันทึกสำเร็จ
+- ปุ่มใน `finance/doc-actions.tsx` ยังเป็น `size="sm"` (32px) บนมือถือ รวมถึงปุ่มบันทึกเงิน
 
 ## 📍 ที่อยู่ทุกอย่าง
 

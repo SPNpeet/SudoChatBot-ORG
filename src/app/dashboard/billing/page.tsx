@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, Badge, PageHeader } from "@/components/ui";
 import { baht, dateTH } from "@/lib/utils";
 import BillingClient from "./billing-client";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
@@ -100,17 +101,34 @@ export default async function BillingPage() {
         <Card>
           <CardHeader><CardTitle>ประวัติการเติมเงิน</CardTitle></CardHeader>
           <CardContent className="space-y-2">
-            {(topups ?? []).map((t) => (
-              <div key={t.id} className="flex items-center justify-between rounded-xl border border-neutral-100 px-4 py-2.5">
-                <div>
-                  <p className="text-sm font-medium">{baht(t.amount)}</p>
-                  <p className="text-[11px] text-neutral-400">{dateTH(t.created_at)}</p>
+            {/* รายการที่จ่ายสำเร็จกดดูใบเสร็จได้ — ก่อนหน้านี้หน้าใบเสร็จมีอยู่จริงแต่ไม่มีทางเข้าถึงเลย */}
+            {(topups ?? []).map((t) => {
+              const paid = t.status === "paid";
+              const body = (
+                <>
+                  <div>
+                    <p className="text-sm font-medium tabular-nums">{baht(t.amount)}</p>
+                    <p className="text-[11px] text-neutral-400">{dateTH(t.created_at)}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge tone={paid ? "green" : t.status === "rejected" ? "red" : "amber"}>
+                      {paid ? "สำเร็จ" : t.status === "verifying" ? "กำลังตรวจสลิป" : t.status === "rejected" ? "ไม่ผ่าน" : "รอชำระ"}
+                    </Badge>
+                    {paid && <span className="hidden items-center gap-1 text-[11px] font-medium text-emerald-700 sm:inline-flex">ดูใบเสร็จ →</span>}
+                  </div>
+                </>
+              );
+              return paid ? (
+                <Link key={t.id} href={`/dashboard/billing/receipt/${t.id}`}
+                  className="flex items-center justify-between rounded-xl border border-neutral-100 px-4 py-3 transition-colors hover:border-emerald-200 hover:bg-emerald-50/40">
+                  {body}
+                </Link>
+              ) : (
+                <div key={t.id} className="flex items-center justify-between rounded-xl border border-neutral-100 px-4 py-3">
+                  {body}
                 </div>
-                <Badge tone={t.status === "paid" ? "green" : t.status === "rejected" ? "red" : "amber"}>
-                  {t.status === "paid" ? "สำเร็จ" : t.status === "verifying" ? "กำลังตรวจสลิป" : t.status === "rejected" ? "ไม่ผ่าน" : "รอชำระ"}
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       )}

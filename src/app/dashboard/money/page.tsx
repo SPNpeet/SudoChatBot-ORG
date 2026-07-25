@@ -10,6 +10,7 @@ import { PAY_METHOD_TH, docOutstanding } from "@/lib/finance";
 import type { FinPayment } from "@/lib/types/finance";
 import Link from "next/link";
 import { Landmark } from "lucide-react";
+import RowLink from "@/components/row-link";
 import SlipMatch from "./slip-match";
 import StatementImport from "./statement-import";
 
@@ -104,8 +105,12 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
               <tbody>
                 {rows.map((p) => {
                   const url = p.slip_storage_path ? urlMap.get(p.slip_storage_path) : undefined;
-                  return (
-                    <tr key={p.id}>
+                  const docHref = p.fin_docs
+                    ? (p.fin_docs.doc_type === "expense" ? `/dashboard/expenses/${p.doc_id}` : `/dashboard/sales/${p.doc_id}`)
+                    : null;
+                  // แถวที่ผูกกับเอกสารกดได้ทั้งแถว · แถวที่ไม่ผูกเอกสารไม่มีปลายทางให้ไป จึงไม่ทำให้ดูกดได้
+                  const cells = (
+                    <>
                       <Td className="text-neutral-400">{dateTH(p.paid_at)}</Td>
                       <Td>{p.direction === "in" ? <Badge tone="green">เงินเข้า</Badge> : <Badge tone="red">เงินออก</Badge>}</Td>
                       <Td className={cn("text-right font-medium", p.direction === "in" ? "text-emerald-700" : "text-red-600")}>
@@ -126,8 +131,11 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
                           </a>
                         ) : <span className="text-neutral-300">-</span>}
                       </Td>
-                    </tr>
+                    </>
                   );
+                  return docHref
+                    ? <RowLink key={p.id} href={docHref}>{cells}</RowLink>
+                    : <tr key={p.id}>{cells}</tr>;
                 })}
               </tbody>
             </Table>

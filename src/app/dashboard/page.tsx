@@ -13,6 +13,7 @@ import SampleDataCard from "./sample-data-card";
 import TodayPanel, { type TodoDoc } from "./today-panel";
 import { TrendingUp, TrendingDown, Users, Receipt, ArrowUpRight, ArrowDownRight, LineChart, FileText } from "lucide-react";
 import Link from "next/link";
+import RowLink from "@/components/row-link";
 
 export const dynamic = "force-dynamic";
 
@@ -168,7 +169,7 @@ export default async function Overview() {
               <thead><tr><Th>เลขที่</Th><Th>ประเภท</Th><Th>คู่ค้า</Th><Th className="text-right">ยอด</Th><Th>สถานะ</Th><Th>วันที่</Th></tr></thead>
               <tbody>
                 {((recentDocs ?? []) as FinDoc[]).map((d) => (
-                  <tr key={d.id} className="hover:bg-neutral-50">
+                  <RowLink key={d.id} href={d.doc_type === "expense" ? `/dashboard/expenses/${d.id}` : `/dashboard/sales/${d.id}`}>
                     <Td>
                       <Link href={d.doc_type === "expense" ? `/dashboard/expenses/${d.id}` : `/dashboard/sales/${d.id}`}
                         className="font-medium text-emerald-700 hover:underline">{d.doc_number}</Link>
@@ -178,7 +179,7 @@ export default async function Overview() {
                     <Td className="text-right tabular-nums">{baht(d.total)}</Td>
                     <Td><Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge></Td>
                     <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
-                  </tr>
+                  </RowLink>
                 ))}
               </tbody>
             </Table>
