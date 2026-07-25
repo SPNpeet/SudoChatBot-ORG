@@ -2,10 +2,10 @@ import { ImageResponse } from "next/og";
 import fs from "node:fs";
 import path from "node:path";
 
-// รูป OG เวลาแชร์ลิงก์ลง Facebook/LINE — ฟอนต์ default ของ ImageResponse ไม่มีสระไทย จึงใช้อังกฤษ
+// รูป OG เวลาแชร์ลิงก์ — ฟอนต์ default ของ ImageResponse ไม่มีสระไทย จึงใช้อังกฤษ
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "SudoChatBot — AI Sales Chatbot for Facebook / IG / LINE";
+export const alt = "SudoChatBot — AI Accounting for Thai Businesses";
 
 export default function OpengraphImage() {
   const logo = fs.readFileSync(path.join(process.cwd(), "public/logo-mark.png"));

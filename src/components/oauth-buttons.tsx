@@ -1,6 +1,8 @@
 "use client";
 // ============================================================
 //  ปุ่มเข้าระบบด้วยบัญชีภายนอก — ใช้ร่วมกันทั้งหน้าสมัครและหน้าเข้าสู่ระบบ
+//  แสดงชุดเดียวกันทั้งสองหน้า เปลี่ยนแค่คำ (สมัครด้วย / เข้าสู่ระบบด้วย)
+//  เจตนา: ไม่ให้มีช่องทางที่โผล่หน้าเดียว — คนกดผิดหน้าแล้วงงว่าทำไมได้บัญชีใหม่
 //  หมายเหตุสำคัญ: OAuth ของ Supabase ไม่มีโหมด "เข้าอย่างเดียว ห้ามสมัคร"
 //  ถ้าอีเมลนั้นยังไม่มีบัญชี ระบบจะสร้างให้อัตโนมัติ — จึงต้องเขียนบอกผู้ใช้ตรงๆ
 //  ไม่ให้เข้าใจผิดว่า "กดเข้าสู่ระบบแล้วทำไมได้บัญชีใหม่"
@@ -11,6 +13,14 @@ import { createClient } from "@/lib/supabase/client";
 export type OAuthProvider = "google" | "facebook";
 
 const LABEL: Record<OAuthProvider, string> = { google: "Google", facebook: "Facebook" };
+
+function FacebookMark() {
+  return (
+    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" aria-hidden>
+      <path fill="#1877F2" d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.03 1.79-4.7 4.53-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07Z" />
+    </svg>
+  );
+}
 
 function GoogleMark() {
   return (
@@ -65,8 +75,8 @@ export default function OAuthButtons({ mode, providers = ["google"] }: {
       )}
       {providers.includes("facebook") && (
         <button type="button" onClick={() => go("facebook")} disabled={!!loading}
-          className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white text-[13px] text-neutral-600 transition hover:bg-neutral-50 disabled:opacity-60">
-          {loading === "facebook" ? "กำลังเชื่อมต่อ..." : `${verb} Facebook`}
+          className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl border border-neutral-300 bg-white text-sm font-medium text-neutral-800 transition hover:border-neutral-400 hover:bg-neutral-50 disabled:opacity-60">
+          <FacebookMark /> {loading === "facebook" ? "กำลังเชื่อมต่อ..." : `${verb} Facebook`}
         </button>
       )}
       {error && <p className="text-center text-xs text-red-600">{error}</p>}

@@ -2,8 +2,7 @@
 // ============================================================
 //  เข้าสู่ระบบ — สำหรับคนที่ "มีบัญชีอยู่แล้ว" เท่านั้น
 //  แยกจากหน้าสมัคร (/signup) ชัดเจน ไม่มีปุ่มสมัครปนในฟอร์ม
-//  Facebook อยู่ใต้ "ช่องทางอื่น" — เหลือผู้ใช้เดิมแค่บัญชีเดียวจากยุคก่อน pivot
-//  ไม่โชว์ในหน้าสมัคร เพราะไม่ใช่ช่องทางที่เราอยากให้คนใหม่ใช้
+//  ช่องทาง: Google · Facebook · อีเมล/รหัสผ่าน — ชุดเดียวกับหน้าสมัคร เปลี่ยนแค่คำบนปุ่ม
 // ============================================================
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
@@ -49,7 +48,7 @@ export default function LoginPage() {
           <p className="mt-1 text-center text-xs text-neutral-500">สำหรับผู้ที่มีบัญชีอยู่แล้ว</p>
 
           <div className="mt-6">
-            <OAuthButtons mode="signin" providers={["google"]} />
+            <OAuthButtons mode="signin" providers={["google", "facebook"]} />
           </div>
 
           <div className="my-5 flex items-center gap-3">
@@ -82,13 +81,6 @@ export default function LoginPage() {
             ยังไม่มีบัญชี? <Link href="/signup" className="font-semibold text-emerald-600 hover:underline">สมัครสมาชิกฟรี</Link>
           </p>
 
-          <details className="mt-3">
-            <summary className="cursor-pointer text-center text-[11px] text-neutral-400 hover:text-neutral-600">ช่องทางอื่น (ผู้ใช้เดิม)</summary>
-            <div className="mt-2.5">
-              <OAuthButtons mode="signin" providers={["facebook"]} />
-              <p className="mt-1.5 text-center text-[10px] text-neutral-400">สำหรับบัญชีที่เคยสมัครด้วย Facebook ไว้ก่อนหน้า</p>
-            </div>
-          </details>
         </div>
 
         <p className="mt-4 text-center text-[11px] text-neutral-400">
