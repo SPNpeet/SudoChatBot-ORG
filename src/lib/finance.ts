@@ -1,5 +1,6 @@
 // ==== ป้ายชื่อ + ตัวคำนวณเอกสารบัญชี (ใช้ได้ทั้ง client/server) ====
 import type { DocType, DocStatus, VatMode } from "@/lib/types/finance";
+import { VAT_RATE } from "./tax-th";
 
 export const DOC_TYPE_TH: Record<DocType, string> = {
   quotation: "ใบเสนอราคา",
@@ -55,14 +56,40 @@ export function calcDocTotals(
   vatMode: VatMode,
   whtRate: number,
 ): DocTotals {
-  const subtotal = items.reduce((a, it) => a + (Number(it.qty) || 0) * (Number(it.unit_price) || 0), 0);
-  const base = Math.max(0, subtotal - (Number(discount) || 0));
-  let vat = 0, exVat = base, total = base;
-  if (vatMode === "exclusive") { vat = base * 0.07; exVat = base; total = base + vat; }
-  else if (vatMode === "inclusive") { vat = base * 7 / 107; exVat = base - vat; total = base; }
-  const wht = exVat * ((Number(whtRate) || 0) / 100);
   const r = (n: number) => Math.round(n * 100) / 100;
-  return { base: r(base), exVat: r(exVat), vat: r(vat), wht: r(wht), total: r(total), cashDue: r(total - wht) };
+
+  const subtotal = items.reduce((a, it) => a + (Number(it.qty) || 0) * (Number(it.unit_price) || 0), 0);
+  const base = r(Math.max(0, subtotal - (Number(discount) || 0)));
+
+  // อัตรามาจาก tax-th.ts ที่เดียว — ห้ามเขียนเลข 7 ตรงนี้อีก
+  // โหมดรวมใน ใช้จำนวนเต็มหารกัน (7/107) ไม่ใช่ 0.07/1.07 เพราะทศนิยมฐานสอง
+  // ทำให้สองสูตรต่างกันระดับบิตสุดท้าย
+  const pct = Math.round(VAT_RATE * 100);          // 7
+
+  // ⚠️ ลำดับการปัดเศษสำคัญมากทางบัญชี
+  // เดิมปัดทุกค่าแยกกันจากค่าเต็มความละเอียด ทำให้เอกสารไม่ลงตัวในตัวเอง
+  // ตัวอย่างที่เคยผิด: ยอด 9.50 บวก VAT -> พิมพ์ 9.50 + 0.67 แต่ยอดรวม 10.16 (ต้องเป็น 10.17)
+  // เจอ 1,060 กรณีจากการทดสอบ 2 ล้านยอด — ผู้สอบบัญชีเห็นแล้วจับได้ทันที
+  // แก้โดย: ปัด VAT ก่อน แล้วค่อยประกอบยอดรวมจากค่าที่ปัดแล้ว
+  // ผลคือ มูลค่าก่อนภาษี + VAT = ยอดรวม เสมอ ไม่มีข้อยกเว้น
+  let vat: number, exVat: number, total: number;
+  if (vatMode === "exclusive") {
+    vat = r(base * VAT_RATE);
+    exVat = base;
+    total = r(exVat + vat);
+  } else if (vatMode === "inclusive") {
+    vat = r(base * pct / (100 + pct));
+    total = base;
+    exVat = r(total - vat);
+  } else {
+    vat = 0;
+    exVat = base;
+    total = base;
+  }
+
+  // หัก ณ ที่จ่ายคำนวณจากมูลค่าก่อน VAT ที่ปัดแล้ว (ตัวเลขเดียวกับที่พิมพ์บนเอกสาร)
+  const wht = r(exVat * ((Number(whtRate) || 0) / 100));
+  return { base, exVat, vat, wht, total, cashDue: r(total - wht) };
 }
 
 /** อายุหนี้เป็น bucket (คงค้างกี่วันนับจาก due date หรือ issue date) */

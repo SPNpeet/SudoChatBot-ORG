@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { FileText } from "lucide-react";
 import DocActions from "../../finance/doc-actions";
+import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
 import ApprovalActions from "../approval-actions";
 
 export const dynamic = "force-dynamic";
@@ -120,7 +121,7 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
           </Table>
           <div className="ml-auto max-w-xs space-y-1 px-5 py-4 text-sm">
             {Number(doc.discount) > 0 && <div className="flex justify-between"><span className="text-neutral-400">ส่วนลด</span><span>-{baht(doc.discount)}</span></div>}
-            {doc.vat_mode !== "none" && <div className="flex justify-between"><span className="text-neutral-400">VAT 7% (ภาษีซื้อ)</span><span>{baht(doc.vat_amount)}</span></div>}
+            {doc.vat_mode !== "none" && <div className="flex justify-between"><span className="text-neutral-400">VAT {VAT_PERCENT_LABEL} (ภาษีซื้อ)</span><span>{baht(doc.vat_amount)}</span></div>}
             <div className="flex justify-between font-semibold"><span>ยอดเอกสาร</span><span>{baht(doc.total)}</span></div>
             {Number(doc.wht_amount) > 0 && <div className="flex justify-between text-neutral-500"><span>หัก ณ ที่จ่าย {Number(doc.wht_rate)}%</span><span>-{baht(doc.wht_amount)}</span></div>}
             <div className="flex justify-between text-emerald-700"><span>จ่ายแล้ว</span><span>{baht(doc.paid_amount)}</span></div>

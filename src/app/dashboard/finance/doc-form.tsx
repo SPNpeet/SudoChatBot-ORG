@@ -14,6 +14,7 @@ import { calcDocTotals, DOC_TYPE_TH, WHT_RATES } from "@/lib/finance";
 import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME } from "@/lib/tax-th";
 import type { DocType, VatMode, ExpenseCategory, Contact, FinDoc } from "@/lib/types/finance";
 import { saveDoc, uploadFinFile, type SaveDocInput } from "./actions";
+import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
 
 interface ProductLite { id: string; name: string; price: number; stock: number; track_stock: boolean }
 interface Row { name: string; qty: string; unit: string; unit_price: string; product_id: string | null }
@@ -72,10 +73,13 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
   // ไม่มี OCR ตัวไหนในโลกอ่านกระดาษถูก 100% (บิลยับ ปากกาเขียนทับ กระดาษความร้อนจาง)
   // สิ่งที่ทำได้จริงคือ "จับให้เจอก่อนลงบัญชี": เอายอดท้ายบิลที่ AI อ่านได้
   // มาทานกับผลรวมที่ฟอร์มคำนวณเองจากรายการ ถ้าไม่ตรงเกิน 1 บาท = มีตัวเลขอ่านผิดแน่นอน
+  // เกณฑ์ 0.05 บาท (5 สตางค์): เดิมตั้งไว้ 1 บาทซึ่งหลวมเกินไป — 1 บาทคือเงินจริง
+  // ที่ยอมให้ต่างได้เล็กน้อยเพราะระบบของผู้ขายแต่ละเจ้าปัดเศษ VAT ไม่เหมือนกัน
+  // ต่างได้ 1-2 สตางค์ถือปกติ เกินกว่านั้นแปลว่ามีตัวเลขอ่านผิดจริง
   const ocrMismatch = useMemo(() => {
     if (ocrTotal == null) return null;
-    const diff = Math.abs(totals.total - ocrTotal);
-    return diff > 1 ? { diff, ocrTotal } : null;
+    const diff = Math.round(Math.abs(totals.total - ocrTotal) * 100) / 100;
+    return diff > 0.05 ? { diff, ocrTotal } : null;
   }, [ocrTotal, totals.total]);
 
   function setRow(i: number, patch: Partial<Row>) {
@@ -293,7 +297,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
               <Input inputMode="decimal" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="0" />
             </div>
             <div>
-              <Label>ภาษีมูลค่าเพิ่ม (VAT 7%)</Label>
+              <Label>{VAT_LABEL}</Label>
               <Select value={vatMode} onChange={(e) => setVatMode(e.target.value as VatMode)}>
                 <option value="none">ไม่มี VAT</option>
                 <option value="exclusive">บวก VAT เพิ่มจากราคา</option>
@@ -401,7 +405,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
             {vatMode !== "none" && (
               <>
                 <div className="flex justify-between"><span className="text-neutral-400">มูลค่าก่อน VAT</span><span>{baht(totals.exVat)}</span></div>
-                <div className="flex justify-between"><span className="text-neutral-400">VAT 7%</span><span>{baht(totals.vat)}</span></div>
+                <div className="flex justify-between"><span className="text-neutral-400">VAT {VAT_PERCENT_LABEL}</span><span>{baht(totals.vat)}</span></div>
               </>
             )}
             <div className="flex justify-between border-t border-neutral-200 pt-1 font-semibold"><span>ยอดเอกสาร</span><span>{baht(totals.total)}</span></div>

@@ -14,6 +14,7 @@ import { branchLabel, checkTaxInvoice, formatTaxId, WHT_INCOME_TYPES } from "@/l
 import { TriangleAlert } from "lucide-react";
 import PrintButton from "./print-button";
 import { rdFormFor } from "@/lib/tax-th";
+import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
 
 export const dynamic = "force-dynamic";
 
@@ -201,7 +202,7 @@ export default async function PrintDocPage({ params, searchParams }: {
                   {doc.vat_mode !== "none" && (
                     <>
                       <tr><td className="py-0.5 pr-4 text-neutral-500">มูลค่าก่อนภาษี</td><td className="py-0.5 text-right">{bahtDoc(Number(doc.total) - Number(doc.vat_amount))}</td></tr>
-                      <tr><td className="py-0.5 pr-4 text-neutral-500">ภาษีมูลค่าเพิ่ม 7%</td><td className="py-0.5 text-right">{bahtDoc(doc.vat_amount)}</td></tr>
+                      <tr><td className="py-0.5 pr-4 text-neutral-500">{VAT_LABEL}</td><td className="py-0.5 text-right">{bahtDoc(doc.vat_amount)}</td></tr>
                     </>
                   )}
                   <tr className="border-t border-neutral-900 text-[15px] font-bold">
