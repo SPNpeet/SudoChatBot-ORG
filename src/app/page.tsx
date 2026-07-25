@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { FileText, ScanLine, BookOpenText, Landmark, Building2, ShieldCheck, ArrowRight, Sparkles, Check, Calculator } from "lucide-react";
+import { FileText, ScanLine, BookOpenText, Landmark, Building2, ShieldCheck, ArrowRight, Sparkles, Check, Calculator, Clock, X as XIcon, Lock, Users } from "lucide-react";
 import LandingSandboxChat from "./landing-sandbox-chat";
 
 const features = [
@@ -35,6 +35,14 @@ const plans = [
   { name: "Professional", price: "1,990", per: "บาท/เดือน", items: ["สูงสุด 3 กิจการ · พนักงานไม่จำกัด", "สมุดรายวัน + 50 ทวิ + AI อ่านบิล", "ตรวจสลิปอัตโนมัติ 1,000 สลิป/เดือน", "งาน AI 500 คำสั่ง/เดือน"], cta: "เลือกแพ็กนี้", hot: true },
   { name: "AI Executive", price: "3,990", per: "บาท/เดือน", items: ["สูงสุด 5 กิจการ · พนักงานไม่จำกัด", "ไฟล์ยื่นสรรพากร ภ.พ.30 / ภ.ง.ด. (.txt)", "ตรวจสลิปอัตโนมัติ ไม่จำกัด", "งาน AI 2,000 คำสั่ง — คุยกับข้อมูลได้ลึก"], cta: "เลือกแพ็กนี้", hot: false },
   { name: "Agency", price: "9,900", per: "บาท/เดือน", items: ["ไม่จำกัดกิจการ (สำนักงานบัญชี)", "พนักงานไม่จำกัดทั้งสำนักงาน", "ทุกอย่างใน AI Executive", "งาน AI 10,000 คำสั่ง/เดือน"], cta: "เลือกแพ็กนี้", hot: false },
+];
+
+// เทียบให้เห็นภาพว่าชีวิตเปลี่ยนยังไง — จุดเจ็บจริงของ SME ไทย
+const compare = [
+  { before: "เก็บบิลใส่กล่อง สิ้นเดือนมานั่งคีย์ทีเดียว 2 วันเต็ม", after: "ถ่ายรูปบิลตอนได้รับ 5 วินาที ลงบัญชีเสร็จทันที" },
+  { before: "ออกใบแจ้งหนี้ใน Excel แล้วมานั่งพิมพ์ซ้ำในโปรแกรมบัญชี", after: "ออกใบเดียว ลงสมุดรายวัน ตัดสต๊อก ตามหนี้ ครบในคลิกเดียว" },
+  { before: "ทวงเงินลูกค้าเอง ไล่เช็คสลิปในแชททีละใบ", after: "ส่งลิงก์ให้ลูกค้าสแกนจ่าย ระบบตรวจสลิปจริง/สลิปซ้ำ ตัดยอดเอง" },
+  { before: "ใกล้ยื่นภาษีค่อยวิ่งหาเอกสาร ไม่รู้ว่าต้องจ่ายเท่าไหร่", after: "ภ.พ.30 / ภ.ง.ด. อัปเดตสดทุกวัน ดาวน์โหลดไฟล์ยื่นได้เลย" },
 ];
 
 const faqs = [
@@ -76,7 +84,15 @@ export default function Landing() {
               <Link href="/signup" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500">
                 เริ่มใช้ฟรี <ArrowRight className="h-4 w-4" />
               </Link>
-              <span className="text-xs text-neutral-400">ไม่ต้องมีความรู้บัญชี · ไม่ต้องเขียนโค้ด</span>
+              <a href="#pricing" className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-medium text-neutral-700 transition hover:border-neutral-400 hover:bg-neutral-50">
+                ดูราคา
+              </a>
+            </div>
+            <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-neutral-500 lg:justify-start justify-center">
+              <span className="inline-flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-emerald-600" /> ไม่ต้องใช้บัตรเครดิต</span>
+              <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5 text-emerald-600" /> ตั้งค่าเสร็จใน 3 นาที</span>
+              <span className="inline-flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-emerald-600" /> พนักงานไม่จำกัดทุกแพ็ก</span>
+              <span className="inline-flex items-center gap-1.5"><Lock className="h-3.5 w-3.5 text-emerald-600" /> เงินเข้าบัญชีคุณโดยตรง</span>
             </div>
           </div>
 
@@ -115,6 +131,30 @@ export default function Landing() {
               <p className="text-xs text-neutral-500">{s.d}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* เทียบก่อน-หลัง — ให้คนเห็นภาพตัวเองในบรรทัดซ้ายก่อน แล้วค่อยขายทางออก */}
+      <section className="border-t border-neutral-100 py-16">
+        <div className="mx-auto max-w-4xl px-6">
+          <h2 className="text-center text-2xl font-bold tracking-tight">งานบัญชีที่กินเวลาคุณทุกเดือน</h2>
+          <p className="mt-2 text-center text-sm text-neutral-500">เทียบให้เห็นชัดว่าเปลี่ยนไปยังไง</p>
+          <div className="mt-8 overflow-hidden rounded-2xl border border-neutral-200">
+            <div className="grid grid-cols-2 border-b border-neutral-200 bg-neutral-50 text-xs font-semibold">
+              <div className="px-4 py-2.5 text-neutral-500">แบบเดิม</div>
+              <div className="border-l border-neutral-200 px-4 py-2.5 text-emerald-700">กับ SudoChatBot</div>
+            </div>
+            {compare.map((c) => (
+              <div key={c.before} className="grid grid-cols-2 border-b border-neutral-100 last:border-0">
+                <div className="flex items-start gap-2 px-4 py-3.5 text-[13px] leading-relaxed text-neutral-500">
+                  <XIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-300" /> {c.before}
+                </div>
+                <div className="flex items-start gap-2 border-l border-neutral-100 bg-emerald-50/30 px-4 py-3.5 text-[13px] font-medium leading-relaxed text-neutral-700">
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" /> {c.after}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -193,7 +233,14 @@ export default function Landing() {
         </Link>
       </section>
 
-      <footer className="border-t border-neutral-100 py-8">
+      {/* แถบ CTA ติดล่างบนมือถือ — เลื่อนอ่านถึงไหนก็สมัครได้ทันที */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur sm:hidden">
+        <Link href="/signup" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-600 text-[15px] font-semibold text-white active:scale-[0.99]">
+          เริ่มใช้ฟรี ไม่ต้องใช้บัตร <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+
+      <footer className="border-t border-neutral-100 py-8 pb-24 sm:pb-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 text-xs text-neutral-400">
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-1">
             <Link href="/privacy" className="hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
