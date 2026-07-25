@@ -2,12 +2,27 @@
 // ตั้งค่า LINE OA กลางของแพลตฟอร์ม — ตั้งครั้งเดียว ทุกกิจการได้ปุ่ม "เชื่อมต่อ LINE" คลิกเดียวทันที
 import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Label } from "@/components/ui";
-import { MessageCircle, CheckCircle2 } from "lucide-react";
+import { MessageCircle, CheckCircle2, LayoutGrid } from "lucide-react";
 import { savePlatformLine } from "./actions";
 
 export default function LineOaCard({ configured, basicId }: { configured: boolean; basicId: string | null }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [menuMsg, setMenuMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [menuBusy, setMenuBusy] = useState(false);
+
+  async function buildRichMenu() {
+    setMenuBusy(true); setMenuMsg(null);
+    try {
+      const res = await fetch("/api/admin/line-richmenu", { method: "POST" });
+      const j = await res.json();
+      setMenuMsg(j.ok
+        ? { ok: true, text: `สร้างเมนูแล้ว ${j.buttons} ปุ่ม — เปิดแชท OA ในมือถือดูได้เลย (อาจต้องปิด-เปิดแชทใหม่)` }
+        : { ok: false, text: j.error ?? "สร้างไม่สำเร็จ" });
+    } catch (e) {
+      setMenuMsg({ ok: false, text: (e as Error).message });
+    } finally { setMenuBusy(false); }
+  }
 
   function submit(fd: FormData) {
     setMsg(null);
@@ -56,6 +71,20 @@ export default function LineOaCard({ configured, basicId }: { configured: boolea
           <Button disabled={pending}>{pending ? "กำลังบันทึก..." : "บันทึก"}</Button>
         </form>
         {msg && <p className={`mt-2 text-xs ${msg.ok ? "text-emerald-600" : "text-red-600"}`}>{msg.text}</p>}
+
+        {configured && (
+          <div className="mt-4 rounded-xl border border-neutral-200 p-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium"><LayoutGrid className="h-3.5 w-3.5 text-emerald-600" /> เมนูในแชท LINE (Rich Menu)</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+              สร้างเมนู 6 ปุ่มให้ลูกค้ากดจากแชท LINE เข้าใช้งานได้ทันที — ผู้ช่วยบัญชี AI · ถ่ายรูปบิล · ออกเอกสาร · ยอดค้าง · รายงานภาษี · ช่วยเหลือ
+              (ระบบสร้างรูปเมนูให้เอง ไม่ต้องออกแบบ)
+            </p>
+            <Button type="button" size="sm" variant="outline" className="mt-2" onClick={buildRichMenu} disabled={menuBusy}>
+              {menuBusy ? "กำลังสร้าง..." : "สร้าง / อัปเดตเมนูในแชท"}
+            </Button>
+            {menuMsg && <p className={`mt-2 text-xs ${menuMsg.ok ? "text-emerald-600" : "text-red-600"}`}>{menuMsg.text}</p>}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
