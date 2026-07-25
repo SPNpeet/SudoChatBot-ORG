@@ -241,6 +241,7 @@ export async function saveNotifySettings(shopId: string, formData: FormData): Pr
     const patch: Record<string, unknown> = {
       shop_id: shopId,
       line_to_id: toId || null,
+      link_source: "own",
       notify_approval: formData.get("notify_approval") === "on",
       updated_at: new Date().toISOString(),
     };
@@ -260,16 +261,29 @@ export async function testLineNotify(shopId: string): Promise<ActionResult> {
   try {
     await assertMember(shopId, ["owner", "admin"]);
     const svc = createServiceClient();
-    const { data: s } = await svc.from("shop_notify_settings")
-      .select("line_channel_token,line_to_id").eq("shop_id", shopId).maybeSingle();
-    if (!s?.line_channel_token || !s?.line_to_id) {
-      return { ok: false, error: "ใส่ Channel access token และ User/Group ID แล้วกดบันทึกก่อนนะ" };
-    }
-    const { pushLineMessage } = await import("@/lib/line");
-    const ok = await pushLineMessage(s.line_channel_token, s.line_to_id,
-      "✅ SudoChatBot เชื่อมต่อ LINE สำเร็จ! การแจ้งเตือน (เช่น ค่าใช้จ่ายรออนุมัติ) จะส่งเข้าห้องนี้ค่ะ");
-    return ok ? { ok: true } : { ok: false, error: "ส่งไม่สำเร็จ — เช็ค token และ ID อีกครั้ง (บอทต้องเป็นเพื่อน/อยู่ในกลุ่มปลายทางแล้ว)" };
+    const { resolveLineSender, pushLineMessage } = await import("@/lib/line");
+    const sender = await resolveLineSender(svc, shopId);
+    if (!sender) return { ok: false, error: "ยังไม่ได้เชื่อม LINE — กดปุ่ม 'เชื่อมต่อ LINE' ก่อนนะ" };
+    const r = await pushLineMessage(sender.token, sender.to,
+      "🔔 ทดสอบจาก SudoChatBot — การแจ้งเตือนใช้งานได้ปกติค่ะ");
+    return r.ok ? { ok: true } : { ok: false, error: r.error ?? "ส่งไม่สำเร็จ" };
   } catch (e) {
     return { ok: false, error: friendly(e, "ทดสอบไม่สำเร็จ") };
+  }
+}
+
+/** ยกเลิกการเชื่อม LINE ของกิจการ */
+export async function unlinkLine(shopId: string): Promise<ActionResult> {
+  try {
+    await assertMember(shopId, ["owner", "admin"]);
+    const svc = createServiceClient();
+    const { error } = await svc.from("shop_notify_settings")
+      .update({ line_to_id: null, line_channel_token: null, line_display_name: null, linked_at: null, updated_at: new Date().toISOString() })
+      .eq("shop_id", shopId);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/dashboard/settings");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ยกเลิกการเชื่อมต่อไม่สำเร็จ") };
   }
 }

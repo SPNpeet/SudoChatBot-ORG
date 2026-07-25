@@ -6,6 +6,7 @@ import SubmitButton from "@/components/submit-button";
 import { claimAdmin } from "./actions";
 import AdminAiCenter from "./ai-center";
 import AiGuardCard, { type AiGuardStatus } from "./ai-guard-card";
+import LineOaCard from "./line-oa-card";
 import { ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -41,10 +42,11 @@ export default async function AdminPage() {
 
   // โหลดสถานะการ์ดงาน + คีย์สำรอง + เกราะค่า AI
   const svc = createServiceClient();
-  const [{ data: keys }, { data: purposeKeys }, { data: guard }] = await Promise.all([
+  const [{ data: keys }, { data: purposeKeys }, { data: guard }, { data: pfLine }] = await Promise.all([
     svc.from("ai_provider_keys").select("provider,key_last4,test_status,test_message,tested_at,updated_at"),
     svc.from("ai_purpose_keys").select("purpose,provider,model,key_last4,updated_at"),
     supabase.rpc("platform_ai_guard_status"),
+    svc.from("platform_billing_settings").select("line_login_channel_id,line_oa_token,line_oa_basic_id").eq("id", true).maybeSingle(),
   ]);
 
   return (
@@ -56,6 +58,10 @@ export default async function AdminPage() {
         purposeKeys={purposeKeys ?? []}
       />
       {guard && <AiGuardCard status={guard as unknown as AiGuardStatus} />}
+      <LineOaCard
+        configured={!!pfLine?.line_login_channel_id && !!pfLine?.line_oa_token}
+        basicId={pfLine?.line_oa_basic_id ?? null}
+      />
     </div>
   );
 }

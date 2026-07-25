@@ -86,3 +86,28 @@ export async function savePlatformAiGuard(capUsd: number | null, kill: boolean):
     return { ok: false, error: (e as Error).message.includes("forbidden") ? "เฉพาะผู้ดูแลแพลตฟอร์ม" : "บันทึกไม่สำเร็จ" };
   }
 }
+
+/** ตั้งค่า LINE OA กลางของแพลตฟอร์ม (แอดมินเท่านั้น) — ช่องว่าง = คงค่าเดิม */
+export async function savePlatformLine(formData: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await assertPlatformAdmin();
+    const svc = createServiceClient();
+    const patch: Record<string, unknown> = { id: true, updated_at: new Date().toISOString() };
+    const put = (key: string, field: string, max = 500) => {
+      const v = String(formData.get(key) ?? "").trim();
+      if (v) patch[field] = v.slice(0, max);
+    };
+    put("login_channel_id", "line_login_channel_id", 40);
+    put("login_channel_secret", "line_login_channel_secret");
+    put("oa_token", "line_oa_token", 1000);
+    const basic = String(formData.get("oa_basic_id") ?? "").trim();
+    patch.line_oa_basic_id = basic ? basic.slice(0, 40) : null;
+    const { error } = await svc.from("platform_billing_settings").upsert(patch, { onConflict: "id" });
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/settings");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}

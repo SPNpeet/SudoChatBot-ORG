@@ -9,16 +9,18 @@ import type { ShopPaymentSettings } from "@/lib/types/db";
 
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ line?: string }> }) {
   const { supabase, shop, role } = await getCurrentShop();
+  const { line: lineStatus } = await searchParams;
   const canEdit = role === "owner" || role === "admin";
   const svc = createServiceClient();
-  const [{ data: pay }, { data: members }, { data: taxInfo }, { data: notify }] = await Promise.all([
+  const [{ data: pay }, { data: members }, { data: taxInfo }, { data: notify }, { data: platform }] = await Promise.all([
     supabase.from("shop_payment_settings").select("*").eq("shop_id", shop.id).maybeSingle(),
     supabase.from("shop_members").select("id, role, profiles(display_name, email)").eq("shop_id", shop.id),
     supabase.from("shops").select("billing_name,billing_address,tax_id").eq("id", shop.id).maybeSingle(),
     // token อยู่หลัง RLS (service เท่านั้น) — ส่งลง client แค่ "มี/ไม่มี" ไม่ส่งค่าจริง
-    svc.from("shop_notify_settings").select("line_channel_token,line_to_id,notify_approval").eq("shop_id", shop.id).maybeSingle(),
+    svc.from("shop_notify_settings").select("line_channel_token,line_to_id,notify_approval,link_source,line_display_name").eq("shop_id", shop.id).maybeSingle(),
+    svc.from("platform_billing_settings").select("line_login_channel_id,line_oa_token,line_oa_basic_id").eq("id", true).maybeSingle(),
   ]);
   const p = (pay ?? {}) as Partial<ShopPaymentSettings>;
   const memberRows = (members ?? []).map((m) => {
@@ -55,9 +57,16 @@ export default async function SettingsPage() {
             <CardHeader><CardTitle>🔔 แจ้งเตือนเข้า LINE (เอกสารรออนุมัติ ฯลฯ)</CardTitle></CardHeader>
             <CardContent>
               <NotifySettingsForm shopId={shop.id}
-                hasToken={!!notify?.line_channel_token}
-                toId={notify?.line_to_id ?? null}
-                notifyApproval={notify?.notify_approval ?? true} />
+                platformReady={!!platform?.line_login_channel_id && !!platform?.line_oa_token}
+                oaBasicId={platform?.line_oa_basic_id ?? null}
+                hasOwnToken={!!notify?.line_channel_token}
+                status={lineStatus}
+                linked={notify?.line_to_id ? {
+                  source: (notify.link_source === "own" ? "own" : "platform") as "own" | "platform",
+                  displayName: notify.line_display_name ?? null,
+                  toId: notify.line_to_id,
+                  notifyApproval: notify.notify_approval ?? true,
+                } : null} />
             </CardContent>
           </Card>
         </>
