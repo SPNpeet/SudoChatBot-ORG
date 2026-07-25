@@ -9,6 +9,7 @@ import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding } from "@/li
 import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
 import CashflowChart from "./cashflow-chart";
 import SetupChecklist from "./setup-checklist";
+import SampleDataCard from "./sample-data-card";
 import { TrendingUp, TrendingDown, HandCoins, AlarmClock } from "lucide-react";
 import Link from "next/link";
 
@@ -20,13 +21,15 @@ export default async function Overview() {
   const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
   const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
 
-  const [{ data: pays30 }, { data: openDocs }, { data: recentDocs }, { data: overdue }] = await Promise.all([
+  const [{ data: pays30 }, { data: openDocs }, { data: recentDocs }, { data: overdue }, { count: sampleCount }, { count: docCount }] = await Promise.all([
     supabase.from("fin_payments").select("direction,amount,paid_at").eq("shop_id", shop.id).gte("paid_at", since30),
     supabase.from("fin_docs").select("doc_type,total,wht_amount,paid_amount").eq("shop_id", shop.id).in("status", ["awaiting", "partial"]),
     supabase.from("fin_docs").select("*").eq("shop_id", shop.id).neq("status", "draft").order("created_at", { ascending: false }).limit(6),
     supabase.from("fin_docs").select("id,doc_type,doc_number,contact_name,due_date,total,wht_amount,paid_amount")
       .eq("shop_id", shop.id).in("status", ["awaiting", "partial"]).lt("due_date", today)
       .order("due_date").limit(5),
+    supabase.from("fin_docs").select("id", { count: "exact", head: true }).eq("shop_id", shop.id).eq("is_sample", true),
+    supabase.from("fin_docs").select("id", { count: "exact", head: true }).eq("shop_id", shop.id),
   ]);
 
   const monthIn = (pays30 ?? []).filter((p) => p.direction === "in" && p.paid_at >= monthStart).reduce((a, p) => a + Number(p.amount), 0);
@@ -60,6 +63,7 @@ export default async function Overview() {
         <p className="text-sm text-neutral-400">สถานะเงินสดและเอกสารของ {shop.name} — ตัวเลขจริงจากสมุดรายวัน ไม่ต้องรอปิดงบ</p>
       </div>
 
+      <SampleDataCard shopId={shop.id} hasSample={(sampleCount ?? 0) > 0} isEmpty={(docCount ?? 0) === 0} />
       <SetupChecklist shop={shop} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

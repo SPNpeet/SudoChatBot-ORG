@@ -11,6 +11,7 @@ import MobileNav from "./mobile-nav";
 import Notifications from "./notifications";
 import SystemAlertBanner from "./system-alert-banner";
 import FeedbackWidget from "./feedback-widget";
+import QuickCreate from "./quick-create";
 import CompanySwitcher from "./company-switcher";
 import AiQuotaBar, { type AiQuota } from "./ai-quota-bar";
 import { Logo } from "@/components/logo";
@@ -116,6 +117,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* Bottom nav — มือถือ */}
       <MobileNav isAdmin={!!isAdmin} />
+
+      {/* ปุ่ม + สร้างงานที่ทำบ่อย จากทุกหน้า */}
+      <QuickCreate />
 
       {/* ปุ่มแนะนำ/ติชม — เสียงผู้ใช้ตรงถึงเจ้าของแพลตฟอร์ม */}
       <FeedbackWidget shopId={shop.id} />
