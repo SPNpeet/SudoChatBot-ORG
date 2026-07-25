@@ -13,6 +13,7 @@ import Link from "next/link";
 import { LineChart, CheckCircle2, FileText, FileSpreadsheet, BookOpenText } from "lucide-react";
 import ExportButtons from "./export-buttons";
 import PeriodPicker from "./period-picker";
+import AccountantPackage from "./accountant-package";
 import { whtIncomeLabel, whtIncomeDesc, branchCode, isJuristicPerson } from "@/lib/tax-th";
 
 export const dynamic = "force-dynamic";
@@ -84,6 +85,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           </Link>
         ))}
       </div>
+
+      <AccountantPackage period={period.key} />
 
       {t === "summary" && <SummaryTab shopId={shop.id} supabase={supabase} period={period} />}
       {t === "aging" && <AgingTab shopId={shop.id} supabase={supabase} />}
