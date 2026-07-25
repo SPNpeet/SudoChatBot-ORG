@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { assertMember } from "@/lib/shop";
 import { pushLineMessage } from "@/lib/line";
 import { signState } from "@/lib/line-state";
+import { APP_ORIGIN, LINE_CALLBACK_URL } from "@/lib/app-origin";
 
 // ============================================================
 //  LINE Login กลับมา -> แลก code เป็น userId แล้วผูกกับกิจการ
@@ -12,7 +13,7 @@ import { signState } from "@/lib/line-state";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const back = (q: string) => NextResponse.redirect(new URL(`/dashboard/settings?line=${q}`, url.origin));
+  const back = (q: string) => NextResponse.redirect(new URL(`/dashboard/settings?line=${q}`, APP_ORIGIN));
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state") ?? "";
 
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: `${url.origin}/api/line/callback`,
+        redirect_uri: LINE_CALLBACK_URL,
         client_id: pf.line_login_channel_id,
         client_secret: pf.line_login_channel_secret,
       }),
