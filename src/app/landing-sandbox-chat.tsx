@@ -67,7 +67,7 @@ export default function LandingSandboxChat() {
           <div className="flex flex-wrap gap-1.5 pb-1">
             {STARTERS.map((s) => (
               <button key={s} onClick={() => send(s)}
-                className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] text-neutral-600 hover:border-emerald-300 hover:text-emerald-700">
+                className="inline-flex min-h-[38px] items-center rounded-full border border-neutral-200 bg-white px-3.5 text-xs text-neutral-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-700">
                 {s}
               </button>
             ))}
