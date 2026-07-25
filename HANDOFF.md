@@ -185,3 +185,19 @@ Vercel token · Supabase management token · Facebook App Secret · รหัส
 
 ## 🧪 ทดสอบ SQL
 สร้าง auth.users ต้องใส่ token columns เช่น `confirmation_token` เป็น `''` ไม่ใช่ NULL (เคยทำ auth พังทั้งระบบมาแล้ว)
+
+## 🆕 รอบสิบสาม 2026-07-26 — Auth แยกชัด · เอกสารกฎหมายตรงจริง · แก้ Cold Start (mig 069)
+**Auth (commit f7e43d7, da783b7):** Google อยู่ทั้ง 2 หน้า (เดิม /signup ไม่มีเลย ทั้งที่ Google = 5 จาก 10 บัญชี)
+· Facebook คงไว้ตามที่เจ้าของตัดสินใจ แสดงเท่ากันทั้ง 2 หน้า (เดิมโผล่หน้าเดียว = ต้นเหตุกดในหน้า login แล้วได้บัญชีใหม่)
+· คำบนปุ่มเปลี่ยนตามบริบท "สมัครด้วย"/"เข้าสู่ระบบด้วย" — OAuth ของ Supabase ไม่มีโหมดห้ามสมัคร แก้ได้แค่ที่ความชัดเจน
+· **LINE Login: ตัดสินใจไม่ทำ** — Supabase ไม่รองรับ LINE ต้องเขียน session bridge เอง = เสี่ยง session hijacking · ใช้ผูก LINE เพื่อแจ้งเตือนแทน
+
+> ⚠️ **กับดักที่เจอตอนจะลบ Facebook**: `ta_free14@hotmail.com` ล็อกอินด้วย Facebook อย่างเดียว **และเป็น platform admin คนเดียวของระบบ** — ถ้าลบ provider จะเข้าศูนย์ AI ไม่ได้ตลอดกาล · แก้แล้วโดยเพิ่ม `justin.minnie89@gmail.com` (Google) เป็นแอดมินคนที่ 2
+
+**เอกสารกฎหมาย:** privacy/terms ยังเขียนว่าเป็น "แชทบอท AI สำหรับร้านค้าบน Facebook/IG" ทั้งที่ pivot ไปแล้ว — และเป็น URL ที่ลงทะเบียนกับ LINE · เขียนใหม่ให้ตรงระบบจริง + เพิ่มหัวข้อการใช้ AI, การเชื่อม LINE, และระบุชัดว่าเงินเข้าบัญชีลูกค้าโดยตรง
+
+**Cold Start (mig 069):** ผู้ใช้ใหม่เจอเลข 0 สี่ช่อง + เช็คลิสต์ที่เป็นงานตั้งค่าล้วน = ขอให้ตั้งค่าก่อนให้คุณค่า
+· **Sample Data 1 คลิก** (`is_sample` flag) สร้าง 4 เอกสารครบวงจร ล้างทิ้งได้สะอาดรวม journal entries
+· **Quick-create FAB** ปุ่ม + ลอย 4 ทางลัดจากทุกหน้า
+
+**ลบโค้ดตาย:** `lib/channel-errors.ts`, `lib/ads-errors.ts` (Meta API ยุคแชทบอท) · ตรวจแล้วทุก npm dependency ยังมีที่ใช้จริง
