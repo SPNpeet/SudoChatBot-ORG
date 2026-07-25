@@ -1,17 +1,38 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 import { APP_ORIGIN } from "@/lib/app-origin";
 
 // ============================================================
-//  Webhook ของ LINE OA — คุมข้อความทางการทั้งหมดจากโค้ด (ไม่ต้องไปพิมพ์ในหน้า OA Manager)
-//   · follow    = คนเพิ่มเพื่อน -> ส่งข้อความต้อนรับ + บอกวิธีเริ่มใช้
-//   · message   = ตอบกลับอัตโนมัติแบบมีประโยชน์ (ไม่ใช่ "ขอบคุณสำหรับข้อความ" ลอยๆ)
-//   · unfollow  = บล็อก/ลบเพื่อน -> ตัดการเชื่อมของกิจการนั้น จะได้ไม่ยิงข้อความทิ้งเปล่าๆ
-//  ความปลอดภัย: ตรวจลายเซ็น x-line-signature ทุกครั้ง ไม่ผ่าน = 401 (กันคนปลอม event)
+//  Webhook ของ LINE OA — คุมข้อความทางการทั้งหมดจากโค้ด (ไม่ต้องพิมพ์ในหน้า OA Manager)
+//   · follow    = เพิ่มเพื่อน -> ข้อความต้อนรับ + วิธีเริ่มใช้
+//   · message   = ตอบกลับแบบมีประโยชน์ แยกกรณีเชื่อมบัญชีแล้ว/ยังไม่เชื่อม
+//   · unfollow  = บล็อก/ลบเพื่อน -> ตัดการเชื่อมของกิจการนั้น จะได้ไม่ยิงข้อความทิ้งเปล่า
+//
+//  ⚡ สำคัญ: LINE รอคำตอบแค่ระดับวินาที ถ้าช้าจะขึ้น REQUEST_TIMEOUT แล้ว retry รัว
+//  (เจอจริงตอนทดสอบ: อ่าน DB ก่อนตอบ + cold start = timeout)
+//  จึงตอบ 200 ทันที แล้วยกงานทั้งหมดไปทำใน after() หลังส่ง response ไปแล้ว
+//
+//  ความปลอดภัย: ยังตรวจลายเซ็น x-line-signature เหมือนเดิม แค่ย้ายไปตรวจใน after()
+//  — ไม่ผ่าน = ไม่ประมวลผลอะไรเลย ผู้โจมตีจึงไม่ได้อะไรจากการยิงมั่ว
 // ============================================================
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+/** cache config ระดับโมดูล — invocation ที่ยัง warm อยู่ไม่ต้องวิ่ง DB ซ้ำ */
+let cachedCfg: { token: string; secret: string; at: number } | null = null;
+const CFG_TTL = 5 * 60_000;
+
+async function getCfg() {
+  if (cachedCfg && Date.now() - cachedCfg.at < CFG_TTL) return cachedCfg;
+  const { data } = await createServiceClient()
+    .from("platform_billing_settings").select("line_oa_token,line_oa_channel_secret").eq("id", true).maybeSingle();
+  if (!data?.line_oa_token || !data?.line_oa_channel_secret) return null;
+  cachedCfg = { token: data.line_oa_token, secret: data.line_oa_channel_secret, at: Date.now() };
+  return cachedCfg;
+}
 
 const HELP = [
   "พิมพ์คุยที่นี่ได้เลย หรือกดเมนูด้านล่างเพื่อเข้าใช้งานระบบครับ",
@@ -60,60 +81,56 @@ interface LineEvent {
   message?: { type?: string; text?: string };
 }
 
+async function handle(raw: string, signature: string | null) {
+  const cfg = await getCfg();
+  if (!cfg) return;                                   // ยังไม่ตั้งค่า — เงียบไว้
+  if (!verify(raw, signature, cfg.secret)) {
+    console.warn("line webhook: bad signature — ไม่ประมวลผล");
+    return;
+  }
+  const { events } = JSON.parse(raw || "{}") as { events?: LineEvent[] };
+  if (!events?.length) return;                        // test ping ของ LINE ไม่มี event
+
+  const svc = createServiceClient();
+  await Promise.allSettled(events.map(async (ev) => {
+    const uid = ev.source?.userId;
+
+    if (ev.type === "follow" && ev.replyToken) {
+      await reply(cfg.token, ev.replyToken, WELCOME);
+      return;
+    }
+    if (ev.type === "unfollow" && uid) {
+      await svc.from("shop_notify_settings")
+        .update({ line_to_id: null, line_display_name: null, linked_at: null, updated_at: new Date().toISOString() })
+        .eq("line_to_id", uid).eq("link_source", "platform");
+      return;
+    }
+    if (ev.type === "message" && ev.replyToken) {
+      const text = (ev.message?.text ?? "").trim();
+      let linked = false;
+      if (uid) {
+        const { data } = await svc.from("shop_notify_settings").select("shop_id").eq("line_to_id", uid).maybeSingle();
+        linked = !!data;
+      }
+      const body = /ช่วย|help|เมนู|เริ่ม|ทำอะไร/i.test(text) || !text
+        ? HELP
+        : linked
+          ? `รับข้อความแล้วครับ 🙌\nงานบัญชีสั่งได้ที่ผู้ช่วย AI ในระบบ (ตอบละเอียดกว่าและลงบัญชีให้จริง)\n${APP_ORIGIN}/dashboard/assistant\n\nพิมพ์ "เมนู" เพื่อดูทางลัดทั้งหมด`
+          : `สวัสดีครับ 🙌\nแชทนี้ใช้แจ้งเตือนเรื่องสำคัญจากระบบบัญชี SudoChatBot\n\nยังไม่ได้เชื่อมบัญชีใช่ไหมครับ — เข้า ${APP_ORIGIN}/dashboard/settings แล้วกด "เชื่อมต่อ LINE" ครั้งเดียวจบ\n\nพิมพ์ "เมนู" เพื่อดูทางลัด`;
+      await reply(cfg.token, ev.replyToken, body);
+    }
+  }));
+}
+
 export async function POST(request: Request) {
   const raw = await request.text();
-  try {
-    const svc = createServiceClient();
-    const { data: pf } = await svc.from("platform_billing_settings")
-      .select("line_oa_token,line_oa_channel_secret").eq("id", true).maybeSingle();
-    if (!pf?.line_oa_channel_secret || !pf?.line_oa_token) {
-      return NextResponse.json({ ok: true });   // ยังไม่ตั้งค่า — ตอบ 200 ไม่ให้ LINE retry รัว
-    }
-    if (!verify(raw, request.headers.get("x-line-signature"), pf.line_oa_channel_secret)) {
-      return NextResponse.json({ ok: false }, { status: 401 });
-    }
-
-    const { events } = JSON.parse(raw || "{}") as { events?: LineEvent[] };
-    const token = pf.line_oa_token;
-
-    await Promise.allSettled((events ?? []).map(async (ev) => {
-      const uid = ev.source?.userId;
-
-      if (ev.type === "follow" && ev.replyToken) {
-        await reply(token, ev.replyToken, WELCOME);
-        return;
-      }
-
-      if (ev.type === "unfollow" && uid) {
-        // บล็อก/ลบเพื่อนแล้ว = ส่งไปก็ไม่ถึง ตัดการเชื่อมทิ้งเพื่อไม่ให้ระบบยิงเปล่า
-        await svc.from("shop_notify_settings")
-          .update({ line_to_id: null, line_display_name: null, linked_at: null, updated_at: new Date().toISOString() })
-          .eq("line_to_id", uid).eq("link_source", "platform");
-        return;
-      }
-
-      if (ev.type === "message" && ev.replyToken) {
-        const text = (ev.message?.text ?? "").trim();
-        // ถ้ายังไม่ได้เชื่อมบัญชี บอกวิธีเชื่อมก่อน (คำถามที่เจอบ่อยที่สุด)
-        let linked = false;
-        if (uid) {
-          const { data } = await svc.from("shop_notify_settings").select("shop_id").eq("line_to_id", uid).maybeSingle();
-          linked = !!data;
-        }
-        const body = /ช่วย|help|เมนู|เริ่ม|ทำอะไร/i.test(text) || !text
-          ? HELP
-          : linked
-            ? `รับข้อความแล้วครับ 🙌\nงานบัญชีสั่งได้ที่ผู้ช่วย AI ในระบบ (ตอบได้ละเอียดกว่าและลงบัญชีให้จริง)\n${APP_ORIGIN}/dashboard/assistant\n\nพิมพ์ "เมนู" เพื่อดูทางลัดทั้งหมด`
-            : `สวัสดีครับ 🙌\nแชทนี้ใช้แจ้งเตือนเรื่องสำคัญจากระบบบัญชี SudoChatBot\n\nยังไม่ได้เชื่อมบัญชีใช่ไหมครับ — เข้า ${APP_ORIGIN}/dashboard/settings แล้วกด "เชื่อมต่อ LINE" ครั้งเดียวจบ\n\nพิมพ์ "เมนู" เพื่อดูทางลัด`;
-        await reply(token, ev.replyToken, body);
-      }
-    }));
-
-    return NextResponse.json({ ok: true });
-  } catch (e) {
-    console.error("line webhook error", (e as Error).message);
-    return NextResponse.json({ ok: true });   // ห้ามตอบ error ให้ LINE retry ถล่ม
-  }
+  const signature = request.headers.get("x-line-signature");
+  // ตอบ LINE ก่อนเลย แล้วค่อยทำงานจริงหลังส่ง response (กัน REQUEST_TIMEOUT + retry ถล่ม)
+  after(async () => {
+    try { await handle(raw, signature); }
+    catch (e) { console.error("line webhook error", (e as Error).message); }
+  });
+  return new NextResponse(null, { status: 200 });
 }
 
 export async function GET() {
