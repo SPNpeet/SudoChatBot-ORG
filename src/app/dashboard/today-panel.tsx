@@ -71,7 +71,7 @@ export default function TodayPanel({ overdue, pendingApproval, unmatchedSlips, t
           <PartyPopper className="h-5 w-5 text-emerald-600" />
         </span>
         <div>
-          <p className="text-sm font-semibold text-neutral-800">เคลียร์หมดแล้ว ไม่มีงานค้าง 🎉</p>
+          <p className="text-sm font-semibold text-neutral-800">เคลียร์หมดแล้ว ไม่มีงานค้าง</p>
           <p className="text-xs text-neutral-500">ไม่มีเอกสารเกินกำหนด ไม่มีรายการรออนุมัติ ไม่มีสลิปค้างจับคู่</p>
         </div>
       </div>

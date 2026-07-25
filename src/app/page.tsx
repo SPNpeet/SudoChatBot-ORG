@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { FileText, ScanLine, BookOpenText, Landmark, Building2, ShieldCheck, ArrowRight, Sparkles, Check, Calculator, Clock, X as XIcon, Lock, Users } from "lucide-react";
+import { FileText, ScanLine, BookOpenText, Landmark, Building2, ShieldCheck, ArrowRight, Check, Calculator, Clock, X as XIcon, Lock, Users } from "lucide-react";
 import LandingSandboxChat from "./landing-sandbox-chat";
 
 const features = [
@@ -70,7 +70,7 @@ export default function Landing() {
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="text-center lg:text-left">
             <p className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-              <Sparkles className="h-3.5 w-3.5" /> ระบบบัญชี + ผู้ช่วย AI — เริ่มฟรี ไม่ต้องใช้บัตร
+              ระบบบัญชี + ผู้ช่วย AI — เริ่มฟรี ไม่ต้องใช้บัตร
             </p>
             <h1 className="text-4xl font-bold leading-[1.15] tracking-tight sm:text-5xl">
               บัญชีทั้งบริษัท<br /><span className="text-emerald-600">เสร็จด้วยการพิมพ์สั่ง</span>
@@ -203,7 +203,7 @@ export default function Landing() {
           ))}
         </div>
         <p className="mt-4 text-center text-xs text-neutral-400">
-          👥 <b>พนักงานใช้ฟรีไม่จำกัดทุกแพ็ก</b> — เชิญทีมขาย ทีมแอดมิน นักบัญชี เข้ามาได้หมด ·
+          <b>พนักงานใช้ฟรีไม่จำกัดทุกแพ็ก</b> — เชิญทีมขาย ทีมแอดมิน นักบัญชี เข้ามาได้หมด ·
           เริ่มทดลองใช้ฟรีก่อนได้ (AI 30 ครั้ง/วัน) · คีย์เอกสารเองไม่จำกัดทุกแพ็ก
         </p>
       </section>

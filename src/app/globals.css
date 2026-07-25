@@ -50,4 +50,30 @@ body {
     transform: scale(0.97);
   }
   button:not(:disabled):hover { filter: brightness(0.97); }
+
+  /* ตัวเลขเงินต้องกว้างเท่ากันทุกตัว คอลัมน์จะได้ตรงเป๊ะ และตัวเลขไม่ "เต้น" ตอนอัปเดต */
+  table, .tabular-nums, input[type="number"] { font-variant-numeric: tabular-nums; }
+
+  /* ตัดคำภาษาไทยให้ถูกหลัก — ไม่งั้นบรรทัดยาวจะขึ้นบรรทัดใหม่กลางคำ อ่านสะดุด */
+  :lang(th) { word-break: break-word; line-break: normal; }
+
+  /* คีย์บอร์ดต้องเห็นชัดว่าโฟกัสอยู่ตรงไหน (คนใช้ Tab / โปรแกรมอ่านหน้าจอ) */
+  :focus-visible { outline: 2px solid rgb(16 185 129 / 0.55); outline-offset: 2px; border-radius: 8px; }
+
+  /* iOS: ห้าม zoom เองตอนแตะช่องกรอก — ต้อง >= 16px */
+  @supports (-webkit-touch-callout: none) {
+    input, select, textarea { font-size: 16px; }
+  }
+}
+
+/* ==== เคารพผู้ใช้ที่ตั้งค่า "ลดการเคลื่อนไหว" ในระบบปฏิบัติการ ====
+   บางคนเวียนหัวกับ animation จริงๆ — มาตรฐาน accessibility บังคับให้ต้องมี */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  button:not(:disabled):active, a[href]:active, [role="button"]:active { transform: none; }
 }

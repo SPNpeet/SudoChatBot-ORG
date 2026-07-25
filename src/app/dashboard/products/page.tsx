@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getCurrentShop } from "@/lib/shop";
 import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader } from "@/components/ui";
-import { FileUp } from "lucide-react";
+import { FileUp, Package } from "lucide-react";
 import { baht, dateTH } from "@/lib/utils";
 import { upsertProduct } from "../actions";
 import ProductForm from "./product-form";
@@ -46,7 +46,13 @@ export default async function ProductsPage() {
       <Card>
         <CardContent className="px-0 pb-0 pt-0">
           {products.length === 0 ? (
-            <EmptyState title="ยังไม่มีสินค้า/บริการ" hint="เพิ่มรายการแรกเพื่อออกเอกสารได้เร็วขึ้น — หรือคีย์ชื่อสดตอนออกเอกสารก็ได้" />
+            <EmptyState icon={Package} title="ยังไม่มีสินค้า/บริการ"
+              hint="ไม่บังคับต้องมี — แต่ถ้าใส่ไว้ ออกเอกสารครั้งต่อไปเลือกได้เลยไม่ต้องพิมพ์ราคาซ้ำ"
+              steps={[
+                "ใส่ชื่อรายการกับราคาขาย เช่น \"ค่าออกแบบโลโก้ 5,000\"",
+                "ใส่ต้นทุนด้วยถ้าอยากรู้กำไรต่อชิ้น (ข้ามได้)",
+                "ของเยอะ? นำเข้าจากไฟล์ Excel ทีเดียวทั้งหมด",
+              ]} />
           ) : (
             <Table>
               <thead><tr><Th>รายการ</Th><Th>SKU</Th><Th>ราคาขาย</Th><Th>ต้นทุน</Th><Th>สต๊อก</Th><Th>สถานะ</Th><Th>เพิ่มเมื่อ</Th>{canEdit && <Th />}</tr></thead>

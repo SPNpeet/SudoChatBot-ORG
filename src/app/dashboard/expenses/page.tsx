@@ -7,7 +7,8 @@ import { baht, dateOnlyTH, cn } from "@/lib/utils";
 import { DOC_STATUS_TH, docStatusTone, docOutstanding } from "@/lib/finance";
 import type { DocStatus, FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
-import { Plus, Sparkles } from "lucide-react";
+import RowLink from "@/components/row-link";
+import { Plus, Receipt } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         help="ทุกบาทที่จ่ายออกไปบันทึกที่นี่ — ถ่ายรูปบิลให้ AI อ่านให้ก็ได้ ไม่ต้องพิมพ์เอง · ระบบแยก VAT ภาษีซื้อ และหัก ณ ที่จ่ายให้อัตโนมัติ เอาไปใช้ลดภาษีตอนสิ้นเดือนได้เลย"
         action={canEdit && (
           <Link href="/dashboard/expenses/new">
-            <Button><Plus className="h-4 w-4" /> บันทึกค่าใช้จ่าย <Sparkles className="h-3.5 w-3.5 opacity-70" /></Button>
+            <Button><Plus className="h-4 w-4" /> บันทึกค่าใช้จ่าย</Button>
           </Link>
         )}
       />
@@ -62,16 +63,27 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       <Card>
         <CardContent className="px-0 pb-0 pt-1">
           {rows.length === 0 ? (
-            <EmptyState icon="📸" title="ยังไม่มีค่าใช้จ่ายในหมวดนี้"
-              hint="ถ่ายรูปบิลแล้วให้ AI อ่าน-ลงบัญชีให้ทั้งใบ หรือคีย์เองก็ได้ ระบบแยก VAT/หัก ณ ที่จ่ายให้ครบ"
-              action={{ href: "/dashboard/expenses/new", label: "+ บันทึกค่าใช้จ่ายใบแรก" }} />
+            <EmptyState icon={Receipt} title="ยังไม่มีค่าใช้จ่ายในหมวดนี้"
+              hint="ทุกบิลที่จ่ายออกไป บันทึกที่นี่แล้วเอาไปลดภาษีได้"
+              steps={[
+                "ถ่ายรูปบิล/ใบเสร็จ แล้วส่งให้ผู้ช่วย AI — อ่านตัวเลขให้เอง ไม่ต้องพิมพ์",
+                "ตรวจยอดที่ AI อ่านมา ถ้าถูกกดยืนยัน (ผิดแก้ได้ก่อนบันทึก)",
+                "ระบบแยก VAT ภาษีซื้อ กับหัก ณ ที่จ่ายให้เอง พร้อมใช้ตอนยื่นภาษี",
+              ]}
+              action={{ href: "/dashboard/expenses/new", label: "บันทึกค่าใช้จ่ายใบแรก" }}
+              secondary={{ href: "/dashboard/assistant", label: "ให้ AI อ่านบิลให้" }} />
           ) : (
             <Table>
               <thead><tr><Th>เลขที่</Th><Th>ผู้ขาย</Th><Th>หมวด</Th><Th>วันที่</Th><Th className="text-right">ยอด</Th><Th className="text-right">ค้างจ่าย</Th><Th>สถานะ</Th></tr></thead>
               <tbody>
                 {rows.map((d) => (
-                  <tr key={d.id} className={cn("hover:bg-neutral-50", d.status === "void" && "opacity-50")}>
-                    <Td><Link className={cn("font-medium text-emerald-700 hover:underline", d.status === "void" && "text-neutral-400 line-through")} href={`/dashboard/expenses/${d.id}`}>{d.doc_number}</Link></Td>
+                  <RowLink key={d.id} href={`/dashboard/expenses/${d.id}`} className={cn(d.status === "void" && "opacity-50")}>
+                    {/* คง Link ไว้บนเลขที่เอกสาร — RowLink ทำให้กดได้ทั้งแถวก็จริง แต่คีย์บอร์ด/
+                        โปรแกรมอ่านหน้าจอต้องมีของที่ focus ได้จริงอย่างน้อย 1 จุดต่อแถว */}
+                    <Td><Link href={`/dashboard/expenses/${d.id}`}
+                      className={cn("font-medium text-emerald-700 hover:underline", d.status === "void" && "text-neutral-400 line-through")}>
+                      {d.doc_number}
+                    </Link></Td>
                     <Td>{d.contact_name ?? "-"}</Td>
                     <Td className="text-neutral-500">{d.expense_categories?.name ?? "-"}</Td>
                     <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
@@ -82,7 +94,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                       : d.approval_status === "rejected"
                         ? <Badge tone="red">ถูกปฏิเสธ</Badge>
                         : <Badge tone={docStatusTone(d.status as DocStatus)}>{DOC_STATUS_TH[d.status as DocStatus]}</Badge>}</Td>
-                  </tr>
+                  </RowLink>
                 ))}
               </tbody>
             </Table>

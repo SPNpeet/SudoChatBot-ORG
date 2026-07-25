@@ -98,7 +98,7 @@ export default async function PlatformStatsPage() {
         <Stat icon={Store} label="ออเดอร์จ่ายแล้วเดือนนี้" value={String(s.orders.paid_month)} sub={`GMV ${baht(s.orders.gmv_month)} · สะสม ${s.orders.total} ออเดอร์`} />
       </div>
       {healthIssues === 0 && (
-        <p className="rounded-xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">✓ ระบบปกติทุกจุด — ไม่มี webhook ล้มเหลว ไม่มี error ฝั่งผู้ใช้ ไม่มีร้านถูกบล็อก</p>
+        <p className="rounded-xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">ระบบปกติทุกจุด — ไม่มี webhook ล้มเหลว ไม่มี error ฝั่งผู้ใช้ ไม่มีร้านถูกบล็อก</p>
       )}
 
       {/* ===== กราฟ 14 วัน ===== */}

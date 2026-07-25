@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import { Button, Input, Label, Select } from "@/components/ui";
 import { savePaymentSettings } from "../actions";
 import type { ShopPaymentSettings } from "@/lib/types/db";
+import { CheckCircle2 } from "lucide-react";
 
 export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: Partial<ShopPaymentSettings> }) {
   const [pending, start] = useTransition();
@@ -38,7 +39,7 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
             <option value="easyslip">EasySlip — อัตโนมัติ 100%</option>
             <option value="slipok">SlipOK — อัตโนมัติ 100%</option>
           </Select>
-          <Input name="slip_api_key" type="password" placeholder="API Key (กรอกเมื่อเปลี่ยน)" />
+          <Input name="slip_api_key" type="password" placeholder="รหัสเชื่อมต่อจากผู้ให้บริการ (กรอกเมื่อต้องการเปลี่ยน)" />
         </div>
         <p className="mt-1 text-[11px] text-neutral-400">
           สมัคร EasySlip ที่ easyslip.com (~0.05฿/สลิป) — ระบบตรวจสลิปจริง กันสลิปซ้ำ จับคู่ใบแจ้งหนี้ และให้ลูกค้าอัปสลิปจ่ายเองจากลิงก์เอกสารได้
@@ -47,7 +48,7 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
 
       <div className="flex items-center gap-3">
         <Button disabled={pending} className="w-full sm:w-auto">{pending ? "กำลังบันทึก..." : "บันทึกการตั้งค่าการเงิน"}</Button>
-        {result?.ok && <span className="text-sm text-emerald-600">✓ {result.msg}</span>}
+        {result?.ok && <span className="inline-flex items-center gap-1 text-sm text-emerald-600"><CheckCircle2 className="h-4 w-4" />{result.msg}</span>}
       </div>
       {result && !result.ok && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{result.msg}</p>}
     </form>

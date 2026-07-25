@@ -57,7 +57,7 @@ export default function AiGuardCard({ status }: { status: AiGuardStatus }) {
                 <div className={`h-full ${over ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
               </div>
               <p className={`mt-1 text-[11px] ${over ? "text-red-600 font-medium" : "text-neutral-400"}`}>
-                {over ? "⛔ เกินเพดานแล้ว — บอทตอบลูกค้าหยุดชั่วคราวอัตโนมัติ" : `${pct.toFixed(0)}% ของเพดาน ${usd(capNum)}/วัน`}
+                {over ? "เกินเพดานแล้ว — บอทตอบลูกค้าหยุดชั่วคราวอัตโนมัติ" : `${pct.toFixed(0)}% ของเพดาน ${usd(capNum)}/วัน`}
               </p>
             </div>
           )}

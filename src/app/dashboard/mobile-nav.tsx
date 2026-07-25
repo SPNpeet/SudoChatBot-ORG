@@ -30,6 +30,8 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const active = (h: string) => h === "/dashboard" ? path === h : path.startsWith(h);
+  // อยู่หน้าที่ซ่อนอยู่ใน "เพิ่มเติม" ก็ต้องเห็นว่าแท็บนั้น active ไม่ใช่ลอยไม่มีที่ยืน
+  const moreActive = !main.some((m) => active(m.href));
 
   return (
     <>
@@ -53,14 +55,22 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
         </div>
       )}
       <nav className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-neutral-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        {main.map((m) => (
-          <Link key={m.href} href={m.href}
-            className={cn("flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px]", active(m.href) ? "text-emerald-600" : "text-neutral-400")}>
-            <m.icon className="h-5 w-5" /> {m.label}
-          </Link>
-        ))}
-        <button onClick={() => setOpen((v) => !v)}
-          className={cn("flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px]", open ? "text-emerald-600" : "text-neutral-400")}>
+        {main.map((m) => {
+          const on = active(m.href);
+          return (
+            <Link key={m.href} href={m.href} aria-current={on ? "page" : undefined}
+              className={cn("relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px]",
+                on ? "font-semibold text-emerald-600" : "text-neutral-400")}>
+              {/* ขีดบนหัว = รู้ทันทีว่าอยู่แท็บไหน แม้มองแวบเดียว */}
+              {on && <span aria-hidden className="absolute inset-x-5 top-0 h-[3px] rounded-b-full bg-emerald-500" />}
+              <m.icon className={cn("h-5 w-5", on && "fill-emerald-50")} /> {m.label}
+            </Link>
+          );
+        })}
+        <button onClick={() => setOpen((v) => !v)} aria-expanded={open}
+          className={cn("relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px]",
+            open || moreActive ? "font-semibold text-emerald-600" : "text-neutral-400")}>
+          {(open || moreActive) && <span aria-hidden className="absolute inset-x-5 top-0 h-[3px] rounded-b-full bg-emerald-500" />}
           <Menu className="h-5 w-5" /> เพิ่มเติม
         </button>
       </nav>

@@ -11,6 +11,7 @@ import { promptPayPayload } from "@/lib/promptpay";
 import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
 import { Logo } from "@/components/logo";
 import PublicSlipUpload from "./slip-upload";
+import { CheckCircle2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -115,8 +116,8 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
         )}
 
         {doc.status === "paid" && doc.doc_type === "invoice" && (
-          <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700">
-            ✓ ชำระครบแล้ว ขอบคุณค่ะ
+          <p className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-700">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />ชำระครบแล้ว ขอบคุณค่ะ
           </p>
         )}
 

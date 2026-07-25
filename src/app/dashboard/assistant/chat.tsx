@@ -9,7 +9,7 @@ import { compressImage } from "@/lib/compress-image";
 // ============================================================
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Calculator, Sparkles, Paperclip, X, Loader2, Trash2 } from "lucide-react";
+import { Send, Calculator, Paperclip, X, Loader2, Trash2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { assistantReply, type AssistantTurn } from "./actions";
 
@@ -175,7 +175,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
               สั่งได้ทุกเรื่องบัญชี — ออกเอกสาร บันทึกรายจ่าย รับเงิน ดูยอดค้าง สรุปภาษี
             </p>
             <p className="mx-auto mt-1 flex max-w-sm items-center justify-center gap-1 text-[11px] text-neutral-400">
-              <Sparkles className="h-3 w-3 shrink-0" /> แนบรูปบิลได้ทีละหลายใบ พิมพ์สั่งกำกับได้เลย เช่น &ldquo;ค่าเช่า ยังไม่จ่าย&rdquo; · ตัวเลขไม่ชัดระบบจะถามก่อนบันทึกเสมอ
+              <Paperclip className="h-3 w-3 shrink-0" /> แนบรูปบิลได้ทีละหลายใบ พิมพ์สั่งกำกับได้เลย เช่น &ldquo;ค่าเช่า ยังไม่จ่าย&rdquo; · ตัวเลขไม่ชัดระบบจะถามก่อนบันทึกเสมอ
             </p>
             <div className="mx-auto mt-4 flex max-w-md flex-wrap justify-center gap-1.5">
               {STARTERS.map((s) => (
@@ -261,7 +261,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
         {error && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-600">{error}</p>}
         {quotaWall && (
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 text-center">
-            <p className="text-2xl">⚡</p>
+            <Zap className="mx-auto h-7 w-7 text-emerald-500" />
             <p className="mt-1 text-sm font-semibold text-neutral-800">{quotaWall}</p>
             <p className="mt-1 text-xs text-neutral-400">งานเอกสาร/บัญชีคีย์เองได้ไม่จำกัดตามปกติ — โควตานี้เฉพาะงาน AI</p>
             <a href="/dashboard/billing"

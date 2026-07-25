@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import * as React from "react";
+import { ChevronLeft, Lightbulb, Inbox, ArrowRight } from "lucide-react";
 
 // ============================================================
 //  ระบบดีไซน์กลาง — แก้ที่นี่ที่เดียว หน้าตาทั้งแอปเปลี่ยนตาม
@@ -27,22 +28,64 @@ export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDiv
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return <h3 className={cn("text-sm font-semibold tracking-tight text-neutral-900", className)} {...props} />;
 }
+
+/**
+ * หัวข้อการ์ดพร้อมไอคอนเส้น — ใช้แทนการเอาอิโมจิไปแปะหน้าข้อความ
+ * ไอคอนอยู่ในกล่องสีจางขนาดเท่ากันทุกใบ สายตาจึงกวาดเจอหัวข้อได้เป็นจังหวะเดียวกันทั้งหน้า
+ */
+export function CardTitleIcon({ icon: Icon, children, desc, className }: {
+  icon: React.ComponentType<{ className?: string }>; children: React.ReactNode;
+  desc?: React.ReactNode; className?: string;
+}) {
+  return (
+    <div className={cn("flex items-start gap-3", className)}>
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-600">
+        <Icon className="h-[17px] w-[17px]" />
+      </span>
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold tracking-tight text-neutral-900">{children}</h3>
+        {desc && <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">{desc}</p>}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ปุ่มย้อนกลับมาตรฐาน — วางไว้บนสุดของหน้าย่อยทุกหน้า
+ * ระบุปลายทางชัดเจนเสมอ ("กลับไปค่าใช้จ่าย") ไม่ใช่แค่ "ย้อนกลับ" ลอยๆ
+ * เพราะผู้ใช้เข้าหน้านี้จากลิงก์/แจ้งเตือน/ประวัติได้หลายทาง history.back() จะเดาผิด
+ */
+export function BackLink({ href, label, className }: { href: string; label: string; className?: string }) {
+  return (
+    <Link href={href}
+      className={cn(
+        "group -ml-1.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-medium text-neutral-500",
+        "transition-colors hover:bg-neutral-100 hover:text-neutral-900", FOCUS, className,
+      )}>
+      <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+      {label}
+    </Link>
+  );
+}
 export function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn("px-5 pb-5", className)} {...props} />;
 }
 
-/** การ์ดตัวเลขสรุป — ใช้บนแดชบอร์ด ให้ทุกหน้าหน้าตาเดียวกัน */
-export function StatCard({ label, value, hint, icon, tone = "neutral", className }: {
+/**
+ * การ์ดตัวเลขสรุป — ใช้บนแดชบอร์ด ให้ทุกหน้าหน้าตาเดียวกัน
+ * ส่ง href มาได้ → ทั้งใบกลายเป็นลิงก์ (ยกใบขึ้นตอน hover) แทนที่จะกดได้แค่ข้อความเล็กๆ ข้างล่าง
+ */
+export function StatCard({ label, value, hint, icon, tone = "neutral", className, href }: {
   label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: React.ReactNode;
-  tone?: "neutral" | "green" | "amber" | "red"; className?: string;
+  tone?: "neutral" | "green" | "amber" | "red"; className?: string; href?: string;
 }) {
-  return (
-    <Card className={cn("p-5", className)}>
+  const body = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs font-medium text-neutral-500">{label}</p>
         {icon && (
           <span className={cn(
-            "grid h-8 w-8 shrink-0 place-items-center rounded-xl",
+            "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
             tone === "green" && "bg-emerald-50 text-emerald-600",
             tone === "amber" && "bg-amber-50 text-amber-600",
             tone === "red" && "bg-red-50 text-red-600",
@@ -55,8 +98,20 @@ export function StatCard({ label, value, hint, icon, tone = "neutral", className
         tone === "red" ? "text-red-600" : tone === "green" ? "text-emerald-700" : "text-neutral-900",
       )}>{value}</p>
       {hint && <p className="mt-1 text-[11px] text-neutral-400">{hint}</p>}
-    </Card>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className={cn(
+        "block rounded-2xl border border-neutral-200/80 bg-white p-5",
+        "shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)]",
+        "transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md active:translate-y-0",
+        FOCUS, className,
+      )}>{body}</Link>
+    );
+  }
+  return <Card className={cn("p-5", className)}>{body}</Card>;
 }
 
 /**
@@ -66,21 +121,24 @@ export function StatCard({ label, value, hint, icon, tone = "neutral", className
  *  · help   = "หน้านี้ใช้ทำอะไร" ภาษาชาวบ้าน — สำคัญมากกับคนที่ไม่เคยใช้โปรแกรมบัญชี
  *  · action = ปุ่มหลัก 1 ปุ่ม (มือถือเต็มความกว้าง นิ้วกดง่าย)
  */
-export function PageHeader({ title, lead, help, action }: {
+export function PageHeader({ title, lead, help, action, back }: {
   title: string; lead?: React.ReactNode; help?: React.ReactNode; action?: React.ReactNode;
+  back?: { href: string; label: string };
 }) {
   return (
     <div className="space-y-3">
+      {back && <BackLink href={back.href} label={back.label} />}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight">{title}</h1>
-          {lead && <p className="mt-0.5 text-sm text-neutral-600">{lead}</p>}
+          <h1 className="text-[22px] font-bold leading-tight tracking-tight text-neutral-900">{title}</h1>
+          {lead && <p className="mt-1 text-sm text-neutral-600">{lead}</p>}
         </div>
         {action && <div className="w-full sm:w-auto [&_a]:w-full [&_button]:w-full sm:[&_a]:w-auto sm:[&_button]:w-auto">{action}</div>}
       </div>
       {help && (
-        <p className="flex items-start gap-1.5 rounded-xl bg-neutral-50 px-3 py-2 text-[12px] leading-relaxed text-neutral-500">
-          <span aria-hidden className="mt-px">💡</span><span>{help}</span>
+        <p className="flex items-start gap-2 rounded-xl border border-neutral-200/70 bg-neutral-50/70 px-3 py-2.5 text-[12px] leading-relaxed text-neutral-500">
+          <Lightbulb aria-hidden className="mt-[1px] h-3.5 w-3.5 shrink-0 text-neutral-400" />
+          <span>{help}</span>
         </p>
       )}
     </div>
@@ -168,9 +226,24 @@ export function Badge({ className, tone = "neutral", ...props }: React.HTMLAttri
   );
 }
 
+/**
+ * ตาราง — บนมือถือคอลัมน์เกินจอต้องเลื่อนแนวนอน
+ * เงาจางฝั่งขวาคือตัวบอกว่า "ยังมีคอลัมน์ต่ออีก" (ไม่งั้นผู้ใช้ไม่รู้ว่าคอลัมน์สถานะซ่อนอยู่)
+ * ใช้ background-attachment: local ทำให้เงาหายเองเมื่อเลื่อนสุดขอบ — ไม่ต้องใช้ JS
+ */
 export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="overflow-x-auto">
+    <div
+      className="overflow-x-auto"
+      style={{
+        backgroundImage:
+          "linear-gradient(to right, white 30%, transparent), linear-gradient(to left, white 30%, transparent), linear-gradient(to right, rgba(16,24,40,.10), transparent 14px), linear-gradient(to left, rgba(16,24,40,.10), transparent 14px)",
+        backgroundPosition: "left center, right center, left center, right center",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "28px 100%, 28px 100%, 14px 100%, 14px 100%",
+        backgroundAttachment: "local, local, scroll, scroll",
+      }}
+    >
       <table className={cn("w-full text-sm", className)} {...props} />
     </div>
   );
@@ -182,22 +255,56 @@ export function Td({ className, ...props }: React.TdHTMLAttributes<HTMLTableCell
   return <td className={cn("border-t border-neutral-100 px-4 py-3 align-middle", className)} {...props} />;
 }
 
-export function EmptyState({ title, hint, icon = "🗂️", action }: {
-  title: string; hint?: string; icon?: React.ReactNode;
+/**
+ * หน้าจอว่าง — ไม่ได้มีไว้บอกว่า "ไม่มีข้อมูล" แต่มีไว้ "สอนงาน"
+ * คนไทยที่ไม่เคยใช้โปรแกรมบัญชีจะติดตรงนี้ที่สุด: เปิดมาแล้วว่างเปล่า ไม่รู้ต้องเริ่มยังไง
+ *  · icon   = ไอคอนเส้น Lucide (ไม่ใช้อิโมจิ)
+ *  · steps  = 1-3 ขั้นตอนสั้นๆ ว่าหน้านี้ทำงานยังไง — ส่วนที่เปลี่ยนคนงงเป็นคนใช้เป็น
+ *  · action = ปุ่มหลัก, secondary = ทางเลือกรอง (เช่น "ดูตัวอย่างข้อมูล")
+ */
+export function EmptyState({ title, hint, icon: Icon = Inbox, steps, action, secondary }: {
+  title: string; hint?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  steps?: string[];
   action?: { href: string; label: string };
+  secondary?: { href: string; label: string };
 }) {
   return (
-    <div className="flex flex-col items-center justify-center px-4 py-14 text-center">
-      <span className="mb-3 grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-b from-neutral-50 to-neutral-100 text-2xl ring-1 ring-neutral-200/70" aria-hidden>
-        {icon}
+    <div className="flex flex-col items-center justify-center px-5 py-14 text-center">
+      <span aria-hidden className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-neutral-50 text-neutral-400 ring-1 ring-inset ring-neutral-200/80">
+        <Icon className="h-6 w-6" />
       </span>
-      <p className="text-sm font-semibold text-neutral-700">{title}</p>
-      {hint && <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-neutral-400">{hint}</p>}
-      {action && (
-        <Link href={action.href}
-          className={cn("mt-5 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500 active:scale-[0.98]", FOCUS)}>
-          {action.label}
-        </Link>
+      <p className="text-[15px] font-semibold text-neutral-800">{title}</p>
+      {hint && <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-neutral-500">{hint}</p>}
+
+      {steps && steps.length > 0 && (
+        <ol className="mt-5 w-full max-w-sm space-y-2 text-left">
+          {steps.map((s, i) => (
+            <li key={i} className="flex items-start gap-2.5 rounded-xl bg-neutral-50/80 px-3 py-2.5">
+              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-[11px] font-bold text-neutral-500 ring-1 ring-neutral-200">
+                {i + 1}
+              </span>
+              <span className="text-[12.5px] leading-relaxed text-neutral-600">{s}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {(action || secondary) && (
+        <div className="mt-5 flex flex-col items-center gap-2 sm:flex-row">
+          {action && (
+            <Link href={action.href}
+              className={cn("inline-flex h-11 items-center gap-1.5 rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500 active:scale-[0.98]", FOCUS)}>
+              {action.label}<ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
+          {secondary && (
+            <Link href={secondary.href}
+              className={cn("inline-flex h-11 items-center rounded-xl px-4 text-sm font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-800", FOCUS)}>
+              {secondary.label}
+            </Link>
+          )}
+        </div>
       )}
     </div>
   );

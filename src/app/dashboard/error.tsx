@@ -1,10 +1,11 @@
 "use client";
 // error boundary ของ dashboard — query พัง/เน็ตสะดุดต้องไม่เจอจอ error ดิบของ Next
+import { CircleAlert } from "lucide-react";
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <div className="flex min-h-[50vh] items-center justify-center">
       <div className="max-w-sm rounded-2xl border border-neutral-200 bg-white p-8 text-center">
-        <p className="text-3xl">😵</p>
+        <CircleAlert className="mx-auto h-9 w-9 text-neutral-300" />
         <h2 className="mt-3 text-base font-bold">หน้านี้โหลดไม่สำเร็จ</h2>
         <p className="mt-1 text-sm text-neutral-500">
           อาจเป็นปัญหาเครือข่ายชั่วคราว ลองใหม่ได้เลย — ข้อมูลของร้านคุณปลอดภัยไม่หายไปไหน

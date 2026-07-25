@@ -3,7 +3,7 @@
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
-import { Badge, Card, CardContent, CardHeader, CardTitle, Table, Th, Td } from "@/components/ui";
+import { Badge, BackLink, Card, CardContent, CardHeader, CardTitle, Table, Th, Td } from "@/components/ui";
 import { baht, bahtDoc, dateOnlyTH, dateTH } from "@/lib/utils";
 import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding, PAY_METHOD_TH } from "@/lib/finance";
 import type { DocStatus, DocType, FinDoc, FinPayment } from "@/lib/types/finance";
@@ -57,10 +57,10 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="max-w-3xl space-y-4">
+      <BackLink href="/dashboard/sales" label="กลับไปเอกสารขาย" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs text-neutral-400"><Link href="/dashboard/sales" className="hover:underline">เอกสารขาย</Link> / {doc.doc_number}</p>
-          <h1 className="mt-1 flex items-center gap-2 text-xl font-bold">
+          <h1 className="flex flex-wrap items-center gap-2 text-[22px] font-bold leading-tight tracking-tight">
             {DOC_TYPE_TH[doc.doc_type as DocType]} {doc.doc_number}
             <Badge tone={docStatusTone(doc.status as DocStatus)}>{docStatusLabel(doc.doc_type as DocType, doc.status as DocStatus)}</Badge>
           </h1>
@@ -77,7 +77,7 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
 
       {doc.status === "void" && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-          🚫 เอกสารนี้ถูกยกเลิกแล้ว{voidInfo ? ` โดย ${voidInfo.by} เมื่อ ${dateTH(voidInfo.at)}` : ""} — ระบบกลับรายการบัญชีและคืนสต๊อกแล้ว ดูรายละเอียดได้ในสมุดรายวัน (รายการกลับรายการ)
+          เอกสารนี้ถูกยกเลิกแล้ว{voidInfo ? ` โดย ${voidInfo.by} เมื่อ ${dateTH(voidInfo.at)}` : ""} — ระบบกลับรายการบัญชีและคืนสต๊อกแล้ว ดูรายละเอียดได้ในสมุดรายวัน (รายการกลับรายการ)
         </p>
       )}
 

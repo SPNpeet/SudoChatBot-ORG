@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { compressImage } from "@/lib/compress-image";
 // ============================================================
 //  ฟอร์มเอกสารกลาง — ใบเสนอราคา/ใบแจ้งหนี้/ใบเสร็จ/ค่าใช้จ่าย
@@ -7,7 +7,7 @@ import { compressImage } from "@/lib/compress-image";
 // ============================================================
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Sparkles, Paperclip } from "lucide-react";
+import { Plus, Trash2, ScanLine, Paperclip, TriangleAlert } from "lucide-react";
 import { Button, Card, CardContent, Input, Label, Select, Textarea } from "@/components/ui";
 import { baht } from "@/lib/utils";
 import { calcDocTotals, DOC_TYPE_TH, WHT_RATES } from "@/lib/finance";
@@ -36,6 +36,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
   const [error, setError] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiWarn, setAiWarn] = useState<string[]>([]);   // จุดที่ AI อ่านไม่ชัด/ยอดไม่ลงตัว — ให้คนตรวจก่อนบันทึก
+  const [ocrTotal, setOcrTotal] = useState<number | null>(null); // ยอดรวมที่ AI อ่านได้จากท้ายบิล
 
   const [rows, setRows] = useState<Row[]>(
     draft?.fin_doc_items?.length
@@ -64,6 +65,16 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
     rows.map((r) => ({ qty: Number(r.qty) || 0, unit_price: Number(r.unit_price) || 0 })),
     Number(discount) || 0, vatMode, Number(whtRate) || 0,
   ), [rows, discount, vatMode, whtRate]);
+
+  // ---- ตัวจับผิด OCR ----------------------------------------------------
+  // ไม่มี OCR ตัวไหนในโลกอ่านกระดาษถูก 100% (บิลยับ ปากกาเขียนทับ กระดาษความร้อนจาง)
+  // สิ่งที่ทำได้จริงคือ "จับให้เจอก่อนลงบัญชี": เอายอดท้ายบิลที่ AI อ่านได้
+  // มาทานกับผลรวมที่ฟอร์มคำนวณเองจากรายการ ถ้าไม่ตรงเกิน 1 บาท = มีตัวเลขอ่านผิดแน่นอน
+  const ocrMismatch = useMemo(() => {
+    if (ocrTotal == null) return null;
+    const diff = Math.abs(totals.total - ocrTotal);
+    return diff > 1 ? { diff, ocrTotal } : null;
+  }, [ocrTotal, totals.total]);
 
   function setRow(i: number, patch: Partial<Row>) {
     setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -96,6 +107,8 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
           unclear?: string[]; issues?: string[];
         };
         setAiWarn([...(d.issues ?? []), ...(d.unclear ?? [])]);
+        // ยอดที่ AI อ่านจากท้ายบิล เอาไว้ทานกับผลรวมที่ฟอร์มคำนวณเอง (ดู useEffect ด้านล่าง)
+        setOcrTotal(typeof d.total === "number" && d.total > 0 ? d.total : null);
         if (j.file_path) setFiles((prev) => (prev.some((x) => x.path === j.file_path) ? prev : [...prev, { path: j.file_path as string, name: f.name }]));
         if (d.vendor_name) { setContactName(d.vendor_name); setContactId(""); }
         if (d.date && /^\d{4}-\d{2}-\d{2}$/.test(d.date)) setIssueDate(d.date);
@@ -165,7 +178,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
             <input ref={fileRef} type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden"
               onChange={async (e) => { const fs = [...(e.target.files ?? [])]; e.target.value = ""; for (const f of fs) await attachFile(f, true); }} />
             <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} disabled={aiBusy}>
-              <Sparkles className="h-4 w-4 text-emerald-600" /> {aiBusy ? "AI กำลังอ่านบิล..." : "ถ่ายรูป/อัปโหลดบิล ให้ AI กรอกให้"}
+              <ScanLine className="h-4 w-4 text-emerald-600" /> {aiBusy ? "AI กำลังอ่านบิล..." : "ถ่ายรูป/อัปโหลดบิล ให้ AI กรอกให้"}
             </Button>
             <p className="text-xs text-neutral-400">เลือกได้หลายใบพร้อมกัน (บิลหลายหน้า/บิล+สลิป) — AI อ่านใบล่าสุดมากรอกฟอร์มให้ ตรวจก่อนบันทึกได้</p>
             {files.length > 0 && (
@@ -180,9 +193,23 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
                 ))}
               </div>
             )}
+            {/* ยอดไม่ตรงกับท้ายบิล = อ่านผิดแน่ๆ เตือนแรงกว่ากรณีอ่านไม่ชัดทั่วไป */}
+            {ocrMismatch && (
+              <div className="w-full rounded-xl border border-red-300 bg-red-50 px-3 py-2.5">
+                <p className="flex items-center gap-1.5 text-xs font-bold text-red-700">
+                  <TriangleAlert className="h-3.5 w-3.5 shrink-0" />ยอดไม่ตรงกับที่พิมพ์ไว้ท้ายบิล — มีตัวเลขอ่านผิดแน่นอน
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-red-600">
+                  ท้ายบิลเขียนว่า <b>{baht(ocrMismatch.ocrTotal)}</b> แต่รวมจากรายการด้านล่างได้ <b>{baht(totals.total)}</b>
+                  {" "}(ต่างกัน {baht(ocrMismatch.diff)}) — เทียบกับบิลจริงแล้วแก้ราคา/จำนวนให้ตรงก่อนบันทึก
+                </p>
+              </div>
+            )}
             {aiWarn.length > 0 && (
               <div className="w-full rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-                <p className="text-xs font-semibold text-amber-800">⚠️ ตรวจตัวเลขก่อนบันทึกนะ — บิลนี้อ่านได้ไม่ชัดทั้งหมด</p>
+                <p className="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
+                  <TriangleAlert className="h-3.5 w-3.5 shrink-0" />ตรวจตัวเลขก่อนบันทึกนะ — บิลนี้อ่านได้ไม่ชัดทั้งหมด
+                </p>
                 <ul className="mt-1 space-y-0.5">
                   {aiWarn.map((w, i) => <li key={i} className="text-[11px] leading-relaxed text-amber-700">• {w}</li>)}
                 </ul>
@@ -234,14 +261,14 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
             <Label>รายการ</Label>
             <div className="space-y-2">
               {rows.map((r, i) => (
-                <div key={i} className="grid grid-cols-[1fr_4.5rem_5.5rem_2rem] items-center gap-2 sm:grid-cols-[1fr_5rem_4rem_7rem_2rem]">
+                <div key={i} className="grid grid-cols-[1fr_3.5rem_4.75rem_1.75rem] sm:grid-cols-[1fr_4.5rem_5.5rem_2rem] items-center gap-2 sm:grid-cols-[1fr_5rem_4rem_7rem_2rem]">
                   <Input list={products.length ? "product-list" : undefined} placeholder="ชื่อรายการ/สินค้า"
                     value={r.name} onChange={(e) => pickProduct(i, e.target.value)} />
                   <Input inputMode="decimal" placeholder="จำนวน" value={r.qty} onChange={(e) => setRow(i, { qty: e.target.value })} />
                   <Input className="hidden sm:block" placeholder="หน่วย" value={r.unit} onChange={(e) => setRow(i, { unit: e.target.value })} />
                   <Input inputMode="decimal" placeholder="ราคา/หน่วย" value={r.unit_price} onChange={(e) => setRow(i, { unit_price: e.target.value })} />
                   <button type="button" onClick={() => setRows((rs) => rs.length > 1 ? rs.filter((_, j) => j !== i) : rs)}
-                    className="text-neutral-300 hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                    className="text-neutral-300 hover:text-red-500"><Trash2 className="h-4 w-4 shrink-0" /></button>
                 </div>
               ))}
             </div>
@@ -266,8 +293,8 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
               <Label>ภาษีมูลค่าเพิ่ม (VAT 7%)</Label>
               <Select value={vatMode} onChange={(e) => setVatMode(e.target.value as VatMode)}>
                 <option value="none">ไม่มี VAT</option>
-                <option value="exclusive">บวก VAT เพิ่ม (แยกนอก)</option>
-                <option value="inclusive">ราคารวม VAT แล้ว (รวมใน)</option>
+                <option value="exclusive">บวก VAT เพิ่มจากราคา</option>
+                <option value="inclusive">ราคาที่ใส่รวม VAT แล้ว</option>
               </Select>
             </div>
             <div>

@@ -6,7 +6,7 @@
 // ============================================================
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Send, Sparkles, Loader2, ArrowRight } from "lucide-react";
+import { Send, Calculator, Loader2, ArrowRight } from "lucide-react";
 
 const MAX_LEN = 150;
 const STARTERS = ["ระบบนี้ทำอะไรได้บ้าง", "ช่วยเรื่องภาษียังไง", "เหมาะกับสำนักงานบัญชีไหม"];
@@ -55,7 +55,7 @@ export default function LandingSandboxChat() {
   return (
     <div className="mx-auto mt-6 w-full max-w-sm rounded-3xl border border-neutral-200 bg-neutral-50 p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 border-b border-neutral-200 pb-3">
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-600 text-white"><Sparkles className="h-4 w-4" /></div>
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-600 text-white"><Calculator className="h-4 w-4" /></div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold">ลองคุยกับผู้ช่วยบัญชี AI ได้เลย</p>
           <p className="text-[10px] text-neutral-400">ไม่ต้องสมัคร · ฟรี 3 ครั้ง{triesLeft != null && !locked ? ` · เหลือ ${triesLeft} ครั้ง` : ""}</p>

@@ -58,7 +58,7 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
               className="h-8 w-20 rounded-lg border border-neutral-300 px-2 text-xs outline-none focus:border-emerald-500" />
             <button onClick={saveQuota} disabled={pending}
               className="h-8 rounded-lg bg-neutral-900 px-2.5 text-[11px] text-white hover:bg-neutral-700 disabled:opacity-40">
-              {savedQuota ? "✓" : "บันทึก"}
+              {savedQuota ? "บันทึกแล้ว" : "บันทึก"}
             </button>
           </div>
         </Td>

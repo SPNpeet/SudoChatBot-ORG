@@ -48,7 +48,7 @@ export default function NotifySettingsForm({ shopId, platformReady, oaBasicId, l
     setResult(null);
     start(async () => {
       const r = await testLineNotify(shopId);
-      setResult(r.ok ? { ok: true, msg: "✅ ส่งข้อความทดสอบแล้ว — เช็คใน LINE ได้เลย" } : { ok: false, msg: r.error });
+      setResult(r.ok ? { ok: true, msg: "ส่งข้อความทดสอบแล้ว — เช็คใน LINE ได้เลย" } : { ok: false, msg: r.error });
     });
   }
 
@@ -64,7 +64,7 @@ export default function NotifySettingsForm({ shopId, platformReady, oaBasicId, l
     <div className="space-y-4">
       {banner && (
         <p className={`rounded-xl px-3 py-2.5 text-sm ${banner.ok ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
-          {banner.ok ? "✅ " : "⚠️ "}{banner.text}
+          {banner.text}
         </p>
       )}
 

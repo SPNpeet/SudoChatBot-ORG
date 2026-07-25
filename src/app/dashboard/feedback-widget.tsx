@@ -2,7 +2,7 @@
 // ปุ่มลอย "แนะนำ/ติชม" — เสียงผู้ใช้ตรงถึงเจ้าของแพลตฟอร์ม (โชว์ในแดชบอร์ดแอดมิน)
 import { useState, useTransition } from "react";
 import { usePathname } from "next/navigation";
-import { MessageCirclePlus, X } from "lucide-react";
+import { MessageCirclePlus, X, CheckCircle2 } from "lucide-react";
 import { Button, Textarea } from "@/components/ui";
 import { submitFeedback } from "./actions";
 
@@ -43,7 +43,9 @@ export default function FeedbackWidget({ shopId }: { shopId: string }) {
               <button onClick={() => setOpen(false)} className="text-neutral-400 hover:text-neutral-700"><X className="h-4 w-4" /></button>
             </div>
             {done ? (
-              <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">✓ ส่งแล้ว ขอบคุณมากค่ะ ทีมงานอ่านทุกข้อความ</p>
+              <p className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />ส่งแล้ว ขอบคุณมากค่ะ ทีมงานอ่านทุกข้อความ
+              </p>
             ) : (
               <>
                 <p className="mt-1 text-xs text-neutral-400">เจออะไรติดขัด อยากได้ฟีเจอร์ไหน บอกได้เลย — ข้อความส่งตรงถึงผู้พัฒนา</p>

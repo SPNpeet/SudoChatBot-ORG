@@ -19,7 +19,11 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
     <html lang="th">
       <body style={{ fontFamily: "system-ui, sans-serif", display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", background: "#fafafa", margin: 0 }}>
         <div style={{ textAlign: "center", padding: 24 }}>
-          <p style={{ fontSize: 40, margin: 0 }}>😵</p>
+          {/* วาด SVG ตรงๆ เพราะ global-error ต้องไม่พึ่งอะไรเลย (มันคือด่านสุดท้ายตอนแอปพัง) */}
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d4d4d4" strokeWidth="1.5"
+            strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", margin: "0 auto" }} aria-hidden>
+            <circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" />
+          </svg>
           <h1 style={{ fontSize: 18, margin: "12px 0 4px" }}>เกิดข้อผิดพลาดชั่วคราว</h1>
           <p style={{ fontSize: 14, color: "#737373", margin: "0 0 20px" }}>ทีมงานได้รับรายงานแล้ว ลองโหลดหน้าใหม่อีกครั้ง</p>
           <button onClick={reset}

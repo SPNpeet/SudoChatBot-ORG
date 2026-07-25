@@ -46,12 +46,12 @@ export default async function BillingPage() {
 
       {dailyCap && quotaUsed >= quotaMax && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <span>⚠️ ใช้ครบโควตา AI ฟรีวันนี้แล้ว ({quotaMax} ครั้ง/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา (คีย์เอกสารเองได้ไม่จำกัด)</span>
+          <span>ใช้ครบโควตา AI ฟรีวันนี้แล้ว ({quotaMax} ครั้ง/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา (คีย์เอกสารเองได้ไม่จำกัด)</span>
         </div>
       )}
       {!dailyCap && balance <= 0 && usage.replies_count >= (plan?.included_replies ?? 0) && (
         <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>⚠️ เครดิตหมดและใช้เกินโควตาแพ็กเกจแล้ว — งาน AI (อ่านบิล/ผู้ช่วย) จะหยุดจนกว่าจะเติมเงินหรืออัปเกรด (คีย์เอกสารเองยังใช้ได้ปกติ)</span>
+          <span>เครดิตหมดและใช้เกินโควตาแพ็กเกจแล้ว — งาน AI (อ่านบิล/ผู้ช่วย) จะหยุดจนกว่าจะเติมเงินหรืออัปเกรด (คีย์เอกสารเองยังใช้ได้ปกติ)</span>
         </div>
       )}
 

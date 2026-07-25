@@ -44,7 +44,7 @@ export default function TeamForm({ shopId, members, canEdit }: { shopId: string;
             </div>
             <div className="flex items-center gap-3">
               <Badge tone={m.role === "owner" ? "green" : "neutral"}>
-                {m.role === "owner" ? "เจ้าของ" : m.role === "admin" ? "ผู้ดูแล" : m.role === "agent" ? "แอดมินเพจ" : "ดูอย่างเดียว"}
+                {m.role === "owner" ? "เจ้าของ" : m.role === "admin" ? "ผู้ดูแล" : m.role === "agent" ? "พนักงาน" : "ดูอย่างเดียว"}
               </Badge>
               {canEdit && m.role !== "owner" && <KickButton memberId={m.id} shopId={shopId} />}
             </div>
@@ -53,11 +53,11 @@ export default function TeamForm({ shopId, members, canEdit }: { shopId: string;
       </div>
       {canEdit && (
         <form ref={formRef} action={submit} className="flex flex-col gap-2 sm:flex-row">
-          <Input name="email" type="email" required placeholder="อีเมลของสมาชิก (ต้องเคย Login แล้ว)" className="min-w-0 flex-1" />
+          <Input name="email" type="email" required placeholder="อีเมลของคนที่จะเชิญ — เขาต้องสมัครและเข้าระบบอย่างน้อย 1 ครั้งก่อน" className="min-w-0 flex-1" />
           <div className="flex gap-2">
             <Select name="role" defaultValue="agent" className="flex-1 sm:w-40 sm:flex-none">
               <option value="admin">ผู้ดูแล</option>
-              <option value="agent">แอดมินเพจ</option>
+              <option value="agent">พนักงาน</option>
               <option value="viewer">ดูอย่างเดียว</option>
             </Select>
             <Button className="h-10 shrink-0" disabled={pending}>{pending ? "..." : "เพิ่ม"}</Button>

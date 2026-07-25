@@ -1,7 +1,7 @@
 // รายละเอียดค่าใช้จ่าย — ทำจ่าย · พิมพ์ 50 ทวิ (ถ้ามีหัก ณ ที่จ่าย) · ยกเลิก
 import { getCurrentShop } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
-import { Badge, Card, CardContent, CardHeader, CardTitle, Table, Th, Td } from "@/components/ui";
+import { Badge, BackLink, Card, CardContent, CardHeader, CardTitle, Table, Th, Td } from "@/components/ui";
 import { baht, bahtDoc, dateOnlyTH, dateTH } from "@/lib/utils";
 import { DOC_STATUS_TH, docStatusTone, docOutstanding, PAY_METHOD_TH } from "@/lib/finance";
 import type { DocStatus, FinDoc, FinPayment } from "@/lib/types/finance";
@@ -54,10 +54,10 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="max-w-3xl space-y-4">
+      <BackLink href="/dashboard/expenses" label="กลับไปค่าใช้จ่าย" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs text-neutral-400"><Link href="/dashboard/expenses" className="hover:underline">ค่าใช้จ่าย</Link> / {doc.doc_number}</p>
-          <h1 className="mt-1 flex items-center gap-2 text-xl font-bold">
+          <h1 className="flex flex-wrap items-center gap-2 text-[22px] font-bold leading-tight tracking-tight">
             {doc.doc_number}
             {doc.approval_status === "pending"
               ? <Badge tone="amber">รออนุมัติ</Badge>
@@ -81,18 +81,18 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
       )}
       {doc.approval_status === "pending" && !["owner", "admin"].includes(role) && (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700">
-          ⏳ ส่งขออนุมัติแล้ว — รอเจ้าของ/ผู้ดูแลอนุมัติ ระบบจะลงบัญชีให้อัตโนมัติทันทีที่อนุมัติ
+          ส่งขออนุมัติแล้ว — รอเจ้าของ/ผู้ดูแลอนุมัติ ระบบจะลงบัญชีให้อัตโนมัติทันทีที่อนุมัติ
         </p>
       )}
       {doc.approval_status === "rejected" && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-          ❌ รายการนี้ถูกปฏิเสธ{doc.approval_note ? ` — เหตุผล: ${doc.approval_note}` : ""}
+          รายการนี้ถูกปฏิเสธ{doc.approval_note ? ` — เหตุผล: ${doc.approval_note}` : ""}
         </p>
       )}
 
       {doc.status === "void" && (
         <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-          🚫 เอกสารนี้ถูกยกเลิกแล้ว{voidInfo ? ` โดย ${voidInfo.by} เมื่อ ${dateTH(voidInfo.at)}` : ""} — ระบบกลับรายการบัญชีแล้ว ดูได้ในสมุดรายวัน
+          เอกสารนี้ถูกยกเลิกแล้ว{voidInfo ? ` โดย ${voidInfo.by} เมื่อ ${dateTH(voidInfo.at)}` : ""} — ระบบกลับรายการบัญชีแล้ว ดูได้ในสมุดรายวัน
         </p>
       )}
 

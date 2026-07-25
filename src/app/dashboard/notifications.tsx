@@ -1,6 +1,7 @@
 import { getCurrentShop } from "@/lib/shop";
 import { markNotificationRead } from "./actions";
 import { cn } from "@/lib/utils";
+import { X } from "lucide-react";
 
 /** แถบแจ้งเตือนของกิจการ (เครดิตใกล้หมด ฯลฯ) — แสดงเหนือเนื้อหาทุกหน้า dashboard */
 export default async function Notifications() {
@@ -28,7 +29,7 @@ export default async function Notifications() {
             : "border-amber-200 bg-amber-50 text-amber-800",
         )}>
           <div>
-            <p className="font-medium">{n.type === "bot_blocked" ? "🛑" : n.type === "order_paid" ? "" : n.type === "handoff" ? "" : "⚠️"} {n.title}</p>
+            <p className="font-medium">{n.title}</p>
             {n.body && <p className="mt-0.5 text-xs opacity-80">{n.body}</p>}
             {n.type === "order_paid" ? (
               <a href="/dashboard/money" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าการเงิน →</a>
@@ -39,7 +40,7 @@ export default async function Notifications() {
           <form action={dismiss}>
             <input type="hidden" name="id" value={n.id} />
             <input type="hidden" name="shop_id" value={shop.id} />
-            <button className="text-xs opacity-60 hover:opacity-100" aria-label="ปิดการแจ้งเตือน">✕</button>
+            <button className="-m-2 shrink-0 rounded-lg p-2 opacity-60 transition-opacity hover:opacity-100" aria-label="ปิดการแจ้งเตือน"><X className="h-3.5 w-3.5" /></button>
           </form>
         </div>
       ))}

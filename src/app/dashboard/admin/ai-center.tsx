@@ -128,7 +128,7 @@ function FunctionCard({ def, row }: { def: FunctionCardDef; row?: PurposeKeyRow 
       try {
         await savePurposeKey(def.purpose, provider, model, key);
         setKey("");
-        setMsg({ ok: true, text: key ? "บันทึกค่าย/โมเดล/key แล้ว ✓" : "บันทึกค่าย/โมเดลแล้ว (ใช้ key เดิม) ✓" });
+        setMsg({ ok: true, text: key ? "บันทึกค่าย/โมเดล/key แล้ว" : "บันทึกค่าย/โมเดลแล้ว (ใช้ key เดิม)" });
       } catch (e) {
         setMsg({ ok: false, text: (e as Error).message || "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง" });
       }
@@ -143,7 +143,7 @@ function FunctionCard({ def, row }: { def: FunctionCardDef; row?: PurposeKeyRow 
         body: JSON.stringify({ purpose: def.purpose, model }),
       });
       const j = await res.json();
-      setMsg({ ok: j.ok, text: j.ok ? "เชื่อมต่อสำเร็จ ✓ พร้อมใช้งาน" : (j.error ?? "เชื่อมต่อไม่สำเร็จ") });
+      setMsg({ ok: j.ok, text: j.ok ? "เชื่อมต่อสำเร็จ พร้อมใช้งาน" : (j.error ?? "เชื่อมต่อไม่สำเร็จ") });
     } catch (e) {
       setMsg({ ok: false, text: (e as Error).message });
     } finally {

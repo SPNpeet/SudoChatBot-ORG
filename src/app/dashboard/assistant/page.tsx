@@ -1,6 +1,6 @@
 import { getCurrentShop } from "@/lib/shop";
 import { Card, CardContent } from "@/components/ui";
-import { Calculator, FileText, Banknote, Receipt, BarChart3, Package, Landmark } from "lucide-react";
+import { Calculator, FileText, Banknote, Receipt, BarChart3, Package, Landmark, CircleHelp } from "lucide-react";
 import AssistantChat from "./chat";
 
 export const dynamic = "force-dynamic";
@@ -32,21 +32,31 @@ export default async function AssistantPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-bold"><Calculator className="h-5 w-5 text-emerald-600" /> ผู้ช่วยบัญชี AI</h1>
-        <p className="text-sm text-neutral-400">นักบัญชีคู่ใจในแชทเดียว — พิมพ์สั่งเป็นภาษาคน หรือแนบรูปบิลให้ลงบัญชีให้เลย</p>
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {CAPABILITIES.map((c) => (
-          <div key={c.text} className="flex items-start gap-2 rounded-xl border border-neutral-100 bg-white px-3 py-2.5 text-[13px] text-neutral-600">
-            <c.icon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> {c.text}
+    // หน้านี้มีงานเดียวคือ "คุย" — จึงให้แชทกินพื้นที่จอทั้งหมด ไม่มีอะไรมาแย่งสายตา
+    // (เดิมมีการ์ดบอกความสามารถ 6 ใบดันแชทตกจอ ทั้งที่ตัวอย่างคำสั่งอยู่ในแชทอยู่แล้ว)
+    <div className="flex h-[calc(100svh-13rem)] min-h-[28rem] flex-col gap-3 md:h-[calc(100svh-7.5rem)]">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-2 text-[22px] font-bold leading-tight tracking-tight">
+            <Calculator className="h-5 w-5 shrink-0 text-emerald-600" />ผู้ช่วยบัญชี AI
+          </h1>
+          <p className="mt-0.5 truncate text-sm text-neutral-500">พิมพ์สั่งเป็นภาษาคน หรือส่งรูปบิลมาให้ลงบัญชีให้</p>
+        </div>
+        <details className="relative shrink-0">
+          <summary className="inline-flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
+            <CircleHelp className="h-3.5 w-3.5" />ทำอะไรได้บ้าง
+          </summary>
+          <div className="absolute right-0 z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] space-y-1.5 rounded-2xl border border-neutral-200 bg-white p-3 shadow-lg">
+            {CAPABILITIES.map((c) => (
+              <div key={c.text} className="flex items-start gap-2 text-[12.5px] leading-relaxed text-neutral-600">
+                <c.icon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{c.text}
+              </div>
+            ))}
           </div>
-        ))}
+        </details>
       </div>
 
-      <Card className="flex h-[70svh] min-h-[26rem] flex-col overflow-hidden sm:h-[34rem]">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <CardContent className="min-h-0 flex-1 p-0">
           <AssistantChat shopId={shop.id} />
         </CardContent>

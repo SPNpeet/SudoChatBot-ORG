@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/logo";
-import { Eye, EyeOff, Check, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Check, ArrowRight } from "lucide-react";
 import { signUpDirect } from "./actions";
 import OAuthButtons from "@/components/oauth-buttons";
 
@@ -92,7 +92,7 @@ export default function SignupPage() {
             </div>
             <button type="submit" disabled={loading || mismatch}
               className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60">
-              <Sparkles className="h-4 w-4" /> {loading ? "กำลังสร้างบัญชี..." : "สมัครและเริ่มใช้เลย"}
+              <ArrowRight className="h-4 w-4" /> {loading ? "กำลังสร้างบัญชี..." : "สมัครและเริ่มใช้เลย"}
             </button>
           </form>
 

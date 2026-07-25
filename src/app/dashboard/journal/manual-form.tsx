@@ -59,12 +59,12 @@ export default function ManualJournalForm({ shopId, accounts }: { shopId: string
                 </div>
                 <div>
                   <Label>คำอธิบาย</Label>
-                  <Input value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="เช่น ปรับปรุงค่าเสื่อม" />
+                  <Input value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="เช่น ปรับปรุงยอดสิ้นเดือน" />
                 </div>
               </div>
               <div className="space-y-2">
                 {lines.map((l, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_5.5rem_5.5rem_2rem] items-center gap-2">
+                  <div key={i} className="grid grid-cols-[1fr_4.25rem_4.25rem_1.75rem] sm:grid-cols-[1fr_5.5rem_5.5rem_2rem] items-center gap-2">
                     <select value={l.code} onChange={(e) => setLine(i, { code: e.target.value })}
                       className="h-10 rounded-xl border border-neutral-300 bg-white px-2 text-sm outline-none focus:border-emerald-500">
                       <option value="">— เลือกบัญชี —</option>
@@ -83,7 +83,7 @@ export default function ManualJournalForm({ shopId, accounts }: { shopId: string
                 <button type="button" onClick={() => setLines((ls) => [...ls, emptyLine()])}
                   className="inline-flex items-center gap-1 text-sm text-emerald-700"><Plus className="h-4 w-4" /> เพิ่มบรรทัด</button>
                 <p className={`text-sm ${balanced ? "text-emerald-600" : "text-red-500"}`}>
-                  เดบิต {bahtDoc(sums.dr)} · เครดิต {bahtDoc(sums.cr)} {balanced ? "✓ สมดุล" : "(ต้องเท่ากัน)"}
+                  เดบิต {bahtDoc(sums.dr)} · เครดิต {bahtDoc(sums.cr)} {balanced ? "— ลงตัวแล้ว" : "— ยังไม่เท่ากัน"}
                 </p>
               </div>
               {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}

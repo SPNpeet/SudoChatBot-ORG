@@ -1,3 +1,3 @@
 // โครงหน้าระหว่างโหลด — Next แสดงทันทีที่กดเมนู ผู้ใช้จึงไม่เจอจอขาว
-import { DashboardSkeleton } from "@/components/skeleton";
-export default function Loading() { return <DashboardSkeleton />; }
+import { FormSkeleton } from "@/components/skeleton";
+export default function Loading() { return <FormSkeleton />; }

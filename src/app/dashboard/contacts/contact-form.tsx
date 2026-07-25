@@ -65,7 +65,7 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
                 </div>
                 <div>
                   <Label>เลขผู้เสียภาษี (13 หลัก)</Label>
-                  <Input name="tax_id" inputMode="numeric" defaultValue={contact?.tax_id ?? ""} placeholder="0000000000000" />
+                  <Input name="tax_id" inputMode="numeric" defaultValue={contact?.tax_id ?? ""} placeholder="0105561000000" />
                 </div>
                 <div>
                   <Label>สาขา</Label>

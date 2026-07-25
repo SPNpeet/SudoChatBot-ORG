@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
+import SideNav from "./side-nav";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import {
@@ -8,6 +9,10 @@ import {
   Users, Banknote, BookOpenText, PieChart,
 } from "lucide-react";
 import MobileNav from "./mobile-nav";
+import { NavShell, MainArea } from "./nav-shell";
+import { SidebarHead, SidebarFoot } from "./sidebar-parts";
+import { ToastProvider } from "@/components/toast";
+import CommandPalette from "./command-palette";
 import Notifications from "./notifications";
 import SystemAlertBanner from "./system-alert-banner";
 import FeedbackWidget from "./feedback-widget";
@@ -31,6 +36,15 @@ const nav = [
   { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },
 ];
 
+const ADMIN_NAV = [
+  { href: "/dashboard/admin", label: "ศูนย์ AI (Admin)", icon: ShieldCheck },
+  { href: "/dashboard/admin/stats", label: "แดชบอร์ดแพลตฟอร์ม", icon: BarChart3 },
+  { href: "/dashboard/admin/billing", label: "รายได้ + บัญชีรับเงิน", icon: Landmark },
+  { href: "/dashboard/admin/shops", label: "จัดการผู้ใช้ระบบ", icon: Store },
+  { href: "/dashboard/admin/feedback", label: "ความเห็นผู้ใช้", icon: MessagesSquare },
+  { href: "/dashboard/admin/logs", label: "Audit Log", icon: ScrollText },
+];
+
 async function signOut() {
   "use server";
   const supabase = await createClient();
@@ -44,76 +58,34 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const { data: quota } = await supabase.rpc("get_ai_quota_status", { p_shop_id: shop.id });
 
   return (
+    <ToastProvider>
+    <NavShell>
     <div className="min-h-screen">
-      {/* Sidebar — เดสก์ท็อป */}
-      <aside className="fixed inset-y-0 z-30 hidden w-56 flex-col border-r border-neutral-200 bg-white md:flex">
-        <div className="px-4 py-4">
-          <div className="px-1"><Logo /></div>
-          <div className="mt-3">
-            <CompanySwitcher companies={companies} currentId={shop.id} />
-          </div>
-        </div>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3">
-          {nav.map((item) => (
-            <Link key={item.href} href={item.href}
-              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900">
-              <item.icon className="h-4 w-4" />{item.label}
-            </Link>
-          ))}
-          {isAdmin && (
-            <>
-              <Link href="/dashboard/admin"
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
-                <ShieldCheck className="h-4 w-4" /> ศูนย์ AI (Admin)
-              </Link>
-              <Link href="/dashboard/admin/stats"
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
-                <BarChart3 className="h-4 w-4" /> แดชบอร์ดแพลตฟอร์ม
-              </Link>
-              <Link href="/dashboard/admin/billing"
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
-                <Landmark className="h-4 w-4" /> รายได้ + บัญชีรับเงิน
-              </Link>
-              <Link href="/dashboard/admin/shops"
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
-                <Store className="h-4 w-4" /> จัดการผู้ใช้ระบบ
-              </Link>
-              <Link href="/dashboard/admin/feedback"
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
-                <MessagesSquare className="h-4 w-4" /> ความเห็นผู้ใช้
-              </Link>
-              <Link href="/dashboard/admin/logs"
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-emerald-700 hover:bg-emerald-50">
-                <ScrollText className="h-4 w-4" /> Audit Log
-              </Link>
-            </>
-          )}
-        </nav>
-        <div className="border-t border-neutral-100 px-2 pt-2">
-          <AiQuotaBar quota={quota as AiQuota | null} />
-        </div>
-        <form action={signOut} className="p-3 pt-1">
-          <button className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-neutral-500 hover:bg-neutral-100">
-            <LogOut className="h-4 w-4" /> ออกจากระบบ
-          </button>
-        </form>
-      </aside>
+      {/* Sidebar — เดสก์ท็อป (พับได้ SideNav คุมความกว้างเอง) */}
+      <SideNav items={nav} adminItems={isAdmin ? ADMIN_NAV : []}
+        foot={<SidebarFoot quota={quota as AiQuota | null} signOut={signOut} />}>
+        <SidebarHead companies={companies} currentId={shop.id} />
+      </SideNav>
 
       {/* Header — มือถือ */}
       <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
-        <Logo />
+        <Link href="/dashboard" aria-label="กลับหน้าภาพรวม" className="shrink-0 rounded-lg transition-opacity active:opacity-60">
+          <Logo />
+        </Link>
         <div className="w-44">
           <CompanySwitcher companies={companies} currentId={shop.id} />
         </div>
       </header>
 
-      {/* เนื้อหา */}
-      {/* pb มือถือ = bottom nav + ระยะปุ่มลอยติชม — ปุ่มแถวล่างสุดต้องกดได้เสมอ ไม่โดนอะไรบัง */}
-      <main className="px-4 py-5 pb-[calc(7.75rem+env(safe-area-inset-bottom))] md:ml-56 md:px-8 md:py-7 md:pb-7">
+      {/* เนื้อหา — pb มือถือ = bottom nav + ปุ่มลอย ปุ่มแถวล่างสุดต้องกดได้เสมอ */}
+      <MainArea>
         <SystemAlertBanner />
         <Notifications />
         {children}
-      </main>
+      </MainArea>
+
+      {/* ค้นหาทุกอย่างด้วย Ctrl+K — ทางลัดที่ทำให้คนใช้คล่องขึ้นเร็วที่สุด */}
+      <CommandPalette shopId={shop.id} />
 
       {/* Bottom nav — มือถือ */}
       <MobileNav isAdmin={!!isAdmin} />
@@ -124,5 +96,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* ปุ่มแนะนำ/ติชม — เสียงผู้ใช้ตรงถึงเจ้าของแพลตฟอร์ม */}
       <FeedbackWidget shopId={shop.id} />
     </div>
+    </NavShell>
+    </ToastProvider>
   );
 }

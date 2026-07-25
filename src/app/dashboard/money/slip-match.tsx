@@ -3,8 +3,8 @@ import { compressImage } from "@/lib/compress-image";
 // อัปสลิป -> ระบบตรวจ (EasySlip/SlipOK) + หาใบแจ้งหนี้ที่ยอดตรง -> ยืนยันบันทึกรับเงิน
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ScanLine, Check } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle, Select } from "@/components/ui";
+import { ScanLine, Check, CheckCircle2 } from "lucide-react";
+import { Button, Card, CardContent, CardHeader, CardTitleIcon, Select } from "@/components/ui";
 import { baht } from "@/lib/utils";
 import { uploadAndMatchSlip, recordPayment, type SlipMatchResult } from "../finance/actions";
 
@@ -54,7 +54,11 @@ export default function SlipMatch({ shopId }: { shopId: string }) {
 
   return (
     <Card>
-      <CardHeader><CardTitle>📥 อัปสลิป — ตรวจ + จับคู่ใบแจ้งหนี้อัตโนมัติ</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitleIcon icon={ScanLine} desc="ลูกค้าโอนแล้วส่งสลิปมา — อัปโหลดที่นี่ ระบบอ่านยอด ตรวจว่าสลิปจริง แล้วตัดยอดค้างให้">
+          อัปสลิป แล้วจับคู่ใบแจ้งหนี้อัตโนมัติ
+        </CardTitleIcon>
+      </CardHeader>
       <CardContent className="space-y-3">
         <input ref={fileRef} type="file" accept="image/*" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
@@ -68,7 +72,9 @@ export default function SlipMatch({ shopId }: { shopId: string }) {
         {result && (
           <div className="space-y-2 rounded-xl bg-neutral-50 p-3 text-sm">
             {result.verify?.verified ? (
-              <p className="text-emerald-700">✓ สลิปจริง ยอด <b>{baht(result.amount ?? 0)}</b>{result.verify.senderName ? ` จาก ${result.verify.senderName}` : ""}</p>
+              <p className="flex items-center gap-1.5 text-emerald-700">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />สลิปจริง ยอด <b>{baht(result.amount ?? 0)}</b>{result.verify.senderName ? ` จาก ${result.verify.senderName}` : ""}
+              </p>
             ) : (
               <p className="text-amber-600">ตรวจอัตโนมัติไม่ได้ ({result.verify?.error ?? "ไม่ได้ตั้ง provider"}) — เลือกเอกสารเองได้</p>
             )}

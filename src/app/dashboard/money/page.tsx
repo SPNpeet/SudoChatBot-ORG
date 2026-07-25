@@ -9,6 +9,7 @@ import { baht, dateTH, cn } from "@/lib/utils";
 import { PAY_METHOD_TH, docOutstanding } from "@/lib/finance";
 import type { FinPayment } from "@/lib/types/finance";
 import Link from "next/link";
+import { Landmark } from "lucide-react";
 import SlipMatch from "./slip-match";
 import StatementImport from "./statement-import";
 
@@ -89,8 +90,13 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
         <CardHeader><CardTitle>รายการเงินล่าสุด</CardTitle></CardHeader>
         <CardContent className="px-0 pb-0">
           {rows.length === 0 ? (
-            <EmptyState icon="🏦" title="ยังไม่มีรายการเงิน"
-              hint="เมื่อรับ-จ่ายเงินจากเอกสาร หรืออัปสลิป/นำเข้า statement ด้านบน รายการเงินจะขึ้นที่นี่พร้อมลงบัญชีอัตโนมัติ"
+            <EmptyState icon={Landmark} title="ยังไม่มีรายการเงินเข้า-ออก"
+              hint="หน้านี้คือสมุดเงินสด/ธนาคารของกิจการ — เงินเข้าออกจริงอยู่ตรงนี้"
+              steps={[
+                "ลูกค้าโอนเงินมา → อัปรูปสลิป ระบบจับคู่กับใบแจ้งหนี้ให้เอง",
+                "หรือโหลด statement จากแอปธนาคาร แล้วนำเข้าทีเดียวทั้งเดือน",
+                "ทุกรายการที่จับคู่แล้ว ระบบตัดยอดค้างและลงบัญชีให้อัตโนมัติ",
+              ]}
               action={{ href: "/dashboard/sales?t=unpaid", label: "ดูใบแจ้งหนี้ค้างรับ" }} />
           ) : (
             <Table>
@@ -116,7 +122,7 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
                       <Td>
                         {url ? (
                           <a href={url} target="_blank" rel="noreferrer" className="text-xs text-emerald-700 hover:underline">
-                            {p.verify_status === "verified" ? "✓ ตรวจแล้ว" : p.verify_status === "failed" ? "⚠ มีปัญหา" : "ดูสลิป"}
+                            {p.verify_status === "verified" ? "ตรวจแล้ว" : p.verify_status === "failed" ? "มีปัญหา" : "ดูสลิป"}
                           </a>
                         ) : <span className="text-neutral-300">-</span>}
                       </Td>

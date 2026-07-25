@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { compressImage } from "@/lib/compress-image";
 // ============================================================
 //  แพ็กเกจ/เครดิต — โหมดหลัก: "จ่ายค่าแพ็กเกจตรง" สแกน QR ยอดเท่าราคาแพ็กพอดี
@@ -9,7 +9,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge } from "@/components/ui";
 import { baht, cn } from "@/lib/utils";
 import { createTopup, createOmiseTopup, getTopupStatus, changePlan, purchasePlan } from "./actions";
-import { Check, Wallet, Upload, X } from "lucide-react";
+import { Check, Wallet, Upload, X, Loader2 } from "lucide-react";
 
 interface Plan {
   code: string; name: string; price_monthly: number; included_replies: number;
@@ -24,6 +24,9 @@ export default function BillingClient({
   const isOwnerAdmin = role === "owner" || role === "admin";
   const isOwner = role === "owner";
   const [amount, setAmount] = useState(300);
+  // แพ็กที่ผู้ใช้กำลังเล็งอยู่ — เริ่มที่แพ็กปัจจุบัน กดใบไหนก็เด้งไปเน้นใบนั้น
+  const [selected, setSelected] = useState<string>(currentPlan);
+  const [buying, setBuying] = useState<string | null>(null);
   const [topup, setTopup] = useState<TopupState | null>(null);
   const [pending, start] = useTransition();
   const [slipMsg, setSlipMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -46,12 +49,15 @@ export default function BillingClient({
 
   function buyPlan(planCode: string, planName: string) {
     setTopupErr(null);
+    setBuying(planCode);            // จำว่ากดแพ็กไหน — ไม่งั้นปุ่มขึ้น "กำลังสร้าง QR" พร้อมกันทุกใบ ผู้ใช้ไม่รู้ว่ากดอันไหนไป
     start(async () => {
       setOmisePaid(false);
-      const r = await purchasePlan(shopId, planCode);
-      if (!r.ok) { setTopupErr(r.error); return; }
-      setTopup({ ...r, planName });
-      setSlipMsg(null);
+      try {
+        const r = await purchasePlan(shopId, planCode);
+        if (!r.ok) { setTopupErr(r.error); return; }
+        setTopup({ ...r, planName });
+        setSlipMsg(null);
+      } finally { setBuying(null); }
     });
   }
 
@@ -97,30 +103,45 @@ export default function BillingClient({
             {plans.map((p) => {
               const current = p.code === currentPlan;
               const paid = Number(p.price_monthly) > 0;
+              const picked = selected === p.code;
               return (
-                <div key={p.code} className={cn("flex flex-col rounded-2xl border p-4", current ? "border-2 border-emerald-500" : "border-neutral-200")}>
-                  {current && <Badge tone="green" className="mb-2 self-start">แพ็กเกจปัจจุบัน</Badge>}
+                // กดได้ทั้งใบ = "เลือก" เท่านั้น ยังไม่จ่าย — ต้องกดปุ่มยืนยันอีกที กันกดโดนแล้วเสียเงิน
+                <div key={p.code} onClick={() => setSelected(p.code)}
+                  className={cn(
+                    "flex cursor-pointer flex-col rounded-2xl border p-4 transition-all duration-150",
+                    picked
+                      ? "border-emerald-500 bg-emerald-50/40 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
+                      : "border-neutral-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md",
+                  )}>
+                  <div className="mb-2 flex min-h-[22px] items-center gap-1.5">
+                    {current && <Badge tone="green">แพ็กเกจปัจจุบัน</Badge>}
+                    {picked && !current && <Badge tone="blue">กำลังเลือก</Badge>}
+                  </div>
                   <p className="font-bold">{p.name}</p>
-                  <p className="mt-1"><span className="text-xl font-bold">{paid ? baht(p.price_monthly) : "ฟรี"}</span>{paid ? <span className="text-xs text-neutral-400">/เดือน</span> : ""}</p>
-                  <p className="mt-1 text-[11px] text-neutral-400">
-                    🏢 {p.max_companies ? `${p.max_companies} กิจการ` : "ไม่จำกัดกิจการ"} · 👥 พนักงานไม่จำกัด
-                  </p>
-                  <p className="text-[11px] text-neutral-400">
-                    🤖 AI {p.code === "free" ? `${(p.daily_reply_cap ?? 30).toLocaleString()}/วัน` : `${p.included_replies.toLocaleString()}/เดือน`}
-                    {" · "}🧾 สลิป {p.slip_quota ? `${p.slip_quota.toLocaleString()}/เดือน` : "ไม่จำกัด"}
-                  </p>
+                  <p className="mt-1"><span className="text-xl font-bold tabular-nums">{paid ? baht(p.price_monthly) : "ฟรี"}</span>{paid ? <span className="text-xs text-neutral-400">/เดือน</span> : ""}</p>
+                  <dl className="mt-2 space-y-1 text-[11px] text-neutral-500">
+                    <div className="flex justify-between gap-2"><dt>กิจการ</dt><dd className="font-medium text-neutral-700">{p.max_companies ? `${p.max_companies} กิจการ` : "ไม่จำกัด"}</dd></div>
+                    <div className="flex justify-between gap-2"><dt>พนักงาน</dt><dd className="font-medium text-neutral-700">ไม่จำกัด</dd></div>
+                    <div className="flex justify-between gap-2"><dt>งาน AI</dt><dd className="font-medium text-neutral-700">{p.code === "free" ? `${(p.daily_reply_cap ?? 30).toLocaleString()}/วัน` : `${p.included_replies.toLocaleString()}/เดือน`}</dd></div>
+                    <div className="flex justify-between gap-2"><dt>ตรวจสลิป</dt><dd className="font-medium text-neutral-700">{p.slip_quota ? `${p.slip_quota.toLocaleString()}/เดือน` : "ไม่จำกัด"}</dd></div>
+                  </dl>
                   <ul className="mt-3 flex-1 space-y-1.5">
                     {(p.features ?? []).map((f, i) => (
                       <li key={i} className="flex items-start gap-1.5 text-[11px] text-neutral-600"><Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" /> {f}</li>
                     ))}
                   </ul>
                   {isOwner && paid && gatewayReady && (
-                    <Button size="sm" className="mt-3" disabled={pending} onClick={() => buyPlan(p.code, p.name)}>
-                      {pending ? "กำลังสร้าง QR..." : current ? `ต่ออายุ ${baht(p.price_monthly)}` : `สมัคร — จ่าย ${baht(p.price_monthly)}`}
+                    <Button size="lg" variant={picked ? "brand" : "outline"} className="mt-3 w-full"
+                      disabled={pending} onClick={(e) => { e.stopPropagation(); setSelected(p.code); buyPlan(p.code, p.name); }}>
+                      {buying === p.code
+                        ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังสร้าง QR…</>
+                        : current ? `ต่ออายุ ${baht(p.price_monthly)}` : `สมัคร — จ่าย ${baht(p.price_monthly)}`}
                     </Button>
                   )}
                   {isOwner && !paid && !current && (
-                    <DowngradeFreeButton shopId={shopId} planCode={p.code} planName={p.name} />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <DowngradeFreeButton shopId={shopId} planCode={p.code} planName={p.name} />
+                    </div>
                   )}
                 </div>
               );
@@ -198,7 +219,7 @@ export default function BillingClient({
             {topup.gateway === "omise" ? (
               <div className="mt-3 rounded-xl bg-neutral-50 p-4 text-center">
                 {omisePaid
-                  ? <p className="text-sm font-medium text-emerald-600">✓ ชำระเงินสำเร็จ! {topup.planName ? "เปิดแพ็กเกจแล้ว" : "เครดิตเข้าแล้ว"} — กำลังรีเฟรช...</p>
+                  ? <p className="text-sm font-medium text-emerald-600">ชำระเงินสำเร็จ! {topup.planName ? "เปิดแพ็กเกจแล้ว" : "เครดิตเข้าแล้ว"} — กำลังรีเฟรช...</p>
                   : <p className="text-xs text-neutral-500"><span className="mr-1 inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" /> ② กำลังรอการชำระเงิน — ไม่ต้องอัปโหลดสลิป ระบบยืนยันอัตโนมัติ</p>}
                 {slipMsg && !slipMsg.ok && <p className="mt-2 text-xs text-red-600">{slipMsg.text}</p>}
               </div>
@@ -211,7 +232,7 @@ export default function BillingClient({
                 {uploading
                   ? <p className="mt-2 flex items-center gap-1.5 text-xs text-neutral-500"><span className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber-400" /> กำลังตรวจสอบสลิป...</p>
                   : slipMsg
-                    ? <p className={cn("mt-2 rounded-lg px-2.5 py-1.5 text-xs", slipMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600")}>{slipMsg.ok ? "✓ " : ""}{slipMsg.text}</p>
+                    ? <p className={cn("mt-2 rounded-lg px-2.5 py-1.5 text-xs", slipMsg.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600")}>{slipMsg.text}</p>
                     : <p className="mt-2 text-[11px] text-neutral-400">
                         โอนเสร็จแล้วถ่ายรูป/แคปสลิปมาอัปโหลด — ระบบตรวจอัตโนมัติ หรือแอดมินยืนยันให้ (ปกติไม่กี่นาที)
                         {topup.planName ? " ยืนยันแล้วแพ็กเกจเปิดทันที" : ""}

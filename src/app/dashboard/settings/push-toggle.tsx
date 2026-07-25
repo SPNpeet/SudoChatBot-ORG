@@ -54,7 +54,7 @@ export default function PushToggle({ shopId }: { shopId: string }) {
       const j = await res.json();
       if (!j.ok) { setMsg(j.error ?? "บันทึกไม่สำเร็จ"); return; }
       setState("on");
-      setMsg("✅ เปิดแล้ว — เครื่องนี้จะได้รับแจ้งเตือนสำคัญจากระบบ");
+      setMsg("เปิดแล้ว — เครื่องนี้จะได้รับแจ้งเตือนสำคัญจากระบบ");
     } catch (e) {
       setMsg(`เปิดไม่สำเร็จ: ${(e as Error).message.slice(0, 80)}`);
     } finally { setBusy(false); }

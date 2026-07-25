@@ -11,7 +11,7 @@ import CashflowChart from "./cashflow-chart";
 import SetupChecklist from "./setup-checklist";
 import SampleDataCard from "./sample-data-card";
 import TodayPanel, { type TodoDoc } from "./today-panel";
-import { TrendingUp, TrendingDown, HandCoins, AlarmClock, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Receipt, ArrowUpRight, ArrowDownRight, LineChart, FileText } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -132,12 +132,18 @@ export default async function Overview() {
       <SetupChecklist shop={shop} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="เงินเข้าเดือนนี้" value={baht(monthIn)} icon={<TrendingUp className="h-4 w-4" />} tone="green" hint={trend(dIn, true)} />
-        <StatCard label="เงินออกเดือนนี้" value={baht(monthOut)} icon={<TrendingDown className="h-4 w-4" />} hint={trend(dOut, false)} />
-        <StatCard label="ลูกหนี้ค้างรับ" value={baht(ar)} icon={<HandCoins className="h-4 w-4" />} tone="amber"
-          hint={ar > 0 ? <Link href="/dashboard/sales?t=unpaid" className="hover:underline">ดูว่าใครค้างเรา →</Link> : "ไม่มียอดค้าง"} />
-        <StatCard label="เจ้าหนี้ค้างจ่าย" value={baht(ap)} icon={<AlarmClock className="h-4 w-4" />} tone={ap > 0 ? "red" : "neutral"}
-          hint={ap > 0 ? <Link href="/dashboard/expenses?t=unpaid" className="hover:underline">ดูบิลที่ต้องจ่าย →</Link> : "ไม่มีบิลค้าง"} />
+        {/* ทุกใบกดได้ทั้งใบ ไม่ใช่กดได้แค่ตัวหนังสือเล็กๆ ข้างล่าง */}
+        <StatCard label="เงินเข้าเดือนนี้" value={baht(monthIn)} icon={<TrendingUp className="h-4 w-4" />} tone="green"
+          hint={trend(dIn, true)} href="/dashboard/money" />
+        <StatCard label="เงินออกเดือนนี้" value={baht(monthOut)} icon={<TrendingDown className="h-4 w-4" />}
+          hint={trend(dOut, false)} href="/dashboard/money" />
+        {/* ไอคอน 2 ใบนี้ต้องบอก "ใคร/อะไร" ไม่ใช่แค่ "เงิน" — ลูกหนี้=คนที่ค้างเรา, เจ้าหนี้=บิลที่เราต้องจ่าย */}
+        <StatCard label="ลูกหนี้ค้างรับ" value={baht(ar)} icon={<Users className="h-4 w-4" />} tone="amber"
+          href="/dashboard/sales?t=unpaid"
+          hint={ar > 0 ? "ดูว่าใครค้างเรา →" : "ไม่มียอดค้าง"} />
+        <StatCard label="เจ้าหนี้ค้างจ่าย" value={baht(ap)} icon={<Receipt className="h-4 w-4" />} tone={ap > 0 ? "red" : "neutral"}
+          href="/dashboard/expenses?t=unpaid"
+          hint={ap > 0 ? "ดูบิลที่ต้องจ่าย →" : "ไม่มีบิลค้าง"} />
       </div>
 
       <Card>
@@ -145,7 +151,7 @@ export default async function Overview() {
         <CardContent>
           {chartData.length > 1
             ? <CashflowChart data={chartData} />
-            : <EmptyState icon="📈" title="ยังไม่มีข้อมูลเงินเข้า-ออก" hint="เมื่อออกเอกสารหรือบันทึกรับ-จ่ายเงิน กราฟจะขึ้นที่นี่อัตโนมัติ" />}
+            : <EmptyState icon={LineChart} title="ยังไม่มีข้อมูลเงินเข้า-ออก" hint="พอมีเงินเข้าหรือออกครั้งแรก กราฟจะขึ้นที่นี่ให้เอง ไม่ต้องตั้งค่าอะไร" />}
         </CardContent>
       </Card>
 
@@ -153,9 +159,10 @@ export default async function Overview() {
         <CardHeader><CardTitle>เอกสารล่าสุด</CardTitle></CardHeader>
         <CardContent className="px-0 pb-0">
           {(recentDocs ?? []).length === 0 ? (
-            <EmptyState icon="🧾" title="ยังไม่มีเอกสาร"
-              hint="ออกใบแจ้งหนี้/ใบเสร็จ หรือถ่ายรูปบิลให้ AI ลงบัญชีให้ — กดปุ่ม + มุมขวาล่างได้เลย"
-              action={{ href: "/dashboard/assistant", label: "สั่งผู้ช่วย AI เป็นภาษาคน" }} />
+            <EmptyState icon={FileText} title="ยังไม่มีเอกสาร"
+              hint="ลองพิมพ์สั่ง AI ดูก่อนก็ได้ เช่น “ออกใบแจ้งหนี้ให้ร้านสมชาย ค่าออกแบบ 5,000”"
+              action={{ href: "/dashboard/assistant", label: "สั่งผู้ช่วย AI เป็นภาษาคน" }}
+              secondary={{ href: "/dashboard/sales/new?type=invoice", label: "คีย์เอกสารเอง" }} />
           ) : (
             <Table>
               <thead><tr><Th>เลขที่</Th><Th>ประเภท</Th><Th>คู่ค้า</Th><Th className="text-right">ยอด</Th><Th>สถานะ</Th><Th>วันที่</Th></tr></thead>

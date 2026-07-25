@@ -1,8 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_Thai } from "next/font/google";
+import { IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
 
-const noto = Noto_Sans_Thai({ subsets: ["thai", "latin"], weight: ["400", "500", "600", "700"] });
+// IBM Plex Sans Thai — ออกแบบมาเพื่องานธุรกิจ/เอกสารโดยเฉพาะ ตัวเลขคมและกว้างเท่ากันทุกตัว
+// (สำคัญมากกับตารางเงิน: หลักหน่วย-สิบ-ร้อย ตรงคอลัมน์กันเป๊ะ) — โหลดผ่าน next/font จึงไม่มี
+// request ออกนอกโดเมนตอนผู้ใช้เปิดเว็บ และไม่มี layout shift
+const font = IBM_Plex_Sans_Thai({
+  subsets: ["thai", "latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 
 const SITE = "https://sudochatbot.online";
 
@@ -71,7 +78,7 @@ const jsonLd = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="th">
-      <body className={noto.className}>
+      <body className={`${font.className} antialiased`}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         {children}
       </body>

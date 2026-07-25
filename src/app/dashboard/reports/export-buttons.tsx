@@ -1,7 +1,8 @@
 "use client";
 // ปุ่มดาวน์โหลดรายงาน — Excel (SheetJS ในเครื่อง) และไฟล์ .txt โอนย้ายข้อมูลสรรพากร
 // .txt เข้ารหัส TIS-620 (มาตรฐาน RD Prep อ่านภาษาไทยได้ตรง) + CRLF
-import { Download, FileText, Lock } from "lucide-react";
+import { Download, FileText, Lock, Loader2 } from "lucide-react";
+import { useState } from "react";
 import Link from "next/link";
 import { encodeTis620 } from "@/lib/rd";
 
@@ -12,6 +13,8 @@ export default function ExportButtons({ rows, xlsxName, txtName, txtContent, txt
   txtContent?: string;
   txtLocked?: boolean;   // แพ็กเกจยังไม่ปลดล็อกไฟล์ยื่นสรรพากร
 }) {
+  const [busy, setBusy] = useState(false);
+
   async function downloadXlsx() {
     if (!rows.length) return;
     const XLSX = await import("xlsx");
@@ -33,10 +36,13 @@ export default function ExportButtons({ rows, xlsxName, txtName, txtContent, txt
   }
 
   return (
-    <div className="flex gap-1.5">
-      <button onClick={downloadXlsx} disabled={!rows.length}
-        className="inline-flex h-8 items-center gap-1 rounded-lg border border-neutral-200 px-2.5 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-40">
-        <Download className="h-3.5 w-3.5" /> Excel
+    <div className="flex flex-wrap gap-1.5">
+      {/* xlsx โหลดแบบ dynamic import (หลายร้อย KB) ถ้าไม่ล็อกไว้ กดรัว = ได้ไฟล์ซ้ำหลายใบ */}
+      <button onClick={async () => { if (busy) return; setBusy(true); try { await downloadXlsx(); } finally { setBusy(false); } }}
+        disabled={!rows.length || busy}
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 px-3 text-xs text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-40">
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+        {busy ? "กำลังสร้างไฟล์…" : "Excel"}
       </button>
       {txtName && (
         txtLocked ? (
@@ -46,8 +52,8 @@ export default function ExportButtons({ rows, xlsxName, txtName, txtContent, txt
           </Link>
         ) : (
           <button onClick={downloadTxt} disabled={!txtContent}
-            className="inline-flex h-8 items-center gap-1 rounded-lg border border-neutral-200 px-2.5 text-xs text-neutral-600 hover:bg-neutral-50 disabled:opacity-40">
-            <FileText className="h-3.5 w-3.5" /> ไฟล์ยื่น .txt (TIS-620)
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 px-3 text-xs text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-40">
+            <FileText className="h-3.5 w-3.5" /> ไฟล์ยื่นสรรพากร (.txt)
           </button>
         )
       )}

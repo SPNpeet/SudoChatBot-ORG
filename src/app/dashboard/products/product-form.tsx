@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { compressImage } from "@/lib/compress-image";
 import { useState, useTransition } from "react";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
@@ -72,7 +72,7 @@ export default function ProductForm({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>ราคาขาย (บาท) *</Label><Input name="price" type="number" step="0.01" min="0" required defaultValue={product?.price} /></div>
-              <div><Label>ต้นทุน/หน่วย (คิดกำไร-COGS)</Label><Input name="cost" type="number" step="0.01" min="0" defaultValue={product?.cost ?? ""} placeholder="ว่าง = ไม่คิดต้นทุน" /></div>
+              <div><Label>ต้นทุนต่อชิ้น (ไว้คิดกำไร)</Label><Input name="cost" type="number" step="0.01" min="0" defaultValue={product?.cost ?? ""} placeholder="ว่าง = ไม่คิดต้นทุน" /></div>
             </div>
             <div className="flex flex-wrap items-center gap-3 rounded-xl bg-neutral-50 px-3 py-2.5">
               <label className="flex items-center gap-2 text-sm">
@@ -95,7 +95,7 @@ export default function ProductForm({
             </div>
             <div>
               <Label>รายละเอียด</Label>
-              <Textarea name="description" defaultValue={product?.description ?? ""} placeholder="โน้ตภายใน เช่น สเปก ซัพพลายเออร์" />
+              <Textarea name="description" defaultValue={product?.description ?? ""} placeholder="บันทึกช่วยจำ เช่น ขนาด สี ร้านที่สั่งซื้อ" />
             </div>
 
             {/* ===== รูปสินค้า ===== */}

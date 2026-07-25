@@ -10,6 +10,7 @@ import { agingBucket, AGING_LABEL_TH, docOutstanding } from "@/lib/finance";
 import { rdClean, rdDateBE, rdAmount } from "@/lib/rd";
 import type { FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
+import { LineChart, CheckCircle2, FileText, FileSpreadsheet, BookOpenText } from "lucide-react";
 import ExportButtons from "./export-buttons";
 import PeriodPicker from "./period-picker";
 
@@ -155,9 +156,9 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
         <CardHeader><CardTitle>รายได้ vs ค่าใช้จ่าย รายเดือน (จากสมุดรายวันจริง)</CardTitle></CardHeader>
         <CardContent className="px-0 pb-0">
           {rows.length === 0 ? (
-            <EmptyState icon="📈" title="งวดนี้ยังไม่มีรายการบัญชี"
-              hint="ออกเอกสารขายหรือบันทึกค่าใช้จ่าย ระบบจะลงสมุดรายวันและสรุปให้อัตโนมัติ"
-              action={{ href: "/dashboard/sales/new?type=invoice", label: "+ ออกเอกสารใบแรก" }} />
+            <EmptyState icon={LineChart} title="งวดนี้ยังไม่มีรายการบัญชี"
+              hint="ออกเอกสารขายหรือบันทึกค่าใช้จ่าย ระบบจะลงบัญชีและสรุปตัวเลขให้เอง"
+              action={{ href: "/dashboard/sales/new?type=invoice", label: "ออกเอกสารใบแรก" }} />
           ) : (
             <Table>
               <thead><tr><Th>เดือน</Th><Th className="text-right">รายได้</Th><Th className="text-right">ค่าใช้จ่าย</Th><Th className="text-right">กำไร</Th></tr></thead>
@@ -216,11 +217,11 @@ async function AgingTab({ shopId, supabase }: { shopId: string; supabase: SB }) 
     return (
       <Card key={kind}>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{kind === "invoice" ? "ลูกหนี้ค้างรับ (AR Aging)" : "เจ้าหนี้ค้างจ่าย (AP Aging)"}</CardTitle>
+          <CardTitle>{kind === "invoice" ? "ลูกหนี้ค้างรับ — แยกตามอายุหนี้" : "เจ้าหนี้ค้างจ่าย — แยกตามอายุหนี้"}</CardTitle>
           <ExportButtons xlsxName={`aging-${kind}.xlsx`} rows={exportRows} />
         </CardHeader>
         <CardContent className="px-0 pb-0">
-          <div className="grid grid-cols-5 gap-2 px-5 pb-3">
+          <div className="grid grid-cols-2 gap-2 px-5 sm:grid-cols-3 lg:grid-cols-5 pb-3">
             {Object.entries(buckets).map(([k, v]) => (
               <div key={k} className="rounded-xl bg-neutral-50 px-2 py-2 text-center">
                 <p className="text-[10px] text-neutral-400">{AGING_LABEL_TH[k]}</p>
@@ -229,8 +230,8 @@ async function AgingTab({ shopId, supabase }: { shopId: string; supabase: SB }) 
             ))}
           </div>
           {list.length === 0 ? (
-            <EmptyState icon="🎉" title="ไม่มียอดค้าง"
-              hint={kind === "invoice" ? "ลูกหนี้จ่ายครบหมดแล้ว" : "ไม่มีบิลค้างจ่าย"} />
+            <EmptyState icon={CheckCircle2} title="ไม่มียอดค้าง"
+              hint={kind === "invoice" ? "ลูกค้าจ่ายครบทุกใบแล้ว" : "จ่ายบิลครบทุกใบแล้ว"} />
           ) : (
             <Table>
               <thead><tr><Th>เลขที่</Th><Th>คู่ค้า</Th><Th>ครบกำหนด</Th><Th className="text-right">ค้าง</Th><Th>อายุหนี้</Th></tr></thead>
@@ -319,8 +320,8 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
           </CardHeader>
           <CardContent className="px-0 pb-0">
             {sec.list.length === 0 ? (
-              <EmptyState icon="🧾" title={`ไม่มีรายการ${period.label}`}
-                hint="เอกสารที่คิด VAT จะขึ้นรายงานนี้อัตโนมัติ"
+              <EmptyState icon={FileText} title={`ไม่มีรายการ${period.label}`}
+                hint="เอกสารใบไหนที่คิด VAT จะมาโผล่ในรายงานนี้เอง ไม่ต้องคีย์ซ้ำ"
                 action={sec.title === "รายงานภาษีขาย"
                   ? { href: "/dashboard/sales/new?type=invoice", label: "+ ออกใบแจ้งหนี้มี VAT" }
                   : { href: "/dashboard/expenses/new", label: "+ บันทึกบิลซื้อมี VAT" }} />
@@ -404,9 +405,9 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
           </CardHeader>
           <CardContent className="px-0 pb-0">
             {sec.list.length === 0 ? (
-              <EmptyState icon="📄" title={`ไม่มีรายการ${period.label}`}
-                hint="ค่าใช้จ่ายที่เลือกอัตราหัก ณ ที่จ่าย จะขึ้นรายงานนี้พร้อมพิมพ์ 50 ทวิ ให้อัตโนมัติ"
-                action={{ href: "/dashboard/expenses/new", label: "+ บันทึกค่าใช้จ่ายมีหัก ณ ที่จ่าย" }} />
+              <EmptyState icon={FileSpreadsheet} title={`ไม่มีรายการ${period.label}`}
+                hint="ค่าใช้จ่ายใบไหนที่เลือกอัตราหัก ณ ที่จ่าย จะมาที่นี่ พร้อมพิมพ์หนังสือรับรอง 50 ทวิ ให้เลย"
+                action={{ href: "/dashboard/expenses/new", label: "บันทึกค่าใช้จ่ายมีหัก ณ ที่จ่าย" }} />
             ) : (
               <Table>
                 <thead><tr><Th>วันที่</Th><Th>ผู้ถูกหัก</Th><Th>เลขผู้เสียภาษี</Th><Th className="text-right">ฐานเงิน</Th><Th className="text-right">อัตรา</Th><Th className="text-right">ภาษีหัก</Th><Th>50 ทวิ</Th></tr></thead>
@@ -489,9 +490,9 @@ async function TrialTab({ shopId, supabase, period }: { shopId: string; supabase
       </CardHeader>
       <CardContent className="px-0 pb-0">
         {accounts.length === 0 ? (
-          <EmptyState icon="📚" title="ยังไม่มีรายการบัญชี"
-            hint="เมื่อออกเอกสาร/บันทึกเงิน ระบบลงบัญชีคู่ให้อัตโนมัติ งบทดลองจะขึ้นที่นี่"
-            action={{ href: "/dashboard/sales/new?type=invoice", label: "+ ออกเอกสารใบแรก" }} />
+          <EmptyState icon={BookOpenText} title="ยังไม่มีรายการบัญชี"
+            hint="ทุกครั้งที่ออกเอกสารหรือบันทึกเงิน ระบบลงบัญชีให้เอง แล้วงบทดลองจะขึ้นที่นี่"
+            action={{ href: "/dashboard/sales/new?type=invoice", label: "ออกเอกสารใบแรก" }} />
         ) : (
           <Table>
             <thead><tr><Th>รหัส</Th><Th>บัญชี</Th><Th className="text-right">เดบิต</Th><Th className="text-right">เครดิต</Th></tr></thead>

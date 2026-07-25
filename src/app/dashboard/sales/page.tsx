@@ -7,7 +7,8 @@ import { baht, dateOnlyTH, cn } from "@/lib/utils";
 import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding } from "@/lib/finance";
 import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import RowLink from "@/components/row-link";
+import { Plus, FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -66,23 +67,34 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
       <Card>
         <CardContent className="px-0 pb-0 pt-1">
           {rows.length === 0 ? (
-            <EmptyState icon="🧾" title="ยังไม่มีเอกสารในหมวดนี้"
-              hint="ออกใบเสนอราคา/ใบแจ้งหนี้/ใบเสร็จ — ระบบลงบัญชีและตามยอดค้างให้อัตโนมัติ หรือพิมพ์สั่งผู้ช่วย AI เป็นภาษาคนก็ได้"
-              action={{ href: "/dashboard/sales/new?type=invoice", label: "+ ออกเอกสารใบแรก" }} />
+            <EmptyState icon={FileText} title="ยังไม่มีเอกสารในหมวดนี้"
+              hint="ที่นี่คือทุกใบที่คุณออกให้ลูกค้า และระบบจะตามยอดค้างให้เอง"
+              steps={[
+                "เลือกลูกค้า ใส่รายการกับราคา — ระบบคิด VAT ให้อัตโนมัติ",
+                "ส่งลิงก์ให้ลูกค้า มี QR พร้อมเพย์ให้สแกนจ่ายได้เลย",
+                "ลูกค้าโอนแล้วอัปสลิป ระบบตัดยอดค้างและลงบัญชีให้ทันที",
+              ]}
+              action={{ href: "/dashboard/sales/new?type=invoice", label: "ออกเอกสารใบแรก" }}
+              secondary={{ href: "/dashboard/assistant", label: "สั่ง AI เป็นภาษาคน" }} />
           ) : (
             <Table>
               <thead><tr><Th>เลขที่</Th><Th>ประเภท</Th><Th>ลูกค้า</Th><Th>วันที่</Th><Th className="text-right">ยอด</Th><Th className="text-right">ค้างรับ</Th><Th>สถานะ</Th></tr></thead>
               <tbody>
                 {rows.map((d) => (
-                  <tr key={d.id} className={cn("hover:bg-neutral-50", d.status === "void" && "opacity-50")}>
-                    <Td><Link className={cn("font-medium text-emerald-700 hover:underline", d.status === "void" && "text-neutral-400 line-through")} href={`/dashboard/sales/${d.id}`}>{d.doc_number}</Link></Td>
+                  <RowLink key={d.id} href={`/dashboard/sales/${d.id}`} className={cn(d.status === "void" && "opacity-50")}>
+                    {/* คง Link ไว้บนเลขที่เอกสาร — RowLink ทำให้กดได้ทั้งแถวก็จริง แต่คีย์บอร์ด/
+                        โปรแกรมอ่านหน้าจอต้องมีของที่ focus ได้จริงอย่างน้อย 1 จุดต่อแถว */}
+                    <Td><Link href={`/dashboard/sales/${d.id}`}
+                      className={cn("font-medium text-emerald-700 hover:underline", d.status === "void" && "text-neutral-400 line-through")}>
+                      {d.doc_number}
+                    </Link></Td>
                     <Td>{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
                     <Td>{d.contact_name ?? "-"}</Td>
                     <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
                     <Td className="text-right">{baht(d.total)}</Td>
                     <Td className="text-right">{d.doc_type === "invoice" && ["awaiting", "partial"].includes(d.status) ? <span className="font-medium text-amber-600">{baht(docOutstanding(d))}</span> : "-"}</Td>
                     <Td><Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge></Td>
-                  </tr>
+                  </RowLink>
                 ))}
               </tbody>
             </Table>

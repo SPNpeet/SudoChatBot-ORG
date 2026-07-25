@@ -2,10 +2,12 @@
 // นำเข้า statement ธนาคาร (CSV/Excel) -> จับคู่เงินเข้ากับใบแจ้งหนี้ค้างรับ -> ยืนยันทีละแถว
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileSpreadsheet, Check } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { FileSpreadsheet, Check, Landmark, Download, Loader2, TriangleAlert } from "lucide-react";
+import { Button, Card, CardContent, CardHeader, CardTitleIcon } from "@/components/ui";
 import { baht } from "@/lib/utils";
 import { recordPayment } from "../finance/actions";
+import { parseStatementPdf } from "./statement-actions";
+import { useToast } from "@/components/toast";
 
 interface InvoiceLite { docId: string; docNumber: string; contact: string | null; outstanding: number; due: string | null }
 interface StmtRow { idx: number; date: string; desc: string; amount: number; matched?: InvoiceLite; docId: string; done?: boolean; error?: string }
@@ -13,7 +15,11 @@ interface StmtRow { idx: number; date: string; desc: string; amount: number; mat
 export default function StatementImport({ shopId, invoices }: { shopId: string; invoices: InvoiceLite[] }) {
   const [rows, setRows] = useState<StmtRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [reading, setReading] = useState(false);
+  const [savingIdx, setSavingIdx] = useState<number | null>(null);
   const [pending, start] = useTransition();
+  const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -27,8 +33,35 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
     URL.revokeObjectURL(a.href);
   }
 
+  /** จับคู่ยอดตรงกับใบแจ้งหนี้ค้างรับ — ใช้ร่วมกันทั้งทาง CSV/Excel และ PDF */
+  function autoMatch(parsed: StmtRow[]) {
+    for (const row of parsed) {
+      const exact = invoices.filter((iv) => Math.abs(iv.outstanding - row.amount) <= 0.01);
+      if (exact.length === 1) { row.matched = exact[0]; row.docId = exact[0].docId; }
+    }
+    return parsed;
+  }
+
+  /** PDF ต้องแกะฝั่งเซิร์ฟเวอร์ (pdf.js ในเบราว์เซอร์ต้องตั้ง worker เอง = พังง่าย) */
+  async function onPdf(f: File) {
+    setReading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", f);
+      const r = await parseStatementPdf(shopId, fd);
+      if (!r.ok) { setError(r.error); return; }
+      setNote(r.note ?? null);
+      setRows(autoMatch(r.rows.map((x, i) => ({ idx: i, date: x.date, desc: x.desc, amount: x.amount, docId: "" }))));
+    } finally {
+      setReading(false);
+    }
+  }
+
   async function onFile(f: File) {
     setError(null);
+    setNote(null);
+    setRows([]);
+    if (/\.pdf$/i.test(f.name) || f.type === "application/pdf") { await onPdf(f); return; }
     try {
       const XLSX = await import("xlsx");
       const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
@@ -51,49 +84,65 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
 
       if (!parsed.length) { setError("ไม่พบแถวเงินเข้า (ยอด > 0) ในไฟล์ — เช็คว่ามีคอลัมน์ยอดเงินฝาก/เงินเข้า"); return; }
 
-      // จับคู่ยอดตรงกับใบแจ้งหนี้ค้างรับ
-      for (const row of parsed) {
-        const exact = invoices.filter((iv) => Math.abs(iv.outstanding - row.amount) <= 0.01);
-        if (exact.length === 1) { row.matched = exact[0]; row.docId = exact[0].docId; }
-      }
-      setRows(parsed);
+      setRows(autoMatch(parsed));
     } catch {
-      setError("อ่านไฟล์ไม่สำเร็จ — ใช้ไฟล์ CSV หรือ Excel จากธนาคาร");
+      setError("อ่านไฟล์ไม่สำเร็จ — ลองใช้ไฟล์ CSV, Excel หรือ PDF ที่โหลดจากแอปธนาคารโดยตรง");
     }
   }
 
   function confirmRow(row: StmtRow) {
+    if (savingIdx !== null || row.done) return;   // กันกดซ้ำระหว่างรอ = บันทึกรับเงินซ้ำ
+    setSavingIdx(row.idx);
     start(async () => {
-      const r = await recordPayment(shopId, {
-        doc_id: row.docId || null, direction: "in", method: "transfer",
-        amount: row.amount, statement_ref: `stmt:${row.date}:${row.idx}`,
-      });
-      setRows((rs) => rs.map((x) => x.idx === row.idx
-        ? { ...x, done: r.ok, error: r.ok ? undefined : r.error }
-        : x));
-      if (r.ok) router.refresh();
+      try {
+        const r = await recordPayment(shopId, {
+          doc_id: row.docId || null, direction: "in", method: "transfer",
+          amount: row.amount, statement_ref: `stmt:${row.date}:${row.idx}`,
+        });
+        setRows((rs) => rs.map((x) => x.idx === row.idx
+          ? { ...x, done: r.ok, error: r.ok ? undefined : r.error }
+          : x));
+        if (r.ok) {
+          toast({ tone: "success", text: `บันทึกรับเงิน ${baht(row.amount)} แล้ว` });
+          router.refresh();
+        } else {
+          toast({ tone: "error", text: r.error ?? "บันทึกไม่สำเร็จ" });
+        }
+      } finally { setSavingIdx(null); }
     });
   }
 
   return (
     <Card>
-      <CardHeader><CardTitle>🏦 นำเข้า Statement ธนาคาร — กระทบยอดอัตโนมัติ</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitleIcon icon={Landmark} desc="โหลดไฟล์เดินบัญชีจากแอปธนาคารมาทีเดียวทั้งเดือน ระบบจับคู่กับใบแจ้งหนี้ให้เอง">
+          นำเข้ารายการเดินบัญชีธนาคาร
+        </CardTitleIcon>
+      </CardHeader>
       <CardContent className="space-y-3">
-        <input ref={fileRef} type="file" accept=".csv,.xls,.xlsx" className="hidden"
+        <input ref={fileRef} type="file" accept=".csv,.xls,.xlsx,.pdf,application/pdf" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
-        <div className="flex gap-2">
-          <Button variant="outline" className="flex-1" onClick={() => fileRef.current?.click()}>
-            <FileSpreadsheet className="h-4 w-4" /> เลือกไฟล์ Statement (CSV/Excel)
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button variant="outline" className="flex-1" disabled={reading} onClick={() => fileRef.current?.click()}>
+            {reading
+              ? <><Loader2 className="h-4 w-4 animate-spin" /> กำลังอ่านไฟล์…</>
+              : <><FileSpreadsheet className="h-4 w-4" /> เลือกไฟล์รายการเดินบัญชี (PDF, Excel, CSV)</>}
           </Button>
-          <button onClick={downloadTemplate}
-            className="shrink-0 rounded-xl border border-dashed border-neutral-300 px-3 text-xs text-neutral-500 hover:border-emerald-400 hover:text-emerald-700">
-            ⬇ ไฟล์ตัวอย่าง
+          <button onClick={downloadTemplate} type="button"
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-dashed border-neutral-300 px-4 text-xs font-medium text-neutral-500 transition-colors hover:border-emerald-400 hover:text-emerald-700 sm:h-10">
+            <Download className="h-3.5 w-3.5" />ไฟล์ตัวอย่าง
           </button>
         </div>
-        <p className="text-xs text-neutral-400">
-          ปลอดภัย 100%: ระบบแค่ &quot;พรีวิว&quot; รายการให้ตรวจก่อน — ไม่มีอะไรถูกบันทึกจนกว่าคุณกดยืนยันเป็นรายแถว ·
-          รองรับไฟล์จากแอปธนาคารโดยตรง (ระบบเดาคอลัมน์วันที่/รายการ/เงินเข้าให้เอง)
+        <p className="text-xs leading-relaxed text-neutral-400">
+          <b className="text-neutral-500">ปลอดภัย 100%:</b> ระบบแค่อ่านมาให้ดูก่อน — ไม่มีอะไรลงบัญชีจนกว่าคุณจะกดบันทึกทีละแถว ·
+          โหลดไฟล์จากแอปธนาคารได้เลย ระบบเดาคอลัมน์วันที่/รายการ/เงินเข้าให้เอง
         </p>
+
+        {note && (
+          <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+            <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" />{note}
+          </p>
+        )}
 
         {rows.length > 0 && (
           <div className="max-h-72 space-y-1.5 overflow-y-auto">
@@ -116,7 +165,9 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
                           <option key={iv.docId} value={iv.docId}>{iv.docNumber} ค้าง {baht(iv.outstanding)}</option>
                         ))}
                       </select>
-                      <Button size="sm" disabled={pending} onClick={() => confirmRow(row)}>บันทึก</Button>
+                      <Button size="sm" disabled={pending} onClick={() => confirmRow(row)}>
+                        {savingIdx === row.idx ? <><Loader2 className="h-3 w-3 animate-spin" />กำลังบันทึก</> : "บันทึก"}
+                      </Button>
                     </div>
                   )}
                 </div>

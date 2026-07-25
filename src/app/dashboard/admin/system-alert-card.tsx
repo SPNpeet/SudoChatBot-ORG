@@ -8,9 +8,9 @@ import { broadcastSystemAlert, closeSystemAlert } from "./actions";
 export interface AlertRow { id: string; level: string; title: string; body: string | null; created_at: string }
 
 const LEVELS = [
-  { v: "info", label: "📢 แจ้งให้ทราบ", hint: "ฟีเจอร์ใหม่ / ข่าวสาร" },
-  { v: "warning", label: "⚠️ เตือน", hint: "ระบบช้า / ปิดปรับปรุงตามแผน" },
-  { v: "critical", label: "🚨 ขัดข้องหนัก", hint: "ใช้งานไม่ได้ / ข้อมูลมีปัญหา" },
+  { v: "info", label: "แจ้งให้ทราบ", hint: "ฟีเจอร์ใหม่ / ข่าวสาร" },
+  { v: "warning", label: "เตือน", hint: "ระบบช้า / ปิดปรับปรุงตามแผน" },
+  { v: "critical", label: "ขัดข้องหนัก", hint: "ใช้งานไม่ได้ / ข้อมูลมีปัญหา" },
 ];
 
 export default function SystemAlertCard({ active }: { active: AlertRow[] }) {

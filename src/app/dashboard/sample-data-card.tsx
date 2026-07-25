@@ -3,7 +3,7 @@
 // พอมีข้อมูลตัวอย่างแล้วเปลี่ยนเป็นแถบเตือน + ปุ่มล้าง (กันสับสนว่าตัวเลขจริงหรือปลอม)
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Trash2, FlaskConical } from "lucide-react";
+import { Trash2, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui";
 import { seedSampleData, clearSampleData } from "./sample-data-actions";
 
@@ -49,14 +49,14 @@ export default function SampleDataCard({ shopId, hasSample, isEmpty }: {
   return (
     <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5">
       <p className="flex items-center gap-2 text-sm font-semibold text-neutral-800">
-        <Sparkles className="h-4 w-4 text-emerald-600" /> อยากเห็นก่อนว่าระบบทำงานยังไง?
+        <FlaskConical className="h-4 w-4 text-emerald-600" /> อยากเห็นก่อนว่าระบบทำงานยังไง?
       </p>
       <p className="mt-1 text-xs leading-relaxed text-neutral-500">
         กดปุ่มเดียว ระบบจะใส่ตัวอย่างให้ครบวงจร — ใบแจ้งหนี้ค้างรับ ใบเสร็จขายสด ค่าเช่า และบิลค้างจ่าย
         แล้วคุณจะเห็นสมุดรายวัน ยอดค้าง กราฟเงินเข้า-ออก และรายงานภาษีทำงานจริงทันที · ล้างทิ้งได้ทุกเมื่อ
       </p>
       <Button variant="brand" size="sm" className="mt-3" onClick={seed} disabled={pending}>
-        <Sparkles className="h-3.5 w-3.5" /> {pending ? "กำลังสร้าง..." : "ลองด้วยข้อมูลตัวอย่าง"}
+        <FlaskConical className="h-3.5 w-3.5" /> {pending ? "กำลังสร้าง..." : "ลองด้วยข้อมูลตัวอย่าง"}
       </Button>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>

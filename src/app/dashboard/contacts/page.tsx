@@ -7,6 +7,7 @@ import { baht } from "@/lib/utils";
 import { docOutstanding } from "@/lib/finance";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Users } from "lucide-react";
 import ContactForm from "./contact-form";
 import type { Contact } from "@/lib/types/finance";
 
@@ -68,8 +69,13 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
 
       {rows.length === 0 ? (
         <Card><CardContent className="pt-5">
-          <EmptyState icon="👥" title="ยังไม่มีผู้ติดต่อ"
-            hint="เพิ่มลูกค้า/ผู้ขายพร้อมเลขผู้เสียภาษี เพื่อออกเอกสารเต็มรูปได้ทันที และเห็นยอดค้างรายคน"
+          <EmptyState icon={Users} title="ยังไม่มีผู้ติดต่อ"
+            hint="เก็บลูกค้าและผู้ขายไว้ที่นี่ ออกเอกสารครั้งต่อไปไม่ต้องพิมพ์ที่อยู่ใหม่"
+            steps={[
+              "ใส่ชื่อ + เลขผู้เสียภาษี 13 หลัก (ถ้ามี) แค่นี้ออกใบกำกับภาษีเต็มรูปได้",
+              "ตอนออกเอกสารแค่พิมพ์ชื่อ ระบบเติมที่อยู่/เลขภาษีให้เอง",
+              "การ์ดของแต่ละคนจะโชว์ว่าค้างเราอยู่เท่าไร หรือเราค้างเขาเท่าไร",
+            ]}
             action={{ href: "/dashboard/assistant", label: "ให้ผู้ช่วย AI เพิ่มให้" }} />
         </CardContent></Card>
       ) : (
