@@ -15,6 +15,7 @@ import {
   Banknote, Users, Package, BookOpenText, PieChart, Wallet, Settings, CircleHelp,
   ShieldCheck, BarChart3, Landmark, Store, MessagesSquare, ScrollText,
   type LucideIcon,
+  Boxes,
 } from "lucide-react";
 import { useNav } from "./nav-shell";
 
@@ -33,6 +34,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard/contacts", label: "ผู้ติดต่อ", icon: Users },
   { href: "/dashboard/products", label: "สินค้า/บริการ", icon: Package },
   { href: "/dashboard/journal", label: "สมุดรายวัน", icon: BookOpenText },
+  { href: "/dashboard/assets", label: "ทรัพย์สิน + ปิดงวด", icon: Boxes },
   { href: "/dashboard/reports", label: "รายงาน + ภาษี", icon: PieChart },
   { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
   { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
