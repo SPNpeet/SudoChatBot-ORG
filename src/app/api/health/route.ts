@@ -27,9 +27,18 @@ export async function GET() {
     } catch { /* db = false */ }
   }
 
+  // commit ที่กำลังให้บริการอยู่จริง — ต้องมี ไม่งั้นยืนยัน deploy ไม่ได้
+  // เคยพลาดมาแล้ว: เช็คแค่ /login = 200 แล้วสรุปว่า deploy ใหม่ขึ้นแล้ว
+  // ทั้งที่หน้าที่พังคือหน้าหลัง login ซึ่ง status code ไม่มีทางบอก
+  // (เป็นข้อมูลสาธารณะอยู่แล้วเพราะ repo เปิด ไม่ใช่ความลับ)
+  const commit = process.env.VERCEL_GIT_COMMIT_SHA ?? null;
+
   return NextResponse.json({
     ok: hasAnon && hasService && db,
     env: { anonKey: hasAnon, serviceRoleKey: hasService },
     db,
+    commit: commit ? commit.slice(0, 7) : "local",
+    branch: process.env.VERCEL_GIT_COMMIT_REF ?? "local",
+    now: new Date().toISOString(),
   });
 }
