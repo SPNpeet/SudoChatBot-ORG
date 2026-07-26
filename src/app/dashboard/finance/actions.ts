@@ -9,7 +9,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { assertMember } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
 import { calcDocTotals, docOutstanding } from "@/lib/finance";
-import { postJournal, reverseJournalOf, applyPaymentToDoc, bkkToday, ACC } from "@/lib/finance-server";
+import { postJournalOrThrow, reverseJournalOf, applyPaymentToDoc, bkkToday, ACC } from "@/lib/finance-server";
 import { verifySlip, type SlipResult } from "@/lib/slip-verify";
 import { notifyShopLine } from "@/lib/line";
 import type { DocType, VatMode, FinDoc } from "@/lib/types/finance";
@@ -143,7 +143,7 @@ async function cutStockAndCogs(
     if (p.cost != null) cogs += Number(p.cost) * it.qty;
   }
   if (cogs > 0) {
-    await postJournal(svc, shopId, userId, {
+    await postJournalOrThrow(svc, shopId, userId, {
       date: issueDate, memo: `ต้นทุนขายตามเอกสาร ${docNumber}`, sourceType: "stock", sourceId: docId,
       lines: [
         { code: ACC.COGS, debit: cogs },
@@ -279,7 +279,7 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       const cashAcc = input.pay_method === "cash" ? ACC.CASH : ACC.BANK;
 
       if (input.doc_type === "invoice") {
-        await postJournal(svc, shopId, user.id, {
+        await postJournalOrThrow(svc, shopId, user.id, {
           date: issueDate, memo: `ขายเชื่อ ${docNumber}${contactName ? ` — ${contactName}` : ""}`,
           sourceType: "sale", sourceId: docId,
           lines: [
@@ -291,7 +291,7 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
         await cutStockAndCogs(svc, shopId, user.id, docId, docNumber, items, issueDate);
       } else if (input.doc_type === "receipt" && !isConvertedReceipt) {
         // ขายสด: เงินเข้าทันที
-        await postJournal(svc, shopId, user.id, {
+        await postJournalOrThrow(svc, shopId, user.id, {
           date: issueDate, memo: `ขายสด ${docNumber}${contactName ? ` — ${contactName}` : ""}`,
           sourceType: "sale", sourceId: docId,
           lines: [
@@ -317,7 +317,7 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
           if (cat?.account_code) expAcc = cat.account_code;
         }
         if (input.paid_now) {
-          await postJournal(svc, shopId, user.id, {
+          await postJournalOrThrow(svc, shopId, user.id, {
             date: issueDate, memo: `ค่าใช้จ่าย ${docNumber}${contactName ? ` — ${contactName}` : ""} (จ่ายแล้ว)`,
             sourceType: "expense", sourceId: docId,
             lines: [
@@ -335,7 +335,7 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
           });
           await svc.from("fin_docs").update({ paid_amount: t.cashDue, status: "paid" }).eq("id", docId);
         } else {
-          await postJournal(svc, shopId, user.id, {
+          await postJournalOrThrow(svc, shopId, user.id, {
             date: issueDate, memo: `ตั้งหนี้ค่าใช้จ่าย ${docNumber}${contactName ? ` — ${contactName}` : ""}`,
             sourceType: "expense", sourceId: docId,
             lines: [
@@ -377,8 +377,12 @@ export async function approveExpense(shopId: string, docId: string): Promise<Act
       const { data: cat } = await svc.from("expense_categories").select("account_code").eq("id", doc.category_id).eq("shop_id", shopId).maybeSingle();
       if (cat?.account_code) expAcc = cat.account_code;
     }
-    const exVat = Number(doc.subtotal) - Number(doc.discount);
-    await postJournal(svc, shopId, user.id, {
+    // ต้องใช้ total - vat เท่านั้น — subtotal-discount ถูกเฉพาะโหมด "บวก VAT"
+    // โหมด "ราคารวม VAT แล้ว" (บิลร้านค้าไทยส่วนใหญ่) ค่านั้นจะเท่ากับ total พอดี
+    // ทำให้เดบิต = total + VAT แต่เครดิต = total -> ไม่สมดุล -> ลงบัญชีไม่ผ่าน
+    // เดิมทิ้งผลลัพธ์ทิ้ง จึงอนุมัติสำเร็จแต่ค่าใช้จ่ายหายจากบัญชีทั้งก้อน
+    const exVat = Math.round((Number(doc.total) - Number(doc.vat_amount)) * 100) / 100;
+    await postJournalOrThrow(svc, shopId, user.id, {
       date: doc.issue_date, memo: `ตั้งหนี้ค่าใช้จ่าย ${doc.doc_number}${doc.contact_name ? ` — ${doc.contact_name}` : ""} (อนุมัติแล้ว)`,
       sourceType: "expense", sourceId: docId,
       lines: [
@@ -576,7 +580,7 @@ export async function recordPayment(shopId: string, input: RecordPaymentInput): 
     } else {
       // เงินเข้า/ออกลอย (ไม่ผูกเอกสาร) — ลงพักไว้ที่รายได้อื่น/ค่าใช้จ่ายอื่น
       const cashAcc = method === "cash" ? ACC.CASH : ACC.BANK;
-      await postJournal(svc, shopId, user.id, {
+      await postJournalOrThrow(svc, shopId, user.id, {
         date: paidAt.slice(0, 10),
         memo: input.direction === "in" ? "เงินเข้า (ยังไม่ผูกเอกสาร)" : "เงินออก (ยังไม่ผูกเอกสาร)",
         sourceType: input.direction === "in" ? "receipt" : "payment", sourceId: payment.id,
@@ -673,13 +677,13 @@ export async function addManualJournal(shopId: string, date: string, memo: strin
   try {
     const { user } = await assertMember(shopId, ["owner", "admin", "agent"]);
     const svc = createServiceClient();
-    const r = await postJournal(svc, shopId, user.id, {
+    const r = await postJournalOrThrow(svc, shopId, user.id, {
       date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : bkkToday(),
       memo: memo.trim().slice(0, 500) || "บันทึกรายวันทั่วไป",
       sourceType: "manual",
       lines,
     });
-    if (!r.ok) return r;
+    // postJournalOrThrow โยน error เองถ้าไม่สำเร็จ — try/catch ด้านล่างแปลงเป็นข้อความให้ผู้ใช้
     await audit(svc, shopId, user.id, "journal_manual_added", "journal_entry", r.entryId, { entry_number: r.entryNumber });
     revalidatePath("/dashboard/journal");
     return { ok: true };

@@ -77,6 +77,26 @@ export async function postJournal(
   return { ok: true, entryId: entry.id, entryNumber: num as string };
 }
 
+/**
+ * ลงสมุดรายวัน แล้ว "โยน error" ถ้าไม่สำเร็จ — ใช้แทน postJournal ทุกที่ที่เรียกจาก server action
+ *
+ * ⚠️ ทำไมต้องมี: เดิมทุกจุดเรียก postJournal แล้วทิ้งผลลัพธ์ (9 จุด)
+ * ถ้าลงบัญชีไม่ผ่าน (เช่น เดบิตไม่เท่าเครดิต หรือไม่พบรหัสบัญชีในผังบัญชี)
+ * ระบบจะเดินหน้าอัปเดตสถานะเอกสารต่อเหมือนสำเร็จ ผู้ใช้เห็น "บันทึกแล้ว"
+ * แต่เอกสารนั้นหายจากสมุดรายวัน งบทดลอง และงบกำไรขาดทุน โดยไม่มีใครรู้
+ * จนกว่าจะปิดงบแล้วเจอว่าตัวเลขไม่ตรง ซึ่งตอนนั้นย้อนหาสาเหตุแทบไม่ได้
+ *
+ * server action ทุกตัวหุ้มด้วย try/catch ที่แปลง error เป็นข้อความให้ผู้ใช้อยู่แล้ว
+ * การโยน error จึงทำให้ "ไม่สำเร็จก็บอกว่าไม่สำเร็จ" แทนที่จะเงียบแล้วข้อมูลหาย
+ */
+export async function postJournalOrThrow(
+  svc: SupabaseClient, shopId: string, userId: string | null, input: PostJournalInput,
+): Promise<{ entryId: string; entryNumber: string }> {
+  const r = await postJournal(svc, shopId, userId, input);
+  if (!r.ok) throw new Error(`ลงบัญชีไม่สำเร็จ (${input.memo.slice(0, 60)}): ${r.error}`);
+  return { entryId: r.entryId, entryNumber: r.entryNumber };
+}
+
 /** กลับรายการ (reversal) ทุก entry ของเอกสารต้นทาง — ใช้ตอนยกเลิกเอกสาร */
 export async function reverseJournalOf(
   svc: SupabaseClient, shopId: string, userId: string | null,
@@ -124,7 +144,7 @@ export async function applyPaymentToDoc(
   const date = paidAt.slice(0, 10);
 
   if (doc.doc_type === "invoice") {
-    await postJournal(svc, shopId, userId, {
+    await postJournalOrThrow(svc, shopId, userId, {
       date, memo: `รับชำระ ${doc.doc_number}${doc.contact_name ? ` — ${doc.contact_name}` : ""}`,
       sourceType: "receipt", sourceId: doc.id,
       lines: [
@@ -134,7 +154,7 @@ export async function applyPaymentToDoc(
       ],
     });
   } else if (doc.doc_type === "expense") {
-    await postJournal(svc, shopId, userId, {
+    await postJournalOrThrow(svc, shopId, userId, {
       date, memo: `จ่ายชำระ ${doc.doc_number}${doc.contact_name ? ` — ${doc.contact_name}` : ""}`,
       sourceType: "payment", sourceId: doc.id,
       lines: [

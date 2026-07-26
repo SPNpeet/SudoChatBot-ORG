@@ -358,7 +358,7 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
   shopId: string; supabase: SB; period: Period; shopName: string; shopTaxId: string; rdAllowed: boolean;
 }) {
   const { data } = await supabase.from("fin_docs")
-    .select("id,doc_type,doc_number,contact_name,contact_tax_id,contact_address,issue_date,total,vat_amount,wht_rate,wht_amount")
+    .select("id,doc_type,doc_number,contact_name,contact_tax_id,contact_address,contact_branch,issue_date,total,vat_amount,wht_rate,wht_amount,wht_income_type")
     .eq("shop_id", shopId).neq("status", "void").gt("wht_amount", 0)
     .gte("issue_date", period.start).lt("issue_date", period.end)
     .order("issue_date");
