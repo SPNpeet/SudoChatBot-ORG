@@ -32,6 +32,9 @@ export interface FinDoc {
   // snapshot ประเภทผู้รับเงิน ณ วันออกเอกสาร — ตัวตัดสิน ภ.ง.ด.3 vs 53
   // ต้องเก็บติดเอกสาร ถ้าคู่ค้าแก้ประเภททีหลัง แบบที่ยื่นไปแล้วต้องไม่เปลี่ยนย้อนหลัง
   recipient_kind: string | null;
+  // จุดความรับผิด VAT: delivery = วันออกเอกสาร (ม.78 สินค้า) · payment = เมื่อรับชำระ (ม.78/1 บริการ)
+  tax_point: string | null;
+  note_reason?: string | null;      // เหตุผลใบลดหนี้/ใบเพิ่มหนี้ (ม.86/10, 86/9)
   wht_income_type: string | null;   // ประเภทเงินได้ ม.40 — ใช้บน 50 ทวิ + ไฟล์ยื่น ภ.ง.ด.
   issue_date: string; due_date: string | null;
   category_id: string | null;
@@ -41,7 +44,7 @@ export interface FinDoc {
   total: number; paid_amount: number;
   status: DocStatus; source: string;
   file_path: string | null; ref_doc_id: string | null;
-  notes: string | null; note_reason: string | null; share_key?: string; created_at: string;
+  notes: string | null; share_key?: string; created_at: string;
   approval_status?: "none" | "pending" | "approved" | "rejected";
   approval_by?: string | null; approval_at?: string | null; approval_note?: string | null;
   fin_doc_items?: FinDocItem[];

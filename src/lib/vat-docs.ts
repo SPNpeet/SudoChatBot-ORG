@@ -18,10 +18,12 @@
 //      ทั้งที่ใบเสนอราคาไม่ใช่ใบกำกับภาษีและไม่ก่อความรับผิด VAT
 //   3) หน้ารายงานนับเอกสาร "ร่าง" ด้วย ทั้งที่ร่างยังไม่ลงบัญชี
 //
-//  ⚠️ ข้อจำกัดที่ยังเหลือ (แจ้งผู้ใช้แล้วในเอกสาร CPA-REVIEW):
-//  ระบบยังไม่แยกบรรทัด "สินค้า" กับ "บริการ" จึงยึดจุดความรับผิดแบบสินค้า
-//  (ม.78 — ส่งมอบ/ออกใบกำกับภาษี) กับทุกใบ ธุรกิจบริการล้วนที่ต้องการ
-//  จุดความรับผิดตอนรับเงิน (ม.78/1) ให้ออกใบเสร็จรับเงินโดยไม่ต้องออกใบแจ้งหนี้ก่อน
+//  ── จุดความรับผิด VAT (tax point) ──────────────────────────────
+//  เอกสารแต่ละใบเลือกได้ว่าความรับผิดเกิดเมื่อไหร่
+//   · delivery (ม.78 สินค้า) — เกิดวันออกเอกสาร นับเข้า ภ.พ.30 ของเดือนนั้น
+//   · payment  (ม.78/1 บริการ) — เกิดเมื่อรับเงิน ใบแจ้งหนี้จึง "ไม่นับ" ในเดือนที่ออก
+//     แต่ไปนับเป็นรายการใน vat_recognitions ของเดือนที่รับเงินจริงแทน
+//     รับเงินหลายงวดข้ามเดือนก็แยกนับตามสัดส่วนของแต่ละงวดได้ถูกต้อง
 // ============================================================
 
 /** ฟิลด์ขั้นต่ำที่กฎนี้ต้องใช้ — ใครจะส่ง type อะไรเข้ามาก็ได้ ขอแค่มีเท่านี้ */
@@ -31,6 +33,8 @@ export interface VatDocLike {
   vat_amount: number | string | null;
   ref_doc_id?: string | null;
   vat_mode?: string | null;
+  /** delivery = ความรับผิดเกิดวันออกเอกสาร (ม.78) · payment = เมื่อรับชำระ (ม.78/1) */
+  tax_point?: string | null;
 }
 
 /** เอกสารที่ "มีผลทางบัญชีแล้ว" — ร่างยังไม่ลงบัญชี ยกเลิกกลับรายการไปแล้ว */
@@ -55,13 +59,48 @@ function hasVat(d: VatDocLike): boolean {
 export function selectVatSalesDocs<T extends VatDocLike>(docs: T[]): T[] {
   return docs.filter((d) => {
     if (!isPostedDoc(d) || !hasVat(d)) return false;
-    if (d.doc_type === "invoice") return true;
+    // ใบแจ้งหนี้บริการที่พักภาษีขายไว้ (ม.78/1) ยังไม่เข้า ภ.พ.30 ของเดือนที่ออกใบ
+    // ความรับผิดเกิดตอนรับเงิน จึงไปโผล่เป็น "รายการรับรู้ภาษีขาย" ของเดือนที่รับเงินแทน
+    if (d.doc_type === "invoice") return d.tax_point !== "payment";
     if (d.doc_type === "receipt") return !d.ref_doc_id; // ขายสดเท่านั้น
     // ใบลดหนี้/ใบเพิ่มหนี้เข้า ภ.พ.30 ของเดือนที่ออก (ม.86/10, 86/9)
     // ใบลดหนี้ไปหักภาษีขาย ใบเพิ่มหนี้ไปบวก — ใช้ vatSign() คุมเครื่องหมาย
     if (d.doc_type === "credit_note" || d.doc_type === "debit_note") return true;
     return false;                                        // quotation / expense
   });
+}
+
+/**
+ * รายการรับรู้ภาษีขายของงานบริการ (ม.78/1) ที่เกิดในงวด
+ * มาจากตาราง vat_recognitions ซึ่งบันทึกทุกครั้งที่รับเงินจากใบ tax_point='payment'
+ * แปลงให้หน้าตาเหมือนเอกสารหนึ่งใบ เพื่อให้รายงาน/ไฟล์ยื่นใช้โค้ดชุดเดียวกัน
+ */
+export interface VatRecognitionRow {
+  recognized_on: string;
+  base_amount: number | string;
+  vat_amount: number | string;
+  fin_docs: {
+    doc_number: string; contact_name: string | null;
+    contact_tax_id: string | null; contact_branch: string | null;
+  } | null;
+}
+
+export function recognitionsAsDocs(rows: VatRecognitionRow[]) {
+  return rows.map((r) => ({
+    id: `rec-${r.recognized_on}-${r.fin_docs?.doc_number ?? ""}`,
+    doc_type: "invoice",
+    status: "paid",
+    vat_mode: "exclusive",
+    ref_doc_id: null,
+    tax_point: "payment",
+    issue_date: r.recognized_on,
+    doc_number: r.fin_docs?.doc_number ?? "",
+    contact_name: r.fin_docs?.contact_name ?? "",
+    contact_tax_id: r.fin_docs?.contact_tax_id ?? "",
+    contact_branch: r.fin_docs?.contact_branch ?? null,
+    vat_amount: Number(r.vat_amount),
+    total: Math.round((Number(r.base_amount) + Number(r.vat_amount)) * 100) / 100,
+  }));
 }
 
 /**

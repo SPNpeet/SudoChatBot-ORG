@@ -15,7 +15,8 @@ import ExportButtons from "./export-buttons";
 import PeriodPicker from "./period-picker";
 import AccountantPackage from "./accountant-package";
 import { whtIncomeLabel, whtIncomeDesc, branchCode, rdFormFor } from "@/lib/tax-th";
-import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, selectWhtReceivableDocs, vatSign, sumVat, sumBase } from "@/lib/vat-docs";
+import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, selectWhtReceivableDocs,
+  vatSign, sumVat, sumBase, recognitionsAsDocs, type VatRecognitionRow } from "@/lib/vat-docs";
 
 export const dynamic = "force-dynamic";
 
@@ -268,16 +269,27 @@ async function AgingTab({ shopId, supabase }: { shopId: string; supabase: SB }) 
 async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed }: {
   shopId: string; supabase: SB; period: Period; shopName: string; shopTaxId: string; rdAllowed: boolean;
 }) {
-  const { data } = await supabase.from("fin_docs")
-    .select("id,doc_type,status,doc_number,contact_name,contact_tax_id,contact_branch,issue_date,total,vat_amount,vat_mode,ref_doc_id")
-    .eq("shop_id", shopId)
-    .gte("issue_date", period.start).lt("issue_date", period.end)
-    .order("issue_date");
+  const [{ data }, { data: recs }] = await Promise.all([
+    supabase.from("fin_docs")
+      .select("id,doc_type,status,doc_number,contact_name,contact_tax_id,contact_branch,issue_date,total,vat_amount,vat_mode,ref_doc_id,tax_point")
+      .eq("shop_id", shopId)
+      .gte("issue_date", period.start).lt("issue_date", period.end)
+      .order("issue_date"),
+    // ภาษีขายของงานบริการ (ม.78/1) เข้า ภ.พ.30 ตามเดือนที่รับเงินจริง ไม่ใช่เดือนที่ออกใบแจ้งหนี้
+    supabase.from("vat_recognitions")
+      .select("recognized_on,base_amount,vat_amount,fin_docs(doc_number,contact_name,contact_tax_id,contact_branch)")
+      .eq("shop_id", shopId)
+      .gte("recognized_on", period.start).lt("recognized_on", period.end)
+      .order("recognized_on"),
+  ]);
   const docs = (data ?? []) as unknown as FinDoc[];
 
   // กฎเลือกเอกสารอยู่ที่ src/lib/vat-docs.ts ที่เดียว — ชุดส่งสำนักงานบัญชีใช้ตัวเดียวกัน
   // ตัวเลขบนจอกับในไฟล์จึงตรงกันเสมอ และกันนับซ้ำเมื่อใบแจ้งหนี้ถูกแปลงเป็นใบเสร็จข้ามเดือน
-  const salesTax = selectVatSalesDocs(docs);
+  const salesTax = [
+    ...selectVatSalesDocs(docs),
+    ...(recognitionsAsDocs((recs ?? []) as unknown as VatRecognitionRow[]) as unknown as FinDoc[]),
+  ].sort((a, b) => a.issue_date.localeCompare(b.issue_date));
   const buyTax = selectVatPurchaseDocs(docs);
 
   // ใบลดหนี้หักภาษีขายออก ใบเพิ่มหนี้บวกเข้า — เครื่องหมายมาจาก vatSign() ที่เดียว

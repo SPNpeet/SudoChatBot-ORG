@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     const svc = createServiceClient();
     const { data: doc } = await svc.from("fin_docs")
-      .select("id,shop_id,doc_number,doc_type,total,wht_amount,paid_amount,contact_name,status")
+      .select("id,shop_id,doc_number,doc_type,total,wht_amount,paid_amount,contact_name,status,tax_point,vat_amount")
       .eq("share_key", key).eq("doc_type", "invoice").in("status", ["awaiting", "partial"]).maybeSingle();
     if (!doc) return NextResponse.json({ ok: false, error: "เอกสารนี้ชำระแล้วหรือไม่เปิดรับชำระ" });
 

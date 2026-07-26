@@ -49,6 +49,9 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
   const [contactName, setContactName] = useState(draft?.contact_name ?? "");
   const [discount, setDiscount] = useState(draft ? String(draft.discount || "") : "");
   const [vatMode, setVatMode] = useState<VatMode>(draft?.vat_mode ?? "none");
+  // จุดความรับผิด VAT — ใช้เฉพาะใบแจ้งหนี้ที่คิด VAT (ขายสดรับเงินแล้วจึงไม่มีอะไรให้พัก)
+  const [taxPoint, setTaxPoint] = useState<"delivery" | "payment">(
+    (draft?.tax_point as "delivery" | "payment" | undefined) ?? "delivery");
   const [whtRate, setWhtRate] = useState(draft ? String(draft.wht_rate || 0) : "0");
   const [incomeType, setIncomeType] = useState(draft?.wht_income_type ?? DEFAULT_WHT_INCOME);
   const [issueDate, setIssueDate] = useState(draft?.issue_date ?? new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10));
@@ -168,6 +171,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
       wht_income_type: Number(whtRate) > 0 ? incomeType : null,
       notes, file_path: files[0]?.path ?? null, extra_files: files.slice(1).map((f) => f.path), status,
       paid_now: isExpense ? paidNow : undefined,
+      tax_point: taxPoint,
       pay_method: payMethod,
     };
     start(async () => {
@@ -365,6 +369,24 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
           {/* เกณฑ์ขั้นต่ำ 1,000 บาท — เตือนอย่างเดียว ไม่บล็อก
               เพราะถ้าเป็นการจ่ายตามสัญญาต่อเนื่องที่รวมทั้งสัญญาแล้วถึงเกณฑ์ ก็ยังต้องหัก
               ระบบไม่รู้เรื่องสัญญา จึงต้องให้คนตัดสิน ไม่ใช่ตัดสินแทนแล้วผิด */}
+          {/* จุดความรับผิด VAT — เลือกได้เฉพาะใบแจ้งหนี้ที่คิด VAT
+              ม.78 สินค้า = เกิดตอนส่งมอบ · ม.78/1 บริการ = เกิดตอนรับเงิน
+              เลือกผิดแล้ว ภ.พ.30 จะตกเดือน ซึ่งเป็นความผิดที่สรรพากรตรวจเจอบ่อย */}
+          {docType === "invoice" && vatMode !== "none" && (
+            <div>
+              <Label>งานนี้เป็นสินค้าหรือบริการ (มีผลต่อเดือนที่ต้องยื่นภาษีขาย)</Label>
+              <Select value={taxPoint} onChange={(e) => setTaxPoint(e.target.value as "delivery" | "payment")}>
+                <option value="delivery">ขายสินค้า / ส่งมอบแล้ว — ยื่นภาษีขายเดือนที่ออกใบนี้ (ม.78)</option>
+                <option value="payment">งานบริการ ขายเชื่อ — ยื่นภาษีขายเดือนที่ลูกค้าจ่ายเงิน (ม.78/1)</option>
+              </Select>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-400">
+                {taxPoint === "delivery"
+                  ? "ใบนี้เป็นใบกำกับภาษีทันที ภาษีขายเข้า ภ.พ.30 ของเดือนนี้เลย · ใบที่มีทั้งสินค้าและบริการให้ใช้ตัวเลือกนี้ (กฎหมายรองรับ เพราะออกใบกำกับภาษีก่อน = ความรับผิดเกิดทันที)"
+                  : "ใบนี้เป็นใบแจ้งหนี้เฉย ๆ ยังไม่ใช่ใบกำกับภาษี · ระบบพักภาษีขายไว้ที่บัญชี 2035 แล้วย้ายเข้าภาษีขายจริงตอนรับเงิน ใบกำกับภาษีออกตอนออกใบเสร็จ"}
+              </p>
+            </div>
+          )}
+
           {Number(whtRate) > 0 && belowWhtThreshold(totals.exVat) && (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-relaxed text-amber-800">
               ยอดก่อน VAT {bahtDoc(totals.exVat)} ต่ำกว่า {WHT_MIN_PAYMENT.toLocaleString()} บาท —

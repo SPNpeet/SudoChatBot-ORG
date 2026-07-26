@@ -14,6 +14,9 @@ export const ACC = {
   // 4090 เป็นบัญชีหักรายได้ (contra-revenue) สำหรับใบลดหนี้
   // แยกจาก 4010 เพื่อให้งบกำไรขาดทุนเห็นยอดรับคืน/ลดราคา ไม่ใช่ซ่อนไว้ในยอดขายสุทธิ
   SALES: "4010", SALES_RETURN: "4090", COGS: "5010", OTHER_EXPENSE: "5990",
+  // ภาษีขายของงานบริการที่ยังไม่ได้รับเงิน — ความรับผิดยังไม่เกิดตาม ม.78/1
+  // พักไว้เป็นหนี้สินก่อน แล้วย้ายเข้า 2030 ตอนรับเงินจริง
+  VAT_OUT_DEFERRED: "2035",
 } as const;
 
 export interface JournalLineInput {
@@ -133,6 +136,8 @@ export function bkkToday(): string {
 export interface PayableDoc {
   id: string; doc_number: string; doc_type: string;
   total: number; wht_amount: number; paid_amount: number; contact_name: string | null;
+  // ต้อง select มาด้วยทุกที่ที่เรียก applyPaymentToDoc — ถ้าไม่มีจะถือว่า delivery (พฤติกรรมเดิม)
+  tax_point?: string | null; vat_amount?: number | null;
 }
 
 /** ลงบัญชีรับ/จ่ายเงินของเอกสาร + อัปเดตยอด/สถานะ — ใช้ทั้ง dashboard และหน้าเอกสารสาธารณะ */
@@ -155,6 +160,41 @@ export async function applyPaymentToDoc(
         { code: ACC.AR, credit: amount + wht },
       ],
     });
+
+    // งานบริการที่ขายเชื่อ: ความรับผิด VAT เพิ่งเกิดตอนนี้ (ม.78/1)
+    // ย้ายภาษีขายที่พักไว้ออกมาเป็นภาษีขายจริง "ตามสัดส่วนเงินที่ได้รับงวดนี้"
+    // ต้องคิดตามสัดส่วน เพราะใบเดียวรับเงินหลายงวดข้ามเดือนได้
+    // และ ภ.พ.30 ต้องลงเดือนที่รับเงินจริง ไม่ใช่เดือนที่ออกใบแจ้งหนี้
+    if (doc.tax_point === "payment" && Number(doc.vat_amount ?? 0) > 0) {
+      const cashDueTotal = Number(doc.total) - Number(doc.wht_amount);
+      const alreadyPaid = Number(doc.paid_amount);
+      const totalVat = Number(doc.vat_amount);
+
+      // งวดสุดท้ายปัดเศษให้ลงตัวพอดี กันภาษีขายค้างเป็นเศษสตางค์ในบัญชี 2035 ตลอดไป
+      const paidAfter = Math.round((alreadyPaid + amount + wht) * 100) / 100;
+      const isFinal = paidAfter >= cashDueTotal + Number(doc.wht_amount) - 0.01;
+      const recognizedBefore = Math.round(totalVat * (alreadyPaid + (alreadyPaid > 0 ? wht : 0)) / Number(doc.total) * 100) / 100;
+      const vatNow = isFinal
+        ? Math.round((totalVat - recognizedBefore) * 100) / 100
+        : Math.round(totalVat * ((amount + wht) / Number(doc.total)) * 100) / 100;
+
+      if (vatNow > 0) {
+        await postJournalOrThrow(svc, shopId, userId, {
+          date, memo: `รับรู้ภาษีขายเมื่อรับชำระ (ม.78/1) ${doc.doc_number}`,
+          sourceType: "receipt", sourceId: doc.id,
+          lines: [
+            { code: ACC.VAT_OUT_DEFERRED, debit: vatNow },
+            { code: ACC.VAT_OUT, credit: vatNow },
+          ],
+        });
+        // เก็บแยกไว้ให้ ภ.พ.30 หยิบไปใช้ตามเดือนที่รับเงินจริง
+        await svc.from("vat_recognitions").insert({
+          shop_id: shopId, doc_id: doc.id, recognized_on: date,
+          base_amount: Math.round((amount + wht - vatNow) * 100) / 100,
+          vat_amount: vatNow,
+        });
+      }
+    }
   } else if (doc.doc_type === "expense") {
     await postJournalOrThrow(svc, shopId, userId, {
       date, memo: `จ่ายชำระ ${doc.doc_number}${doc.contact_name ? ` — ${doc.contact_name}` : ""}`,

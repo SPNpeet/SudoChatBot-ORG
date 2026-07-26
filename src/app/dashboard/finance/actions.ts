@@ -126,6 +126,7 @@ export interface SaveDocInput {
   extra_files?: string[];        // ไฟล์แนบใบที่ 2 ขึ้นไป (fin_doc_files)
   status?: "draft" | "awaiting";
   paid_now?: boolean;            // expense/receipt: เงินออก/เข้าแล้วทันที
+  tax_point?: "delivery" | "payment";  // ม.78 vs ม.78/1 — ดูคำอธิบายใน saveDoc
   pay_method?: string;           // cash/transfer/promptpay/card/other
   source?: "manual" | "ai" | "import";
   ref_doc_id?: string | null;
@@ -191,6 +192,10 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
     if (!items.length) return { ok: false, error: "ต้องมีรายการอย่างน้อย 1 บรรทัด" };
 
     const vatMode: VatMode = ["none", "exclusive", "inclusive"].includes(String(input.vat_mode)) ? input.vat_mode! : "none";
+    // จุดความรับผิด VAT: delivery = ทันที (ม.78 สินค้า) · payment = เมื่อรับเงิน (ม.78/1 บริการ)
+    // ใช้ได้กับใบแจ้งหนี้ที่คิด VAT เท่านั้น — ขายสดรับเงินแล้วจึงไม่มีอะไรให้พัก
+    const taxPoint = (input.tax_point === "payment" && input.doc_type === "invoice" && vatMode !== "none")
+      ? "payment" : "delivery";
     const whtRate = Math.max(0, Math.min(15, Number(input.wht_rate) || 0));
     const issueDate = input.issue_date || bkkToday();
 
@@ -229,6 +234,7 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       contact_address: contactAddress,
       contact_branch: contactBranch,
       recipient_kind: recipientKind,
+      tax_point: taxPoint,
       issue_date: issueDate,
       due_date: input.due_date || null,
       category_id: input.doc_type === "expense" ? (input.category_id || null) : null,
@@ -293,13 +299,18 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       const cashAcc = input.pay_method === "cash" ? ACC.CASH : ACC.BANK;
 
       if (input.doc_type === "invoice") {
+        // งานบริการที่ขายเชื่อ (tax_point = payment): ความรับผิด VAT ยังไม่เกิดตาม ม.78/1
+        // จึงพักไว้ที่ 2035 ภาษีขายยังไม่ถึงกำหนด แล้วย้ายเข้า 2030 ตอนรับเงินจริง
+        // รายได้ยังรับรู้ทันทีตามเกณฑ์คงค้าง — ผิดเฉพาะฝั่งภาษีขายเท่านั้นถ้าลง 2030 เลย
+        const vatAcc = taxPoint === "payment" ? ACC.VAT_OUT_DEFERRED : ACC.VAT_OUT;
         await postJournalOrThrow(svc, shopId, user.id, {
-          date: issueDate, memo: `ขายเชื่อ ${docNumber}${contactName ? ` — ${contactName}` : ""}`,
+          date: issueDate,
+          memo: `ขายเชื่อ ${docNumber}${contactName ? ` — ${contactName}` : ""}${taxPoint === "payment" ? " (ภาษีขายรอรับชำระ)" : ""}`,
           sourceType: "sale", sourceId: docId,
           lines: [
             { code: ACC.AR, debit: t.total },
             { code: ACC.SALES, credit: t.exVat },
-            { code: ACC.VAT_OUT, credit: t.vat },
+            { code: vatAcc, credit: t.vat },
           ],
         });
         await cutStockAndCogs(svc, shopId, user.id, docId, docNumber, items, issueDate);
@@ -701,7 +712,7 @@ export async function recordPayment(shopId: string, input: RecordPaymentInput): 
     let doc: { id: string; doc_number: string; doc_type: string; total: number; wht_amount: number; paid_amount: number; contact_name: string | null } | null = null;
     if (input.doc_id) {
       const { data } = await svc.from("fin_docs")
-        .select("id,doc_number,doc_type,total,wht_amount,paid_amount,contact_name,status")
+        .select("id,doc_number,doc_type,total,wht_amount,paid_amount,contact_name,status,tax_point,vat_amount")
         .eq("id", input.doc_id).eq("shop_id", shopId).maybeSingle();
       if (!data) return { ok: false, error: "ไม่พบเอกสารที่จะผูกรายการเงิน" };
       if (data.status === "void") return { ok: false, error: "เอกสารถูกยกเลิกแล้ว" };

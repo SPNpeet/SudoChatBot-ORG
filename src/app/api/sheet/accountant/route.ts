@@ -10,9 +10,10 @@
 // ============================================================
 import { NextResponse } from "next/server";
 import { getCurrentShop } from "@/lib/shop";
-import { docOutstanding, agingBucket, AGING_LABEL_TH } from "@/lib/finance";
+import { docOutstanding, agingBucket, AGING_LABEL_TH, DOC_TYPE_TH } from "@/lib/finance";
 import { branchCode, whtIncomeDesc, rdFormFor, formatTaxId, branchLabel } from "@/lib/tax-th";
-import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs } from "@/lib/vat-docs";
+import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs,
+  vatSign, recognitionsAsDocs, type VatRecognitionRow } from "@/lib/vat-docs";
 import type { FinDoc } from "@/lib/types/finance";
 
 export const runtime = "nodejs";
@@ -54,7 +55,7 @@ export async function GET(req: Request) {
   const MAX_ENTRIES = 5000;
   const MAX_LINES = 20000;
 
-  const [{ data: docsRaw }, { data: entriesRaw }, { data: openRaw }, { data: tbRaw }] = await Promise.all([
+  const [{ data: docsRaw }, { data: entriesRaw }, { data: openRaw }, { data: tbRaw }, { data: recsRaw }] = await Promise.all([
     supabase.from("fin_docs").select("*, fin_doc_items(*)")
       .eq("shop_id", shop.id).neq("status", "draft")
       .gte("issue_date", p.start).lt("issue_date", p.end).order("issue_date").limit(MAX_DOCS),
@@ -69,6 +70,11 @@ export async function GET(req: Request) {
     supabase.from("journal_lines")
       .select("debit, credit, chart_of_accounts(code,name), journal_entries!inner(entry_date)")
       .eq("shop_id", shop.id).lt("journal_entries.entry_date", p.end).limit(MAX_LINES),
+    // ภาษีขายงานบริการ (ม.78/1) เข้า ภ.พ.30 ตามเดือนที่รับเงิน ไม่ใช่เดือนที่ออกใบแจ้งหนี้
+    supabase.from("vat_recognitions")
+      .select("recognized_on,base_amount,vat_amount,fin_docs(doc_number,contact_name,contact_tax_id,contact_branch)")
+      .eq("shop_id", shop.id).gte("recognized_on", p.start).lt("recognized_on", p.end)
+      .order("recognized_on").limit(MAX_DOCS),
   ]);
 
   const truncated: string[] = [];
@@ -82,7 +88,10 @@ export async function GET(req: Request) {
   // ใช้กฎกลางตัวเดียวกับหน้ารายงานบนจอ (src/lib/vat-docs.ts)
   // เดิมที่นี่เขียนกฎเองว่า "ทุกอย่างที่ไม่ใช่ค่าใช้จ่าย" ซึ่งกวาดใบเสนอราคาเข้ามาด้วย
   // และนับทั้งใบแจ้งหนี้และใบเสร็จที่แปลงมาจากใบนั้น = ภาษีขายเกินจริงหนึ่งเท่า
-  const sales = selectVatSalesDocs(docs);
+  const sales = [
+    ...selectVatSalesDocs(docs),
+    ...(recognitionsAsDocs((recsRaw ?? []) as unknown as VatRecognitionRow[]) as unknown as FinDoc[]),
+  ].sort((a, b) => a.issue_date.localeCompare(b.issue_date));
   const expenses = selectVatPurchaseDocs(docs);
   const wht = selectWhtPayableDocs(docs);
 
@@ -93,8 +102,9 @@ export async function GET(req: Request) {
       "ลำดับ": i + 1, "วันที่": d.issue_date, "เลขที่เอกสาร": d.doc_number,
       "ชื่อผู้ซื้อ": d.contact_name ?? "", "เลขผู้เสียภาษี": d.contact_tax_id ?? "",
       "สาขา": branchCode(d.contact_branch),
-      "มูลค่าสินค้า/บริการ": n2(Number(d.total) - Number(d.vat_amount)),
-      "ภาษีขาย": n2(d.vat_amount), "ยอดรวม": n2(d.total),
+      "ประเภท": DOC_TYPE_TH[d.doc_type],
+      "มูลค่าสินค้า/บริการ": n2(vatSign(d) * (Number(d.total) - Number(d.vat_amount))),
+      "ภาษีขาย": n2(vatSign(d) * Number(d.vat_amount)), "ยอดรวม": n2(vatSign(d) * Number(d.total)),
     })),
   });
 
