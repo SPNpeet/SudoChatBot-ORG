@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "tsx scripts/check-accounting.mjs",
+    "verify": "npm run typecheck && npm run check && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -31,6 +33,7 @@
     "@types/react-dom": "^19.1.0",
     "@types/web-push": "^3.6.4",
     "tailwindcss": "^4.1.10",
+    "tsx": "^4.23.1",
     "typescript": "^5.8.3"
   }
 }
