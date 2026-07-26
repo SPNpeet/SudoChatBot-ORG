@@ -193,6 +193,65 @@ export async function saveTaxInfo(shopId: string, formData: FormData): Promise<A
   }
 }
 
+// ---------- ปิดงวด / ปลดล็อกงวด ----------
+// ตัวเลขที่ยื่น ภ.พ.30 หรือ ภ.ง.ด. ไปแล้วต้องนิ่งตลอดไป ถ้ายังแก้ย้อนหลังได้
+// ระบบจะไม่ตรงกับแบบที่ยื่น และอธิบายกับสรรพากรตอนตรวจย้อนหลังไม่ได้
+//
+// การบังคับจริงอยู่ที่ trigger ในฐานข้อมูล (assert_period_open) ไม่ใช่ที่นี่
+// ฟังก์ชันนี้แค่ตั้งค่าและบันทึกร่องรอย ต่อให้มีทางเขียนข้อมูลที่ลืมเช็ค
+// หรือมีคนเข้าถึง service role ตรง ๆ ก็ยังทะลุงวดที่ปิดไม่ได้
+
+export async function setPeriodLock(shopId: string, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user } = await assertMember(shopId, ["owner", "admin"]);
+    const raw = String(formData.get("locked_through") ?? "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { ok: false, error: "เลือกวันที่ปิดงวดก่อน" };
+
+    // ห้ามปิดงวดล่วงหน้า — จะทำให้ออกเอกสารของวันนี้ไม่ได้ทันที
+    const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+    if (raw >= today) return { ok: false, error: "ปิดงวดได้ถึงเมื่อวานเป็นอย่างช้า ไม่งั้นจะออกเอกสารวันนี้ไม่ได้" };
+
+    const svc = createServiceClient();
+    const { error } = await svc.from("fin_period_locks").upsert({
+      shop_id: shopId, locked_through: raw, locked_by: user.id,
+      locked_at: new Date().toISOString(),
+      note: String(formData.get("note") ?? "").trim().slice(0, 300) || null,
+    }, { onConflict: "shop_id" });
+    if (error) return { ok: false, error: error.message };
+
+    await svc.from("audit_logs").insert({
+      actor_type: "user", actor_id: user.id, action: "period_locked",
+      resource_type: "fin_period_locks", resource_id: shopId,
+      details: { locked_through: raw },
+    });
+    revalidatePath("/dashboard/settings");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ปิดงวดไม่สำเร็จ") };
+  }
+}
+
+export async function clearPeriodLock(shopId: string): Promise<ActionResult> {
+  try {
+    // ปลดล็อกเป็นเรื่องใหญ่ทางบัญชี — เจ้าของเท่านั้น และต้องมีร่องรอยเสมอ
+    const { user } = await assertMember(shopId, ["owner"]);
+    const svc = createServiceClient();
+    const { data: cur } = await svc.from("fin_period_locks").select("locked_through").eq("shop_id", shopId).maybeSingle();
+    const { error } = await svc.from("fin_period_locks").delete().eq("shop_id", shopId);
+    if (error) return { ok: false, error: error.message };
+
+    await svc.from("audit_logs").insert({
+      actor_type: "user", actor_id: user.id, action: "period_unlocked",
+      resource_type: "fin_period_locks", resource_id: shopId,
+      details: { was_locked_through: cur?.locked_through ?? null },
+    });
+    revalidatePath("/dashboard/settings");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ปลดล็อกงวดไม่สำเร็จ") };
+  }
+}
+
 // ---------- สลับ/สร้างบริษัท (สำนักงานบัญชีดูแลหลายกิจการในบัญชีเดียว) ----------
 export async function switchShop(shopId: string): Promise<ActionResult> {
   try {

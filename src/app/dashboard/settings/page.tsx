@@ -6,13 +6,14 @@
 import { getCurrentShop } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitleIcon, PageHeader } from "@/components/ui";
-import { Building2, Wallet, Bell, UsersRound } from "lucide-react";
+import { Building2, Wallet, Bell, UsersRound, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import PaymentSettingsForm from "./payment-settings-form";
 import TaxInfoForm from "./tax-info-form";
 import TeamForm from "./team-form";
 import NotifySettingsForm from "./notify-settings-form";
+import PeriodLockForm from "./period-lock-form";
 import PushToggle from "./push-toggle";
 import type { ShopPaymentSettings } from "@/lib/types/db";
 
@@ -23,6 +24,7 @@ const TABS = [
   { id: "payment", label: "การรับเงิน", icon: Wallet, desc: "พร้อมเพย์สำหรับ QR บนใบแจ้งหนี้ + ตรวจสลิปอัตโนมัติ" },
   { id: "notify", label: "การแจ้งเตือน", icon: Bell, desc: "ให้ระบบเตือนคุณทาง LINE และบนเครื่องนี้" },
   { id: "team", label: "ทีมงาน", icon: UsersRound, desc: "เชิญพนักงานหรือสำนักงานบัญชีเข้ามาช่วย" },
+  { id: "period", label: "ปิดงวด", icon: Lock, desc: "ล็อกเดือนที่ยื่นภาษีไปแล้ว ไม่ให้ตัวเลขเปลี่ยนย้อนหลัง" },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -35,13 +37,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const tab: TabId = (TABS.some((t) => t.id === s) ? s : lineStatus ? "notify" : "business") as TabId;
 
   const svc = createServiceClient();
-  const [{ data: pay }, { data: members }, { data: taxInfo }, { data: notify }, { data: platform }] = await Promise.all([
+  const [{ data: pay }, { data: members }, { data: taxInfo }, { data: notify }, { data: platform }, { data: lock }] = await Promise.all([
     supabase.from("shop_payment_settings").select("*").eq("shop_id", shop.id).maybeSingle(),
     supabase.from("shop_members").select("id, role, profiles(display_name, email)").eq("shop_id", shop.id),
     supabase.from("shops").select("billing_name,billing_address,tax_id,branch").eq("id", shop.id).maybeSingle(),
     // token อยู่หลัง RLS (service เท่านั้น) — ส่งลง client แค่ "มี/ไม่มี" ไม่ส่งค่าจริง
     svc.from("shop_notify_settings").select("line_channel_token,line_to_id,notify_approval,link_source,line_display_name").eq("shop_id", shop.id).maybeSingle(),
     svc.from("platform_billing_settings").select("line_login_channel_id,line_oa_token,line_oa_basic_id").eq("id", true).maybeSingle(),
+    supabase.from("fin_period_locks").select("locked_through,locked_at,note").eq("shop_id", shop.id).maybeSingle(),
   ]);
   const p = (pay ?? {}) as Partial<ShopPaymentSettings>;
   const memberRows = (members ?? []).map((m) => {
@@ -55,6 +58,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     payment: !p.promptpay_id,
     notify: !notify?.line_to_id,
     team: false,
+    // ยังไม่เคยปิดงวดเลย = ตัวเลขที่ยื่นภาษีไปแล้วยังถูกแก้ย้อนหลังได้ ต้องเตือน
+    period: !lock,
   };
 
   const active = TABS.find((t) => t.id === tab)!;
@@ -132,6 +137,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <TeamForm shopId={shop.id} members={memberRows} canEdit={canEdit} />
             </>
           )}
+
+          {tab === "period" && (canEdit
+            ? <PeriodLockForm shopId={shop.id} isOwner={role === "owner"}
+                lock={lock ? { locked_through: lock.locked_through, locked_at: lock.locked_at, note: lock.note } : null} />
+            : <Locked />)}
         </CardContent>
       </Card>
     </div>
