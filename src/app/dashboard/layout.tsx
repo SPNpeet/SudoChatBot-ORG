@@ -3,11 +3,6 @@ import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import SideNav from "./side-nav";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import {
-  LayoutDashboard, Package, Settings, LogOut, ShieldCheck, Wallet, Receipt, CircleHelp,
-  BarChart3, Landmark, Store, MessagesSquare, ScrollText, Calculator, FileText,
-  Users, Banknote, BookOpenText, PieChart,
-} from "lucide-react";
 import MobileNav from "./mobile-nav";
 import { NavShell, MainArea } from "./nav-shell";
 import { SidebarHead, SidebarFoot } from "./sidebar-parts";
@@ -18,32 +13,8 @@ import SystemAlertBanner from "./system-alert-banner";
 import FeedbackWidget from "./feedback-widget";
 import QuickCreate from "./quick-create";
 import CompanySwitcher from "./company-switcher";
-import AiQuotaBar, { type AiQuota } from "./ai-quota-bar";
+import { type AiQuota } from "./ai-quota-bar";
 import { Logo } from "@/components/logo";
-
-const nav = [
-  { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
-  { href: "/dashboard/assistant", label: "ผู้ช่วยบัญชี AI", icon: Calculator },
-  { href: "/dashboard/sales", label: "เอกสารขาย", icon: FileText },
-  { href: "/dashboard/expenses", label: "ค่าใช้จ่าย", icon: Receipt },
-  { href: "/dashboard/money", label: "การเงิน/กระทบยอด", icon: Banknote },
-  { href: "/dashboard/contacts", label: "ผู้ติดต่อ", icon: Users },
-  { href: "/dashboard/products", label: "สินค้า/บริการ", icon: Package },
-  { href: "/dashboard/journal", label: "สมุดรายวัน", icon: BookOpenText },
-  { href: "/dashboard/reports", label: "รายงาน + ภาษี", icon: PieChart },
-  { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
-  { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
-  { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },
-];
-
-const ADMIN_NAV = [
-  { href: "/dashboard/admin", label: "ศูนย์ AI (Admin)", icon: ShieldCheck },
-  { href: "/dashboard/admin/stats", label: "แดชบอร์ดแพลตฟอร์ม", icon: BarChart3 },
-  { href: "/dashboard/admin/billing", label: "รายได้ + บัญชีรับเงิน", icon: Landmark },
-  { href: "/dashboard/admin/shops", label: "จัดการผู้ใช้ระบบ", icon: Store },
-  { href: "/dashboard/admin/feedback", label: "ความเห็นผู้ใช้", icon: MessagesSquare },
-  { href: "/dashboard/admin/logs", label: "Audit Log", icon: ScrollText },
-];
 
 async function signOut() {
   "use server";
@@ -62,7 +33,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <NavShell>
     <div className="min-h-screen">
       {/* Sidebar — เดสก์ท็อป (พับได้ SideNav คุมความกว้างเอง) */}
-      <SideNav items={nav} adminItems={isAdmin ? ADMIN_NAV : []}
+      {/* ส่งได้เฉพาะข้อมูลที่ serialize ได้ (boolean / object ธรรมดา / server action / JSX)
+          รายการเมนูพร้อมไอคอนอยู่ใน side-nav.tsx ฝั่ง client แล้ว ห้ามย้ายกลับมาที่นี่ */}
+      <SideNav isAdmin={!!isAdmin}
         foot={<SidebarFoot quota={quota as AiQuota | null} signOut={signOut} />}>
         <SidebarHead companies={companies} currentId={shop.id} />
       </SideNav>

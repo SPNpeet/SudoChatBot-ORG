@@ -10,21 +10,56 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { PanelLeftClose, PanelLeftOpen, type LucideIcon } from "lucide-react";
+import {
+  PanelLeftClose, PanelLeftOpen, LayoutDashboard, Calculator, FileText, Receipt,
+  Banknote, Users, Package, BookOpenText, PieChart, Wallet, Settings, CircleHelp,
+  ShieldCheck, BarChart3, Landmark, Store, MessagesSquare, ScrollText,
+  type LucideIcon,
+} from "lucide-react";
 import { useNav } from "./nav-shell";
 
 export interface NavItem { href: string; label: string; icon: LucideIcon }
+
+// ⚠️ รายการเมนูต้องอยู่ในไฟล์นี้ (ฝั่ง client) ห้ามส่งมาจาก layout ที่เป็น Server Component
+// เพราะ icon เป็นฟังก์ชัน React ซึ่ง React ส่งข้ามเส้น server -> client ไม่ได้
+// เคยพลาดตรงนี้มาแล้ว: build ผ่านแต่หน้าภาพรวมพังทั้งหน้าตอนรันจริง
+// (หน้านี้เป็น force-dynamic จึงไม่ถูก render ตอน build ทำให้ไม่มีใครจับได้)
+const NAV: NavItem[] = [
+  { href: "/dashboard", label: "ภาพรวม", icon: LayoutDashboard },
+  { href: "/dashboard/assistant", label: "ผู้ช่วยบัญชี AI", icon: Calculator },
+  { href: "/dashboard/sales", label: "เอกสารขาย", icon: FileText },
+  { href: "/dashboard/expenses", label: "ค่าใช้จ่าย", icon: Receipt },
+  { href: "/dashboard/money", label: "การเงิน/กระทบยอด", icon: Banknote },
+  { href: "/dashboard/contacts", label: "ผู้ติดต่อ", icon: Users },
+  { href: "/dashboard/products", label: "สินค้า/บริการ", icon: Package },
+  { href: "/dashboard/journal", label: "สมุดรายวัน", icon: BookOpenText },
+  { href: "/dashboard/reports", label: "รายงาน + ภาษี", icon: PieChart },
+  { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
+  { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
+  { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  { href: "/dashboard/admin", label: "ศูนย์ AI (Admin)", icon: ShieldCheck },
+  { href: "/dashboard/admin/stats", label: "แดชบอร์ดแพลตฟอร์ม", icon: BarChart3 },
+  { href: "/dashboard/admin/billing", label: "รายได้ + บัญชีรับเงิน", icon: Landmark },
+  { href: "/dashboard/admin/shops", label: "จัดการผู้ใช้ระบบ", icon: Store },
+  { href: "/dashboard/admin/feedback", label: "ความเห็นผู้ใช้", icon: MessagesSquare },
+  { href: "/dashboard/admin/logs", label: "Audit Log", icon: ScrollText },
+];
 
 /** หน้าไหน active — /dashboard ต้อง exact ไม่งั้นจะสว่างค้างทุกหน้า */
 export function isActive(path: string, href: string) {
   return href === "/dashboard" ? path === href : path.startsWith(href);
 }
 
-export default function SideNav({ items, adminItems, children, foot }: {
-  items: NavItem[]; adminItems: NavItem[]; children?: React.ReactNode; foot?: React.ReactNode;
+export default function SideNav({ isAdmin, children, foot }: {
+  isAdmin: boolean; children?: React.ReactNode; foot?: React.ReactNode;
 }) {
   const path = usePathname();
   const { collapsed, toggle, ready } = useNav();
+  const items = NAV;
+  const adminItems = isAdmin ? ADMIN_NAV : [];
 
   const row = (item: NavItem, admin = false) => {
     const active = isActive(path, item.href);
