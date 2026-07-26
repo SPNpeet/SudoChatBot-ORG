@@ -461,6 +461,145 @@ export async function voidDoc(shopId: string, docId: string, reason: string): Pr
   }
 }
 
+// ============================================================
+//  ใบลดหนี้ (ม.86/10) · ใบเพิ่มหนี้ (ม.86/9)
+//
+//  ใช้เมื่อขายไปแล้วและออกใบกำกับภาษีให้ผู้ซื้อไปแล้ว แต่มูลค่าเปลี่ยน
+//  (คืนของ ลดราคา คำนวณราคาผิด ส่งของเพิ่ม)
+//
+//  ทำไมต้องเป็นเอกสารใหม่ ไม่ใช่แก้ใบเดิม:
+//  ใบเดิมอยู่ในมือผู้ซื้อและถูกยื่น ภ.พ.30 ไปแล้ว แก้ย้อนหลังไม่ได้ตามกฎหมาย
+//  กฎหมายกำหนดให้ออกใบลดหนี้/ใบเพิ่มหนี้ "ในเดือนที่เหตุเกิด"
+//  ซึ่งพอดีกับกติกาล็อกงวดของระบบ — ลงงวดปัจจุบันได้เสมอ ไม่ต้องปลดล็อก
+// ============================================================
+export interface NoteInput {
+  origin_doc_id: string;
+  kind: "credit_note" | "debit_note";
+  reason: string;
+  items: { name: string; qty: number; unit?: string; unit_price: number }[];
+  /** ตัดกับลูกหนี้ (ปกติ) หรือคืนเงินให้ลูกค้าจริง */
+  settle?: "ar" | "cash" | "bank";
+  issue_date?: string;
+  notes?: string;
+}
+
+export async function issueCreditDebitNote(shopId: string, input: NoteInput): Promise<DocResult> {
+  try {
+    const { user } = await assertMember(shopId, ["owner", "admin", "agent"]);
+    const svc = createServiceClient();
+
+    const { data: originRaw } = await svc.from("fin_docs")
+      .select("*").eq("id", input.origin_doc_id).eq("shop_id", shopId).maybeSingle();
+    if (!originRaw) return { ok: false, error: "ไม่พบใบกำกับภาษีต้นทาง" };
+    const origin = originRaw as unknown as FinDoc;
+
+    if (!["invoice", "receipt"].includes(origin.doc_type)) {
+      return { ok: false, error: "ออกใบลดหนี้/ใบเพิ่มหนี้ได้จากใบแจ้งหนี้หรือใบเสร็จเท่านั้น" };
+    }
+    if (origin.status === "void") return { ok: false, error: "ใบต้นทางถูกยกเลิกไปแล้ว" };
+    if (origin.status === "draft") return { ok: false, error: "ใบต้นทางยังเป็นร่าง ให้แก้ใบเดิมได้เลย ไม่ต้องออกใบลดหนี้" };
+    if (origin.vat_mode === "none") {
+      return { ok: false, error: "ใบต้นทางไม่ได้คิด VAT จึงไม่เข้าเงื่อนไขใบลดหนี้/ใบเพิ่มหนี้ตามกฎหมาย" };
+    }
+
+    const reason = String(input.reason ?? "").trim().slice(0, 300);
+    if (reason.length < 5) return { ok: false, error: "ต้องระบุเหตุผล — กฎหมายบังคับให้พิมพ์เหตุผลบนเอกสาร" };
+
+    const items = (input.items ?? [])
+      .filter((it) => String(it.name ?? "").trim() && Number(it.unit_price) > 0)
+      .map((it) => ({
+        name: String(it.name).trim().slice(0, 300),
+        qty: Math.max(0.01, Number(it.qty) || 1),
+        unit: it.unit ? String(it.unit).slice(0, 30) : null,
+        unit_price: Math.max(0, Number(it.unit_price) || 0),
+      }));
+    if (!items.length) return { ok: false, error: "ต้องมีรายการอย่างน้อย 1 บรรทัด" };
+
+    // ⚠️ ต้องใช้อัตรา VAT ของ "ใบเดิม" ไม่ใช่อัตราวันนี้
+    // ใบลดหนี้ไปหักยอดที่เคยเสียภาษีในอัตราเดิม ถ้าใช้อัตราใหม่ ภาษีที่หักออกจะไม่เท่าที่เคยเสีย
+    // เรื่องนี้จะเห็นผลจริงถ้าอัตราเปลี่ยนหลัง 30 ก.ย. 2569
+    const { data: rateRow } = await svc.rpc("vat_rate_on", { p_date: origin.issue_date });
+    const vatRate = Number(rateRow ?? 0.07);
+    const t = calcDocTotals(items, 0, origin.vat_mode, 0, vatRate);
+
+    // ลดเกินยอดใบเดิมไม่ได้ — เป็นสัญญาณว่ากรอกผิด และจะทำให้ภาษีขายติดลบเกินจริง
+    if (input.kind === "credit_note" && t.total > Number(origin.total) + 0.004) {
+      return { ok: false, error: `ยอดใบลดหนี้ (${t.total.toLocaleString()}) เกินยอดใบเดิม (${Number(origin.total).toLocaleString()}) — ตรวจรายการอีกครั้ง` };
+    }
+
+    const issueDate = input.issue_date || bkkToday();
+    // ออกย้อนไปก่อนใบเดิมไม่ได้ เหตุต้องเกิดหลังการขาย
+    if (issueDate < origin.issue_date) {
+      return { ok: false, error: "วันที่ต้องไม่ก่อนวันที่ของใบกำกับภาษีเดิม" };
+    }
+
+    const { data: num, error: numErr } = await svc.rpc("next_fin_doc_number", { p_shop_id: shopId, p_doc_type: input.kind });
+    if (numErr || !num) return { ok: false, error: numErr?.message ?? "ออกเลขเอกสารไม่สำเร็จ" };
+    const docNumber = num as string;
+
+    const { data: doc, error } = await svc.from("fin_docs").insert({
+      shop_id: shopId, doc_type: input.kind, doc_number: docNumber,
+      // สำเนาตัวตนผู้ซื้อจากใบเดิม กฎหมายบังคับให้ใบลดหนี้มีข้อมูลผู้ซื้อครบเหมือนใบกำกับภาษี
+      contact_id: origin.contact_id, contact_name: origin.contact_name,
+      contact_tax_id: origin.contact_tax_id, contact_address: origin.contact_address,
+      contact_branch: origin.contact_branch, recipient_kind: origin.recipient_kind,
+      issue_date: issueDate, due_date: null,
+      subtotal: t.base, discount: 0,
+      vat_mode: origin.vat_mode, vat_amount: t.vat,
+      wht_rate: 0, wht_amount: 0,
+      total: t.total, paid_amount: 0,
+      status: "awaiting", source: "manual",
+      ref_doc_id: origin.id,
+      note_reason: reason,
+      notes: String(input.notes ?? "").trim().slice(0, 1000) || null,
+      created_by: user.id, updated_at: new Date().toISOString(),
+    }).select("id").single();
+    if (error || !doc) return { ok: false, error: error?.message ?? "สร้างเอกสารไม่สำเร็จ" };
+
+    const { error: itemErr } = await svc.from("fin_doc_items").insert(items.map((it, i) => ({
+      doc_id: doc.id, shop_id: shopId, name: it.name, qty: it.qty, unit: it.unit,
+      unit_price: it.unit_price, amount: Math.round(it.qty * it.unit_price * 100) / 100, sort: i,
+    })));
+    if (itemErr) return { ok: false, error: itemErr.message };
+
+    const settleAcc = input.settle === "cash" ? ACC.CASH : input.settle === "bank" ? ACC.BANK : ACC.AR;
+
+    if (input.kind === "credit_note") {
+      // ไม่หักออกจากบัญชีขาย (4010) ตรง ๆ แต่ลงบัญชีหักรายได้แยก (4090)
+      // เพื่อให้งบกำไรขาดทุนเห็นว่ามีการรับคืน/ลดราคาเท่าไหร่ ซึ่งเป็นข้อมูลที่ผู้บริหารต้องเห็น
+      await postJournalOrThrow(svc, shopId, user.id, {
+        date: issueDate, memo: `ใบลดหนี้ ${docNumber} อ้าง ${origin.doc_number} — ${reason}`,
+        sourceType: "sale", sourceId: doc.id,
+        lines: [
+          { code: ACC.SALES_RETURN, debit: t.exVat },
+          { code: ACC.VAT_OUT, debit: t.vat },
+          { code: settleAcc, credit: t.total },
+        ],
+      });
+    } else {
+      await postJournalOrThrow(svc, shopId, user.id, {
+        date: issueDate, memo: `ใบเพิ่มหนี้ ${docNumber} อ้าง ${origin.doc_number} — ${reason}`,
+        sourceType: "sale", sourceId: doc.id,
+        lines: [
+          { code: settleAcc === ACC.AR ? ACC.AR : settleAcc, debit: t.total },
+          { code: ACC.SALES, credit: t.exVat },
+          { code: ACC.VAT_OUT, credit: t.vat },
+        ],
+      });
+    }
+
+    await audit(svc, shopId, user.id, input.kind === "credit_note" ? "credit_note_issued" : "debit_note_issued",
+      "fin_doc", doc.id, { doc_number: docNumber, origin: origin.doc_number, reason, total: t.total });
+
+    revalidatePath("/dashboard/sales");
+    revalidatePath("/dashboard/reports");
+    revalidatePath("/dashboard/journal");
+    return { ok: true, docId: doc.id, docNumber };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ออกเอกสารไม่สำเร็จ") };
+  }
+}
+
 /** แปลงเอกสาร: ใบเสนอราคา -> ใบแจ้งหนี้ · ใบแจ้งหนี้ (จ่ายครบ) -> ใบเสร็จ */
 export async function convertDoc(shopId: string, docId: string): Promise<DocResult> {
   try {

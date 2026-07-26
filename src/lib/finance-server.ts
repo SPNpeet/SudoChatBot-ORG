@@ -11,7 +11,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export const ACC = {
   CASH: "1010", BANK: "1020", AR: "1130", VAT_IN: "1154", WHT_ASSET: "1155",
   INVENTORY: "1160", AP: "2010", VAT_OUT: "2030", WHT_PAYABLE: "2045",
-  SALES: "4010", COGS: "5010", OTHER_EXPENSE: "5990",
+  // 4090 เป็นบัญชีหักรายได้ (contra-revenue) สำหรับใบลดหนี้
+  // แยกจาก 4010 เพื่อให้งบกำไรขาดทุนเห็นยอดรับคืน/ลดราคา ไม่ใช่ซ่อนไว้ในยอดขายสุทธิ
+  SALES: "4010", SALES_RETURN: "4090", COGS: "5010", OTHER_EXPENSE: "5990",
 } as const;
 
 export interface JournalLineInput {

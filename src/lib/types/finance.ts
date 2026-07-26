@@ -1,6 +1,8 @@
 // ==== ชนิดข้อมูลระบบบัญชี (ย่อจาก schema จริง migration 050-051) ====
 
-export type DocType = "quotation" | "invoice" | "receipt" | "expense";
+// credit_note = ใบลดหนี้ (ม.86/10) · debit_note = ใบเพิ่มหนี้ (ม.86/9)
+// ทั้งคู่อ้างใบกำกับภาษีเดิมผ่าน ref_doc_id และออกในงวดที่เหตุเกิด ไม่ใช่งวดของใบเดิม
+export type DocType = "quotation" | "invoice" | "receipt" | "expense" | "credit_note" | "debit_note";
 export type DocStatus = "draft" | "awaiting" | "partial" | "paid" | "void";
 export type VatMode = "none" | "exclusive" | "inclusive";
 
@@ -39,7 +41,7 @@ export interface FinDoc {
   total: number; paid_amount: number;
   status: DocStatus; source: string;
   file_path: string | null; ref_doc_id: string | null;
-  notes: string | null; share_key?: string; created_at: string;
+  notes: string | null; note_reason: string | null; share_key?: string; created_at: string;
   approval_status?: "none" | "pending" | "approved" | "rejected";
   approval_by?: string | null; approval_at?: string | null; approval_note?: string | null;
   fin_doc_items?: FinDocItem[];

@@ -74,6 +74,7 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
         {canEdit && <DocActions doc={{
           id: doc.id, shopId: shop.id, docType: "expense", docNumber: doc.doc_number,
           status: doc.status as DocStatus, outstanding, shareKey: null, whtAmount: Number(doc.wht_amount),
+        vatMode: doc.vat_mode, total: Number(doc.total),
         }} />}
       </div>
 

@@ -57,8 +57,32 @@ export function selectVatSalesDocs<T extends VatDocLike>(docs: T[]): T[] {
     if (!isPostedDoc(d) || !hasVat(d)) return false;
     if (d.doc_type === "invoice") return true;
     if (d.doc_type === "receipt") return !d.ref_doc_id; // ขายสดเท่านั้น
+    // ใบลดหนี้/ใบเพิ่มหนี้เข้า ภ.พ.30 ของเดือนที่ออก (ม.86/10, 86/9)
+    // ใบลดหนี้ไปหักภาษีขาย ใบเพิ่มหนี้ไปบวก — ใช้ vatSign() คุมเครื่องหมาย
+    if (d.doc_type === "credit_note" || d.doc_type === "debit_note") return true;
     return false;                                        // quotation / expense
   });
+}
+
+/**
+ * เครื่องหมายของเอกสารในรายงานภาษี
+ * เก็บยอดในฐานข้อมูลเป็นบวกเสมอ เพื่อให้ตัวเอกสารที่พิมพ์ออกมาอ่านได้ตรงไปตรงมา
+ * แล้วค่อยใส่เครื่องหมายตอนรวมยอด — ใบลดหนี้ = -1
+ */
+export function vatSign(d: Pick<VatDocLike, "doc_type">): 1 | -1 {
+  return d.doc_type === "credit_note" ? -1 : 1;
+}
+
+/** รวมภาษีขายของงวดโดยคิดเครื่องหมายใบลดหนี้/ใบเพิ่มหนี้ให้ถูก */
+export function sumVat<T extends VatDocLike>(docs: T[]): number {
+  return Math.round(docs.reduce((a, d) => a + vatSign(d) * Number(d.vat_amount ?? 0), 0) * 100) / 100;
+}
+
+/** รวมมูลค่าฐาน (ก่อน VAT) ของงวด คิดเครื่องหมายเช่นเดียวกัน */
+export function sumBase<T extends VatDocLike & { total: number | string }>(docs: T[]): number {
+  return Math.round(
+    docs.reduce((a, d) => a + vatSign(d) * (Number(d.total) - Number(d.vat_amount ?? 0)), 0) * 100,
+  ) / 100;
 }
 
 /** เอกสารที่นับเป็นภาษีซื้อของงวด (ใช้กรอก ภ.พ.30 ฝั่งซื้อ) */

@@ -6,7 +6,7 @@
 import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td, Badge, PageHeader } from "@/components/ui";
 import { baht, bahtDoc, dateOnlyTH, cn } from "@/lib/utils";
-import { agingBucket, AGING_LABEL_TH, docOutstanding } from "@/lib/finance";
+import { agingBucket, AGING_LABEL_TH, docOutstanding, DOC_TYPE_TH } from "@/lib/finance";
 import { rdClean, rdDateBE, rdAmount } from "@/lib/rd";
 import type { FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
@@ -15,7 +15,7 @@ import ExportButtons from "./export-buttons";
 import PeriodPicker from "./period-picker";
 import AccountantPackage from "./accountant-package";
 import { whtIncomeLabel, whtIncomeDesc, branchCode, rdFormFor } from "@/lib/tax-th";
-import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, selectWhtReceivableDocs } from "@/lib/vat-docs";
+import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, selectWhtReceivableDocs, vatSign, sumVat, sumBase } from "@/lib/vat-docs";
 
 export const dynamic = "force-dynamic";
 
@@ -280,16 +280,19 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
   const salesTax = selectVatSalesDocs(docs);
   const buyTax = selectVatPurchaseDocs(docs);
 
-  const sumSales = salesTax.reduce((a, d) => a + Number(d.vat_amount), 0);
-  const sumBuy = buyTax.reduce((a, d) => a + Number(d.vat_amount), 0);
-  const baseSales = salesTax.reduce((a, d) => a + Number(d.total) - Number(d.vat_amount), 0);
-  const baseBuy = buyTax.reduce((a, d) => a + Number(d.total) - Number(d.vat_amount), 0);
-  const net = sumSales - sumBuy;
+  // ใบลดหนี้หักภาษีขายออก ใบเพิ่มหนี้บวกเข้า — เครื่องหมายมาจาก vatSign() ที่เดียว
+  const sumSales = sumVat(salesTax);
+  const sumBuy = sumVat(buyTax);
+  const baseSales = sumBase(salesTax);
+  const baseBuy = sumBase(buyTax);
+  const net = Math.round((sumSales - sumBuy) * 100) / 100;
 
   const mkRows = (list: FinDoc[]) => list.map((d, i) => ({
-    "ลำดับ": i + 1, "วันที่": d.issue_date, "เลขที่ใบกำกับ": d.doc_number,
+    "ลำดับ": i + 1, "วันที่": d.issue_date, "ประเภท": DOC_TYPE_TH[d.doc_type],
+    "เลขที่ใบกำกับ": d.doc_number,
     "ชื่อผู้ซื้อ/ผู้ขาย": d.contact_name ?? "", "เลขผู้เสียภาษี": d.contact_tax_id ?? "",
-    "มูลค่าสินค้า/บริการ": Number(d.total) - Number(d.vat_amount), "ภาษีมูลค่าเพิ่ม": Number(d.vat_amount),
+    "มูลค่าสินค้า/บริการ": vatSign(d) * (Number(d.total) - Number(d.vat_amount)),
+    "ภาษีมูลค่าเพิ่ม": vatSign(d) * Number(d.vat_amount),
   }));
   // ไฟล์โอนย้ายรายงานภาษีซื้อ-ขาย: ลำดับ|วันที่(พ.ศ.)|เลขที่ใบกำกับ|ชื่อคู่ค้า|เลขผู้เสียภาษี|สาขา|มูลค่า|VAT
   const txtOf = (list: FinDoc[]) => list.map((d, i) =>
@@ -297,7 +300,9 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
     // ทำให้ใบที่ออกให้สาขาถูกยื่นเป็นสำนักงานใหญ่หมด
     [i + 1, rdDateBE(d.issue_date), rdClean(d.doc_number), rdClean(d.contact_name), rdClean(d.contact_tax_id),
       branchCode(d.contact_branch),
-      rdAmount(Number(d.total) - Number(d.vat_amount)), rdAmount(d.vat_amount)].join("|"),
+      // ใบลดหนี้ต้องเป็นยอดติดลบในไฟล์ที่ยื่น ไม่งั้นภาษีขายที่ยื่นจะเกินจริง
+      rdAmount(vatSign(d) * (Number(d.total) - Number(d.vat_amount))),
+      rdAmount(vatSign(d) * Number(d.vat_amount))].join("|"),
   ).join("\r\n");
 
   return (

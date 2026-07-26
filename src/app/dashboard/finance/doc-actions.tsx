@@ -2,17 +2,19 @@
 // ปุ่มจัดการเอกสาร: รับ/จ่ายเงิน · แปลงเอกสาร · พิมพ์ · ลิงก์ลูกค้า · ยกเลิก
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Printer, Link2, ArrowRightLeft, Banknote, Ban, X, Check } from "lucide-react";
+import { Printer, Link2, ArrowRightLeft, Banknote, Ban, X, Check, FileMinus } from "lucide-react";
 import { Button, Input, Label, Select } from "@/components/ui";
 import { baht } from "@/lib/utils";
 import { recordPayment, convertDoc, voidDoc, uploadFinFile } from "./actions";
 import { compressImage } from "@/lib/compress-image";
-import type { DocStatus, DocType } from "@/lib/types/finance";
+import type { DocStatus, DocType, VatMode } from "@/lib/types/finance";
+import NoteDialog from "./note-dialog";
 
 export interface DocActionsProps {
   doc: {
     id: string; shopId: string; docType: DocType; docNumber: string;
     status: DocStatus; outstanding: number; shareKey: string | null; whtAmount: number;
+    vatMode: VatMode; total: number;
   };
 }
 
@@ -21,6 +23,7 @@ export default function DocActions({ doc }: DocActionsProps) {
   const [pending, start] = useTransition();
   const [payOpen, setPayOpen] = useState(false);
   const [voidOpen, setVoidOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState(String(doc.outstanding || ""));
@@ -34,6 +37,9 @@ export default function DocActions({ doc }: DocActionsProps) {
   const active = doc.status !== "void" && doc.status !== "draft";
   const payable = active && (doc.status === "awaiting" || doc.status === "partial") && (doc.docType === "invoice" || isExpense);
   const convertible = active && (doc.docType === "quotation" || (doc.docType === "invoice" && doc.status === "paid"));
+  // ใบลดหนี้/ใบเพิ่มหนี้ออกได้จากเอกสารขายที่คิด VAT และออกจริงแล้วเท่านั้น
+  // (ใบเสนอราคายังไม่ก่อความรับผิด VAT · ค่าใช้จ่ายเป็นฝั่งซื้อ ต้องรอใบลดหนี้จากผู้ขาย)
+  const notable = active && doc.vatMode !== "none" && (doc.docType === "invoice" || doc.docType === "receipt");
 
   function submitPayment() {
     setError(null);
@@ -101,10 +107,20 @@ export default function DocActions({ doc }: DocActionsProps) {
           {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Link2 className="h-4 w-4" />} {copied ? "คัดลอกแล้ว" : "ลิงก์ส่งลูกค้า"}
         </Button>
       )}
+      {notable && (
+        <Button size="sm" variant="outline" onClick={() => setNoteOpen(true)}>
+          <FileMinus className="h-4 w-4" /> ใบลดหนี้/เพิ่มหนี้
+        </Button>
+      )}
       {doc.status !== "void" && (
         <Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50" onClick={() => setVoidOpen(true)}>
           <Ban className="h-4 w-4" /> ยกเลิก
         </Button>
+      )}
+
+      {noteOpen && (
+        <NoteDialog shopId={doc.shopId} originId={doc.id} originNumber={doc.docNumber}
+          originTotal={doc.total} vatMode={doc.vatMode} onClose={() => setNoteOpen(false)} />
       )}
       {error && !payOpen && !voidOpen && <p className="w-full text-sm text-red-600">{error}</p>}
 

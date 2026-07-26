@@ -34,8 +34,11 @@ export default async function PrintDocPage({ params, searchParams }: {
 
   const shopName = shop.billing_name || shop.name;
   const isWhtForm = form === "wht" && Number(doc.wht_amount) > 0;
+  // ใบลดหนี้/ใบเพิ่มหนี้ต้องมีรายการบังคับชุดเดียวกับใบกำกับภาษี (ม.86/10, 86/9)
+  // รวมถึงข้อมูลผู้ซื้อครบ และ สำนักงานใหญ่/สาขา ทั้งสองฝ่าย
+  const isNote = doc.doc_type === "credit_note" || doc.doc_type === "debit_note";
   // "ใบกำกับภาษี" = ใบเสร็จที่คิด VAT เท่านั้น — ใบเสนอราคา/ใบแจ้งหนี้ไม่ใช่ใบกำกับภาษี
-  const isTaxInvoice = !isWhtForm && doc.doc_type === "receipt" && doc.vat_mode !== "none";
+  const isTaxInvoice = !isWhtForm && ((doc.doc_type === "receipt" && doc.vat_mode !== "none") || isNote);
   // ตรวจตาม ม.86/4 ก่อนพิมพ์ ขาดข้อไหนต้องบอกบนจอ ไม่ปล่อยให้พิมพ์ใบที่ใช้ไม่ได้ออกไปเงียบ ๆ
   const taxIssues = isTaxInvoice
     ? checkTaxInvoice({
@@ -58,6 +61,15 @@ export default async function PrintDocPage({ params, searchParams }: {
     : doc.doc_type === "receipt" && doc.vat_mode !== "none"
       ? "ใบเสร็จรับเงิน / ใบกำกับภาษี"
       : DOC_TYPE_TH[doc.doc_type as DocType];
+
+  // ใบกำกับภาษีเดิมที่ใบลดหนี้/ใบเพิ่มหนี้อ้างถึง — กฎหมายบังคับให้แสดงเลขที่และวันที่ของใบเดิม
+  interface OriginRef { doc_number: string; issue_date: string; total: number }
+  let originDoc: OriginRef | null = null;
+  if (isNote && doc.ref_doc_id) {
+    const { data: o } = await supabase.from("fin_docs")
+      .select("doc_number,issue_date,total").eq("id", doc.ref_doc_id).eq("shop_id", shop.id).maybeSingle();
+    originDoc = (o as unknown as OriginRef | null) ?? null;
+  }
 
   return (
     <div className="min-h-screen bg-neutral-100 py-4 sm:py-6 print:bg-white print:py-0">
@@ -145,9 +157,29 @@ export default async function PrintDocPage({ params, searchParams }: {
                   <tr><td className="pr-3 text-neutral-400">เลขที่</td><td className="font-semibold">{doc.doc_number}</td></tr>
                   <tr><td className="pr-3 text-neutral-400">วันที่</td><td>{dateOnlyTH(doc.issue_date)}</td></tr>
                   {doc.due_date && <tr><td className="pr-3 text-neutral-400">{doc.doc_type === "quotation" ? "ยืนราคาถึง" : "ครบกำหนด"}</td><td>{dateOnlyTH(doc.due_date)}</td></tr>}
+                  {/* ม.86/10 (ใบลดหนี้) และ ม.86/9 (ใบเพิ่มหนี้) บังคับให้อ้างใบกำกับภาษีเดิม */}
+                  {originDoc && <tr><td className="pr-3 text-neutral-400">อ้างใบกำกับภาษีเลขที่</td><td className="font-semibold">{originDoc.doc_number}</td></tr>}
+                  {originDoc && <tr><td className="pr-3 text-neutral-400">ลงวันที่</td><td>{dateOnlyTH(originDoc.issue_date)}</td></tr>}
                 </tbody>
               </table>
             </div>
+
+            {/* เหตุผลต้องพิมพ์บนหน้าเอกสาร ไม่ใช่เก็บไว้ในระบบเฉย ๆ */}
+            {isNote && doc.note_reason && (
+              <div className="mt-4 rounded-lg border border-neutral-300 px-3 py-2">
+                <p className="text-[11px] text-neutral-500">
+                  เหตุผลในการออก{DOC_TYPE_TH[doc.doc_type as DocType]}
+                  {doc.doc_type === "credit_note" ? " (ประมวลรัษฎากร มาตรา 86/10)" : " (ประมวลรัษฎากร มาตรา 86/9)"}
+                </p>
+                <p className="mt-0.5 font-medium">{doc.note_reason}</p>
+                {originDoc && (
+                  <p className="mt-1 text-[11px] text-neutral-500">
+                    มูลค่าตามใบกำกับภาษีเดิม {Number(originDoc.total).toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท ·
+                    มูลค่าที่{doc.doc_type === "credit_note" ? "ลด" : "เพิ่ม"} {Number(doc.total).toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* ตารางรายการ — คอลัมน์กว้างคงที่ + ตัวเลข tabular-nums ให้หลักตรงกันทุกบรรทัด */}
             <table className="mt-5 w-full table-fixed border-collapse">

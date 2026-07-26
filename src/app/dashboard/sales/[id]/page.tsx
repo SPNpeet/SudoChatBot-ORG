@@ -73,6 +73,7 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
         {canEdit && <DocActions doc={{
           id: doc.id, shopId: shop.id, docType: doc.doc_type as DocType, docNumber: doc.doc_number,
           status: doc.status as DocStatus, outstanding, shareKey: doc.share_key ?? null, whtAmount: Number(doc.wht_amount),
+        vatMode: doc.vat_mode, total: Number(doc.total),
         }} />}
       </div>
 
