@@ -47,16 +47,25 @@ export async function GET(req: Request) {
 
   const p = parsePeriod(new URL(req.url).searchParams.get("period"));
 
+  // เพดานจำนวนแถว — กันร้านที่ยุ่งมากดึงทั้งปีแล้วฟังก์ชันหมดเวลา/หน่วยความจำไม่พอ
+  // ถ้าชนเพดานต้องบอกผู้ใช้ตรง ๆ ในไฟล์ ห้ามตัดข้อมูลเงียบ ๆ แล้วให้เขาเอาไปยื่นภาษี
+  const MAX_DOCS = 5000;
+  const MAX_ENTRIES = 5000;
+
   const [{ data: docsRaw }, { data: entriesRaw }, { data: openRaw }] = await Promise.all([
     supabase.from("fin_docs").select("*, fin_doc_items(*)")
       .eq("shop_id", shop.id).neq("status", "draft")
-      .gte("issue_date", p.start).lt("issue_date", p.end).order("issue_date"),
+      .gte("issue_date", p.start).lt("issue_date", p.end).order("issue_date").limit(MAX_DOCS),
     supabase.from("journal_entries")
       .select("entry_number, entry_date, memo, source_type, journal_lines(debit, credit, chart_of_accounts(code, name, type))")
-      .eq("shop_id", shop.id).gte("entry_date", p.start).lt("entry_date", p.end).order("entry_date"),
+      .eq("shop_id", shop.id).gte("entry_date", p.start).lt("entry_date", p.end).order("entry_date").limit(MAX_ENTRIES),
     supabase.from("fin_docs").select("*")
-      .eq("shop_id", shop.id).in("status", ["awaiting", "partial"]),
+      .eq("shop_id", shop.id).in("status", ["awaiting", "partial"]).limit(MAX_DOCS),
   ]);
+
+  const truncated: string[] = [];
+  if ((docsRaw ?? []).length >= MAX_DOCS) truncated.push(`เอกสารเกิน ${MAX_DOCS.toLocaleString()} ใบ`);
+  if ((entriesRaw ?? []).length >= MAX_ENTRIES) truncated.push(`รายการบัญชีเกิน ${MAX_ENTRIES.toLocaleString()} รายการ`);
 
   const docs = (docsRaw ?? []) as unknown as FinDoc[];
   const open = (openRaw ?? []) as unknown as FinDoc[];
@@ -81,6 +90,10 @@ export async function GET(req: Request) {
       { หัวข้อ: "แท็บ งบทดลอง", รายละเอียด: "ยอดคงเหลือแต่ละบัญชี ณ สิ้นงวด" },
       { หัวข้อ: "แท็บ ลูกหนี้/เจ้าหนี้ค้าง", รายละเอียด: "ยอดค้าง ณ วันที่ดึงรายงาน (ไม่ใช่ ณ สิ้นงวด)" },
       { หัวข้อ: "ข้อควรทราบ", รายละเอียด: "ตัวเลขทั้งหมดมาจากเอกสารที่ผู้ใช้บันทึกเอง ยังไม่ผ่านการตรวจสอบโดยผู้สอบบัญชี" },
+      ...(truncated.length ? [{
+        หัวข้อ: "*** ข้อมูลไม่ครบ ***",
+        รายละเอียด: `งวดนี้มี${truncated.join(" และ ")} ไฟล์นี้จึงมีข้อมูลไม่ครบทั้งงวด — ห้ามใช้ยื่นภาษี ให้แบ่งดึงเป็นรายเดือนแทน`,
+      }] : []),
     ],
   });
 

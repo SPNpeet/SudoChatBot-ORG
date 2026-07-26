@@ -10,7 +10,7 @@ import { bahtText, DOC_TYPE_TH } from "@/lib/finance";
 import { promptPayPayload } from "@/lib/promptpay";
 import { docOutstanding } from "@/lib/finance";
 import type { DocType, FinDoc } from "@/lib/types/finance";
-import { branchLabel, checkTaxInvoice, formatTaxId, WHT_INCOME_TYPES } from "@/lib/tax-th";
+import { branchLabel, shouldPrintBranch, checkTaxInvoice, formatTaxId, WHT_INCOME_TYPES } from "@/lib/tax-th";
 import { TriangleAlert } from "lucide-react";
 import PrintButton from "./print-button";
 import { rdFormFor } from "@/lib/tax-th";
@@ -114,7 +114,7 @@ export default async function PrintDocPage({ params, searchParams }: {
                     เลขประจำตัวผู้เสียภาษี {formatTaxId(shop.tax_id)}
                     {/* ประกาศอธิบดีฯ ฉบับที่ 199 บังคับระบุสำนักงานใหญ่/สาขา บนใบกำกับภาษีเต็มรูป
                         ขาดข้อความนี้ = ผู้ซื้อขอคืนภาษีซื้อไม่ได้ */}
-                    {isTaxInvoice && <span className="font-semibold"> ({branchLabel(shop.branch)})</span>}
+                    {isTaxInvoice && shouldPrintBranch(shop.billing_address) && <span className="font-semibold"> ({branchLabel(shop.branch)})</span>}
                   </p>
                 )}
               </div>
@@ -136,7 +136,7 @@ export default async function PrintDocPage({ params, searchParams }: {
                 {doc.contact_tax_id && (
                   <p className="text-neutral-600">
                     เลขประจำตัวผู้เสียภาษี {formatTaxId(doc.contact_tax_id)}
-                    {isTaxInvoice && <span className="font-semibold"> ({branchLabel(doc.contact_branch)})</span>}
+                    {isTaxInvoice && shouldPrintBranch(doc.contact_address) && <span className="font-semibold"> ({branchLabel(doc.contact_branch)})</span>}
                   </p>
                 )}
               </div>

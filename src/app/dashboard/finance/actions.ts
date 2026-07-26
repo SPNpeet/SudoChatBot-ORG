@@ -218,7 +218,9 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       issue_date: issueDate,
       due_date: input.due_date || null,
       category_id: input.doc_type === "expense" ? (input.category_id || null) : null,
-      subtotal: t.base + (Number(input.discount) || 0),
+      // ปัดเศษก่อนเก็บเสมอ — จำนวนเงินในระบบบัญชีต้องเป็นทศนิยม 2 ตำแหน่ง
+      // ถ้าเก็บค่าดิบ (เช่น 3 x 33.333 = 99.999) รายงานที่บวกยอดหลายใบจะเพี้ยนสะสม
+      subtotal: Math.round((t.base + (Number(input.discount) || 0)) * 100) / 100,
       discount: Number(input.discount) || 0,
       vat_mode: vatMode, vat_amount: t.vat,
       wht_rate: whtRate, wht_amount: t.wht,

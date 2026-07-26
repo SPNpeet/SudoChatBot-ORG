@@ -74,6 +74,15 @@ export function whtIncomeLabel(code: string | null | undefined): string {
  * สาขาให้แสดงบนเอกสาร — กฎหมายบังคับคำว่า "สำนักงานใหญ่" หรือ "สาขาที่ ....."
  * ผู้ใช้อาจกรอกมาแค่ "1" หรือ "00001" หรือเว้นว่าง จึงต้องแปลงให้เป็นรูปแบบที่ถูกต้องเสมอ
  */
+/**
+ * ควรพิมพ์สาขาต่อท้ายเลขผู้เสียภาษีไหม
+ * เอกสารที่ออกก่อน 2026-07-26 เก็บสาขาต่อท้ายที่อยู่ (เช่น "...กรุงเทพฯ (สำนักงานใหญ่)")
+ * ถ้าพิมพ์ซ้ำอีกจะกลายเป็นเอกสารที่มีสาขาโผล่ 2 ที่ ดูเหมือนเอกสารผิด
+ */
+export function shouldPrintBranch(address: string | null | undefined): boolean {
+  return !/สำนักงานใหญ่|สาขา/.test(address ?? "");
+}
+
 export function branchLabel(raw: string | null | undefined): string {
   const s = (raw ?? "").trim();
   if (!s) return "สำนักงานใหญ่";
