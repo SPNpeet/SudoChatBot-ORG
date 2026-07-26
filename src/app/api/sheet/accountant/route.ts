@@ -11,7 +11,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentShop } from "@/lib/shop";
 import { docOutstanding, agingBucket, AGING_LABEL_TH } from "@/lib/finance";
-import { branchCode, whtIncomeDesc, isJuristicPerson, formatTaxId, branchLabel } from "@/lib/tax-th";
+import { branchCode, whtIncomeDesc, rdFormFor, formatTaxId, branchLabel } from "@/lib/tax-th";
+import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs } from "@/lib/vat-docs";
 import type { FinDoc } from "@/lib/types/finance";
 
 export const runtime = "nodejs";
@@ -51,8 +52,9 @@ export async function GET(req: Request) {
   // ถ้าชนเพดานต้องบอกผู้ใช้ตรง ๆ ในไฟล์ ห้ามตัดข้อมูลเงียบ ๆ แล้วให้เขาเอาไปยื่นภาษี
   const MAX_DOCS = 5000;
   const MAX_ENTRIES = 5000;
+  const MAX_LINES = 20000;
 
-  const [{ data: docsRaw }, { data: entriesRaw }, { data: openRaw }] = await Promise.all([
+  const [{ data: docsRaw }, { data: entriesRaw }, { data: openRaw }, { data: tbRaw }] = await Promise.all([
     supabase.from("fin_docs").select("*, fin_doc_items(*)")
       .eq("shop_id", shop.id).neq("status", "draft")
       .gte("issue_date", p.start).lt("issue_date", p.end).order("issue_date").limit(MAX_DOCS),
@@ -61,41 +63,30 @@ export async function GET(req: Request) {
       .eq("shop_id", shop.id).gte("entry_date", p.start).lt("entry_date", p.end).order("entry_date").limit(MAX_ENTRIES),
     supabase.from("fin_docs").select("*")
       .eq("shop_id", shop.id).in("status", ["awaiting", "partial"]).limit(MAX_DOCS),
+    // งบทดลองต้องเป็น "ยอดสะสมถึงสิ้นงวด" ไม่ใช่ยอดเคลื่อนไหวเฉพาะในงวด
+    // จึงต้องดึงทุกบรรทัดตั้งแต่เปิดกิจการจนถึงก่อนวันสิ้นงวด (ไม่มีขอบล่าง)
+    // ใช้กติกาเดียวกับแท็บงบทดลองบนหน้าจอ ตัวเลขสองที่จึงตรงกันเสมอ
+    supabase.from("journal_lines")
+      .select("debit, credit, chart_of_accounts(code,name), journal_entries!inner(entry_date)")
+      .eq("shop_id", shop.id).lt("journal_entries.entry_date", p.end).limit(MAX_LINES),
   ]);
 
   const truncated: string[] = [];
   if ((docsRaw ?? []).length >= MAX_DOCS) truncated.push(`เอกสารเกิน ${MAX_DOCS.toLocaleString()} ใบ`);
   if ((entriesRaw ?? []).length >= MAX_ENTRIES) truncated.push(`รายการบัญชีเกิน ${MAX_ENTRIES.toLocaleString()} รายการ`);
+  if ((tbRaw ?? []).length >= MAX_LINES) truncated.push(`บรรทัดบัญชีสะสมเกิน ${MAX_LINES.toLocaleString()} บรรทัด (งบทดลองไม่ครบ)`);
 
   const docs = (docsRaw ?? []) as unknown as FinDoc[];
   const open = (openRaw ?? []) as unknown as FinDoc[];
-  const sales = docs.filter((d) => d.doc_type !== "expense" && d.status !== "void");
-  const expenses = docs.filter((d) => d.doc_type === "expense" && d.status !== "void");
-  const wht = expenses.filter((d) => Number(d.wht_amount) > 0);
+
+  // ใช้กฎกลางตัวเดียวกับหน้ารายงานบนจอ (src/lib/vat-docs.ts)
+  // เดิมที่นี่เขียนกฎเองว่า "ทุกอย่างที่ไม่ใช่ค่าใช้จ่าย" ซึ่งกวาดใบเสนอราคาเข้ามาด้วย
+  // และนับทั้งใบแจ้งหนี้และใบเสร็จที่แปลงมาจากใบนั้น = ภาษีขายเกินจริงหนึ่งเท่า
+  const sales = selectVatSalesDocs(docs);
+  const expenses = selectVatPurchaseDocs(docs);
+  const wht = selectWhtPayableDocs(docs);
 
   const sheets: { name: string; rows: Record<string, unknown>[] }[] = [];
-
-  // แท็บอธิบาย — นักบัญชีเปิดไฟล์มาต้องรู้ทันทีว่ามีอะไรบ้างและตัวเลขมาจากไหน
-  sheets.push({
-    name: "อ่านก่อน", rows: [
-      { หัวข้อ: "กิจการ", รายละเอียด: shop.billing_name || shop.name },
-      { หัวข้อ: "เลขประจำตัวผู้เสียภาษี", รายละเอียด: formatTaxId(shop.tax_id) || "ยังไม่ได้กรอก" },
-      { หัวข้อ: "สาขา", รายละเอียด: branchLabel(shop.branch) },
-      { หัวข้อ: "งวด", รายละเอียด: p.label },
-      { หัวข้อ: "ช่วงวันที่", รายละเอียด: `${p.start} ถึงก่อน ${p.end}` },
-      { หัวข้อ: "แท็บ ภาษีขาย", รายละเอียด: "เอกสารขายที่คิด VAT ในงวด — ใช้กรอก ภ.พ.30 ฝั่งภาษีขาย" },
-      { หัวข้อ: "แท็บ ภาษีซื้อ", รายละเอียด: "ค่าใช้จ่ายที่มีภาษีซื้อในงวด — ใช้กรอก ภ.พ.30 ฝั่งภาษีซื้อ" },
-      { หัวข้อ: "แท็บ หัก ณ ที่จ่าย", รายละเอียด: "ใช้ยื่น ภ.ง.ด.3 (บุคคลธรรมดา) และ ภ.ง.ด.53 (นิติบุคคล)" },
-      { หัวข้อ: "แท็บ สมุดรายวัน", รายละเอียด: "รายการบัญชีคู่ทุกรายการในงวด เดบิตรวม = เครดิตรวมเสมอ" },
-      { หัวข้อ: "แท็บ งบทดลอง", รายละเอียด: "ยอดคงเหลือแต่ละบัญชี ณ สิ้นงวด" },
-      { หัวข้อ: "แท็บ ลูกหนี้/เจ้าหนี้ค้าง", รายละเอียด: "ยอดค้าง ณ วันที่ดึงรายงาน (ไม่ใช่ ณ สิ้นงวด)" },
-      { หัวข้อ: "ข้อควรทราบ", รายละเอียด: "ตัวเลขทั้งหมดมาจากเอกสารที่ผู้ใช้บันทึกเอง ยังไม่ผ่านการตรวจสอบโดยผู้สอบบัญชี" },
-      ...(truncated.length ? [{
-        หัวข้อ: "*** ข้อมูลไม่ครบ ***",
-        รายละเอียด: `งวดนี้มี${truncated.join(" และ ")} ไฟล์นี้จึงมีข้อมูลไม่ครบทั้งงวด — ห้ามใช้ยื่นภาษี ให้แบ่งดึงเป็นรายเดือนแทน`,
-      }] : []),
-    ],
-  });
 
   if (sales.length) sheets.push({
     name: "ภาษีขาย", rows: sales.map((d, i) => ({
@@ -119,7 +110,7 @@ export async function GET(req: Request) {
 
   if (wht.length) sheets.push({
     name: "หัก ณ ที่จ่าย", rows: wht.map((d, i) => ({
-      "ลำดับ": i + 1, "แบบที่ยื่น": isJuristicPerson(d.contact_tax_id) ? "ภ.ง.ด.53" : "ภ.ง.ด.3",
+      "ลำดับ": i + 1, "แบบที่ยื่น": rdFormFor(d.contact_tax_id, d.wht_income_type, d.recipient_kind),
       "วันที่จ่าย": d.issue_date, "เลขผู้เสียภาษี": d.contact_tax_id ?? "",
       "สาขา": branchCode(d.contact_branch), "ชื่อผู้ถูกหัก": d.contact_name ?? "",
       "ประเภทเงินได้": whtIncomeDesc(d.wht_income_type),
@@ -135,7 +126,6 @@ export async function GET(req: Request) {
   const entries = (entriesRaw ?? []) as unknown as Entry[];
 
   const jRows: Record<string, unknown>[] = [];
-  const balance = new Map<string, { name: string; dr: number; cr: number }>();
   for (const e of entries) {
     for (const l of e.journal_lines ?? []) {
       const a = l.chart_of_accounts;
@@ -144,22 +134,45 @@ export async function GET(req: Request) {
         "คำอธิบาย": e.memo ?? "", "รหัสบัญชี": a?.code ?? "", "ชื่อบัญชี": a?.name ?? "",
         "เดบิต": n2(l.debit), "เครดิต": n2(l.credit),
       });
-      if (!a?.code) continue;
-      const cur = balance.get(a.code) ?? { name: a.name, dr: 0, cr: 0 };
-      cur.dr += Number(l.debit); cur.cr += Number(l.credit);
-      balance.set(a.code, cur);
     }
   }
   if (jRows.length) sheets.push({ name: "สมุดรายวัน", rows: jRows });
 
-  if (balance.size) sheets.push({
-    name: "งบทดลอง",
-    rows: [...balance.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([code, v]) => ({
+  // งบทดลอง = ยอดสะสมถึงสิ้นงวด แสดงเป็นด้านเดียวต่อบัญชี (เดบิตหรือเครดิต)
+  // เดิมแท็บนี้รวมเฉพาะรายการในงวดแต่พาดหัวว่า "ยอดคงเหลือ" ซึ่งคนละความหมายกัน
+  // นักบัญชีที่เอาไปทำงบต่อจะได้ตัวเลขผิดทั้งงบโดยไม่รู้ตัว
+  type TbLine = { debit: number; credit: number; chart_of_accounts: { code: string; name: string } | null };
+  const balance = new Map<string, { name: string; dr: number; cr: number }>();
+  for (const l of (tbRaw ?? []) as unknown as TbLine[]) {
+    const a = l.chart_of_accounts;
+    if (!a?.code) continue;
+    const cur = balance.get(a.code) ?? { name: a.name, dr: 0, cr: 0 };
+    cur.dr += Number(l.debit); cur.cr += Number(l.credit);
+    balance.set(a.code, cur);
+  }
+
+  const tbRows = [...balance.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([code, v]) => ({
       "รหัสบัญชี": code, "ชื่อบัญชี": v.name,
-      "เดบิตรวม": n2(v.dr), "เครดิตรวม": n2(v.cr),
-      "ยอดคงเหลือ": n2(v.dr - v.cr),
-    })),
-  });
+      "เดบิต": n2(Math.max(0, v.dr - v.cr)),
+      "เครดิต": n2(Math.max(0, v.cr - v.dr)),
+    }))
+    .filter((r) => r["เดบิต"] !== 0 || r["เครดิต"] !== 0);
+
+  if (tbRows.length) {
+    const drTotal = n2(tbRows.reduce((a, r) => a + r["เดบิต"], 0));
+    const crTotal = n2(tbRows.reduce((a, r) => a + r["เครดิต"], 0));
+    sheets.push({
+      name: "งบทดลอง",
+      rows: [...tbRows, { "รหัสบัญชี": "", "ชื่อบัญชี": "รวม", "เดบิต": drTotal, "เครดิต": crTotal }],
+    });
+    // เดบิตรวมต้องเท่าเครดิตรวมเสมอตามหลักบัญชีคู่ ถ้าไม่เท่าแปลว่าข้อมูลมีปัญหา
+    // ต้องบอกในไฟล์ ห้ามปล่อยให้นักบัญชีไปเจอเองตอนทำงบ
+    if (Math.abs(drTotal - crTotal) > 0.004) {
+      truncated.push(`งบทดลองไม่สมดุล (เดบิต ${drTotal.toLocaleString()} · เครดิต ${crTotal.toLocaleString()})`);
+    }
+  }
 
   if (open.length) sheets.push({
     name: "ลูกหนี้-เจ้าหนี้ค้าง", rows: open.map((d, i) => ({
@@ -171,9 +184,34 @@ export async function GET(req: Request) {
     })),
   });
 
-  if (sheets.length <= 1) {
+  if (sheets.length === 0) {
     return NextResponse.json({ ok: false, error: `${p.label} ยังไม่มีข้อมูลให้ส่งออก` }, { status: 400 });
   }
+
+  // แท็บอธิบาย — นักบัญชีเปิดไฟล์มาต้องรู้ทันทีว่ามีอะไรบ้างและตัวเลขมาจากไหน
+  // ต้องสร้าง "หลัง" ทุกแท็บ เพราะคำเตือนข้อมูลไม่ครบ/งบไม่สมดุล เพิ่งรู้ผลตอนคำนวณเสร็จ
+  // (เดิมสร้างก่อน คำเตือนที่เกิดทีหลังจึงหายไปเงียบ ๆ)
+  sheets.unshift({
+    name: "อ่านก่อน", rows: [
+      { หัวข้อ: "กิจการ", รายละเอียด: shop.billing_name || shop.name },
+      { หัวข้อ: "เลขประจำตัวผู้เสียภาษี", รายละเอียด: formatTaxId(shop.tax_id) || "ยังไม่ได้กรอก" },
+      { หัวข้อ: "สาขา", รายละเอียด: branchLabel(shop.branch) },
+      { หัวข้อ: "งวด", รายละเอียด: p.label },
+      { หัวข้อ: "ช่วงวันที่", รายละเอียด: `${p.start} ถึงก่อน ${p.end}` },
+      { หัวข้อ: "แท็บ ภาษีขาย", รายละเอียด: "ใบแจ้งหนี้ + ใบเสร็จขายสด ที่คิด VAT ในงวด — ใช้กรอก ภ.พ.30 ฝั่งภาษีขาย · ใบเสร็จที่ออกต่อจากใบแจ้งหนี้ไม่นับซ้ำ เพราะนับที่ใบแจ้งหนี้ไปแล้ว · ไม่รวมใบเสนอราคาและเอกสารร่าง" },
+      { หัวข้อ: "แท็บ ภาษีซื้อ", รายละเอียด: "ค่าใช้จ่ายที่มีภาษีซื้อในงวด — ใช้กรอก ภ.พ.30 ฝั่งภาษีซื้อ" },
+      { หัวข้อ: "แท็บ หัก ณ ที่จ่าย", รายละเอียด: "ภาษีที่กิจการหักไว้และต้องนำส่ง · แบบที่ยื่นยึดประเภทผู้รับเงินที่ผู้ใช้ระบุ (คณะบุคคล/ห้างหุ้นส่วนสามัญไม่จดทะเบียน ยื่น ภ.ง.ด.3 แม้เลขผู้เสียภาษีขึ้นต้นด้วย 0)" },
+      { หัวข้อ: "แท็บ สมุดรายวัน", รายละเอียด: "รายการบัญชีคู่ทุกรายการในงวด เดบิตรวม = เครดิตรวมเสมอ" },
+      { หัวข้อ: "แท็บ งบทดลอง", รายละเอียด: `ยอดคงเหลือสะสมของทุกบัญชีตั้งแต่เปิดกิจการถึงก่อน ${p.end} (ไม่ใช่ยอดเคลื่อนไหวเฉพาะในงวด)` },
+      { หัวข้อ: "แท็บ ลูกหนี้/เจ้าหนี้ค้าง", รายละเอียด: "ยอดค้าง ณ วันที่ดึงรายงาน (ไม่ใช่ ณ สิ้นงวด)" },
+      { หัวข้อ: "อัตรา VAT", รายละเอียด: "อัตราที่ใช้กับแต่ละใบยึดตามวันที่ออกเอกสาร ไม่ใช่อัตราวันที่ดึงรายงาน" },
+      { หัวข้อ: "ข้อควรทราบ", รายละเอียด: "ตัวเลขทั้งหมดมาจากเอกสารที่ผู้ใช้บันทึกเอง ยังไม่ผ่านการตรวจสอบโดยผู้สอบบัญชี" },
+      ...(truncated.length ? [{
+        หัวข้อ: "*** ตรวจก่อนใช้ ***",
+        รายละเอียด: `${truncated.join(" · ")} — ห้ามใช้ยื่นภาษีจนกว่าจะตรวจสอบ ถ้าเป็นเพราะข้อมูลเกินเพดาน ให้แบ่งดึงเป็นรายเดือนแทน`,
+      }] : []),
+    ],
+  });
 
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();

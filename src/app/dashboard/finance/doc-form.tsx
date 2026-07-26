@@ -9,9 +9,9 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2, ScanLine, Paperclip, TriangleAlert } from "lucide-react";
 import { Button, Card, CardContent, Input, Label, Select, Textarea } from "@/components/ui";
-import { baht, cn } from "@/lib/utils";
+import { baht, bahtDoc, cn } from "@/lib/utils";
 import { calcDocTotals, DOC_TYPE_TH, WHT_RATES } from "@/lib/finance";
-import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME } from "@/lib/tax-th";
+import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME, WHT_MIN_PAYMENT, belowWhtThreshold } from "@/lib/tax-th";
 import type { DocType, VatMode, ExpenseCategory, Contact, FinDoc } from "@/lib/types/finance";
 import { saveDoc, uploadFinFile, type SaveDocInput } from "./actions";
 import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
@@ -360,6 +360,17 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
                 ไม่แน่ใจให้เลือก <b>40(8)</b> — ค่าบริการทั่วไปของธุรกิจเข้าหมวดนี้เกือบทั้งหมด
               </p>
             </div>
+          )}
+
+          {/* เกณฑ์ขั้นต่ำ 1,000 บาท — เตือนอย่างเดียว ไม่บล็อก
+              เพราะถ้าเป็นการจ่ายตามสัญญาต่อเนื่องที่รวมทั้งสัญญาแล้วถึงเกณฑ์ ก็ยังต้องหัก
+              ระบบไม่รู้เรื่องสัญญา จึงต้องให้คนตัดสิน ไม่ใช่ตัดสินแทนแล้วผิด */}
+          {Number(whtRate) > 0 && belowWhtThreshold(totals.exVat) && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-relaxed text-amber-800">
+              ยอดก่อน VAT {bahtDoc(totals.exVat)} ต่ำกว่า {WHT_MIN_PAYMENT.toLocaleString()} บาท —
+              การจ่ายครั้งเดียวต่ำกว่าเกณฑ์นี้ <b>ไม่ต้องหัก ณ ที่จ่าย</b> (ท.ป.4/2528)
+              ยกเว้นเป็นการจ่ายตามสัญญาต่อเนื่องที่รวมทั้งสัญญาแล้วถึงเกณฑ์ ถ้าไม่เข้าข้อยกเว้นให้เลือก &ldquo;ไม่ต้องหัก&rdquo;
+            </p>
           )}
 
           {isExpense && (

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Pencil, X } from "lucide-react";
 import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { upsertContact, archiveContact } from "../finance/actions";
+import { RECIPIENT_KINDS, guessRecipientKind, isValidTaxId, type RecipientKind } from "@/lib/tax-th";
 import type { Contact } from "@/lib/types/finance";
 
 export default function ContactForm({ shopId, contact }: { shopId: string; contact?: Contact }) {
@@ -12,6 +13,17 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
+
+  // ประเภทผู้รับเงินเป็นตัวตัดสินว่ารายนี้เข้า ภ.ง.ด.3 หรือ 53
+  // ระบบเดาให้จากเลขผู้เสียภาษีได้ แต่ต้องให้คนแก้ทับได้ เพราะคณะบุคคลกับนิติบุคคล
+  // ใช้เลขขึ้นต้นเหมือนกันแต่ยื่นคนละแบบ — เดาผิดแล้วยื่นผิดแบบทั้งปี
+  const [taxId, setTaxId] = useState(contact?.tax_id ?? "");
+  const [kind, setKind] = useState<RecipientKind>(
+    (contact?.recipient_kind as RecipientKind | undefined) ?? guessRecipientKind(contact?.tax_id),
+  );
+  const [touchedKind, setTouchedKind] = useState(!!contact?.recipient_kind);
+  const taxDigits = taxId.replace(/\D/g, "");
+  const taxOk = isValidTaxId(taxId);
 
   function submit(fd: FormData) {
     setError(null);
@@ -65,11 +77,35 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
                 </div>
                 <div>
                   <Label>เลขผู้เสียภาษี (13 หลัก)</Label>
-                  <Input name="tax_id" inputMode="numeric" defaultValue={contact?.tax_id ?? ""} placeholder="0105561000000" />
+                  <Input name="tax_id" inputMode="numeric" value={taxId} placeholder="0105561000000"
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setTaxId(v);
+                      // เดาประเภทให้ก่อนเฉพาะตอนผู้ใช้ยังไม่เคยเลือกเอง — เลือกแล้วห้ามเปลี่ยนทับ
+                      if (!touchedKind) setKind(guessRecipientKind(v));
+                    }} />
+                  {taxDigits.length === 13 && !taxOk && (
+                    <p className="mt-1 text-[11px] text-red-600">เลขนี้ไม่ผ่านการตรวจหลักสุดท้าย ลองทานอีกครั้ง — เลขผิดจะติดไปถึงไฟล์ที่ยื่นสรรพากร</p>
+                  )}
+                  {taxDigits.length > 0 && taxDigits.length !== 13 && (
+                    <p className="mt-1 text-[11px] text-neutral-400">กรอกแล้ว {taxDigits.length} หลัก (ต้องครบ 13)</p>
+                  )}
                 </div>
                 <div>
                   <Label>สาขา</Label>
                   <Input name="branch" defaultValue={contact?.branch ?? ""} placeholder="สำนักงานใหญ่" />
+                  <p className="mt-1 text-[11px] text-neutral-400">ว่างไว้ = สำนักงานใหญ่ · สาขาให้กรอกเลข เช่น 1</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>ประเภทผู้รับเงิน (ใช้เลือกแบบยื่นหัก ณ ที่จ่าย)</Label>
+                  <Select name="recipient_kind" value={kind}
+                    onChange={(e) => { setKind(e.target.value as RecipientKind); setTouchedKind(true); }}>
+                    {RECIPIENT_KINDS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                  </Select>
+                  <p className="mt-1 text-[11px] text-neutral-400">
+                    {RECIPIENT_KINDS.find((r) => r.value === kind)?.hint} · หักภาษีให้รายนี้จะเข้าแบบ{" "}
+                    <span className="font-semibold text-neutral-600">{RECIPIENT_KINDS.find((r) => r.value === kind)?.form}</span>
+                  </p>
                 </div>
                 <div>
                   <Label>โทรศัพท์</Label>

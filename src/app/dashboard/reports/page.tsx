@@ -14,7 +14,8 @@ import { LineChart, CheckCircle2, FileText, FileSpreadsheet, BookOpenText } from
 import ExportButtons from "./export-buttons";
 import PeriodPicker from "./period-picker";
 import AccountantPackage from "./accountant-package";
-import { whtIncomeLabel, whtIncomeDesc, branchCode, isJuristicPerson } from "@/lib/tax-th";
+import { whtIncomeLabel, whtIncomeDesc, branchCode, rdFormFor } from "@/lib/tax-th";
+import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, selectWhtReceivableDocs } from "@/lib/vat-docs";
 
 export const dynamic = "force-dynamic";
 
@@ -268,16 +269,16 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
   shopId: string; supabase: SB; period: Period; shopName: string; shopTaxId: string; rdAllowed: boolean;
 }) {
   const { data } = await supabase.from("fin_docs")
-    .select("id,doc_type,doc_number,contact_name,contact_tax_id,issue_date,total,vat_amount,vat_mode,ref_doc_id")
-    .eq("shop_id", shopId).neq("status", "void").neq("vat_mode", "none").gt("vat_amount", 0)
+    .select("id,doc_type,status,doc_number,contact_name,contact_tax_id,contact_branch,issue_date,total,vat_amount,vat_mode,ref_doc_id")
+    .eq("shop_id", shopId)
     .gte("issue_date", period.start).lt("issue_date", period.end)
     .order("issue_date");
   const docs = (data ?? []) as unknown as FinDoc[];
 
-  const receipts = docs.filter((d) => d.doc_type === "receipt");
-  const refIds = new Set(receipts.map((r) => r.ref_doc_id).filter(Boolean));
-  const salesTax = [...receipts, ...docs.filter((d) => d.doc_type === "invoice" && !refIds.has(d.id))];
-  const buyTax = docs.filter((d) => d.doc_type === "expense");
+  // กฎเลือกเอกสารอยู่ที่ src/lib/vat-docs.ts ที่เดียว — ชุดส่งสำนักงานบัญชีใช้ตัวเดียวกัน
+  // ตัวเลขบนจอกับในไฟล์จึงตรงกันเสมอ และกันนับซ้ำเมื่อใบแจ้งหนี้ถูกแปลงเป็นใบเสร็จข้ามเดือน
+  const salesTax = selectVatSalesDocs(docs);
+  const buyTax = selectVatPurchaseDocs(docs);
 
   const sumSales = salesTax.reduce((a, d) => a + Number(d.vat_amount), 0);
   const sumBuy = buyTax.reduce((a, d) => a + Number(d.vat_amount), 0);
@@ -292,7 +293,10 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
   }));
   // ไฟล์โอนย้ายรายงานภาษีซื้อ-ขาย: ลำดับ|วันที่(พ.ศ.)|เลขที่ใบกำกับ|ชื่อคู่ค้า|เลขผู้เสียภาษี|สาขา|มูลค่า|VAT
   const txtOf = (list: FinDoc[]) => list.map((d, i) =>
-    [i + 1, rdDateBE(d.issue_date), rdClean(d.doc_number), rdClean(d.contact_name), rdClean(d.contact_tax_id), "00000",
+    // สาขาต้องเป็นค่าจริงของคู่ค้าแต่ละราย เดิมฮาร์ดโค้ด "00000" ทุกบรรทัด
+    // ทำให้ใบที่ออกให้สาขาถูกยื่นเป็นสำนักงานใหญ่หมด
+    [i + 1, rdDateBE(d.issue_date), rdClean(d.doc_number), rdClean(d.contact_name), rdClean(d.contact_tax_id),
+      branchCode(d.contact_branch),
       rdAmount(Number(d.total) - Number(d.vat_amount)), rdAmount(d.vat_amount)].join("|"),
   ).join("\r\n");
 
@@ -320,7 +324,7 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{sec.title} ({sec.list.length} ใบ)</CardTitle>
             <ExportButtons xlsxName={`${sec.base}.xlsx`} rows={mkRows(sec.list)}
-              txtName={`${sec.base}.txt`} txtContent={txtOf(sec.list)} txtLocked={!rdAllowed} />
+              txtName={`${sec.base}.txt`} txtContent={rdAllowed ? txtOf(sec.list) : undefined} txtLocked={!rdAllowed} />
           </CardHeader>
           <CardContent className="px-0 pb-0">
             {sec.list.length === 0 ? (
@@ -358,19 +362,22 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
   shopId: string; supabase: SB; period: Period; shopName: string; shopTaxId: string; rdAllowed: boolean;
 }) {
   const { data } = await supabase.from("fin_docs")
-    .select("id,doc_type,doc_number,contact_name,contact_tax_id,contact_address,contact_branch,issue_date,total,vat_amount,wht_rate,wht_amount,wht_income_type")
-    .eq("shop_id", shopId).neq("status", "void").gt("wht_amount", 0)
+    .select("id,doc_type,status,doc_number,contact_name,contact_tax_id,contact_address,contact_branch,recipient_kind,issue_date,total,vat_amount,vat_mode,ref_doc_id,wht_rate,wht_amount,wht_income_type")
+    .eq("shop_id", shopId).gt("wht_amount", 0)
     .gte("issue_date", period.start).lt("issue_date", period.end)
     .order("issue_date");
   const docs = (data ?? []) as unknown as FinDoc[];
 
-  const paid = docs.filter((d) => d.doc_type === "expense");
-  const received = docs.filter((d) => d.doc_type !== "expense");
+  const paid = selectWhtPayableDocs(docs);       // เราหักเขาไว้ ต้องนำส่ง
+  const received = selectWhtReceivableDocs(docs); // ลูกค้าหักเราไว้ ต้องตามเก็บ 50 ทวิ
   const sumPaid = paid.reduce((a, d) => a + Number(d.wht_amount), 0);
 
-  // ใช้กฎกลางตัวเดียวกับที่หนังสือ 50 ทวิ ใช้ — ถ้าแยกกันเขียน สองที่จะบอกแบบยื่นคนละแบบ
-  const pnd53 = paid.filter((d) => isJuristicPerson(d.contact_tax_id));
-  const pnd3 = paid.filter((d) => !isJuristicPerson(d.contact_tax_id));
+  // แบบยื่นยึด "ประเภทผู้รับเงิน" ที่ผู้ใช้ยืนยันเป็นหลัก ถ้ายังไม่ระบุค่อยเดาจากเลขผู้เสียภาษี
+  // เดิมเดาจากเลขขึ้นต้น 0 อย่างเดียว ทำให้คณะบุคคล/ห้างหุ้นส่วนสามัญไม่จดทะเบียน
+  // ซึ่งได้เลขขึ้นต้น 0 เหมือนกัน ถูกจัดเข้า ภ.ง.ด.53 ทั้งที่ต้องยื่น ภ.ง.ด.3
+  const formOf = (d: FinDoc) => rdFormFor(d.contact_tax_id, d.wht_income_type, d.recipient_kind);
+  const pnd53 = paid.filter((d) => formOf(d) === "ภ.ง.ด.53");
+  const pnd3 = paid.filter((d) => formOf(d) !== "ภ.ง.ด.53");
 
   const mkRows = (list: FinDoc[]) => list.map((d, i) => ({
     "ลำดับ": i + 1, "เลขผู้เสียภาษี": d.contact_tax_id ?? "", "ชื่อผู้ถูกหัก": d.contact_name ?? "",
@@ -408,7 +415,7 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{sec.title} ({sec.list.length})</CardTitle>
             <ExportButtons xlsxName={`${sec.base}.xlsx`} rows={mkRows(sec.list)}
-              txtName={`${sec.base}.txt`} txtContent={txtOf(sec.list)} txtLocked={!rdAllowed} />
+              txtName={`${sec.base}.txt`} txtContent={rdAllowed ? txtOf(sec.list) : undefined} txtLocked={!rdAllowed} />
           </CardHeader>
           <CardContent className="px-0 pb-0">
             {sec.list.length === 0 ? (

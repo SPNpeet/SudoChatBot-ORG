@@ -53,23 +53,31 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
       {/* เนื้อหา — pb มือถือ = bottom nav + ปุ่มลอย ปุ่มแถวล่างสุดต้องกดได้เสมอ */}
       <MainArea>
-        <SystemAlertBanner />
-        <VatRateAlert />
-        <Notifications />
+        {/* แบนเนอร์แจ้งเตือนเป็นของหน้าจอ ไม่ใช่ของเอกสาร
+            หน้าพิมพ์ใบกำกับภาษีอยู่ใต้ layout นี้ด้วย ถ้าไม่กัน จะมีข้อความเตือน
+            ไปโผล่บนใบกำกับภาษีที่ส่งให้ลูกค้าและกรมสรรพากร */}
+        <div data-noprint>
+          <SystemAlertBanner />
+          <VatRateAlert />
+          <Notifications />
+        </div>
         {children}
       </MainArea>
 
-      {/* ค้นหาทุกอย่างด้วย Ctrl+K — ทางลัดที่ทำให้คนใช้คล่องขึ้นเร็วที่สุด */}
-      <CommandPalette shopId={shop.id} />
+      {/* ปุ่มลอยทั้งหมด — ต้องไม่ติดไปกับกระดาษ (globals.css ซ่อน [data-noprint] ตอนพิมพ์) */}
+      <div data-noprint>
+        {/* ค้นหาทุกอย่างด้วย Ctrl+K — ทางลัดที่ทำให้คนใช้คล่องขึ้นเร็วที่สุด */}
+        <CommandPalette shopId={shop.id} />
 
-      {/* Bottom nav — มือถือ */}
-      <MobileNav isAdmin={!!isAdmin} />
+        {/* Bottom nav — มือถือ */}
+        <MobileNav isAdmin={!!isAdmin} />
 
-      {/* ปุ่ม + สร้างงานที่ทำบ่อย จากทุกหน้า */}
-      <QuickCreate />
+        {/* ปุ่ม + สร้างงานที่ทำบ่อย จากทุกหน้า */}
+        <QuickCreate />
 
-      {/* ปุ่มแนะนำ/ติชม — เสียงผู้ใช้ตรงถึงเจ้าของแพลตฟอร์ม */}
-      <FeedbackWidget shopId={shop.id} />
+        {/* ปุ่มแนะนำ/ติชม — เสียงผู้ใช้ตรงถึงเจ้าของแพลตฟอร์ม */}
+        <FeedbackWidget shopId={shop.id} />
+      </div>
     </div>
     </NavShell>
     </ToastProvider>

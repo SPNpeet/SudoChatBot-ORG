@@ -13,7 +13,7 @@ import { postJournalOrThrow, reverseJournalOf, applyPaymentToDoc, bkkToday, ACC 
 import { verifySlip, type SlipResult } from "@/lib/slip-verify";
 import { notifyShopLine } from "@/lib/line";
 import type { DocType, VatMode, FinDoc } from "@/lib/types/finance";
-import { WHT_INCOME_TYPES, DEFAULT_WHT_INCOME } from "@/lib/tax-th";
+import { WHT_INCOME_TYPES, DEFAULT_WHT_INCOME, guessRecipientKind } from "@/lib/tax-th";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type DocResult = { ok: true; docId: string; docNumber: string; approvalPending?: boolean } | { ok: false; error: string };
@@ -45,6 +45,10 @@ export async function upsertContact(shopId: string, formData: FormData): Promise
       name: String(formData.get("name") ?? "").trim().slice(0, 200),
       tax_id: String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null,
       branch: String(formData.get("branch") ?? "").trim().slice(0, 100) || null,
+      // ตัวตัดสินแบบยื่น ภ.ง.ด.3 / 53 — ถ้าไม่ส่งมาให้เดาจากเลขผู้เสียภาษีไว้ก่อน
+      recipient_kind: ["individual", "juristic", "group"].includes(String(formData.get("recipient_kind")))
+        ? String(formData.get("recipient_kind"))
+        : guessRecipientKind(String(formData.get("tax_id") ?? "")),
       address: String(formData.get("address") ?? "").trim().slice(0, 500) || null,
       email: String(formData.get("email") ?? "").trim().slice(0, 200) || null,
       phone: String(formData.get("phone") ?? "").trim().slice(0, 30) || null,
@@ -201,8 +205,9 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
     // snapshot ผู้ติดต่อ
     let contactName = String(input.contact_name ?? "").trim().slice(0, 200) || null;
     let contactTaxId: string | null = null, contactAddress: string | null = null, contactBranch: string | null = null;
+    let recipientKind: string | null = null;
     if (input.contact_id) {
-      const { data: c } = await svc.from("contacts").select("name,tax_id,address,branch").eq("id", input.contact_id).eq("shop_id", shopId).maybeSingle();
+      const { data: c } = await svc.from("contacts").select("name,tax_id,address,branch,recipient_kind").eq("id", input.contact_id).eq("shop_id", shopId).maybeSingle();
       if (c) {
         contactName = c.name;
         contactTaxId = c.tax_id;
@@ -210,6 +215,8 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
         // สาขาเก็บแยกช่อง ไม่ยัดต่อท้ายที่อยู่ — ใบกำกับภาษีต้องพิมพ์ "สำนักงานใหญ่/สาขาที่ NNNNN"
         // ในรูปแบบมาตรฐาน ถ้าปนอยู่ในที่อยู่จะจัดรูปแบบให้ถูกกฎหมายไม่ได้
         contactBranch = c.branch || null;
+        // snapshot ไว้กับเอกสาร ถ้าคู่ค้าเปลี่ยนประเภททีหลัง เอกสารเก่าที่ยื่นไปแล้วต้องไม่เปลี่ยนตาม
+        recipientKind = c.recipient_kind || guessRecipientKind(c.tax_id);
       }
     }
 
@@ -221,6 +228,7 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       contact_tax_id: contactTaxId,
       contact_address: contactAddress,
       contact_branch: contactBranch,
+      recipient_kind: recipientKind,
       issue_date: issueDate,
       due_date: input.due_date || null,
       category_id: input.doc_type === "expense" ? (input.category_id || null) : null,

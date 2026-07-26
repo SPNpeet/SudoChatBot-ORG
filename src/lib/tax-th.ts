@@ -107,20 +107,75 @@ export function branchCode(raw: string | null | undefined): string {
  * ผู้ถูกหักเป็นนิติบุคคลไหม — ตัดสินจากเลข 13 หลัก
  *  · เลขทะเบียนนิติบุคคล ขึ้นต้นด้วย 0  -> ภ.ง.ด.53
  *  · เลขบัตรประชาชนบุคคลธรรมดา ขึ้นต้น 1-8 -> ภ.ง.ด.3
- * ⚠️ ต้องมีที่เดียวในระบบ ถ้าเขียนซ้ำหลายที่แล้วเพี้ยนกัน
- *    หนังสือ 50 ทวิ จะบอกแบบหนึ่ง แต่ไฟล์ที่ยื่นจริงเป็นอีกแบบ = ยื่นผิดแบบ
+ *
+ * ⚠️ นี่คือ "การเดา" ไม่ใช่คำตอบ ใช้ได้แค่เป็นค่าตั้งต้น
+ * คณะบุคคลและห้างหุ้นส่วนสามัญที่ไม่จดทะเบียน ได้เลขขึ้นต้นด้วย 0 เหมือนกัน
+ * แต่เสียภาษีอย่างบุคคลธรรมดา ต้องยื่น ภ.ง.ด.3 ไม่ใช่ 53
+ * ของจริงให้ยึด recipient_kind ที่ผู้ใช้ยืนยัน -> ใช้ rdFormFor()
  */
 export function isJuristicPerson(taxId: string | null | undefined): boolean {
   const d = (taxId ?? "").replace(/\D/g, "");
   return d.length === 13 && d.startsWith("0");
 }
 
-/** แบบยื่นที่ต้องใช้กับรายการหัก ณ ที่จ่ายรายนี้ */
-export function rdFormFor(taxId: string | null | undefined, incomeCode: string | null | undefined): string {
+// ---- ประเภทผู้รับเงิน (ตัวตัดสินแบบยื่นตัวจริง) --------------------------
+export type RecipientKind = "individual" | "juristic" | "group";
+
+export const RECIPIENT_KINDS: { value: RecipientKind; label: string; form: "ภ.ง.ด.3" | "ภ.ง.ด.53"; hint: string }[] = [
+  { value: "individual", label: "บุคคลธรรมดา", form: "ภ.ง.ด.3", hint: "ใช้เลขบัตรประชาชน 13 หลัก" },
+  { value: "juristic", label: "นิติบุคคล (บริษัท / ห้างหุ้นส่วนจดทะเบียน)", form: "ภ.ง.ด.53", hint: "เลขทะเบียนนิติบุคคลขึ้นต้นด้วย 0" },
+  { value: "group", label: "คณะบุคคล / ห้างหุ้นส่วนสามัญไม่จดทะเบียน", form: "ภ.ง.ด.3", hint: "เลขขึ้นต้นด้วย 0 เหมือนนิติบุคคล แต่ยื่น ภ.ง.ด.3" },
+];
+
+export function recipientKindLabel(k: string | null | undefined): string {
+  return RECIPIENT_KINDS.find((r) => r.value === k)?.label ?? "";
+}
+
+/** ค่าตั้งต้นจากเลขผู้เสียภาษี — ผู้ใช้แก้ทับได้เสมอ */
+export function guessRecipientKind(taxId: string | null | undefined): RecipientKind {
+  return isJuristicPerson(taxId) ? "juristic" : "individual";
+}
+
+/**
+ * แบบยื่นที่ต้องใช้กับรายการหัก ณ ที่จ่ายรายนี้
+ * @param kind ประเภทผู้รับเงินที่ผู้ใช้ยืนยัน — ถ้าไม่มีค่อยถอยไปเดาจากเลขผู้เสียภาษี
+ */
+export function rdFormFor(
+  taxId: string | null | undefined,
+  incomeCode: string | null | undefined,
+  kind?: string | null,
+): string {
   const t = WHT_INCOME_TYPES.find((x) => x.code === incomeCode);
   if (t?.form === "ภ.ง.ด.1") return "ภ.ง.ด.1";
   if (t?.form === "ภ.ง.ด.2") return "ภ.ง.ด.2";
+  const k = RECIPIENT_KINDS.find((r) => r.value === kind);
+  if (k) return k.form;
   return isJuristicPerson(taxId) ? "ภ.ง.ด.53" : "ภ.ง.ด.3";
+}
+
+/**
+ * ยอดจ่ายขั้นต่ำที่ต้องหัก ณ ที่จ่าย — ต่ำกว่านี้ไม่ต้องหัก
+ * (คำสั่งกรมสรรพากรที่ ท.ป.4/2528 — เว้นแต่เป็นการจ่ายตามสัญญาต่อเนื่อง
+ *  ที่รวมทั้งสัญญาแล้วถึงเกณฑ์ ซึ่งระบบตัดสินแทนไม่ได้ ต้องให้คนยืนยัน)
+ */
+export const WHT_MIN_PAYMENT = 1000;
+
+/** ยอดนี้ต่ำกว่าเกณฑ์ต้องหักไหม — ใช้ขึ้นคำเตือนให้คนตัดสิน ไม่ได้บล็อก */
+export function belowWhtThreshold(baseAmount: number): boolean {
+  return baseAmount > 0 && baseAmount < WHT_MIN_PAYMENT;
+}
+
+/**
+ * ตรวจ check digit ของเลขประจำตัวผู้เสียภาษี 13 หลัก
+ * สูตรทางการ: ผลรวม (หลักที่ i x (13 - i)) หาร 11 เอาเศษ แล้ว (11 - เศษ) mod 10
+ * ใช้กันเลขพิมพ์ผิดตั้งแต่ตอนกรอก ก่อนจะไปโผล่ในไฟล์ที่ยื่นสรรพากร
+ */
+export function isValidTaxId(raw: string | null | undefined): boolean {
+  const d = (raw ?? "").replace(/\D/g, "");
+  if (d.length !== 13) return false;
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += Number(d[i]) * (13 - i);
+  return (11 - (sum % 11)) % 10 === Number(d[12]);
 }
 
 export interface TaxInvoiceIssue { field: string; why: string }

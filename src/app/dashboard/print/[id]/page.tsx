@@ -245,7 +245,8 @@ function WhtCert({ doc, shopName, shopTaxId, shopAddress }: {
   const income = WHT_INCOME_TYPES.find((t) => t.code === doc.wht_income_type);
   const incomeLabel = income?.label ?? doc.wht_income_type ?? "40(8) ธุรกิจ พาณิชย์ บริการอื่น ๆ";
   // ใช้กฎกลางเดียวกับหน้ารายงาน/ไฟล์ยื่น — ห้ามเขียนซ้ำ ไม่งั้นเอกสารกับแบบที่ยื่นจะไม่ตรงกัน
-  const rdForm = rdFormFor(doc.contact_tax_id, doc.wht_income_type);
+  // ยึดประเภทผู้รับเงินที่ snapshot ไว้กับเอกสาร หนังสือ 50 ทวิ กับไฟล์ที่ยื่นจึงบอกแบบเดียวกันเสมอ
+  const rdForm = rdFormFor(doc.contact_tax_id, doc.wht_income_type, doc.recipient_kind);
   return (
     <div>
       <div className="flex items-start justify-between gap-4">

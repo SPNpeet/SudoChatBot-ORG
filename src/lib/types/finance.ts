@@ -7,6 +7,7 @@ export type VatMode = "none" | "exclusive" | "inclusive";
 export interface Contact {
   id: string; shop_id: string; kind: "customer" | "vendor" | "both";
   name: string; tax_id: string | null; branch: string | null; address: string | null;
+  recipient_kind: string | null;   // individual | juristic | group — ตัวตัดสิน ภ.ง.ด.3 vs 53
   email: string | null; phone: string | null; notes: string | null;
   status: string; created_at: string;
 }
@@ -26,6 +27,9 @@ export interface FinDoc {
   id: string; shop_id: string; doc_type: DocType; doc_number: string;
   contact_id: string | null; contact_name: string | null;
   contact_tax_id: string | null; contact_address: string | null; contact_branch: string | null;
+  // snapshot ประเภทผู้รับเงิน ณ วันออกเอกสาร — ตัวตัดสิน ภ.ง.ด.3 vs 53
+  // ต้องเก็บติดเอกสาร ถ้าคู่ค้าแก้ประเภททีหลัง แบบที่ยื่นไปแล้วต้องไม่เปลี่ยนย้อนหลัง
+  recipient_kind: string | null;
   wht_income_type: string | null;   // ประเภทเงินได้ ม.40 — ใช้บน 50 ทวิ + ไฟล์ยื่น ภ.ง.ด.
   issue_date: string; due_date: string | null;
   category_id: string | null;
