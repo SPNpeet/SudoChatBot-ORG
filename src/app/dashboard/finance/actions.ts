@@ -188,8 +188,14 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
 
     const vatMode: VatMode = ["none", "exclusive", "inclusive"].includes(String(input.vat_mode)) ? input.vat_mode! : "none";
     const whtRate = Math.max(0, Math.min(15, Number(input.wht_rate) || 0));
-    const t = calcDocTotals(items, Number(input.discount) || 0, vatMode, whtRate);
     const issueDate = input.issue_date || bkkToday();
+
+    // อัตรา VAT ต้องมาจากตาราง vat_rates ตามวันที่ออกเอกสาร ไม่ใช่เลขที่ฮาร์ดโค้ดตอน deploy
+    // พ.ร.ฎ.ลดอัตราเป็น 7% ต่ออายุเป็นรายปี ถ้าอัตราเปลี่ยนแล้วโค้ดยังใช้ค่าเดิม
+    // เอกสารทุกใบหลังจากนั้นจะคิดภาษีผิด และแก้ย้อนหลังไม่ได้เพราะส่งให้ลูกค้าไปแล้ว
+    const { data: rateRow } = await svc.rpc("vat_rate_on", { p_date: issueDate });
+    const vatRate = Number(rateRow ?? 0.07);
+    const t = calcDocTotals(items, Number(input.discount) || 0, vatMode, whtRate, vatRate);
     const status = input.status === "draft" ? "draft" : "awaiting";
 
     // snapshot ผู้ติดต่อ

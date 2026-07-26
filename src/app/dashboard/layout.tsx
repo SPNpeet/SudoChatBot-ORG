@@ -10,6 +10,7 @@ import { ToastProvider } from "@/components/toast";
 import CommandPalette from "./command-palette";
 import Notifications from "./notifications";
 import SystemAlertBanner from "./system-alert-banner";
+import VatRateAlert from "./vat-rate-alert";
 import FeedbackWidget from "./feedback-widget";
 import QuickCreate from "./quick-create";
 import CompanySwitcher from "./company-switcher";
@@ -53,6 +54,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* เนื้อหา — pb มือถือ = bottom nav + ปุ่มลอย ปุ่มแถวล่างสุดต้องกดได้เสมอ */}
       <MainArea>
         <SystemAlertBanner />
+        <VatRateAlert />
         <Notifications />
         {children}
       </MainArea>
