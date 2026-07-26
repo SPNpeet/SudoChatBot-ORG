@@ -15,10 +15,26 @@ async function assertPlatformAdmin() {
   return { supabase, user };
 }
 
-export async function claimAdmin() {
+/**
+ * ยึดสิทธิ์แอดมินแพลตฟอร์มครั้งแรก (bootstrap ตอนระบบยังไม่มีแอดมินเลย)
+ *
+ * ตั้งแต่ 26 ก.ค. 2569 สิทธิ์ EXECUTE ถูกถอนจาก role `authenticated` แล้ว
+ * เพราะแพลตฟอร์มมีแอดมินครบ ไม่มีเหตุให้เปิดประตูนี้ค้างไว้
+ * ถ้าเปิดค้างแล้ววันใดแถวใน platform_admins หายหมด ลูกค้าคนถัดไปที่ล็อกอิน
+ * จะยึดสิทธิ์ทั้งแพลตฟอร์มได้ทันที — ความเสี่ยงสูงกว่าประโยชน์มาก
+ *
+ * ตอนนี้จึงคืนข้อความอธิบายแทนที่จะโยน error ดิบของ Postgres ใส่หน้าผู้ใช้
+ * ถ้าต้องกู้จริง เพิ่มแถวใน platform_admins ผ่าน service_role ได้
+ */
+export async function claimAdmin(): Promise<boolean> {
   const { supabase } = await requireUser();
   const { data, error } = await supabase.rpc("claim_platform_admin");
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (/permission denied|not exist/i.test(error.message)) {
+      throw new Error("ระบบมีผู้ดูแลแพลตฟอร์มแล้ว ช่องทางนี้ถูกปิดถาวรเพื่อความปลอดภัย");
+    }
+    throw new Error(error.message);
+  }
   revalidatePath("/dashboard/admin");
   return data as boolean;
 }
