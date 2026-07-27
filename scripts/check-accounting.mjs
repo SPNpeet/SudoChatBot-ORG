@@ -102,7 +102,7 @@ console.log("  ถูก  วันที่ · จำนวนเงิน · �
 
 // ---------- 4. ตรวจข้อมูลก่อนโหลดไฟล์ยื่น ----------
 section("ตัวตรวจข้อมูลก่อนโหลดไฟล์ ภ.ง.ด.");
-const { checkRdWhtRows, whtDueDates } = await import("../src/lib/rd.ts");
+const { checkRdWhtRows, whtPaperDueDate } = await import("../src/lib/rd.ts");
 const base = { doc_number: "EXP-1", contact_name: "บจ.ทดสอบ", contact_address: "1 ถ.สุขุมวิท กรุงเทพฯ",
   contact_tax_id: "0105569012345", wht_income_type: "40(8)", wht_rate: 3, wht_amount: 300, total: 10700, vat_amount: 700 };
 const chk = (patch) => checkRdWhtRows([{ ...base, ...patch }]);
@@ -115,13 +115,12 @@ ok(chk({ wht_income_type: null }).length === 1, "จับได้: ไม่�
 ok(chk({ wht_amount: 0 }).length === 1, "จับได้: ภาษีหักเป็น 0");
 ok(chk({ contact_name: "บจ.ทดสอบ 🙂" }).length === 1, "จับได้: ชื่อมีอักขระที่ TIS-620 เก็บไม่ได้");
 ok(chk({ contact_name: "บจ. ก้าวหน้า ABC" }).length === 0, "ไทย+อังกฤษปกติ ต้องไม่เตือนผิด");
-{
-  const d = whtDueDates("2026-07");
-  ok(d && d.paper === "2026-08-07", "กำหนดยื่นกระดาษ ก.ค. = 7 ส.ค.", d ? d.paper : "null");
-  ok(d && d.online === "2026-08-15", "กำหนดยื่นออนไลน์ ก.ค. = 15 ส.ค.", d ? d.online : "null");
-  const dec = whtDueDates("2026-12");
-  ok(dec && dec.paper === "2027-01-07", "ข้ามปี: ธ.ค. 2569 = 7 ม.ค. 2570", dec ? dec.paper : "null");
-}
+// กำหนดกระดาษเป็นกฎหมาย (ม.52) จึงทดสอบในโค้ดได้
+// ส่วนวันออนไลน์เป็นประกาศที่มีวันหมดอายุ อยู่ในตาราง rd_filing_extensions ไม่ทดสอบที่นี่
+ok(whtPaperDueDate("2026-07") === "2026-08-07", "ม.52 ก.ค. 2569 = 7 ส.ค. 2569", String(whtPaperDueDate("2026-07")));
+ok(whtPaperDueDate("2026-12") === "2027-01-07", "ข้ามปี ธ.ค. 2569 = 7 ม.ค. 2570", String(whtPaperDueDate("2026-12")));
+ok(whtPaperDueDate("2028-01") === "2028-02-07", "ปีอธิกสุรทิน ม.ค. 2571 = 7 ก.พ. 2571", String(whtPaperDueDate("2028-01")));
+ok(whtPaperDueDate("abc") === null, "รูปแบบผิดต้องคืน null");
 console.log("  ถูก  ตรวจครบทุกกรณี");
 
 console.log(failures === 0

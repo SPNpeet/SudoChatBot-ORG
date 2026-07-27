@@ -104,17 +104,25 @@ export function checkRdWhtRows(rows: RdCheckable[]): RdRowIssue[] {
 }
 
 /**
- * กำหนดยื่น ภ.ง.ด.3/53 ของเดือนที่จ่ายเงิน
- * ม.52 — ภายใน 7 วันนับแต่วันสิ้นเดือน · ยื่นออนไลน์ได้ขยายเพิ่มอีก 8 วัน
- * คืนวันกระดาษกับวันออนไลน์ให้แสดงคู่กัน ผู้ใช้จะได้ไม่พลาดเพราะจำผิดว่าใช้วันไหน
+ * กำหนดนำส่ง ภ.ง.ด. แบบกระดาษ ของเดือนที่จ่ายเงิน
+ * ประมวลรัษฎากร ม.52 — ภายใน 7 วันนับแต่วันสิ้นเดือนที่จ่าย
+ *
+ * ฟังก์ชันนี้คิดเฉพาะกำหนดตามกฎหมาย ซึ่งนิ่งและไม่มีวันหมดอายุ
+ *
+ * ⚠️ ส่วน "ยื่นออนไลน์ได้เพิ่มอีกกี่วัน" จงใจไม่อยู่ในโค้ด
+ * เพราะมาจากประกาศกระทรวงการคลังที่มีวันสิ้นสุด เหมือนกรณีอัตรา VAT 7%
+ * ถ้าฮาร์ดโค้ดไว้แล้วประกาศหมดอายุ ระบบจะบอกกำหนดช้ากว่าจริง
+ * ผู้ใช้ยื่นตามที่ระบบบอก = ยื่นเกินกำหนด = เงินเพิ่ม 1.5% ต่อเดือน
+ * -> เก็บในตาราง rd_filing_extensions และอ่านผ่าน RPC wht_due_dates() แทน
+ *
+ * ⚠️ ถ้าวันครบกำหนดตรงวันหยุดราชการ กฎหมายให้เลื่อนเป็นวันทำการถัดไป
+ * ระบบไม่มีตารางวันหยุดจึงไม่คำนวณให้ และเขียนกำกับไว้บนหน้าจอ
  */
-export function whtDueDates(periodMonth: string): { paper: string; online: string } | null {
+export function whtPaperDueDate(periodMonth: string): string | null {
   if (!/^\d{4}-\d{2}$/.test(periodMonth)) return null;
   const y = Number(periodMonth.slice(0, 4));
   const m = Number(periodMonth.slice(5, 7));
-  const paper = new Date(Date.UTC(y, m, 7));         // วันที่ 7 ของเดือนถัดไป
-  const online = new Date(Date.UTC(y, m, 15));       // +8 วัน
-  return { paper: paper.toISOString().slice(0, 10), online: online.toISOString().slice(0, 10) };
+  return new Date(Date.UTC(y, m, 7)).toISOString().slice(0, 10);
 }
 
 /**

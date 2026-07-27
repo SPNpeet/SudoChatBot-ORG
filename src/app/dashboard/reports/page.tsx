@@ -7,7 +7,7 @@ import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td, Badge, PageHeader } from "@/components/ui";
 import { baht, bahtDoc, dateOnlyTH, cn } from "@/lib/utils";
 import { agingBucket, AGING_LABEL_TH, docOutstanding, DOC_TYPE_TH } from "@/lib/finance";
-import { rdClean, rdDateBE, rdAmount, checkRdWhtRows, whtDueDates } from "@/lib/rd";
+import { rdClean, rdDateBE, rdAmount, checkRdWhtRows } from "@/lib/rd";
 import type { FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
 import { LineChart, CheckCircle2, FileText, FileSpreadsheet, BookOpenText } from "lucide-react";
@@ -393,10 +393,14 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
   // เดิมเดาจากเลขขึ้นต้น 0 อย่างเดียว ทำให้คณะบุคคล/ห้างหุ้นส่วนสามัญไม่จดทะเบียน
   // ซึ่งได้เลขขึ้นต้น 0 เหมือนกัน ถูกจัดเข้า ภ.ง.ด.53 ทั้งที่ต้องยื่น ภ.ง.ด.3
   // กำหนดยื่นคิดจากเดือนสุดท้ายของงวด (งวดไตรมาส/ปีก็ยึดเดือนสุดท้ายที่มีการจ่าย)
-  const due = whtDueDates(period.months[period.months.length - 1]);
-  const dueLeft = due
-    ? Math.floor((new Date(due.online + "T00:00:00Z").getTime()
-        - new Date(new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10) + "T00:00:00Z").getTime()) / 86400000)
+  // ดึงจาก RPC เพราะจำนวนวันที่ขยายให้ตอนยื่นออนไลน์เป็น "ประกาศที่มีวันหมดอายุ"
+  // ไม่ใช่กฎหมายถาวร — ถ้าพ้นช่วงที่ยืนยันไว้ RPC จะคืน online = null แทนที่จะเดา
+  const { data: dueRaw } = await supabase.rpc("wht_due_dates", { p_period: period.months[period.months.length - 1] });
+  const due = dueRaw as { paper: string; online: string | null; extension_until: string | null } | null;
+  const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
+  const refDue = due?.online ?? due?.paper ?? null;
+  const dueLeft = refDue
+    ? Math.floor((new Date(refDue + "T00:00:00Z").getTime() - new Date(today + "T00:00:00Z").getTime()) / 86400000)
     : null;
 
   const formOf = (d: FinDoc) => rdFormFor(d.contact_tax_id, d.wht_income_type, d.recipient_kind);
@@ -434,15 +438,25 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
       {/* กำหนดยื่นของงวด — คนพลาดเพราะจำสลับระหว่างวันยื่นกระดาษกับออนไลน์บ่อยมาก
           แสดงคู่กันไปเลย ไม่ต้องให้ไปเปิดปฏิทินสรรพากรเอง */}
       {due && sumPaid > 0 && (
-        <p className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-[12px] leading-relaxed text-neutral-600">
-          <b className="text-neutral-800">กำหนดนำส่งของงวดนี้</b> — ยื่นกระดาษภายใน {dateOnlyTH(due.paper)} ·
-          ยื่นออนไลน์ภายใน {dateOnlyTH(due.online)} (ขยายเวลาเพิ่ม 8 วัน)
-          {dueLeft !== null && (
-            <span className={dueLeft < 0 ? " font-bold text-red-600" : dueLeft <= 5 ? " font-bold text-amber-700" : " text-neutral-500"}>
-              {" · "}{dueLeft < 0 ? `เลยกำหนดยื่นออนไลน์มาแล้ว ${Math.abs(dueLeft)} วัน` : `เหลืออีก ${dueLeft} วัน`}
-            </span>
-          )}
-        </p>
+        <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-[12px] leading-relaxed text-neutral-600">
+          <p>
+            <b className="text-neutral-800">กำหนดนำส่งของงวดนี้</b> — ยื่นกระดาษภายใน{" "}
+            <b className="text-neutral-800">{dateOnlyTH(due.paper)}</b> (ประมวลรัษฎากร มาตรา 52)
+            {due.online
+              ? <> · ยื่นออนไลน์ภายใน <b className="text-neutral-800">{dateOnlyTH(due.online)}</b></>
+              : <> · <span className="text-amber-700">มาตรการขยายเวลายื่นออนไลน์ที่ระบบรู้จักไม่ครอบคลุมงวดนี้ ให้ยึดวันกระดาษไว้ก่อน แล้วตรวจประกาศฉบับล่าสุด</span></>}
+            {dueLeft !== null && (
+              <span className={dueLeft < 0 ? " font-bold text-red-600" : dueLeft <= 5 ? " font-bold text-amber-700" : " text-neutral-500"}>
+                {" · "}{dueLeft < 0 ? `เลยกำหนดมาแล้ว ${Math.abs(dueLeft)} วัน` : `เหลืออีก ${dueLeft} วัน`}
+              </span>
+            )}
+          </p>
+          {/* บอกข้อจำกัดตรง ๆ ดีกว่าให้เขาเชื่อวันที่ผิด */}
+          <p className="mt-1 text-[11px] text-neutral-400">
+            ถ้าวันครบกำหนดตรงวันหยุดราชการ กฎหมายให้เลื่อนเป็นวันทำการถัดไป — ระบบไม่มีตารางวันหยุดจึงไม่คำนวณให้
+            {due.extension_until && ` · มาตรการขยายเวลายื่นออนไลน์ที่ระบบใช้อ้างอิงมีผลถึง ${due.extension_until}`}
+          </p>
+        </div>
       )}
 
       {[
