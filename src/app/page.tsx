@@ -250,11 +250,13 @@ export default function Landing() {
 
       <footer className="border-t border-neutral-100 py-8 pb-24 sm:pb-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 text-xs text-neutral-400">
-          <div className="flex flex-wrap justify-center gap-x-5 gap-y-1">
-            <Link href="/privacy" className="hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
-            <Link href="/terms" className="hover:text-neutral-600">เงื่อนไขการใช้งาน</Link>
-            <Link href="/data-deletion" className="hover:text-neutral-600">การลบข้อมูล</Link>
-            <a href="mailto:support@sudochatbot.online" className="hover:text-neutral-600">ติดต่อเรา</a>
+          {/* พื้นที่กดต้องสูงพอบนมือถือ — เดิมสูงแค่ 16px กดพลาดตลอด
+              inline-flex + min-h ทำให้กดง่ายขึ้นโดยหน้าตายังเหมือนเดิม */}
+          <div className="flex flex-wrap justify-center gap-x-4">
+            <Link href="/privacy" className="inline-flex min-h-[40px] items-center px-1 hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
+            <Link href="/terms" className="inline-flex min-h-[40px] items-center px-1 hover:text-neutral-600">เงื่อนไขการใช้งาน</Link>
+            <Link href="/data-deletion" className="inline-flex min-h-[40px] items-center px-1 hover:text-neutral-600">การลบข้อมูล</Link>
+            <a href="mailto:support@sudochatbot.online" className="inline-flex min-h-[40px] items-center px-1 hover:text-neutral-600">ติดต่อเรา</a>
           </div>
           <p>© {new Date().getFullYear()} SudoChatBot — AI Accounting & Back-Office Platform</p>
         </div>
