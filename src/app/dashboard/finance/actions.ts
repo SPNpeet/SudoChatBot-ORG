@@ -13,7 +13,7 @@ import { postJournalOrThrow, reverseJournalOf, applyPaymentToDoc, bkkToday, ACC 
 import { verifySlip, type SlipResult } from "@/lib/slip-verify";
 import { notifyShopLine } from "@/lib/line";
 import type { DocType, VatMode, FinDoc } from "@/lib/types/finance";
-import { WHT_INCOME_TYPES, DEFAULT_WHT_INCOME, guessRecipientKind } from "@/lib/tax-th";
+import { WHT_INCOME_TYPES, DEFAULT_WHT_INCOME, guessRecipientKind, docDateTooFarFuture } from "@/lib/tax-th";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type DocResult = { ok: true; docId: string; docNumber: string; approvalPending?: boolean } | { ok: false; error: string };
@@ -198,6 +198,12 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       ? "payment" : "delivery";
     const whtRate = Math.max(0, Math.min(15, Number(input.wht_rate) || 0));
     const issueDate = input.issue_date || bkkToday();
+
+    // กันวันที่พิมพ์ผิดตั้งแต่ต้นทาง — บังคับฝั่งเซิร์ฟเวอร์ ทุกทางเขียนต้องผ่านตรงนี้
+    // รวมถึงตอนผู้ช่วย AI อ่านบิลแล้วบันทึกให้เอง ซึ่งเป็นทางที่พลาดง่ายที่สุด
+    if (docDateTooFarFuture(issueDate, bkkToday())) {
+      return { ok: false, error: `วันที่ ${issueDate} อยู่ในอนาคตไกลเกินไป — ตรวจอีกครั้งว่าพิมพ์ปีถูกไหม (พ.ศ. 2569 = ค.ศ. 2026)` };
+    }
 
     // อัตรา VAT ต้องมาจากตาราง vat_rates ตามวันที่ออกเอกสาร ไม่ใช่เลขที่ฮาร์ดโค้ดตอน deploy
     // พ.ร.ฎ.ลดอัตราเป็น 7% ต่ออายุเป็นรายปี ถ้าอัตราเปลี่ยนแล้วโค้ดยังใช้ค่าเดิม
@@ -539,6 +545,12 @@ export async function issueCreditDebitNote(shopId: string, input: NoteInput): Pr
     }
 
     const issueDate = input.issue_date || bkkToday();
+
+    // กันวันที่พิมพ์ผิดตั้งแต่ต้นทาง — บังคับฝั่งเซิร์ฟเวอร์ ทุกทางเขียนต้องผ่านตรงนี้
+    // รวมถึงตอนผู้ช่วย AI อ่านบิลแล้วบันทึกให้เอง ซึ่งเป็นทางที่พลาดง่ายที่สุด
+    if (docDateTooFarFuture(issueDate, bkkToday())) {
+      return { ok: false, error: `วันที่ ${issueDate} อยู่ในอนาคตไกลเกินไป — ตรวจอีกครั้งว่าพิมพ์ปีถูกไหม (พ.ศ. 2569 = ค.ศ. 2026)` };
+    }
     // ออกย้อนไปก่อนใบเดิมไม่ได้ เหตุต้องเกิดหลังการขาย
     if (issueDate < origin.issue_date) {
       return { ok: false, error: "วันที่ต้องไม่ก่อนวันที่ของใบกำกับภาษีเดิม" };

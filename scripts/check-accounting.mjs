@@ -123,6 +123,20 @@ ok(whtPaperDueDate("2028-01") === "2028-02-07", "ปีอธิกสุรท�
 ok(whtPaperDueDate("abc") === null, "รูปแบบผิดต้องคืน null");
 console.log("  ถูก  ตรวจครบทุกกรณี");
 
+// ---------- 5. วันที่เอกสาร ----------
+section("กันวันที่พิมพ์ผิด");
+const { docDateTooFarFuture, docDateVeryOld } = await import("../src/lib/tax-th.ts");
+const T = "2026-07-27";
+ok(docDateTooFarFuture("2069-06-19", T), "จับได้: ปี 2069 (ของจริงที่หลุดเข้า production)");
+ok(docDateTooFarFuture("2569-01-01", T), "จับได้: กรอก พ.ศ. ลงช่อง ค.ศ.");
+ok(!docDateTooFarFuture("2026-07-27", T), "วันนี้ ต้องผ่าน");
+ok(!docDateTooFarFuture("2026-10-20", T), "ล่วงหน้า 85 วัน ต้องผ่าน (ใบเสนอราคาลงวันล่วงหน้าได้)");
+ok(docDateTooFarFuture("2026-11-01", T), "ล่วงหน้า 98 วัน ต้องถูกบล็อก");
+ok(!docDateTooFarFuture("2020-01-01", T), "ย้อนหลัง ต้องไม่บล็อก (คีย์บิลเก่าเป็นเรื่องปกติ)");
+ok(docDateVeryOld("2019-01-01", T), "เตือน: เก่าเกิน 5 ปี");
+ok(!docDateVeryOld("2023-01-01", T), "3 ปีที่แล้ว ไม่ต้องเตือน");
+console.log("  ถูก  ตรวจครบทุกกรณี");
+
 console.log(failures === 0
   ? "\nสรุป: ผ่านทั้งหมด\n"
   : `\nสรุป: ไม่ผ่าน ${failures} ข้อ — ห้าม deploy จนกว่าจะแก้\n`);

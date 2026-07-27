@@ -178,6 +178,37 @@ export function isValidTaxId(raw: string | null | undefined): boolean {
   return (11 - (sum % 11)) % 10 === Number(d[12]);
 }
 
+// ---- ตรวจวันที่เอกสาร ----------------------------------------------------
+/**
+ * วันที่เอกสารที่ยอมรับได้
+ *
+ * เจอของจริงบน production: เอกสารค่าใช้จ่าย 63,750 บาท ลงวันที่ 19/06/2069
+ * (พิมพ์ปีผิด 2569 -> 2069) ระบบรับไว้เงียบ ๆ ผลคือเอกสารไม่โผล่ในรายงานงวดไหนเลย
+ * แต่ยังค้างอยู่ในยอด "เจ้าหนี้ค้างจ่าย" ตลอดไป และจะไปโผล่ในอีก 43 ปี
+ *
+ * อนาคต: กันแน่น เพราะเอกสารลงวันที่ล่วงหน้ามาก ๆ เกือบทั้งหมดคือพิมพ์ผิด
+ *        (เผื่อไว้ 90 วันสำหรับใบเสนอราคา/ใบแจ้งหนี้ที่ลงวันล่วงหน้าจริง)
+ * อดีต: เตือนอย่างเดียว ไม่บล็อก เพราะคีย์บิลเก่าย้อนหลังเป็นเรื่องปกติ
+ */
+export const DOC_DATE_MAX_FUTURE_DAYS = 90;
+export const DOC_DATE_WARN_PAST_YEARS = 5;
+
+function daysBetween(a: string, b: string): number {
+  return Math.round((new Date(a + "T00:00:00Z").getTime() - new Date(b + "T00:00:00Z").getTime()) / 86400000);
+}
+
+/** วันที่ไกลเกินไปจนแทบแน่ใจว่าพิมพ์ผิด — ใช้บล็อกฝั่งเซิร์ฟเวอร์ */
+export function docDateTooFarFuture(issueDate: string, today: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(issueDate)) return false;
+  return daysBetween(issueDate, today) > DOC_DATE_MAX_FUTURE_DAYS;
+}
+
+/** วันที่เก่ามาก — เตือนให้ทานอีกครั้ง ไม่บล็อก */
+export function docDateVeryOld(issueDate: string, today: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(issueDate)) return false;
+  return daysBetween(today, issueDate) > DOC_DATE_WARN_PAST_YEARS * 365;
+}
+
 export interface TaxInvoiceIssue { field: string; why: string }
 
 /**
