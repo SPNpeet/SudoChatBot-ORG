@@ -69,6 +69,12 @@ export default function LoginPage() {
                 {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {/* ลืมรหัสผ่านต้องอยู่ตรงนี้ ตอนที่คนเพิ่งกรอกรหัสผิด ไม่ใช่ซ่อนท้ายหน้า */}
+            <div className="flex justify-end">
+              <Link href="/forgot-password" className="text-xs text-neutral-500 hover:text-emerald-700 hover:underline">
+                ลืมรหัสผ่าน?
+              </Link>
+            </div>
             <button type="submit" disabled={loading}
               className="h-11 w-full rounded-xl bg-neutral-900 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:opacity-60">
               {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}

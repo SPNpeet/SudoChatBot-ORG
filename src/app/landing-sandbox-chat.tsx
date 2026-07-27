@@ -98,7 +98,8 @@ export default function LandingSandboxChat() {
               className="h-10 w-full rounded-xl border border-neutral-300 bg-white px-3 pr-11 text-base outline-none focus:border-emerald-500 sm:text-sm" />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-neutral-300">{input.length}/{MAX_LEN}</span>
           </div>
-          <button disabled={busy || !input.trim()}
+          {/* ปุ่มไอคอนล้วนต้องมีชื่อ ไม่งั้นโปรแกรมอ่านหน้าจอจะอ่านได้แค่คำว่า "ปุ่ม" */}
+          <button aria-label="ส่งคำถาม" disabled={busy || !input.trim()}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
             <Send className="h-4 w-4" />
           </button>
