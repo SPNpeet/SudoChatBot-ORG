@@ -100,6 +100,30 @@ for (const nm of ["บริษัท ก้าวหน้า จำกัด",
 }
 console.log("  ถูก  วันที่ · จำนวนเงิน · อักขระต้องห้าม · TIS-620 พร้อมวรรณยุกต์/สระซ้อน");
 
+// ---------- 4. ตรวจข้อมูลก่อนโหลดไฟล์ยื่น ----------
+section("ตัวตรวจข้อมูลก่อนโหลดไฟล์ ภ.ง.ด.");
+const { checkRdWhtRows, whtDueDates } = await import("../src/lib/rd.ts");
+const base = { doc_number: "EXP-1", contact_name: "บจ.ทดสอบ", contact_address: "1 ถ.สุขุมวิท กรุงเทพฯ",
+  contact_tax_id: "0105569012345", wht_income_type: "40(8)", wht_rate: 3, wht_amount: 300, total: 10700, vat_amount: 700 };
+const chk = (patch) => checkRdWhtRows([{ ...base, ...patch }]);
+ok(checkRdWhtRows([base]).length === 0, "แถวที่ข้อมูลครบ ต้องไม่ถูกเตือน");
+ok(chk({ contact_tax_id: "" }).length === 1, "จับได้: ไม่มีเลขผู้เสียภาษี");
+ok(chk({ contact_tax_id: "010556901234" }).length === 1, "จับได้: เลขไม่ครบ 13 หลัก");
+ok(chk({ contact_tax_id: "0105569012340" }).length === 1, "จับได้: check digit ผิด");
+ok(chk({ contact_address: "" }).length === 1, "จับได้: ไม่มีที่อยู่");
+ok(chk({ wht_income_type: null }).length === 1, "จับได้: ไม่ระบุประเภทเงินได้");
+ok(chk({ wht_amount: 0 }).length === 1, "จับได้: ภาษีหักเป็น 0");
+ok(chk({ contact_name: "บจ.ทดสอบ 🙂" }).length === 1, "จับได้: ชื่อมีอักขระที่ TIS-620 เก็บไม่ได้");
+ok(chk({ contact_name: "บจ. ก้าวหน้า ABC" }).length === 0, "ไทย+อังกฤษปกติ ต้องไม่เตือนผิด");
+{
+  const d = whtDueDates("2026-07");
+  ok(d && d.paper === "2026-08-07", "กำหนดยื่นกระดาษ ก.ค. = 7 ส.ค.", d ? d.paper : "null");
+  ok(d && d.online === "2026-08-15", "กำหนดยื่นออนไลน์ ก.ค. = 15 ส.ค.", d ? d.online : "null");
+  const dec = whtDueDates("2026-12");
+  ok(dec && dec.paper === "2027-01-07", "ข้ามปี: ธ.ค. 2569 = 7 ม.ค. 2570", dec ? dec.paper : "null");
+}
+console.log("  ถูก  ตรวจครบทุกกรณี");
+
 console.log(failures === 0
   ? "\nสรุป: ผ่านทั้งหมด\n"
   : `\nสรุป: ไม่ผ่าน ${failures} ข้อ — ห้าม deploy จนกว่าจะแก้\n`);

@@ -7,7 +7,7 @@ import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td, Badge, PageHeader } from "@/components/ui";
 import { baht, bahtDoc, dateOnlyTH, cn } from "@/lib/utils";
 import { agingBucket, AGING_LABEL_TH, docOutstanding, DOC_TYPE_TH } from "@/lib/finance";
-import { rdClean, rdDateBE, rdAmount } from "@/lib/rd";
+import { rdClean, rdDateBE, rdAmount, checkRdWhtRows, whtDueDates } from "@/lib/rd";
 import type { FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
 import { LineChart, CheckCircle2, FileText, FileSpreadsheet, BookOpenText } from "lucide-react";
@@ -392,6 +392,13 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
   // แบบยื่นยึด "ประเภทผู้รับเงิน" ที่ผู้ใช้ยืนยันเป็นหลัก ถ้ายังไม่ระบุค่อยเดาจากเลขผู้เสียภาษี
   // เดิมเดาจากเลขขึ้นต้น 0 อย่างเดียว ทำให้คณะบุคคล/ห้างหุ้นส่วนสามัญไม่จดทะเบียน
   // ซึ่งได้เลขขึ้นต้น 0 เหมือนกัน ถูกจัดเข้า ภ.ง.ด.53 ทั้งที่ต้องยื่น ภ.ง.ด.3
+  // กำหนดยื่นคิดจากเดือนสุดท้ายของงวด (งวดไตรมาส/ปีก็ยึดเดือนสุดท้ายที่มีการจ่าย)
+  const due = whtDueDates(period.months[period.months.length - 1]);
+  const dueLeft = due
+    ? Math.floor((new Date(due.online + "T00:00:00Z").getTime()
+        - new Date(new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10) + "T00:00:00Z").getTime()) / 86400000)
+    : null;
+
   const formOf = (d: FinDoc) => rdFormFor(d.contact_tax_id, d.wht_income_type, d.recipient_kind);
   const pnd53 = paid.filter((d) => formOf(d) === "ภ.ง.ด.53");
   const pnd3 = paid.filter((d) => formOf(d) !== "ภ.ง.ด.53");
@@ -424,16 +431,54 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
         </CardContent>
       </Card>
 
+      {/* กำหนดยื่นของงวด — คนพลาดเพราะจำสลับระหว่างวันยื่นกระดาษกับออนไลน์บ่อยมาก
+          แสดงคู่กันไปเลย ไม่ต้องให้ไปเปิดปฏิทินสรรพากรเอง */}
+      {due && sumPaid > 0 && (
+        <p className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-[12px] leading-relaxed text-neutral-600">
+          <b className="text-neutral-800">กำหนดนำส่งของงวดนี้</b> — ยื่นกระดาษภายใน {dateOnlyTH(due.paper)} ·
+          ยื่นออนไลน์ภายใน {dateOnlyTH(due.online)} (ขยายเวลาเพิ่ม 8 วัน)
+          {dueLeft !== null && (
+            <span className={dueLeft < 0 ? " font-bold text-red-600" : dueLeft <= 5 ? " font-bold text-amber-700" : " text-neutral-500"}>
+              {" · "}{dueLeft < 0 ? `เลยกำหนดยื่นออนไลน์มาแล้ว ${Math.abs(dueLeft)} วัน` : `เหลืออีก ${dueLeft} วัน`}
+            </span>
+          )}
+        </p>
+      )}
+
       {[
         { title: "ภ.ง.ด.3 — หักจากบุคคลธรรมดา", list: pnd3, base: `pnd3-${period.key}` },
         { title: "ภ.ง.ด.53 — หักจากนิติบุคคล", list: pnd53, base: `pnd53-${period.key}` },
-      ].map((sec) => (
+      ].map((sec) => {
+        // ตรวจก่อนโหลด ไม่ใช่ให้ไปเจอตอนเปิด RD Prep ตอนดึกของวันที่ 6
+        const issues = checkRdWhtRows(sec.list);
+        return (
         <Card key={sec.title}>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>{sec.title} ({sec.list.length})</CardTitle>
             <ExportButtons xlsxName={`${sec.base}.xlsx`} rows={mkRows(sec.list)}
               txtName={`${sec.base}.txt`} txtContent={rdAllowed ? txtOf(sec.list) : undefined} txtLocked={!rdAllowed} />
           </CardHeader>
+          {issues.length > 0 && (
+            <div className="mx-4 mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5">
+              <p className="text-[12px] font-bold text-amber-800">
+                {issues.length} จาก {sec.list.length} รายการยังกรอกไม่ครบ — โหลดไฟล์ไปตอนนี้ RD Prep อาจไม่รับ
+              </p>
+              <ul className="mt-1.5 space-y-1">
+                {issues.slice(0, 8).map((it) => (
+                  <li key={it.docNumber} className="text-[11px] leading-relaxed text-amber-800">
+                    <b>{it.docNumber}</b> {it.contactName} — {it.problems.join(" · ")}
+                  </li>
+                ))}
+              </ul>
+              {issues.length > 8 && (
+                <p className="mt-1 text-[11px] text-amber-700">และอีก {issues.length - 8} รายการ</p>
+              )}
+              <p className="mt-1.5 text-[11px] text-amber-700">
+                แก้ได้ที่หน้า <Link href="/dashboard/contacts" className="font-semibold underline">ผู้ติดต่อ</Link> (ชื่อ ที่อยู่ เลขผู้เสียภาษี)
+                หรือเปิดเอกสารนั้นเพื่อแก้ประเภทเงินได้
+              </p>
+            </div>
+          )}
           <CardContent className="px-0 pb-0">
             {sec.list.length === 0 ? (
               <EmptyState icon={FileSpreadsheet} title={`ไม่มีรายการ${period.label}`}
@@ -459,7 +504,8 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
             )}
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
 
       {received.length > 0 && (
         <Card>
