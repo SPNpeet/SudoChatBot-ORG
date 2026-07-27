@@ -17,6 +17,8 @@ const TABS: { id: string; label: string }[] = [
   { id: "quotation", label: "ใบเสนอราคา" },
   { id: "invoice", label: "ใบแจ้งหนี้" },
   { id: "receipt", label: "ใบเสร็จ" },
+  // ใบลดหนี้/ใบเพิ่มหนี้ต้องหาเจอที่นี่ด้วย ไม่งั้นออกแล้วหาไม่เจออีกเลย
+  { id: "note", label: "ใบลดหนี้/เพิ่มหนี้" },
   { id: "unpaid", label: "ค้างรับ" },
 ];
 
@@ -25,10 +27,13 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   const { t = "all" } = await searchParams;
   const canEdit = ["owner", "admin", "agent"].includes(role);
 
+  // ต้องรวม credit_note / debit_note ด้วย เดิมกรองทิ้ง ทำให้ออกใบลดหนี้แล้วหาไม่เจอ
+  const SALES_TYPES = ["quotation", "invoice", "receipt", "credit_note", "debit_note"];
   let q = supabase.from("fin_docs").select("*")
-    .eq("shop_id", shop.id).in("doc_type", ["quotation", "invoice", "receipt"])
+    .eq("shop_id", shop.id).in("doc_type", SALES_TYPES)
     .order("created_at", { ascending: false }).limit(200);
   if (t === "quotation" || t === "invoice" || t === "receipt") q = q.eq("doc_type", t);
+  if (t === "note") q = q.in("doc_type", ["credit_note", "debit_note"]);
   if (t === "unpaid") q = q.eq("doc_type", "invoice").in("status", ["awaiting", "partial"]);
   const { data } = await q;
   const rows = (data ?? []) as FinDoc[];

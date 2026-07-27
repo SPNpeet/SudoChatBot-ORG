@@ -24,7 +24,8 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
   const { data } = await svc.from("fin_docs")
     .select("*, fin_doc_items(*)")
     .eq("share_key", key)
-    .in("doc_type", ["quotation", "invoice", "receipt"])
+    // รวมใบลดหนี้/ใบเพิ่มหนี้ด้วย — ลูกค้าต้องเปิดลิงก์ดูได้เหมือนเอกสารขายอื่น
+    .in("doc_type", ["quotation", "invoice", "receipt", "credit_note", "debit_note"])
     .neq("status", "draft")
     .maybeSingle();
   if (!data) notFound();
