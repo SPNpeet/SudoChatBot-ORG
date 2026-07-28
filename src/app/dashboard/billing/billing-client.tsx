@@ -99,16 +99,40 @@ export default function BillingClient({
               ระบบรับชำระยังไม่เปิด — ผู้ดูแลแพลตฟอร์มตั้งค่าพร้อมเพย์ได้ที่ <span className="font-medium">รายได้ + บัญชีรับเงิน</span>
             </div>
           )}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* กลุ่มตัวเลือกแพ็กเกจ = radiogroup จริง ๆ ไม่ใช่กอง div ที่บังเอิญกดได้
+              เดิมเป็น <div onClick> ซึ่งคนที่ใช้คีย์บอร์ดหรือโปรแกรมอ่านหน้าจอ
+              เลือกแพ็กเกจไม่ได้เลย ทั้งที่เป็นขั้นตอนจ่ายเงิน */}
+          <div role="radiogroup" aria-label="เลือกแพ็กเกจ" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {plans.map((p) => {
               const current = p.code === currentPlan;
               const paid = Number(p.price_monthly) > 0;
               const picked = selected === p.code;
               return (
                 // กดได้ทั้งใบ = "เลือก" เท่านั้น ยังไม่จ่าย — ต้องกดปุ่มยืนยันอีกที กันกดโดนแล้วเสียเงิน
-                <div key={p.code} onClick={() => setSelected(p.code)}
+                // ใช้ div + role=radio ไม่ใช่ <button> เพราะข้างในการ์ดมีปุ่ม "สมัคร — จ่าย" อยู่แล้ว
+                // และ <button> ซ้อน <button> เป็น HTML ที่ไม่ถูกต้อง
+                // จึงต้องเติม tabIndex + onKeyDown เองเพื่อให้ Tab ถึงและกด Enter/Space เลือกได้
+                <div key={p.code} role="radio" aria-checked={picked}
+                  tabIndex={picked || (!selected && p.code === plans[0]?.code) ? 0 : -1}
+                  aria-label={`แพ็กเกจ ${p.name} ${paid ? baht(p.price_monthly) + " ต่อเดือน" : "ฟรี"}${current ? " (แพ็กเกจปัจจุบัน)" : ""}`}
+                  onClick={() => setSelected(p.code)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(p.code); return; }
+                    // ลูกศรเลื่อนระหว่างตัวเลือก ตามพฤติกรรมมาตรฐานของ radiogroup
+                    if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) {
+                      e.preventDefault();
+                      const i = plans.findIndex((x) => x.code === p.code);
+                      const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+                      const next = plans[(i + step + plans.length) % plans.length];
+                      if (next) {
+                        setSelected(next.code);
+                        (e.currentTarget.parentElement?.children[plans.indexOf(next)] as HTMLElement | undefined)?.focus();
+                      }
+                    }
+                  }}
                   className={cn(
                     "flex cursor-pointer flex-col rounded-2xl border p-4 transition-all duration-150",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2",
                     picked
                       ? "border-emerald-500 bg-emerald-50/40 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
                       : "border-neutral-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md",
