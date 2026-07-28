@@ -10,35 +10,39 @@
 //
 //  ทั้งหมดนี้ระบบรู้ได้ตั้งแต่วันนี้ จึงต้องบอกตั้งแต่วันนี้ พร้อมลิงก์ไปแก้
 //  ไม่ขึ้นอะไรเลยถ้าข้อมูลครบ — แถบเตือนที่ขึ้นตลอดเวลาคนจะเลิกอ่าน
+//
+//  ⚠️ นับในฐานข้อมูล ไม่ดึงแถวออกมานับที่นี่
+//  หน้านี้เปิดบ่อยที่สุดในระบบ เวอร์ชันแรกดึงเอกสารมาถึง 700 แถวทุกครั้ง
+//  เพื่อจะได้ตัวเลข 3 ตัว พอร้านมีเอกสารหลักพันจะกินแบนด์วิดท์ฟรี ๆ ทุกการเปิดหน้า
 // ============================================================
 import Link from "next/link";
 import { TriangleAlert, ArrowRight } from "lucide-react";
-import { createServiceClient } from "@/lib/supabase/server";
-import { isValidTaxId, docDateTooFarFuture } from "@/lib/tax-th";
+import { createClient } from "@/lib/supabase/server";
+
+interface Health {
+  tax_id_ok: boolean;
+  address_ok: boolean;
+  bad_partners: number;
+  partner_names: string;
+  odd_dates: number;
+  odd_list: string;
+  error?: string;
+}
 
 interface Issue { text: string; href: string; cta: string }
 
 export default async function DataHealth({ shopId }: { shopId: string }) {
-  const svc = createServiceClient();
-
-  const [{ data: shop }, { data: whtDocs }, { data: oddDates }] = await Promise.all([
-    svc.from("shops").select("tax_id,billing_name,name,billing_address").eq("id", shopId).maybeSingle(),
-    // คู่ค้าที่เราหักภาษีไว้ — ต้องมีเลขผู้เสียภาษีถึงจะยื่น ภ.ง.ด. ได้
-    svc.from("fin_docs").select("contact_name,contact_tax_id")
-      .eq("shop_id", shopId).eq("doc_type", "expense").gt("wht_amount", 0)
-      .not("status", "in", "(draft,void)").limit(500),
-    svc.from("fin_docs").select("doc_number,issue_date")
-      .eq("shop_id", shopId).not("status", "in", "(draft,void)")
-      .order("issue_date", { ascending: false }).limit(200),
-  ]);
+  // ใช้ client ของผู้ใช้ (ไม่ใช่ service role) — ฟังก์ชันเช็คสมาชิกภาพเองอีกชั้น
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("shop_data_health", { p_shop_id: shopId });
+  const h = data as Health | null;
+  if (!h || h.error) return null;
 
   const issues: Issue[] = [];
-  const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
 
-  // 1) ข้อมูลกิจการที่ ม.86/4 บังคับ
   const missing: string[] = [];
-  if (!isValidTaxId(shop?.tax_id)) missing.push("เลขประจำตัวผู้เสียภาษี");
-  if (!String(shop?.billing_address ?? "").trim()) missing.push("ที่อยู่");
+  if (!h.tax_id_ok) missing.push("เลขประจำตัวผู้เสียภาษี");
+  if (!h.address_ok) missing.push("ที่อยู่");
   if (missing.length) {
     issues.push({
       text: `ข้อมูลกิจการยังไม่ครบ (${missing.join(" · ")}) — ออกใบกำกับภาษีเต็มรูปตามมาตรา 86/4 ไม่ได้ ลูกค้านิติบุคคลจะขอคืนภาษีซื้อไม่ได้`,
@@ -46,24 +50,16 @@ export default async function DataHealth({ shopId }: { shopId: string }) {
     });
   }
 
-  // 2) คู่ค้าที่หักภาษีไว้แต่เลขผู้เสียภาษีใช้ไม่ได้
-  const badPartners = new Set(
-    (whtDocs ?? []).filter((d) => !isValidTaxId(d.contact_tax_id))
-      .map((d) => d.contact_name ?? "(ไม่มีชื่อ)"),
-  );
-  if (badPartners.size) {
-    const names = [...badPartners].slice(0, 3).join(" · ");
+  if (h.bad_partners > 0) {
     issues.push({
-      text: `${badPartners.size} คู่ค้าที่หักภาษี ณ ที่จ่ายไว้ ยังไม่มีเลขผู้เสียภาษีที่ถูกต้อง (${names}${badPartners.size > 3 ? " และอื่น ๆ" : ""}) — ไฟล์ยื่น ภ.ง.ด. จะไม่ผ่าน`,
+      text: `${h.bad_partners} คู่ค้าที่หักภาษี ณ ที่จ่ายไว้ ยังไม่มีเลขผู้เสียภาษีที่ถูกต้อง (${h.partner_names}) — ไฟล์ยื่น ภ.ง.ด. จะไม่ผ่าน`,
       href: "/dashboard/contacts", cta: "ไปแก้ข้อมูลคู่ค้า",
     });
   }
 
-  // 3) เอกสารที่วันที่ผิดปกติ — หายจากรายงานแต่ยังค้างในยอดหนี้
-  const odd = (oddDates ?? []).filter((d) => docDateTooFarFuture(d.issue_date, today));
-  if (odd.length) {
+  if (h.odd_dates > 0) {
     issues.push({
-      text: `${odd.length} เอกสารลงวันที่ในอนาคตไกลผิดปกติ (${odd.slice(0, 2).map((d) => `${d.doc_number} = ${d.issue_date}`).join(" · ")}) — น่าจะกรอก พ.ศ. ลงช่อง ค.ศ. เอกสารพวกนี้จะไม่โผล่ในรายงานงวดไหนเลย`,
+      text: `${h.odd_dates} เอกสารลงวันที่ในอนาคตไกลผิดปกติ (${h.odd_list}) — น่าจะกรอก พ.ศ. ลงช่อง ค.ศ. เอกสารพวกนี้จะไม่โผล่ในรายงานงวดไหนเลย`,
       href: "/dashboard/expenses", cta: "ไปตรวจเอกสาร",
     });
   }
@@ -78,7 +74,7 @@ export default async function DataHealth({ shopId }: { shopId: string }) {
       </p>
       <ul className="mt-2 space-y-2">
         {issues.map((i) => (
-          <li key={i.href + i.text.slice(0, 20)} className="text-[12px] leading-relaxed text-amber-800">
+          <li key={i.cta} className="text-[12px] leading-relaxed text-amber-800">
             {i.text}
             <Link href={i.href}
               className="ml-1 inline-flex items-center gap-0.5 font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-950">
