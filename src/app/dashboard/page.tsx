@@ -14,6 +14,7 @@ import TodayPanel, { type TodoDoc } from "./today-panel";
 import { TrendingUp, TrendingDown, Users, Receipt, ArrowUpRight, ArrowDownRight, LineChart, FileText } from "lucide-react";
 import Link from "next/link";
 import RowLink from "@/components/row-link";
+import DataHealth from "./data-health";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,10 @@ export default async function Overview() {
 
   return (
     <div className="space-y-6">
+      {/* ข้อมูลที่ขาดไม่ทำให้ระบบพัง แต่จะระเบิดตอนวันยื่นภาษีซึ่งแก้ไม่ทันแล้ว
+          ระบบรู้ได้ตั้งแต่วันนี้ จึงต้องบอกตั้งแต่วันนี้ (ไม่ขึ้นถ้าข้อมูลครบ) */}
+      <DataHealth shopId={shop.id} />
+
       {/* ทักทาย + สรุปหนึ่งบรรทัดที่บอกสถานะเงินสดทันที */}
       <div>
         <p className="text-xs text-neutral-400">
