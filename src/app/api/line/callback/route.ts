@@ -66,7 +66,7 @@ export async function GET(request: Request) {
     // ทักทายทันที = ผู้ใช้เห็นกับตาว่าเชื่อมสำเร็จจริง (ถ้ายังไม่ได้เพิ่มเพื่อนจะได้รู้ตรงนี้เลย)
     if (pf.line_oa_token) {
       const r = await pushLineMessage(pf.line_oa_token, prof.userId,
-        "✅ เชื่อมต่อ SudoChatBot สำเร็จแล้ว!\nจากนี้ระบบจะแจ้งเตือนเรื่องสำคัญ เช่น ค่าใช้จ่ายรออนุมัติ มาที่แชทนี้ค่ะ");
+        "เชื่อมต่อ SudoChatBot สำเร็จแล้ว\nจากนี้ระบบจะแจ้งเตือนเรื่องสำคัญ เช่น ค่าใช้จ่ายรออนุมัติ มาที่แชทนี้ค่ะ");
       if (!r.ok) return back("need_friend");
     }
     return back("ok");

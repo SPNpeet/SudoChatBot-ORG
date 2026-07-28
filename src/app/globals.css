@@ -27,6 +27,20 @@ body {
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .rise { animation: rise .3s ease both; }
 
+/* ==== ตอบสนองการแตะบนมือถือ ====
+   เครื่องที่ไม่มีเมาส์ไม่มี :hover เลย ทุกเอฟเฟกต์ hover: จึงตายสนิทบนมือถือ
+   ผู้ใช้แตะการ์ด/ปุ่มแล้วไม่เห็นอะไรตอบกลับ เข้าใจว่ากดไม่ติดหรือแอปค้าง
+   (พบ 41 จุดในระบบที่มีแต่ hover: ไม่มี active:)
+   ตั้งเป็นกฎกลางตรงนี้ทีเดียว ดีกว่าไล่ใส่ทีละไฟล์แล้วตกหล่น */
+@media (hover: none) {
+  a:active, button:active,
+  [role="button"]:active, [role="radio"]:active, [role="menuitem"]:active,
+  label:active, summary:active {
+    opacity: .65;
+    transition: none;
+  }
+}
+
 /* ==== โหมดพิมพ์เอกสาร A4 — ซ่อนโครง dashboard ให้เหลือแต่ตัวเอกสาร ==== */
 /* margin 0 เพราะตัวกระดาษมี padding 15mm ในตัวแล้ว — ถ้าไม่ตั้งจะซ้อนกันจนล้นไปหน้า 2 */
 @page { size: A4; margin: 0; }

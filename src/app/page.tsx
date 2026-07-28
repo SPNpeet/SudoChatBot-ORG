@@ -1,18 +1,19 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
-import { FileText, ScanLine, BookOpenText, Landmark, Building2, ShieldCheck, ArrowRight, Check, Calculator, Clock, X as XIcon, Lock, Users, Boxes } from "lucide-react";
+import { FileText, ScanLine, BookOpenText, Landmark, ShieldCheck, ArrowRight, Check, Calculator, Clock, X as XIcon, Lock, Users } from "lucide-react";
 import LandingSandboxChat from "./landing-sandbox-chat";
 
+// 6 ใบ ไม่ใช่ 9 — เดิมยาวเกินจนคนกวาดตาผ่านโดยไม่อ่านสักใบ
+// ยุบที่ทับซ้อนกันเข้าด้วยกัน (สมุดรายวัน + งานสิ้นงวด) และตัดที่ซ้ำกับส่วนอื่นของหน้า
+// (สำนักงานบัญชีหลายบริษัท กับ ตรวจสลิป มีอยู่ในตารางเปรียบเทียบด้านบนแล้ว)
+// แต่ละใบเหลือหัวข้อสั้น + ประโยคเดียว ให้อ่านจบทั้งบล็อกได้จริง
 const features = [
-  { icon: Calculator, title: "ผู้ช่วยบัญชี AI สั่งเป็นภาษาคน", desc: "\"ออกใบแจ้งหนี้ 5,000 ให้บริษัท A บวก VAT\" — พิมพ์แค่นี้ เอกสารออก บัญชีลงให้ครบ" },
-  { icon: ScanLine, title: "ถ่ายรูปบิล = ลงบัญชีเสร็จ", desc: "AI อ่านบิล แยก VAT ภาษีซื้อ หัก ณ ที่จ่าย จัดหมวด แล้วลงสมุดรายวันให้อัตโนมัติ" },
-  { icon: FileText, title: "เอกสารครบ พร้อมลิงก์เก็บเงิน", desc: "ใบเสนอราคา → ใบแจ้งหนี้ → ใบเสร็จ/ใบกำกับภาษี ส่งลิงก์ให้ลูกค้าสแกน QR จ่าย + อัปสลิป ระบบตรวจเองตัดยอดเอง" },
-  { icon: BookOpenText, title: "สมุดรายวันอัตโนมัติ 100%", desc: "ทุกธุรกรรมลงเดบิต/เครดิตเองทันที นักบัญชีแค่รีวิว — งบทดลองพร้อมดูตลอดเวลา" },
-  { icon: Landmark, title: "ภาษีไทยครบ พร้อมยื่น", desc: "ภ.พ.30 · 50 ทวิ · ภ.ง.ด.3/53 + ไฟล์ยื่นสรรพากร · ใบลดหนี้/ใบเพิ่มหนี้ ม.86/10, 86/9" },
-  { icon: ShieldCheck, title: "ถูกตามกฎหมายตั้งแต่ในโครงสร้าง", desc: "จุดความรับผิด VAT แยกสินค้า/บริการ (ม.78, 78/1) · ล็อกงวดที่ยื่นแล้วแก้ย้อนหลังไม่ได้ · อัตรา VAT ตามวันที่ออกเอกสาร ไม่ฮาร์ดโค้ด" },
-  { icon: Boxes, title: "งานสิ้นงวดที่คนมักลืม", desc: "ทะเบียนทรัพย์สิน + ค่าเสื่อมราคาเส้นตรงเฉลี่ยรายวันปีแรก · ปิดบัญชีสิ้นปียกเข้ากำไรสะสมให้เอง" },
-  { icon: Building2, title: "สำนักงานบัญชีดูแลหลายบริษัท", desc: "บัญชีเดียวสลับดูแลลูกค้าหลายกิจการ ข้อมูลแยกขาดจากกัน ตรวจย้อนหลังได้ทุกรายการ" },
-  { icon: Lock, title: "ตรวจสลิปจริง กันสลิปปลอมและสลิปซ้ำ", desc: "ลูกค้าอัปสลิปเอง ระบบตรวจกับธนาคารว่าโอนจริงและยังไม่เคยใช้ใบนี้ แล้วตัดยอดให้อัตโนมัติ" },
+  { icon: Calculator, title: "สั่งเป็นภาษาคน", desc: "พิมพ์ว่าจะออกใบอะไรให้ใคร เท่าไหร่ — เอกสารออกและบัญชีลงให้ครบในคำสั่งเดียว" },
+  { icon: ScanLine, title: "ถ่ายรูปบิล บัญชีเสร็จ", desc: "AI อ่านบิล แยก VAT และหัก ณ ที่จ่าย จัดหมวด ลงสมุดรายวันให้เอง" },
+  { icon: FileText, title: "เอกสารครบ เก็บเงินได้ในใบเดียว", desc: "ใบเสนอราคาถึงใบกำกับภาษี ส่งลิงก์ให้ลูกค้าสแกนจ่าย ระบบตรวจสลิปแล้วตัดยอดเอง" },
+  { icon: Landmark, title: "ภาษีไทยพร้อมยื่น", desc: "ภ.พ.30 · ภ.ง.ด.3/53 · 50 ทวิ · ใบลดหนี้ พร้อมไฟล์สำหรับโปรแกรมของสรรพากร" },
+  { icon: BookOpenText, title: "บัญชีคู่และงานสิ้นงวดอัตโนมัติ", desc: "เดบิต/เครดิตลงเองทุกรายการ พร้อมค่าเสื่อมราคาและปิดบัญชีสิ้นปี" },
+  { icon: ShieldCheck, title: "ถูกกฎหมายตั้งแต่โครงสร้าง", desc: "จุดความรับผิด VAT แยกสินค้า/บริการ · ล็อกงวดที่ยื่นแล้ว · อัตราภาษีตามวันที่ออกเอกสาร" },
 ];
 
 const steps = [
@@ -24,7 +25,7 @@ const steps = [
 // ตัวอย่างการสั่งงานผู้ช่วยบัญชี AI — สะท้อน flow จริง
 const demo: { from: "user" | "ai"; text: string }[] = [
   { from: "user", text: "ออกใบแจ้งหนี้ค่าออกแบบเว็บ 25,000 ให้บริษัท สยามเทรด บวก VAT เขาหัก ณ ที่จ่าย 3%" },
-  { from: "ai", text: "ออกใบแจ้งหนี้ INV-2026-0042 แล้วค่ะ ✓ ยอดรวม 26,750 บาท (VAT 1,750) หัก ณ ที่จ่าย 750 รับจริง 26,000 บาท — ลงบัญชีตั้งลูกหนี้ให้แล้ว ส่งลิงก์ให้ลูกค้าสแกนจ่ายได้เลยค่ะ" },
+  { from: "ai", text: "ออกใบแจ้งหนี้ INV-2026-0042 แล้วค่ะ ยอดรวม 26,750 บาท (VAT 1,750) หัก ณ ที่จ่าย 750 รับจริง 26,000 บาท — ลงบัญชีตั้งลูกหนี้ให้แล้ว ส่งลิงก์ให้ลูกค้าสแกนจ่ายได้เลยค่ะ" },
   { from: "user", text: "(แนบรูปบิลค่าไฟ)" },
   { from: "ai", text: "อ่านบิลแล้วค่ะ: การไฟฟ้านครหลวง 2,340.51 บาท (รวม VAT) — บันทึกเป็นค่าน้ำ/ค่าไฟ EXP-2026-0018 แยกภาษีซื้อ 153.12 ลงสมุดรายวันเรียบร้อยค่ะ" },
   { from: "user", text: "เดือนนี้ต้องยื่นภาษีอะไรบ้าง" },
@@ -111,7 +112,7 @@ export default function Landing() {
                 <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-600 text-white"><Calculator className="h-4 w-4" /></div>
                 <div>
                   <p className="text-xs font-semibold">ผู้ช่วยบัญชี AI</p>
-                  <p className="text-[10px] text-emerald-600">● ลงบัญชีให้ทุกคำสั่ง ตรวจย้อนหลังได้</p>
+                  <p className="text-[10px] text-emerald-600">ลงบัญชีให้ทุกคำสั่ง ตรวจย้อนหลังได้</p>
                 </div>
               </div>
               <div className="space-y-2">
@@ -192,22 +193,35 @@ export default function Landing() {
         <h2 className="text-center text-2xl font-bold tracking-tight">ราคาตรงไปตรงมา</h2>
         <p className="mt-2 text-center text-sm text-neutral-500">เริ่มฟรี อัปเกรดเมื่อธุรกิจโต ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด</p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* การ์ดราคาเดิมเป็น div เปล่า กดทั้งใบไม่ได้ ต้องเล็งกดปุ่มเล็ก ๆ ท้ายการ์ด
+              และบนมือถือไม่มี hover จึงแตะแล้วไม่มีอะไรตอบกลับเลย ดูเหมือนกดไม่ติด
+              เปลี่ยนทั้งใบเป็นลิงก์ + ใส่สถานะตอนแตะ (active:) ให้เห็นว่ากดโดน */}
           {plans.map((p) => (
-            <div key={p.name} className={`relative rounded-2xl border p-6 ${p.hot ? "border-emerald-300 bg-emerald-50/40 shadow-sm" : "border-neutral-200 bg-white"}`}>
+            <Link key={p.name} href="/signup"
+              aria-label={`เลือกแพ็กเกจ ${p.name} ${p.price}${p.per}`}
+              className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-150 active:scale-[0.985] ${
+                p.hot
+                  ? "border-emerald-300 bg-emerald-50/40 shadow-sm hover:border-emerald-400 hover:shadow-md active:bg-emerald-50"
+                  : "border-neutral-200 bg-white hover:border-emerald-300 hover:shadow-md active:bg-neutral-50"
+              }`}>
               {p.hot && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-3 py-0.5 text-[11px] font-medium text-white">ยอดนิยม</span>}
               <p className="text-sm font-semibold">{p.name}</p>
               <p className="mt-2 text-3xl font-bold tracking-tight">{p.price}<span className="ml-1 text-sm font-normal text-neutral-400">{p.per}</span></p>
-              <ul className="mt-4 space-y-2">
+              <ul className="mt-4 flex-1 space-y-2">
                 {p.items.map((it) => (
                   <li key={it} className="flex items-start gap-2 text-sm text-neutral-600">
                     <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> {it}
                   </li>
                 ))}
               </ul>
-              <Link href="/signup" className={`mt-5 block rounded-xl py-2.5 text-center text-sm font-medium ${p.hot ? "bg-emerald-600 text-white hover:bg-emerald-500" : "border border-neutral-300 text-neutral-700 hover:bg-neutral-50"}`}>
+              <span className={`mt-5 block rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
+                p.hot
+                  ? "bg-emerald-600 text-white group-hover:bg-emerald-500"
+                  : "border border-neutral-300 text-neutral-700 group-hover:border-emerald-400 group-hover:text-emerald-700"
+              }`}>
                 {p.cta}
-              </Link>
-            </div>
+              </span>
+            </Link>
           ))}
         </div>
         <p className="mt-4 text-center text-xs text-neutral-400">

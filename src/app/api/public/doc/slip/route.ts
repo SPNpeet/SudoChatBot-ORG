@@ -81,8 +81,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true, paid: status === "paid",
       message: status === "paid"
-        ? `ตรวจสลิปผ่าน ✓ ชำระครบ ${amount.toLocaleString()} บาท ขอบคุณค่ะ`
-        : `ตรวจสลิปผ่าน ✓ รับยอด ${amount.toLocaleString()} บาท (ยังค้างบางส่วน)`,
+        ? `ตรวจสลิปผ่าน — ชำระครบ ${amount.toLocaleString()} บาท ขอบคุณค่ะ`
+        : `ตรวจสลิปผ่าน — รับยอด ${amount.toLocaleString()} บาท (ยังค้างบางส่วน)`,
     });
   } catch (e) {
     return NextResponse.json({ ok: false, error: `เกิดข้อผิดพลาด: ${(e as Error).message.slice(0, 150)}` }, { status: 500 });
