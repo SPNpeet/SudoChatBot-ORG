@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Calculator, BookLock, TriangleAlert } from "lucide-react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/components/ui";
 import { addFixedAsset, runDepreciation, closeFiscalYear } from "./actions";
+import DateField from "@/components/date-field";
 
 /** อายุการใช้งานที่พบบ่อย — เป็นตัวช่วยกรอก ไม่ใช่คำวินิจฉัยทางภาษี */
 const LIFE_PRESETS = [
@@ -24,6 +25,8 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
   const [life, setLife] = useState("3");
   const [depMonth, setDepMonth] = useState(defaultMonth);
   const [yearEnd, setYearEnd] = useState(`${new Date().getFullYear() - 1}-12-31`);
+  // ตั้งต้นเป็นวันนี้ตามเวลาไทย — ค่าที่คนเลือกบ่อยสุด และกันช่องว่างที่ทำให้ลืมกรอก
+  const [acquiredOn, setAcquiredOn] = useState(new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10));
   const [confirmClose, setConfirmClose] = useState(false);
 
   if (!canEdit) {
@@ -58,9 +61,9 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
                 <p className="mt-1 text-[11px] text-neutral-400">ราคาซื้อ + ค่าติดตั้ง/ขนส่ง ไม่รวมภาษีซื้อที่ขอคืนได้</p>
               </div>
               <div>
-                <Label>วันที่ได้ทรัพย์สินมา *</Label>
-                <Input type="date" name="acquired_on" required />
-                <p className="mt-1 text-[11px] text-neutral-400">ปีแรกคิดค่าเสื่อมตามส่วนเฉลี่ยรายวันจากวันนี้</p>
+                <DateField label="วันที่ได้ทรัพย์สินมา" required name="acquired_on"
+                  value={acquiredOn} onChange={setAcquiredOn}
+                  hint="ปีแรกคิดค่าเสื่อมตามส่วนเฉลี่ยรายวันจากวันนี้" />
               </div>
               <div>
                 <Label>อายุการใช้งาน (ปี) *</Label>
@@ -117,8 +120,7 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
               ถ้าไม่ทำ ยอดจะสะสมข้ามปีและงบดุลผิดตั้งแต่ปีที่สอง
             </p>
             <div>
-              <Label>วันสิ้นรอบบัญชี</Label>
-              <Input type="date" value={yearEnd} onChange={(e) => setYearEnd(e.target.value)} />
+              <DateField label="วันสิ้นรอบบัญชี" value={yearEnd} onChange={setYearEnd} hideToday />
             </div>
             {!isOwner ? (
               <p className="text-[12px] text-neutral-400">ปิดบัญชีสิ้นปีได้เฉพาะเจ้าของกิจการ</p>

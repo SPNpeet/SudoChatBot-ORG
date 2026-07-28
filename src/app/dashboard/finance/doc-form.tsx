@@ -15,6 +15,7 @@ import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME, WHT_MIN_PAYMENT, bel
 import type { DocType, VatMode, ExpenseCategory, Contact, FinDoc } from "@/lib/types/finance";
 import { saveDoc, uploadFinFile, type SaveDocInput } from "./actions";
 import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
+import DateField from "@/components/date-field";
 
 interface ProductLite { id: string; name: string; price: number; stock: number; track_stock: boolean }
 interface Row { name: string; qty: string; unit: string; unit_price: string; product_id: string | null }
@@ -247,14 +248,9 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
               )}
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>วันที่เอกสาร</Label>
-                <Input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
-              </div>
-              <div>
-                <Label>{docType === "quotation" ? "ยืนราคาถึง" : "ครบกำหนด"}</Label>
-                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-              </div>
+              <DateField label="วันที่เอกสาร" value={issueDate} onChange={setIssueDate} />
+              <DateField label={docType === "quotation" ? "ยืนราคาถึง" : "ครบกำหนด"}
+                value={dueDate} onChange={setDueDate} min={issueDate} hideToday />
             </div>
             {isExpense && (
               <div className="sm:col-span-2">

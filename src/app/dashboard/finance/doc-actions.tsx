@@ -9,6 +9,7 @@ import { recordPayment, convertDoc, voidDoc, uploadFinFile } from "./actions";
 import { compressImage } from "@/lib/compress-image";
 import type { DocStatus, DocType, VatMode } from "@/lib/types/finance";
 import NoteDialog from "./note-dialog";
+import DateField from "@/components/date-field";
 
 export interface DocActionsProps {
   doc: {
@@ -141,10 +142,7 @@ export default function DocActions({ doc }: DocActionsProps) {
                   <Label>จำนวนเงิน (บาท)</Label>
                   <Input inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
                 </div>
-                <div>
-                  <Label>วันที่</Label>
-                  <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
-                </div>
+                <DateField label="วันที่" value={payDate} onChange={setPayDate} />
               </div>
               <div>
                 <Label>ช่องทาง</Label>

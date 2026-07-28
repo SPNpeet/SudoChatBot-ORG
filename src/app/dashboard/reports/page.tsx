@@ -159,7 +159,16 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
       </div>
 
       <Card>
-        <CardHeader><CardTitle>รายได้ vs ค่าใช้จ่าย รายเดือน (จากสมุดรายวันจริง)</CardTitle></CardHeader>
+        {/* ตารางนี้กว้างกว่างวดที่เลือก (ย้อนหลัง 6 เดือนให้เห็นเทรนด์)
+            จึงต้องเขียนช่วงจริงไว้ ไม่งั้นคนอ่านว่าเป็นตัวเลขของงวดที่เลือก */}
+        <CardHeader>
+          <CardTitle>รายได้ vs ค่าใช้จ่าย รายเดือน (จากสมุดรายวันจริง)</CardTitle>
+          {rows.length > 1 && (
+            <p className="mt-1 text-xs font-normal text-neutral-400">
+              แสดง {rows.length} เดือน ({rows[0]} ถึง {rows[rows.length - 1]}) — กว้างกว่างวดที่เลือกเพื่อให้เห็นแนวโน้ม
+            </p>
+          )}
+        </CardHeader>
         <CardContent className="px-0 pb-0">
           {rows.length === 0 ? (
             <EmptyState icon={LineChart} title="งวดนี้ยังไม่มีรายการบัญชี"
@@ -188,7 +197,9 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
                   }, { income: 0, expense: 0 });
                   return (
                     <tr className="font-bold">
-                      <Td>รวม{period.label}</Td>
+                      {/* เดิมเขียนว่า "รวม{period.label}" ซึ่งผิด เพราะรวมทุกเดือนในตาราง
+                          ไม่ใช่เฉพาะงวดที่เลือก — คนอ่านแล้วเข้าใจว่ากำไรของเดือนนั้นเยอะกว่าจริง */}
+                      <Td>{rows.length > 1 ? `รวม ${rows[0]} ถึง ${rows[rows.length - 1]}` : `รวม${period.label}`}</Td>
                       <Td className="text-right text-emerald-700">{bahtDoc(sum.income)}</Td>
                       <Td className="text-right text-red-600">{bahtDoc(sum.expense)}</Td>
                       <Td className={cn("text-right", sum.income - sum.expense >= 0 ? "text-emerald-700" : "text-red-600")}>{bahtDoc(sum.income - sum.expense)}</Td>

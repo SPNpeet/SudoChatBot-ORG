@@ -13,6 +13,7 @@ import { useState, useTransition } from "react";
 import { Button, Input, Label } from "@/components/ui";
 import { setPeriodLock, clearPeriodLock } from "../actions";
 import { Lock, LockOpen, TriangleAlert } from "lucide-react";
+import DateField from "@/components/date-field";
 
 /** วันสุดท้ายของเดือนก่อนหน้า ตามเวลาไทย — ค่าที่คนเลือกบ่อยที่สุด */
 function endOfLastMonth(): string {
@@ -29,6 +30,7 @@ export default function PeriodLockForm({ shopId, lock, isOwner }: {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [lockThrough, setLockThrough] = useState(lock?.locked_through ?? endOfLastMonth());
 
   function submit(fd: FormData) {
     setResult(null);
@@ -77,9 +79,9 @@ export default function PeriodLockForm({ shopId, lock, isOwner }: {
       <form action={submit} className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <Label>ปิดงวดถึงวันที่</Label>
-            <Input type="date" name="locked_through" required defaultValue={lock?.locked_through ?? endOfLastMonth()} />
-            <p className="mt-1 text-[11px] text-neutral-400">ปกติใช้วันสุดท้ายของเดือนที่ยื่นภาษีไปแล้ว</p>
+            <DateField label="ปิดงวดถึงวันที่" required name="locked_through"
+              value={lockThrough} onChange={setLockThrough} hideToday
+              hint="ปกติใช้วันสุดท้ายของเดือนที่ยื่นภาษีไปแล้ว" />
           </div>
           <div>
             <Label>บันทึกช่วยจำ (ไม่บังคับ)</Label>

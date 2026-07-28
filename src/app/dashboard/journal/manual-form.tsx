@@ -7,6 +7,7 @@ import { Button, Input, Label } from "@/components/ui";
 import { bahtDoc } from "@/lib/utils";
 import { addManualJournal } from "../finance/actions";
 import type { Account } from "@/lib/types/finance";
+import DateField from "@/components/date-field";
 
 interface Line { code: string; debit: string; credit: string; memo: string }
 const emptyLine = (): Line => ({ code: "", debit: "", credit: "", memo: "" });
@@ -53,10 +54,7 @@ export default function ManualJournalForm({ shopId, accounts }: { shopId: string
             </div>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>วันที่</Label>
-                  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-                </div>
+                <DateField label="วันที่" value={date} onChange={setDate} />
                 <div>
                   <Label>คำอธิบาย</Label>
                   <Input value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="เช่น ปรับปรุงยอดสิ้นเดือน" />
