@@ -137,6 +137,21 @@ ok(docDateVeryOld("2019-01-01", T), "เตือน: เก่าเกิน 5
 ok(!docDateVeryOld("2023-01-01", T), "3 ปีที่แล้ว ไม่ต้องเตือน");
 console.log("  ถูก  ตรวจครบทุกกรณี");
 
+// ---------- 6. อัตราหัก ณ ที่จ่าย เข้าคู่กับประเภทเงินได้ ----------
+section("เตือนอัตราหัก ณ ที่จ่ายไม่เข้าคู่");
+const { whtRateMismatch } = await import("../src/lib/tax-th.ts");
+ok(whtRateMismatch("40(8)", 5) !== null, "จับได้: 40(8) ค่าบริการ + 5% (เคสจริงจากไฟล์ผู้ใช้)");
+ok(whtRateMismatch("40(5)", 3) !== null, "จับได้: 40(5) ค่าเช่า + 3%");
+ok(whtRateMismatch("40(4)", 3) !== null, "จับได้: 40(4) ดอกเบี้ย + 3%");
+ok(whtRateMismatch("40(8)", 3) === null, "ปกติ: 40(8) + 3% ค่าบริการ");
+ok(whtRateMismatch("40(8)", 1) === null, "ปกติ: 40(8) + 1% ค่าขนส่ง");
+ok(whtRateMismatch("40(8)", 2) === null, "ปกติ: 40(8) + 2% ค่าโฆษณา");
+ok(whtRateMismatch("40(5)", 5) === null, "ปกติ: 40(5) + 5% ค่าเช่า");
+ok(whtRateMismatch("40(4)", 10) === null, "ปกติ: 40(4) + 10% เงินปันผล");
+ok(whtRateMismatch(null, 3) === null, "ไม่ระบุประเภท ต้องไม่เตือนมั่ว");
+ok(whtRateMismatch("40(8)", 0) === null, "อัตรา 0 = ไม่หัก ต้องไม่เตือน");
+console.log("  ถูก  ตรวจครบทุกกรณี");
+
 console.log(failures === 0
   ? "\nสรุป: ผ่านทั้งหมด\n"
   : `\nสรุป: ไม่ผ่าน ${failures} ข้อ — ห้าม deploy จนกว่าจะแก้\n`);

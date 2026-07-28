@@ -11,7 +11,7 @@ import { Plus, Trash2, ScanLine, Paperclip, TriangleAlert } from "lucide-react";
 import { Button, Card, CardContent, Input, Label, Select, Textarea } from "@/components/ui";
 import { baht, bahtDoc, cn } from "@/lib/utils";
 import { calcDocTotals, DOC_TYPE_TH, WHT_RATES } from "@/lib/finance";
-import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME, WHT_MIN_PAYMENT, belowWhtThreshold } from "@/lib/tax-th";
+import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME, WHT_MIN_PAYMENT, belowWhtThreshold, whtRateMismatch } from "@/lib/tax-th";
 import type { DocType, VatMode, ExpenseCategory, Contact, FinDoc } from "@/lib/types/finance";
 import { saveDoc, uploadFinFile, type SaveDocInput } from "./actions";
 import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
@@ -381,6 +381,14 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
                   : "ใบนี้เป็นใบแจ้งหนี้เฉย ๆ ยังไม่ใช่ใบกำกับภาษี · ระบบพักภาษีขายไว้ที่บัญชี 2035 แล้วย้ายเข้าภาษีขายจริงตอนรับเงิน ใบกำกับภาษีออกตอนออกใบเสร็จ"}
               </p>
             </div>
+          )}
+
+          {/* อัตราไม่เข้าคู่กับประเภทเงินได้ — เตือนอย่างเดียว ไม่บล็อก
+              เพราะมีกรณีเฉพาะที่อัตราต่างจากปกติได้จริง ให้ผู้ทำบัญชีตัดสิน */}
+          {Number(whtRate) > 0 && whtRateMismatch(incomeType, Number(whtRate)) && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-relaxed text-amber-800">
+              {whtRateMismatch(incomeType, Number(whtRate))}
+            </p>
           )}
 
           {Number(whtRate) > 0 && belowWhtThreshold(totals.exVat) && (
