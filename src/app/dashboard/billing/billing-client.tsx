@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge } from "
 import { baht, cn } from "@/lib/utils";
 import { createTopup, createOmiseTopup, getTopupStatus, changePlan, purchasePlan } from "./actions";
 import { Check, Wallet, Upload, X, Loader2 } from "lucide-react";
+import { useDismiss } from "@/components/use-dismiss";
 
 interface Plan {
   code: string; name: string; price_monthly: number; included_replies: number;
@@ -32,6 +33,7 @@ export default function BillingClient({
   const [slipMsg, setSlipMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [topupErr, setTopupErr] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  useDismiss(!!topup, () => { setTopup(null); setSlipMsg(null); });
   const [omisePaid, setOmisePaid] = useState(false);
 
   // Omise: poll สถานะทุก 4 วิ หลังโชว์ QR — จ่ายสำเร็จแล้วรีโหลด
@@ -273,6 +275,7 @@ export default function BillingClient({
 function DowngradeFreeButton({ shopId, planCode, planName }: { shopId: string; planCode: string; planName: string }) {
   const [pending, start] = useTransition();
   const [open, setOpen] = useState(false);
+  useDismiss(open, () => setOpen(false));
   const [err, setErr] = useState<string | null>(null);
   return (
     <>

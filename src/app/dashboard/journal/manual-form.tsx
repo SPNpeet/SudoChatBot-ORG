@@ -8,12 +8,14 @@ import { bahtDoc } from "@/lib/utils";
 import { addManualJournal } from "../finance/actions";
 import type { Account } from "@/lib/types/finance";
 import DateField from "@/components/date-field";
+import { useDismiss } from "@/components/use-dismiss";
 
 interface Line { code: string; debit: string; credit: string; memo: string }
 const emptyLine = (): Line => ({ code: "", debit: "", credit: "", memo: "" });
 
 export default function ManualJournalForm({ shopId, accounts }: { shopId: string; accounts: Account[] }) {
   const [open, setOpen] = useState(false);
+  useDismiss(open, () => setOpen(false));
   const [date, setDate] = useState(new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10));
   const [memo, setMemo] = useState("");
   const [lines, setLines] = useState<Line[]>([emptyLine(), emptyLine()]);

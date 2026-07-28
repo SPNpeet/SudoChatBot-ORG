@@ -7,9 +7,11 @@ import { Button, Input, Label, Select, Textarea } from "@/components/ui";
 import { upsertContact, archiveContact } from "../finance/actions";
 import { RECIPIENT_KINDS, guessRecipientKind, isValidTaxId, type RecipientKind } from "@/lib/tax-th";
 import type { Contact } from "@/lib/types/finance";
+import { useDismiss } from "@/components/use-dismiss";
 
 export default function ContactForm({ shopId, contact }: { shopId: string; contact?: Contact }) {
   const [open, setOpen] = useState(false);
+  useDismiss(open, () => setOpen(false));
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();

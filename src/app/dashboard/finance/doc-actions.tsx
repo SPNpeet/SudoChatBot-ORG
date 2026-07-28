@@ -10,6 +10,7 @@ import { compressImage } from "@/lib/compress-image";
 import type { DocStatus, DocType, VatMode } from "@/lib/types/finance";
 import NoteDialog from "./note-dialog";
 import DateField from "@/components/date-field";
+import { useDismiss } from "@/components/use-dismiss";
 
 export interface DocActionsProps {
   doc: {
@@ -27,6 +28,9 @@ export default function DocActions({ doc }: DocActionsProps) {
   const [noteOpen, setNoteOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  useDismiss(payOpen, () => setPayOpen(false));
+  useDismiss(voidOpen, () => setVoidOpen(false));
+  useDismiss(noteOpen, () => setNoteOpen(false));
   const [amount, setAmount] = useState(String(doc.outstanding || ""));
   const [method, setMethod] = useState("transfer");
   const [payDate, setPayDate] = useState(new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10));

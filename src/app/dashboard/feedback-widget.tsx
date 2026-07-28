@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import { MessageCirclePlus, X, CheckCircle2 } from "lucide-react";
 import { Button, Textarea } from "@/components/ui";
 import { submitFeedback } from "./actions";
+import { useDismiss } from "@/components/use-dismiss";
 
 export default function FeedbackWidget({ shopId }: { shopId: string }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  useDismiss(open, () => setOpen(false));
   const [msg, setMsg] = useState("");
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<string | null>(null);

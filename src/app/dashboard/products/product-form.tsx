@@ -6,11 +6,13 @@ import type { Product } from "@/lib/types/db";
 import type { ActionResult } from "../actions";
 import { uploadProductImage } from "../actions";
 import { Plus, Pencil, X, Upload } from "lucide-react";
+import { useDismiss } from "@/components/use-dismiss";
 
 export default function ProductForm({
   shopId, action, product,
 }: { shopId: string; action: (fd: FormData) => Promise<ActionResult>; product?: Product }) {
   const [open, setOpen] = useState(false);
+  useDismiss(open, () => setOpen(false));
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>(Array.isArray(product?.images) ? (product!.images as string[]) : []);
