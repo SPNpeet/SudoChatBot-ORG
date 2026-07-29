@@ -81,16 +81,19 @@ function Row({ t, onClose }: { t: ToastItem; onClose: () => void }) {
     )}>
       <Icon className="mt-px h-4 w-4 shrink-0" />
       <p className="min-w-0 flex-1 text-[13px] font-medium leading-relaxed text-neutral-800">{t.text}</p>
+      {/* "เลิกทำ" คือปุ่มที่คนต้องกดให้ทันใน 6 วินาทีก่อน toast หาย — เป้าเล็กยิ่งซ้ำเติม
+          เดิมสูง ~22px (py-1) ขยายเป็นขั้นต่ำ 36px ซึ่งเล็กสุดที่ยอมรับได้ในแถบลอย
+          (ไม่ถึง 44 เพราะจะดัน toast สูงจนบังเนื้อหา — แลกแบบรู้ตัว) */}
       {t.undo && (
         <button type="button" disabled={busy}
           onClick={async () => { setBusy(true); try { await t.undo!(); } finally { onClose(); } }}
-          className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-neutral-900 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-neutral-700 disabled:opacity-60">
+          className="inline-flex min-h-[36px] shrink-0 items-center gap-1 rounded-lg bg-neutral-900 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-neutral-700 disabled:opacity-60">
           {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Undo2 className="h-3 w-3" />}
           {t.undoLabel ?? "เลิกทำ"}
         </button>
       )}
       <button type="button" onClick={onClose} aria-label="ปิด"
-        className="shrink-0 rounded-lg p-0.5 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600">
+        className="grid h-9 w-9 shrink-0 place-items-center self-center rounded-lg text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-600">
         <X className="h-3.5 w-3.5" />
       </button>
     </div>

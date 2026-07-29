@@ -26,7 +26,9 @@ export async function signUpDirect(name: string, email: string, password: string
   const pw = String(password ?? "");
   if (!n) return { ok: false, error: "กรอกชื่อของคุณก่อนนะ" };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return { ok: false, error: "รูปแบบอีเมลไม่ถูกต้อง" };
-  if (pw.length < 6) return { ok: false, error: "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร" };
+  // 8 ให้ตรงกับ Minimum password length ที่ตั้งไว้ใน Supabase Auth (30 ก.ค. 2569)
+  // เดิมเช็ค 6 ตรงนี้ แล้วปล่อยไปตกที่เซิร์ฟเวอร์ Auth ซึ่งตอบ error ภาษาอังกฤษ
+  if (pw.length < 8) return { ok: false, error: "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร" };
 
   const svc = createServiceClient();
 
@@ -46,6 +48,10 @@ export async function signUpDirect(name: string, email: string, password: string
     const m = error.message ?? "";
     if (m.includes("already") || m.includes("registered") || error.code === "email_exists") {
       return { ok: false, error: "อีเมลนี้มีบัญชีอยู่แล้ว — กดเข้าสู่ระบบได้เลย" };
+    }
+    // เผื่อเกณฑ์ฝั่ง Auth ถูกปรับอีกในอนาคต — แปลเป็นภาษาคน ไม่โชว์ error อังกฤษดิบ
+    if (/at least|password.*short|weak/i.test(m)) {
+      return { ok: false, error: "รหัสผ่านสั้นหรือเดาง่ายเกินไป — ตั้งอย่างน้อย 8 ตัวอักษร" };
     }
     return { ok: false, error: `สมัครไม่สำเร็จ: ${m.slice(0, 200)}` };
   }

@@ -75,10 +75,10 @@ export default function SignupPage() {
             <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
               placeholder="อีเมล" autoComplete="email" className={inputCls} />
             <div className="relative">
-              <input type={showPw ? "text" : "password"} required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)}
-                placeholder="ตั้งรหัสผ่าน (อย่างน้อย 6 ตัว)" autoComplete="new-password" className={`${inputCls} pr-11`} />
+              <input type={showPw ? "text" : "password"} required minLength={8} value={pw} onChange={(e) => setPw(e.target.value)}
+                placeholder="ตั้งรหัสผ่าน (อย่างน้อย 8 ตัว)" autoComplete="new-password" className={`${inputCls} pr-11`} />
               <button type="button" onClick={() => setShowPw((v) => !v)} tabIndex={-1}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+                className="absolute right-1 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-lg text-neutral-400 transition-colors hover:text-neutral-600"
                 aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}>
                 {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -99,11 +99,11 @@ export default function SignupPage() {
           {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-xs text-red-600">{error}</p>}
 
           <p className="mt-5 rounded-xl bg-neutral-50 px-3 py-2.5 text-center text-xs text-neutral-500">
-            มีบัญชีอยู่แล้ว? <Link href="/login" className="font-semibold text-emerald-600 hover:underline">เข้าสู่ระบบ</Link>
+            มีบัญชีอยู่แล้ว? <Link href="/login" className="inline-flex min-h-[36px] items-center font-semibold text-emerald-600 hover:underline">เข้าสู่ระบบ</Link>
           </p>
         </div>
         <p className="mt-4 text-center text-[11px] leading-relaxed text-neutral-400">
-          การสมัครถือว่ายอมรับ<Link href="/terms" className="underline">เงื่อนไขการใช้งาน</Link>และ<Link href="/privacy" className="underline">นโยบายความเป็นส่วนตัว</Link>
+          การสมัครถือว่ายอมรับ<Link href="/terms" className="inline-flex min-h-[36px] items-center px-0.5 underline">เงื่อนไขการใช้งาน</Link>และ<Link href="/privacy" className="inline-flex min-h-[36px] items-center px-0.5 underline">นโยบายความเป็นส่วนตัว</Link>
         </p>
       </div>
     </main>
