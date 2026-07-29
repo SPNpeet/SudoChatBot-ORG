@@ -12,10 +12,17 @@ import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "
 import { createClient } from "@/lib/supabase/client";
 import { dateOnlyTH } from "@/lib/utils";
 import { updateMyProfile } from "../actions";
-import { CheckCircle2, KeyRound, Mail, UserRound } from "lucide-react";
+import { CheckCircle2, KeyRound, Mail, ShieldCheck, TriangleAlert, UserRound } from "lucide-react";
 
-export default function AccountForm({ email, displayName, phone, joined }: {
+const PROVIDER_LABEL: Record<string, string> = {
+  email: "อีเมล + รหัสผ่าน",
+  google: "บัญชี Google",
+  facebook: "บัญชี Facebook",
+};
+
+export default function AccountForm({ email, displayName, phone, joined, providers, hasPassword }: {
   email: string | null; displayName: string | null; phone: string | null; joined: string | null;
+  providers: string[]; hasPassword: boolean;
 }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -99,17 +106,57 @@ export default function AccountForm({ email, displayName, phone, joined }: {
 
         <div className="border-t border-neutral-100 pt-4">
           <p className="flex items-center gap-1.5 text-sm font-medium text-neutral-800">
-            <KeyRound className="h-4 w-4 text-neutral-400" /> รหัสผ่าน
+            <KeyRound className="h-4 w-4 text-neutral-400" /> วิธีเข้าสู่ระบบของคุณ
           </p>
+
+          <ul className="mt-2 space-y-1">
+            {providers.map((p) => (
+              <li key={p} className="flex items-center gap-2 text-[13px] text-neutral-700">
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                {PROVIDER_LABEL[p] ?? p}
+              </li>
+            ))}
+            {providers.length === 0 && <li className="text-[13px] text-neutral-400">—</li>}
+          </ul>
+
+          {/* ============================================================
+              เตือนคนที่มี "ประตูเดียว"
+              ตรวจแล้วพบว่าเป็นสถานะของ 10 จาก 15 บัญชีในระบบ และ 8 ในนั้น
+              เป็นเจ้าของกิจการที่มีข้อมูลจริง — วันที่เข้าบัญชี Google ไม่ได้
+              คือวันที่เข้าสมุดบัญชีของกิจการไม่ได้ และหน้า "ลืมรหัสผ่าน" ก็ช่วยไม่ได้
+              เพราะไม่เคยมีรหัสผ่านให้ลืม
+              ============================================================ */}
+          {!hasPassword && pwState !== "sent" && (
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+              <p className="flex items-start gap-2 text-[13px] font-semibold text-amber-900">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                ตอนนี้คุณเข้าระบบได้ทางเดียว
+              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-amber-800">
+                บัญชีนี้ยังไม่มีรหัสผ่านของ SudoChatBot เอง — ถ้าวันไหนเข้า
+                {providers.map((p) => PROVIDER_LABEL[p] ?? p).join("/")} ไม่ได้
+                จะเข้าสมุดบัญชีของกิจการไม่ได้เลย และกด &quot;ลืมรหัสผ่าน&quot; ก็ไม่ช่วย
+                เพราะยังไม่เคยตั้งรหัสไว้
+              </p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-amber-800">
+                <b>ตั้งรหัสผ่านสำรองไว้ 1 นาที</b> แล้วเข้าได้ทั้งสองทาง — ทางเดิมยังใช้ได้เหมือนเดิม
+              </p>
+              <Button type="button" onClick={sendReset}
+                disabled={pwState === "sending" || !email} className="mt-2.5 w-full sm:w-auto">
+                {pwState === "sending" ? "กำลังส่ง..." : "ส่งลิงก์ตั้งรหัสผ่านสำรอง"}
+              </Button>
+            </div>
+          )}
+
           {pwState === "sent" ? (
-            <p className="mt-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-[12px] leading-relaxed text-emerald-700">
-              ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่ <b>{email}</b> แล้ว — ลิงก์ใช้ได้ครั้งเดียวและมีอายุจำกัด
+            <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2.5 text-[12px] leading-relaxed text-emerald-700">
+              ส่งลิงก์ไปที่ <b>{email}</b> แล้ว — ลิงก์ใช้ได้ครั้งเดียวและมีอายุจำกัด
               ถ้าไม่เจอในกล่องจดหมาย ลองดูในอีเมลขยะ
             </p>
-          ) : (
+          ) : hasPassword && (
             <>
-              <p className="mt-1 text-[11px] leading-relaxed text-neutral-400">
-                เราจะส่งลิงก์ตั้งรหัสใหม่ไปที่อีเมลของคุณ — ตั้งรหัสจากหน้านี้ตรง ๆ ไม่ได้
+              <p className="mt-3 text-[11px] leading-relaxed text-neutral-400">
+                เปลี่ยนรหัสผ่านได้ทางลิงก์ที่ส่งไปอีเมล — ตั้งจากหน้านี้ตรง ๆ ไม่ได้
                 เพื่อกันคนที่มานั่งเครื่องต่อจากคุณยึดบัญชีไปโดยไม่รู้รหัสเดิม
               </p>
               <Button type="button" variant="outline" onClick={sendReset}

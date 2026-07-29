@@ -29,6 +29,19 @@ export default async function AccountPage() {
   const email = user.email ?? prof?.email ?? null;
   const joined = prof?.created_at ?? user.created_at;
 
+  // ============================================================
+  //  "ประตูเดียว" คือความเสี่ยงที่ผู้ใช้มองไม่เห็นจนกว่าจะสาย
+  //
+  //  ตรวจฐานข้อมูลจริง 29 ก.ค. 2569 พบ 10 จาก 15 บัญชีเข้าระบบได้ทางเดียว
+  //  และไม่มีรหัสผ่านของเราเองเลย — ในนั้น 8 บัญชีเป็นเจ้าของกิจการที่มีข้อมูลจริง
+  //  ถ้าวันไหนเข้าบัญชี Google ตัวเองไม่ได้ = เข้าสมุดบัญชีของกิจการไม่ได้เลย
+  //  และหน้า "ลืมรหัสผ่าน" ก็ไม่ช่วย เพราะไม่เคยมีรหัสผ่านให้ลืม
+  //
+  //  จึงต้องบอกให้เห็นตรงนี้ พร้อมทางแก้ที่กดได้ทันที ไม่ใช่รอให้เจอปัญหาก่อน
+  // ============================================================
+  const providers = (user.identities ?? []).map((i) => i.provider);
+  const hasPassword = providers.includes("email");
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <PageHeader
@@ -42,6 +55,8 @@ export default async function AccountPage() {
         displayName={prof?.display_name ?? (user.user_metadata?.full_name as string | undefined) ?? null}
         phone={prof?.phone ?? null}
         joined={joined ?? null}
+        providers={providers}
+        hasPassword={hasPassword}
       />
 
       <Card>
