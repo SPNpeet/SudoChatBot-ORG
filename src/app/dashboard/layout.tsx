@@ -8,9 +8,6 @@ import { NavShell, MainArea } from "./nav-shell";
 import { SidebarHead, SidebarFoot } from "./sidebar-parts";
 import { ToastProvider } from "@/components/toast";
 import CommandPalette from "./command-palette";
-import Notifications from "./notifications";
-import SystemAlertBanner from "./system-alert-banner";
-import VatRateAlert from "./vat-rate-alert";
 import FeedbackWidget from "./feedback-widget";
 import QuickCreate from "./quick-create";
 import CompanySwitcher from "./company-switcher";
@@ -72,18 +69,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <AccountMenu me={me} signOut={signOut} variant="icon" />
       </header>
 
-      {/* เนื้อหา — pb มือถือ = bottom nav + ปุ่มลอย ปุ่มแถวล่างสุดต้องกดได้เสมอ */}
-      <MainArea>
-        {/* แบนเนอร์แจ้งเตือนเป็นของหน้าจอ ไม่ใช่ของเอกสาร
-            หน้าพิมพ์ใบกำกับภาษีอยู่ใต้ layout นี้ด้วย ถ้าไม่กัน จะมีข้อความเตือน
-            ไปโผล่บนใบกำกับภาษีที่ส่งให้ลูกค้าและกรมสรรพากร */}
-        <div data-noprint>
-          <SystemAlertBanner />
-          <VatRateAlert />
-          <Notifications />
-        </div>
-        {children}
-      </MainArea>
+      {/* เนื้อหา — pb มือถือ = bottom nav + ปุ่มลอย ปุ่มแถวล่างสุดต้องกดได้เสมอ
+          ⚠️ ห้ามเอาแบนเนอร์แจ้งเตือนกลับมาไว้ที่นี่
+          เดิมมี 3 กล่อง (ประกาศระบบ · อัตรา VAT · แจ้งเตือน) วางไว้ตรงนี้
+          ผลคือเปิดหน้าไหนก็เจอ กินที่บนสุดของทุกหน้าตลอดเวลา
+          เจ้าของใช้คำว่า "รกจัด ๆ" ซึ่งถูก — คำเตือนที่เห็นทุกวันคือคำเตือนที่ตาชา
+          ย้ายไปไว้หน้าภาพรวมที่เดียว (dashboard/page.tsx) แล้ว
+          รอบถัดไปจะยกเข้ากล่องจดหมายระบบให้หน้าภาพรวมสะอาดด้วย */}
+      <MainArea>{children}</MainArea>
 
       {/* ปุ่มลอยทั้งหมด — ต้องไม่ติดไปกับกระดาษ (globals.css ซ่อน [data-noprint] ตอนพิมพ์) */}
       <div data-noprint>

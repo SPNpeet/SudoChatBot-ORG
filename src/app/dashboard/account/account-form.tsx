@@ -12,7 +12,7 @@ import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "
 import { createClient } from "@/lib/supabase/client";
 import { dateOnlyTH } from "@/lib/utils";
 import { updateMyProfile } from "../actions";
-import { CheckCircle2, KeyRound, Mail, ShieldCheck, TriangleAlert, UserRound } from "lucide-react";
+import { CheckCircle2, KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
 
 const PROVIDER_LABEL: Record<string, string> = {
   email: "อีเมล + รหัสผ่าน",
@@ -120,32 +120,34 @@ export default function AccountForm({ email, displayName, phone, joined, provide
           </ul>
 
           {/* ============================================================
-              เตือนคนที่มี "ประตูเดียว"
-              ตรวจแล้วพบว่าเป็นสถานะของ 10 จาก 15 บัญชีในระบบ และ 8 ในนั้น
-              เป็นเจ้าของกิจการที่มีข้อมูลจริง — วันที่เข้าบัญชี Google ไม่ได้
-              คือวันที่เข้าสมุดบัญชีของกิจการไม่ได้ และหน้า "ลืมรหัสผ่าน" ก็ช่วยไม่ได้
-              เพราะไม่เคยมีรหัสผ่านให้ลืม
+              ⚠️ เดิมตรงนี้เป็นกล่องเตือนสีเหลือง "ตอนนี้คุณเข้าระบบได้ทางเดียว"
+              เอาออกแล้ว (30 ก.ค. 2569) เพราะเป็นการเตือนที่ผิด
+
+              เหตุผล
+              · เข้าด้วย Google อย่างเดียวเป็นมาตรฐานของ SaaS ทั่วโลก ไม่ใช่ช่องโหว่
+              · บัญชี Google + 2FA ปลอดภัยกว่ารหัสผ่านที่ผู้ใช้ตั้งเอง และ Google
+                มีระบบกู้บัญชีที่ดีกว่าที่ระบบเล็ก ๆ อย่างเราจะทำได้
+              · กล่องสีเหลืองผลักให้คนไปตั้งรหัสผ่านซึ่ง "อ่อนแอกว่าเดิม"
+                และทำให้ระบบดูเปราะบางทั้งที่ไม่ได้เปราะ
+
+              ความเสี่ยงจริงไม่ได้อยู่ที่ผู้ใช้ แต่อยู่ที่ฝั่งเรา — ถ้าปิด/ตั้งค่า
+              Google provider พลาด ทุกบัญชีที่มีแต่ Google จะเข้าไม่ได้พร้อมกัน
+              (เกิดจริงกับ Facebook ไปแล้ว 1 บัญชี) นั่นเป็นกฎของทีม ไม่ใช่คำเตือนในจอ:
+              ห้ามปิด provider ใดก็ตามจนกว่าทุกบัญชีที่ผูกอยู่จะมีทางเข้าที่สอง
+
+              คงปุ่มไว้เป็น "ตัวเลือก" ให้คนที่อยากมีรหัสผ่านไว้เอง — ไม่ใช่คำเตือน
               ============================================================ */}
           {!hasPassword && pwState !== "sent" && (
-            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
-              <p className="flex items-start gap-2 text-[13px] font-semibold text-amber-900">
-                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-                ตอนนี้คุณเข้าระบบได้ทางเดียว
+            <>
+              <p className="mt-3 text-[11px] leading-relaxed text-neutral-400">
+                ถ้าอยากเข้าระบบได้โดยไม่ต้องผ่าน{providers.map((p) => PROVIDER_LABEL[p] ?? p).join("/")}
+                {" "}จะตั้งรหัสผ่านเพิ่มไว้ก็ได้ — ทางเดิมยังใช้ได้เหมือนเดิม
               </p>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-amber-800">
-                บัญชีนี้ยังไม่มีรหัสผ่านของ SudoChatBot เอง — ถ้าวันไหนเข้า
-                {providers.map((p) => PROVIDER_LABEL[p] ?? p).join("/")} ไม่ได้
-                จะเข้าสมุดบัญชีของกิจการไม่ได้เลย และกด &quot;ลืมรหัสผ่าน&quot; ก็ไม่ช่วย
-                เพราะยังไม่เคยตั้งรหัสไว้
-              </p>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-amber-800">
-                <b>ตั้งรหัสผ่านสำรองไว้ 1 นาที</b> แล้วเข้าได้ทั้งสองทาง — ทางเดิมยังใช้ได้เหมือนเดิม
-              </p>
-              <Button type="button" onClick={sendReset}
-                disabled={pwState === "sending" || !email} className="mt-2.5 w-full sm:w-auto">
-                {pwState === "sending" ? "กำลังส่ง..." : "ส่งลิงก์ตั้งรหัสผ่านสำรอง"}
+              <Button type="button" variant="outline" onClick={sendReset}
+                disabled={pwState === "sending" || !email} className="mt-2 w-full sm:w-auto">
+                {pwState === "sending" ? "กำลังส่ง..." : "ตั้งรหัสผ่านเพิ่ม (ไม่บังคับ)"}
               </Button>
-            </div>
+            </>
           )}
 
           {pwState === "sent" ? (

@@ -15,6 +15,9 @@ import { TrendingUp, TrendingDown, Users, Receipt, ArrowUpRight, ArrowDownRight,
 import Link from "next/link";
 import RowLink from "@/components/row-link";
 import DataHealth from "./data-health";
+import SystemAlertBanner from "./system-alert-banner";
+import VatRateAlert from "./vat-rate-alert";
+import Notifications from "./notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -102,6 +105,17 @@ export default async function Overview() {
 
   return (
     <div className="space-y-6">
+      {/* ย้ายมาจาก layout (30 ก.ค. 2569) — เดิม 3 กล่องนี้อยู่ใน layout
+          เปิดหน้าไหนก็เจอ กินที่บนสุดของทุกหน้า เจ้าของบอกว่า "รกจัด ๆ"
+          ตอนนี้โผล่เฉพาะหน้าภาพรวม ทุกหน้าอื่นสะอาดแล้ว
+          รอบถัดไปยกเข้ากล่องจดหมายระบบ (กระดิ่ง) ให้หน้านี้สะอาดด้วย
+          ทั้งสามตัวคืน null เองถ้าไม่มีอะไรต้องบอก จึงไม่กินที่เปล่า ๆ */}
+      <div data-noprint className="space-y-3 empty:hidden">
+        <SystemAlertBanner />
+        <VatRateAlert />
+        <Notifications />
+      </div>
+
       {/* ข้อมูลที่ขาดไม่ทำให้ระบบพัง แต่จะระเบิดตอนวันยื่นภาษีซึ่งแก้ไม่ทันแล้ว
           ระบบรู้ได้ตั้งแต่วันนี้ จึงต้องบอกตั้งแต่วันนี้ (ไม่ขึ้นถ้าข้อมูลครบ) */}
       <DataHealth shopId={shop.id} />
