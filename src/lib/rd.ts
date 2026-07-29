@@ -140,3 +140,55 @@ export function encodeTis620(text: string): Uint8Array {
   }
   return out.slice(0, n);
 }
+
+// ============================================================
+//  ประกอบ "บรรทัด" ของไฟล์ยื่น — ย้ายออกมาจาก reports/page.tsx (30 ก.ค. 2569)
+//
+//  ทำไมต้องย้าย: ตัวตรวจอัตโนมัติเดิมตรวจแค่ฟังก์ชันย่อย (rdDateBE · rdAmount · rdClean)
+//  แต่ "ลำดับคอลัมน์ · ตัวคั่น · การขึ้นบรรทัด" ซึ่งเป็นสิ่งที่ทำให้โปรแกรมสรรพากร
+//  อ่านไฟล์ไม่ได้จริง ๆ อยู่ในไฟล์หน้าเว็บและไม่เคยมีเทสต์แตะเลย
+//  สลับคอลัมน์สองช่องแล้วเลขทุกบรรทัดผิดที่ — build ผ่าน typecheck ผ่าน ไม่มีใครรู้
+//  จนกว่าจะเอาไฟล์เข้า RD Prep แล้วเจอตอนดึกของวันที่ 6
+//
+//  ⚠️ ห้ามแก้ลำดับคอลัมน์ในนี้โดยไม่แก้เทสต์ใน scripts/check-accounting.mjs พร้อมกัน
+// ============================================================
+import { branchCode, whtIncomeDesc } from "./tax-th";
+
+/** 1 บรรทัดของไฟล์รายงานภาษีขาย (ภ.พ.30) — 8 คอลัมน์ */
+export function rdVatLine(r: {
+  seq: number; issueDate: string | null; docNumber: string | null;
+  contactName: string | null; contactTaxId: string | null; contactBranch: string | null;
+  /** ยอดก่อน VAT — ใบลดหนี้ต้องส่งค่าติดลบเข้ามา ไม่งั้นภาษีขายที่ยื่นจะเกินจริง */
+  base: number;
+  /** ยอด VAT — ใบลดหนี้ติดลบเช่นกัน */
+  vat: number;
+}): string {
+  return [
+    r.seq, rdDateBE(r.issueDate), rdClean(r.docNumber), rdClean(r.contactName),
+    rdClean(r.contactTaxId), branchCode(r.contactBranch), rdAmount(r.base), rdAmount(r.vat),
+  ].join("|");
+}
+
+/** 1 บรรทัดของไฟล์ ภ.ง.ด.3 / ภ.ง.ด.53 — 11 คอลัมน์ ปิดท้ายเงื่อนไข 1 = หัก ณ ที่จ่าย */
+export function rdWhtLine(r: {
+  seq: number; contactTaxId: string | null; contactBranch: string | null;
+  contactName: string | null; contactAddress: string | null;
+  issueDate: string | null; whtIncomeType: string | null;
+  whtRate: number | string | null; /** ยอดจ่ายก่อน VAT */ base: number;
+  whtAmount: number | string | null;
+}): string {
+  return [
+    r.seq, rdClean(r.contactTaxId), branchCode(r.contactBranch), rdClean(r.contactName),
+    rdClean(r.contactAddress), rdDateBE(r.issueDate), rdClean(whtIncomeDesc(r.whtIncomeType)),
+    rdAmount(r.whtRate), rdAmount(r.base), rdAmount(r.whtAmount), "1",
+  ].join("|");
+}
+
+/**
+ * รวมบรรทัดเป็นเนื้อไฟล์
+ * ต้องเป็น CRLF — โปรแกรม RD Prep เป็นแอป Windows ถ้าใช้ LF อย่างเดียว
+ * บางเวอร์ชันอ่านเป็นบรรทัดเดียวยาว ๆ แล้วฟ้องว่าไฟล์ผิดรูปแบบ
+ */
+export function rdFile(lines: string[]): string {
+  return lines.join("\r\n");
+}

@@ -7,7 +7,7 @@ import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td, Badge, PageHeader } from "@/components/ui";
 import { baht, bahtDoc, dateOnlyTH, cn } from "@/lib/utils";
 import { agingBucket, AGING_LABEL_TH, docOutstanding, DOC_TYPE_TH } from "@/lib/finance";
-import { rdClean, rdDateBE, rdAmount, checkRdWhtRows } from "@/lib/rd";
+import { rdClean, rdDateBE, rdAmount, checkRdWhtRows, rdVatLine, rdWhtLine, rdFile } from "@/lib/rd";
 import type { FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
 import { LineChart, CheckCircle2, FileText, FileSpreadsheet, BookOpenText } from "lucide-react";
@@ -324,15 +324,15 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
     "ภาษีมูลค่าเพิ่ม": vatSign(d) * Number(d.vat_amount),
   }));
   // ไฟล์โอนย้ายรายงานภาษีซื้อ-ขาย: ลำดับ|วันที่(พ.ศ.)|เลขที่ใบกำกับ|ชื่อคู่ค้า|เลขผู้เสียภาษี|สาขา|มูลค่า|VAT
-  const txtOf = (list: FinDoc[]) => list.map((d, i) =>
-    // สาขาต้องเป็นค่าจริงของคู่ค้าแต่ละราย เดิมฮาร์ดโค้ด "00000" ทุกบรรทัด
-    // ทำให้ใบที่ออกให้สาขาถูกยื่นเป็นสำนักงานใหญ่หมด
-    [i + 1, rdDateBE(d.issue_date), rdClean(d.doc_number), rdClean(d.contact_name), rdClean(d.contact_tax_id),
-      branchCode(d.contact_branch),
-      // ใบลดหนี้ต้องเป็นยอดติดลบในไฟล์ที่ยื่น ไม่งั้นภาษีขายที่ยื่นจะเกินจริง
-      rdAmount(vatSign(d) * (Number(d.total) - Number(d.vat_amount))),
-      rdAmount(vatSign(d) * Number(d.vat_amount))].join("|"),
-  ).join("\r\n");
+  // ลำดับคอลัมน์/ตัวคั่น/CRLF ย้ายไปอยู่ใน src/lib/rd.ts แล้ว เพื่อให้ตัวตรวจอัตโนมัติแตะได้
+  // (เดิมอยู่ในไฟล์นี้ ไม่มีเทสต์ไหนเห็น สลับคอลัมน์แล้วไม่มีใครรู้จนเอาไฟล์เข้า RD Prep)
+  const txtOf = (list: FinDoc[]) => rdFile(list.map((d, i) => rdVatLine({
+    seq: i + 1, issueDate: d.issue_date, docNumber: d.doc_number,
+    contactName: d.contact_name, contactTaxId: d.contact_tax_id, contactBranch: d.contact_branch,
+    // ใบลดหนี้ต้องเป็นยอดติดลบในไฟล์ที่ยื่น ไม่งั้นภาษีขายที่ยื่นจะเกินจริง
+    base: vatSign(d) * (Number(d.total) - Number(d.vat_amount)),
+    vat: vatSign(d) * Number(d.vat_amount),
+  })));
 
   return (
     <div className="space-y-4">
@@ -439,13 +439,14 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
     "เอกสารอ้างอิง": d.doc_number,
   }));
   // ไฟล์โอนย้าย ภ.ง.ด.: ลำดับ|เลขผู้เสียภาษี|สาขา|ชื่อผู้ถูกหัก|ที่อยู่|วันที่จ่าย(พ.ศ.)|ประเภทเงินได้|อัตรา|ยอดจ่าย|ภาษีหัก|เงื่อนไข(1=หัก ณ ที่จ่าย)
-  const txtOf = (list: FinDoc[]) => list.map((d, i) =>
-    // สาขาและประเภทเงินได้ต้องเป็นค่าจริงของแต่ละราย — เดิมฮาร์ดโค้ดทั้งคู่
-    // ทำให้ไฟล์ที่ยื่นเข้าระบบสรรพากรมีข้อมูลผิดทุกบรรทัด นักบัญชีต้องมานั่งแก้เอง
-    [i + 1, rdClean(d.contact_tax_id), branchCode(d.contact_branch), rdClean(d.contact_name), rdClean(d.contact_address),
-      rdDateBE(d.issue_date), rdClean(whtIncomeDesc(d.wht_income_type)), rdAmount(d.wht_rate),
-      rdAmount(Number(d.total) - Number(d.vat_amount)), rdAmount(d.wht_amount), "1"].join("|"),
-  ).join("\r\n");
+  // สาขาและประเภทเงินได้ต้องเป็นค่าจริงของแต่ละราย — เดิมฮาร์ดโค้ดทั้งคู่
+  // ทำให้ไฟล์ที่ยื่นเข้าระบบสรรพากรมีข้อมูลผิดทุกบรรทัด นักบัญชีต้องมานั่งแก้เอง
+  const txtOf = (list: FinDoc[]) => rdFile(list.map((d, i) => rdWhtLine({
+    seq: i + 1, contactTaxId: d.contact_tax_id, contactBranch: d.contact_branch,
+    contactName: d.contact_name, contactAddress: d.contact_address,
+    issueDate: d.issue_date, whtIncomeType: d.wht_income_type, whtRate: d.wht_rate,
+    base: Number(d.total) - Number(d.vat_amount), whtAmount: d.wht_amount,
+  })));
 
   return (
     <div className="space-y-4">

@@ -100,6 +100,62 @@ for (const nm of ["บริษัท ก้าวหน้า จำกัด",
 }
 console.log("  ถูก  วันที่ · จำนวนเงิน · อักขระต้องห้าม · TIS-620 พร้อมวรรณยุกต์/สระซ้อน");
 
+// ---------- 3.1 ไฟล์ยื่นทั้งบรรทัด (snapshot) ----------
+// ของเดิมตรวจแค่ฟังก์ชันย่อย แต่สิ่งที่ทำให้โปรแกรมสรรพากรอ่านไฟล์ไม่ได้จริง ๆ คือ
+// "ลำดับคอลัมน์ · ตัวคั่น · จำนวนคอลัมน์ · การขึ้นบรรทัด" ซึ่งไม่เคยมีเทสต์แตะเลย
+// สลับสองคอลัมน์แล้วเลขทุกบรรทัดไปผิดช่อง — build ผ่าน typecheck ผ่าน
+// ไม่มีใครรู้จนเอาไฟล์เข้า RD Prep ตอนดึกของวันที่ 6
+section("ไฟล์ยื่นทั้งบรรทัด (ลำดับคอลัมน์ + ตัวคั่น + CRLF)");
+const { rdVatLine, rdWhtLine, rdFile } = await import("../src/lib/rd.ts");
+
+// ภ.พ.30 — ลำดับ|วันที่(พ.ศ.)|เลขที่|ชื่อ|เลขผู้เสียภาษี|สาขา|มูลค่า|VAT
+const vatLine = rdVatLine({
+  seq: 1, issueDate: "2026-07-23", docNumber: "INV-2026-0042",
+  contactName: "บริษัท สยามเทรด จำกัด", contactTaxId: "0105561000000", contactBranch: "สำนักงานใหญ่",
+  base: 25000, vat: 1750,
+});
+ok(vatLine === "1|23/07/2569|INV-2026-0042|บริษัท สยามเทรด จำกัด|0105561000000|00000|25000.00|1750.00",
+  "ภ.พ.30 ครบ 8 คอลัมน์ ลำดับถูก", `ได้ "${vatLine}"`);
+ok(vatLine.split("|").length === 8, "ภ.พ.30 ต้องมี 8 คอลัมน์เสมอ");
+
+// ใบลดหนี้ต้องติดลบ ไม่งั้นภาษีขายที่ยื่นเกินจริง
+const cnLine = rdVatLine({
+  seq: 2, issueDate: "2026-07-25", docNumber: "CN-2026-0001",
+  contactName: "บริษัท สยามเทรด จำกัด", contactTaxId: "0105561000000", contactBranch: "1",
+  base: -2000, vat: -140,
+});
+ok(cnLine.endsWith("|00001|-2000.00|-140.00"), "ใบลดหนี้ยอดติดลบ + สาขาที่ 1 เป็น 00001", `ได้ "${cnLine}"`);
+
+// ภ.ง.ด. — ลำดับ|เลขผู้เสียภาษี|สาขา|ชื่อ|ที่อยู่|วันที่|ประเภทเงินได้|อัตรา|ยอดจ่าย|ภาษีหัก|เงื่อนไข
+const whtLine = rdWhtLine({
+  seq: 1, contactTaxId: "0105561000000", contactBranch: "สำนักงานใหญ่",
+  contactName: "บริษัท รับเหมา จำกัด", contactAddress: "1 ถนนสุขุมวิท กรุงเทพฯ 10110",
+  issueDate: "2026-07-23", whtIncomeType: "40(8)", whtRate: 3, base: 10000, whtAmount: 300,
+});
+const wf = whtLine.split("|");
+ok(wf.length === 11, "ภ.ง.ด. ต้องมี 11 คอลัมน์เสมอ", `ได้ ${wf.length} คอลัมน์`);
+ok(wf[0] === "1" && wf[1] === "0105561000000" && wf[2] === "00000", "3 คอลัมน์แรก: ลำดับ/เลขภาษี/สาขา");
+ok(wf[5] === "23/07/2569", "คอลัมน์ 6 = วันที่ พ.ศ.", `ได้ "${wf[5]}"`);
+ok(wf[7] === "3.00" && wf[8] === "10000.00" && wf[9] === "300.00", "อัตรา/ยอดจ่าย/ภาษีหัก อยู่ช่อง 8-10");
+ok(wf[10] === "1", "คอลัมน์สุดท้าย = 1 (หัก ณ ที่จ่าย)");
+
+// ข้อมูลที่มี pipe ปนมาต้องไม่ทำคอลัมน์เพี้ยน
+const dirty = rdWhtLine({
+  seq: 1, contactTaxId: "0105561000000", contactBranch: null,
+  // ใช้ String.fromCharCode แทนการเขียน escape ตรง ๆ ให้อ่านง่ายและไม่พลาดตอนแก้ไฟล์
+  contactName: "ร้าน|ก|ข", contactAddress: "ที่อยู่" + String.fromCharCode(10) + "บรรทัดสอง",
+  issueDate: "2026-07-23", whtIncomeType: "40(8)", whtRate: 3, base: 100, whtAmount: 3,
+});
+ok(dirty.split("|").length === 11, "ชื่อที่มี pipe ปนมา ต้องยังได้ 11 คอลัมน์", `ได้ ${dirty.split("|").length}`);
+
+// ไฟล์ต้องเป็น CRLF — RD Prep เป็นแอป Windows ถ้าใช้ LF บางเวอร์ชันอ่านเป็นบรรทัดเดียว
+const CRLF = String.fromCharCode(13) + String.fromCharCode(10);
+const file = rdFile([vatLine, cnLine]);
+ok(file.includes(CRLF), "ขึ้นบรรทัดด้วย CRLF");
+ok(!file.includes(String.fromCharCode(10) + String.fromCharCode(10)), "ไม่มีบรรทัดว่างคั่น");
+ok(file.split(CRLF).length === 2, "2 รายการ = 2 บรรทัด ไม่มีบรรทัดว่างท้ายไฟล์");
+console.log("  ถูก  ลำดับคอลัมน์ · จำนวนคอลัมน์ · ยอดติดลบใบลดหนี้ · pipe ปน · CRLF");
+
 // ---------- 4. ตรวจข้อมูลก่อนโหลดไฟล์ยื่น ----------
 section("ตัวตรวจข้อมูลก่อนโหลดไฟล์ ภ.ง.ด.");
 const { checkRdWhtRows, whtPaperDueDate } = await import("../src/lib/rd.ts");
