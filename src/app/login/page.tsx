@@ -2,7 +2,7 @@
 // ============================================================
 //  เข้าสู่ระบบ — สำหรับคนที่ "มีบัญชีอยู่แล้ว" เท่านั้น
 //  แยกจากหน้าสมัคร (/signup) ชัดเจน ไม่มีปุ่มสมัครปนในฟอร์ม
-//  ช่องทาง: Google · Facebook · อีเมล/รหัสผ่าน — ชุดเดียวกับหน้าสมัคร เปลี่ยนแค่คำบนปุ่ม
+//  ช่องทาง: Google · อีเมล/รหัสผ่าน — ชุดเดียวกับหน้าสมัคร เปลี่ยนแค่คำบนปุ่ม
 // ============================================================
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
@@ -48,7 +48,7 @@ export default function LoginPage() {
           <p className="mt-1 text-center text-xs text-neutral-500">สำหรับผู้ที่มีบัญชีอยู่แล้ว</p>
 
           <div className="mt-6">
-            <OAuthButtons mode="signin" providers={["google", "facebook"]} />
+            <OAuthButtons mode="signin" />
           </div>
 
           <div className="my-5 flex items-center gap-3">
@@ -90,7 +90,7 @@ export default function LoginPage() {
         </div>
 
         {/* ต้องมีนโยบายความเป็นส่วนตัวด้วย ไม่ใช่เงื่อนไขอย่างเดียว —
-            หน้านี้มีปุ่มเข้าระบบด้วย Google/Facebook ซึ่งทั้งสองค่ายบังคับให้ลิงก์นโยบายไว้
+            หน้านี้มีปุ่มเข้าระบบด้วย Google ซึ่งบังคับให้ลิงก์นโยบายไว้
             และ PDPA ก็ต้องแจ้งก่อน/ขณะเก็บข้อมูล (หน้าสมัครมีครบอยู่แล้ว หน้านี้ตกไป) */}
         <p className="mt-4 text-center text-[11px] leading-relaxed text-neutral-400">
           การเข้าสู่ระบบถือว่ายอมรับ<Link href="/terms" className="underline">เงื่อนไขการใช้งาน</Link>

@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
 
-  // OAuth (Facebook/Google) บางกรณี redirect กลับมาที่หน้าแรกพร้อม ?code= — ส่งต่อไป exchange ที่ callback ให้จบ flow
+  // OAuth (Google) บางกรณี redirect กลับมาที่หน้าแรกพร้อม ?code= — ส่งต่อไป exchange ที่ callback ให้จบ flow
   if (path === "/") {
     const code = request.nextUrl.searchParams.get("code");
     if (code) {

@@ -60,7 +60,7 @@ export default function SignupPage() {
 
           {/* Google = ช่องทางที่คนใช้เยอะสุด วางไว้บนสุด กดครั้งเดียวจบ ไม่ต้องตั้งรหัสผ่าน */}
           <div className="mt-5">
-            <OAuthButtons mode="signup" providers={["google", "facebook"]} />
+            <OAuthButtons mode="signup" />
           </div>
 
           <div className="my-5 flex items-center gap-3">

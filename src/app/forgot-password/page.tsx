@@ -88,7 +88,7 @@ export default function ForgotPasswordPage() {
                 นึกออกแล้ว? <Link href="/login" className="font-semibold text-emerald-700 hover:underline">กลับไปเข้าสู่ระบบ</Link>
               </p>
               <p className="mt-2 text-center text-[11px] leading-relaxed text-neutral-400">
-                ถ้าสมัครด้วย Google หรือ Facebook ให้กดปุ่มนั้นที่หน้าเข้าสู่ระบบแทน — บัญชีแบบนั้นไม่มีรหัสผ่านของเราเอง
+                ถ้าสมัครด้วยบัญชีภายนอก (เช่น Google) ให้กดปุ่มนั้นที่หน้าเข้าสู่ระบบแทน — บัญชีแบบนั้นไม่มีรหัสผ่านของเราเอง
               </p>
             </>
           )}
