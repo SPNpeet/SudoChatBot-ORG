@@ -55,8 +55,13 @@ export default function HeroCommand() {
     const q = text.trim() || ph.trim();
     if (!q) { inputRef.current?.focus(); return; }
     // ส่งต่อให้กล่องทดลอง (ฟรี 3 ครั้ง ไม่ต้องสมัคร) แล้วเลื่อนไปให้เห็นคำตอบ
+    //
+    // ⚠️ ต้อง block: "start" ไม่ใช่ "center" — เจ้าของกดแล้ว "เด้งไปตรงการ์ด 3 ขั้นตอนตลอด"
+    // เพราะ center เอากล่องทดลองไว้กลางจอ ครึ่งล่างของจอเลยเป็นเนื้อหาส่วนถัดไป
+    // สายตาคนจับสิ่งที่อยู่กลางล่างก่อน = รู้สึกว่าถูกพาไปผิดที่ ทั้งที่กล่องอยู่ตรงนั้น
+    // ให้กล่องขึ้นชิดบน (#try มี scroll-mt-24 เว้นหายใจให้แล้ว) คำตอบ AI จะเด่นสุดในจอ
     window.dispatchEvent(new CustomEvent(HERO_ASK_EVENT, { detail: q }));
-    document.getElementById("try")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    document.getElementById("try")?.scrollIntoView({ behavior: "smooth", block: "start" });
     setText("");
   }
 

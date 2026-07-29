@@ -9,17 +9,31 @@ import { compressImage } from "@/lib/compress-image";
 // ============================================================
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Calculator, Paperclip, X, Loader2, Trash2, Zap, ArrowDown } from "lucide-react";
+import {
+  Send, Calculator, Paperclip, X, Loader2, Trash2, Zap, ArrowDown,
+  FileText, Receipt, BarChart3, Users, Landmark, Package,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { assistantReply, type AssistantTurn } from "./actions";
 
+/**
+ * งานเริ่มต้นที่คนใช้บ่อย — โชว์เป็นการ์ดบนหน้าต้อนรับ
+ * title/desc คือสิ่งที่คนอ่าน ("กดแล้วได้อะไร") ส่วน prompt คือข้อความที่ส่งให้ AI จริง
+ * เดิมเป็นประโยคตัวอย่างล้วน ๆ เรียงเป็นเม็ดยา อ่านแล้วต้องเดาเองว่าระบบทำอะไรได้บ้าง
+ */
 const STARTERS = [
-  "เดือนนี้กำไรเท่าไหร่ มีอะไรค้างบ้าง",
-  "ใครค้างจ่ายเราบ้าง ทวงใครก่อนดี",
-  "ออกใบแจ้งหนี้ค่าบริการ 5,000 บาท ให้บริษัท ตัวอย่าง จำกัด บวก VAT หัก ณ ที่จ่าย 3%",
-  "บันทึกค่าไฟเดือนนี้ 2,340 บาท จ่ายแล้ว",
-  "สรุปภาษีที่ต้องยื่นเดือนนี้",
-  "สินค้าตัวไหนใกล้หมดสต๊อก",
+  { icon: FileText, title: "ออกใบแจ้งหนี้", desc: "บอกยอดกับชื่อลูกค้า เดี๋ยวออกเอกสารและลงบัญชีให้",
+    prompt: "ออกใบแจ้งหนี้ค่าบริการ 5,000 บาท ให้บริษัท ตัวอย่าง จำกัด บวก VAT หัก ณ ที่จ่าย 3%" },
+  { icon: Receipt, title: "บันทึกค่าใช้จ่าย", desc: "พิมพ์บอก หรือแนบรูปบิลให้อ่านก็ได้",
+    prompt: "บันทึกค่าไฟเดือนนี้ 2,340 บาท จ่ายแล้ว" },
+  { icon: BarChart3, title: "กำไร-ขาดทุนเดือนนี้", desc: "ตัวเลขจริงจากสมุดรายวัน พร้อมรายการที่ค้างอยู่",
+    prompt: "เดือนนี้กำไรเท่าไหร่ มีอะไรค้างบ้าง" },
+  { icon: Users, title: "ใครค้างจ่ายเรา", desc: "ไล่ยอดลูกหนี้ พร้อมแนะว่าควรทวงใครก่อน",
+    prompt: "ใครค้างจ่ายเราบ้าง ทวงใครก่อนดี" },
+  { icon: Landmark, title: "ภาษีที่ต้องยื่นเดือนนี้", desc: "ภ.พ.30 · ภ.ง.ด.3/53 พร้อมกำหนดส่ง",
+    prompt: "สรุปภาษีที่ต้องยื่นเดือนนี้" },
+  { icon: Package, title: "เช็คสต๊อกใกล้หมด", desc: "ดูว่าสินค้าตัวไหนควรสั่งเติมก่อนของขาด",
+    prompt: "สินค้าตัวไหนใกล้หมดสต๊อก" },
 ];
 
 /**
@@ -278,24 +292,51 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
       <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={listRef} onScroll={onListScroll} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {msgs.length === 0 && (
-          <div className="pt-6 text-center">
-            <Calculator className="mx-auto h-8 w-8 text-neutral-300" />
-            <p className="mt-2 text-sm text-neutral-500">
-              สั่งได้ทุกเรื่องบัญชี — ออกเอกสาร บันทึกรายจ่าย รับเงิน ดูยอดค้าง สรุปภาษี
-            </p>
-            <p className="mx-auto mt-1 flex max-w-sm items-center justify-center gap-1 text-[11px] text-neutral-400">
-              <Paperclip className="h-3 w-3 shrink-0" /> แนบรูปบิลได้ทีละหลายใบ พิมพ์สั่งกำกับได้เลย เช่น &ldquo;ค่าเช่า ยังไม่จ่าย&rdquo; · ตัวเลขไม่ชัดระบบจะถามก่อนบันทึกเสมอ
-            </p>
-            <div className="mx-auto mt-4 flex max-w-md flex-wrap justify-center gap-1.5">
-              {/* ปุ่มตัวอย่างคำสั่งเป็นสิ่งแรกที่คนกดในหน้านี้ ต้องกดง่ายจริง
-                  ของเดิม py-1.5 + text-xs = สูง 28px ต่ำกว่าเกณฑ์เป้ากดขั้นต่ำ 44px
-                  และตัวหนังสือ 12px เล็กไปสำหรับผู้ใช้สูงวัยที่เป็นลูกค้าหลักของระบบบัญชี */}
-              {STARTERS.map((s) => (
-                <button key={s} onClick={() => send(s)}
-                  className="inline-flex min-h-[44px] items-center rounded-full border border-neutral-200 px-4 py-2.5 text-[13px] leading-snug text-neutral-600 transition-colors hover:border-emerald-300 hover:text-emerald-700">
-                  {s}
-                </button>
-              ))}
+          /* ==========================================================
+             หน้าต้อนรับ — เจ้าของบอกว่าของเดิม "โล่งและไม่เป็นมืออาชีพ"
+             ซึ่งจริง: บนจอเดสก์ท็อป เม็ดยาเล็ก ๆ กองอยู่บนสุดของการ์ดเปล่า
+             ที่สูงเกือบเต็มจอ = พื้นที่ว่าง 80% ของจอไม่มีอะไรเลย
+
+             แก้ 2 อย่าง
+             1. จัดกึ่งกลางแนวตั้งของพื้นที่แชท (h-full + justify-center)
+                แบบเดียวกับผู้ช่วย AI ที่คนคุ้นมือ — จอไม่ดูร้าง
+             2. เม็ดยาประโยคตัวอย่าง -> การ์ดงานที่บอกว่า "กดแล้วได้อะไร"
+                หัวข้อหนา + คำอธิบาย ผู้ใช้ใหม่อ่านออกโดยไม่ต้องเดา
+             ========================================================== */
+          /* min-h-full ไม่ใช่ h-full — จอเตี้ย (มือถือแนวนอน/หน้าต่างย่อ) การ์ด 6 ใบ
+             สูงกว่าพื้นที่ ถ้าล็อกความสูงแล้ว justify-center หัวจะโดนตัดแบบเลื่อนกลับไม่ได้
+             min-h ให้กล่องยืดตามเนื้อหาแล้วเลื่อนดูได้ปกติ จอสูงก็ยังได้กึ่งกลางเหมือนเดิม */
+          <div className="flex min-h-full flex-col items-center justify-center px-1 sm:px-2">
+            <div className="w-full max-w-2xl">
+              <div className="text-center">
+                <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50">
+                  <Calculator className="h-6 w-6 text-emerald-600" />
+                </div>
+                <h2 className="mt-3 text-lg font-bold tracking-tight text-neutral-900">วันนี้ให้ช่วยเรื่องไหนดี</h2>
+                <p className="mt-1 text-[13px] text-neutral-500">
+                  พิมพ์สั่งเป็นภาษาคนในช่องด้านล่าง หรือเริ่มจากงานที่ใช้บ่อย
+                </p>
+              </div>
+
+              <div className="mt-6 grid gap-2.5 sm:grid-cols-2">
+                {STARTERS.map((s) => (
+                  <button key={s.title} onClick={() => send(s.prompt)}
+                    className="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50/50">
+                    <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100">
+                      <s.icon className="h-4 w-4 text-emerald-700" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[13.5px] font-semibold leading-snug text-neutral-800">{s.title}</span>
+                      <span className="mt-0.5 block text-[12px] leading-relaxed text-neutral-500">{s.desc}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <p className="mx-auto mt-5 flex max-w-md items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-neutral-400">
+                <Paperclip className="mt-[1px] h-3 w-3 shrink-0" />
+                แนบรูปบิลได้ทีละหลายใบ พิมพ์กำกับได้ เช่น &ldquo;ค่าเช่า ยังไม่จ่าย&rdquo; · ตัวเลขไม่ชัดระบบจะถามก่อนบันทึกเสมอ
+              </p>
             </div>
           </div>
         )}
