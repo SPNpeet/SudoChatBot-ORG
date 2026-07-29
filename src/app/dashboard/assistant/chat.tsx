@@ -267,7 +267,11 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   }
 
   return (
-    <div className="relative flex h-full flex-col">
+    <div className="flex h-full flex-col">
+      {/* ครอบสายเลื่อนด้วยกล่อง relative ของตัวเอง — ปุ่มลอยจะได้เกาะ "ขอบล่างของสายเลื่อน"
+          ไม่ใช่ขอบล่างของทั้งแชท ถ้าเกาะทั้งแชท พอแนบบิลไว้ช่องพิมพ์จะสูงขึ้นอีก ~80px
+          แล้วปุ่มจะไปทับรูปบิลที่แนบค้างไว้ */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
       <div ref={listRef} onScroll={onListScroll} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {msgs.length === 0 && (
           <div className="pt-6 text-center">
@@ -380,11 +384,12 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
           บอกด้วยว่ามีข้อความใหม่ไหม คนที่เลื่อนขึ้นไปอ่านของเก่าจะได้รู้ว่า AI ตอบแล้ว */}
       {showJump && (
         <button type="button" onClick={jumpToBottom}
-          className="absolute bottom-[4.75rem] left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-neutral-200 bg-white/95 px-3.5 py-2 text-xs font-medium text-neutral-700 shadow-lg backdrop-blur transition-colors hover:bg-neutral-50">
+          className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-neutral-200 bg-white/95 px-3.5 py-2 text-xs font-medium text-neutral-700 shadow-lg backdrop-blur transition-colors hover:bg-neutral-50">
           <ArrowDown className="h-3.5 w-3.5" />
           {busy || reading ? "กำลังตอบอยู่ด้านล่าง" : "ไปข้อความล่าสุด"}
         </button>
       )}
+      </div>
 
       <div className="border-t border-neutral-100 p-3">
         {pendingFiles.length > 0 && (
