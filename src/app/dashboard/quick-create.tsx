@@ -25,12 +25,13 @@ export default function QuickCreate() {
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", esc);
-    // หน้าผู้ช่วย AI สั่งงานด้วยการพิมพ์อยู่แล้ว ปุ่มสร้างเอกสารลอยทับจึงซ้ำซ้อน
-  // และไปบังกล่องแชทซึ่งเป็นสิ่งเดียวที่หน้านั้นต้องใช้
-  if (path?.startsWith("/dashboard/assistant")) return null;
-
-  return () => window.removeEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
   }, []);
+
+  // หน้าผู้ช่วย AI สั่งงานด้วยการพิมพ์อยู่แล้ว ปุ่มสร้างเอกสารลอยทับจึงซ้ำซ้อน
+  // และไปบังกล่องแชทซึ่งเป็นสิ่งเดียวที่หน้านั้นต้องใช้
+  // ต้องอยู่ "หลัง" hooks ทุกตัว ไม่งั้นผิดกฎ Rules of Hooks (จำนวน hook ต้องเท่ากันทุก render)
+  if (path?.startsWith("/dashboard/assistant")) return null;
 
   return (
     <>
