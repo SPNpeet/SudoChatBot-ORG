@@ -78,7 +78,11 @@ export default function Landing() {
       </header>
 
       <section className="mx-auto max-w-6xl px-6 pb-20 pt-14">
-        <div className="grid items-center gap-12 lg:grid-cols-2">
+        {/* items-start ไม่ใช่ items-center — คอลัมน์ขวา (ตัวอย่างแชท) สูงกว่าคอลัมน์ซ้ายมาก
+            ถ้าจัดกึ่งกลางแนวตั้ง ข้อความฝั่งซ้ายจะถูกดันลงไปลอยอยู่กลางช่อง
+            เกิดช่องว่างก้อนใหญ่เหนือหัวเรื่องบนจอกว้าง ซึ่งคือที่มาของความรู้สึก "ขัดตา"
+            ให้สองคอลัมน์เริ่มที่บรรทัดบนสุดพร้อมกัน สายตาจะจับหัวเรื่องได้ทันที */}
+        <div className="grid items-start gap-12 lg:grid-cols-2">
           <div className="text-center lg:text-left">
             {/* ไม่มีป้ายแคปซูลบอกว่า "นี่คือระบบบัญชี + AI" แล้ว
                 ป้ายแบบนั้นเป็นองค์ประกอบที่หน้าเว็บซึ่ง AI สร้างมีเหมือนกันแทบทุกอัน
@@ -198,7 +202,7 @@ export default function Landing() {
       </section>
 
       {/* ราคา — ตัวเลขเดียวกับหน้า แพ็กเกจ ในระบบ */}
-      <section id="pricing" className="mx-auto max-w-5xl px-6 py-16">
+      <section id="pricing" className="mx-auto max-w-5xl scroll-mt-16 px-6 py-16">
         <h2 className="text-center text-2xl font-bold tracking-tight">ราคาตรงไปตรงมา</h2>
         <p className="mt-2 text-center text-sm text-neutral-500">เริ่มฟรี อัปเกรดเมื่อธุรกิจโต ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด</p>
         <PricingCards plans={plans} />
