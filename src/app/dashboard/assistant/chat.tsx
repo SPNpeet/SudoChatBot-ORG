@@ -7,9 +7,9 @@ import { compressImage } from "@/lib/compress-image";
 //   2. สลับไปหน้าอื่นแล้วกลับมา แชทต้องยังอยู่ (เก็บใน sessionStorage แยกตามกิจการ)
 //   3. รูปที่แนบต้องโชว์เป็นรูปจริงในบับเบิล ไม่ใช่ path ยาวๆ
 // ============================================================
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, Calculator, Paperclip, X, Loader2, Trash2, Zap } from "lucide-react";
+import { Send, Calculator, Paperclip, X, Loader2, Trash2, Zap, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { assistantReply, type AssistantTurn } from "./actions";
 
@@ -70,9 +70,62 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);  // แนบค้างไว้หลายใบ พิมพ์สั่งกำกับก่อนส่ง
   const [error, setError] = useState<string | null>(null);
   const [quotaWall, setQuotaWall] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // ============================================================
+  //  การเลื่อนจออัตโนมัติ — ของเดิมเลื่อนลงล่างสุดทุกครั้งที่ msgs/busy/reading เปลี่ยน
+  //  โดยไม่ดูเลยว่าผู้ใช้กำลังอ่านอะไรอยู่ ปัญหาจริงที่เกิด
+  //   · เลื่อนขึ้นไปดูตัวเลขที่ AI ตอบไว้เมื่อกี้ แล้วโดนกระชากลงล่างสุด
+  //   · แนบบิล 4 ใบ ข้อความ "กำลังอ่านบิลใบที่ n/4" เปลี่ยน 4 ครั้ง = โดนกระชาก 4 รอบ
+  //     ทั้งที่ยังไม่มีข้อความใหม่สักข้อความ
+  //  กติกาใหม่: เลื่อนตามให้ก็ต่อเมื่อผู้ใช้ "ยังจอดอยู่ล่างสุด" เท่านั้น
+  //  ถ้าเลื่อนหนีขึ้นไปอ่านของเก่า = เคารพเขา แล้วขึ้นปุ่มให้กดลงเองแทน
+  // ============================================================
+  const stickRef = useRef(true);        // ผู้ใช้ยังจอดอยู่ล่างสุดไหม (ref ไม่ใช่ state — ห้าม re-render ทุกพิกเซลที่เลื่อน)
+  const [showJump, setShowJump] = useState(false);
+
+  const NEAR_BOTTOM = 80;   // ห่างขอบล่างไม่เกินนี้ ถือว่ายังตามอยู่
+  const FAR_ENOUGH = 160;   // ห่างเกินนี้ค่อยโชว์ปุ่ม ไม่งั้นปุ่มกะพริบตอนเลื่อนนิดเดียว
+
+  function onListScroll() {
+    const el = listRef.current;
+    if (!el) return;
+    const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickRef.current = dist < NEAR_BOTTOM;
+    setShowJump(dist > FAR_ENOUGH);
+  }
+
+  const scrollToBottom = useCallback((smooth = false) => {
+    const el = listRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+  }, []);
+
+  /**
+   * คำตอบใหม่มาถึง — ถ้ายาวเกินจอ ให้จัด "หัวคำตอบ" ไว้บนสุดแทนการดีดไปล่างสุด
+   * คำตอบของระบบนี้มักเป็นสรุปภาษี/รายการลูกหนี้ยาว ๆ ถ้าดีดไปล่างสุด
+   * ผู้ใช้จะไปโผล่ที่บรรทัดสุดท้ายแล้วต้องเลื่อนหาว่าคำตอบเริ่มตรงไหน
+   */
+  const scrollForNewMessage = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const last = el.querySelector<HTMLElement>("[data-last-msg]");
+    if (last && last.offsetHeight > el.clientHeight - 40) {
+      // ใช้ getBoundingClientRect เพราะ offsetParent ของบับเบิลไม่ใช่กล่องนี้เสมอไป
+      const top = last.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop;
+      el.scrollTo({ top: Math.max(0, top - 8), behavior: "auto" });
+    } else {
+      scrollToBottom();
+    }
+  }, [scrollToBottom]);
+
+  function jumpToBottom() {
+    stickRef.current = true;
+    setShowJump(false);
+    scrollToBottom(true);
+  }
 
   // กู้แชทเดิมกลับมาเมื่อสลับหน้าไป-กลับ (เก็บใน sessionStorage: ปิดแท็บแล้วเริ่มใหม่ ไม่ค้างข้ามวัน)
   useEffect(() => {
@@ -99,9 +152,18 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     }
   }, [msgs, shopId, restored]);
 
+  // ข้อความใหม่เข้ามา — ตามให้เฉพาะตอนที่ผู้ใช้ยังจอดอยู่ล่างสุด
+  // ถ้าเขากำลังอ่านของเก่าอยู่ ไม่แตะจอเขา แค่ขึ้นปุ่มบอกว่ามีของใหม่
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs, busy, reading]);
+    if (!restored) return;
+    if (stickRef.current) scrollForNewMessage();
+    else setShowJump(true);
+  }, [msgs, restored, scrollForNewMessage]);
+
+  // "กำลังคิด" / "กำลังอ่านบิลใบที่ n/4" — เลื่อนตามได้ แต่ห้ามกระชากคนที่เลื่อนหนีไปแล้ว
+  useEffect(() => {
+    if (stickRef.current) scrollToBottom();
+  }, [busy, reading, scrollToBottom]);
 
   /** ยิงข้อความให้ AI แล้วต่อคำตอบเข้าแชท — userMsg ต้องถูกใส่ใน msgs มาก่อนแล้ว */
   async function askAi(history: Msg[]) {
@@ -205,8 +267,8 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+    <div className="relative flex h-full flex-col">
+      <div ref={listRef} onScroll={onListScroll} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {msgs.length === 0 && (
           <div className="pt-6 text-center">
             <Calculator className="mx-auto h-8 w-8 text-neutral-300" />
@@ -236,7 +298,9 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
         )}
 
         {msgs.map((m, i) => (
-          <div key={i} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+          // data-last-msg = จุดอ้างอิงให้ตัวเลื่อนจอวัดว่าคำตอบล่าสุดสูงเกินจอไหม
+          <div key={i} data-last-msg={i === msgs.length - 1 ? "" : undefined}
+            className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
             <div className={cn(
               "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm",
               m.role === "user" ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-800",
@@ -309,8 +373,18 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
             </a>
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
+
+      {/* ปุ่มลงล่างสุด — โผล่เฉพาะตอนเลื่อนหนีขึ้นไปแล้ว
+          วางลอยเหนือช่องพิมพ์ ไม่ใช่ในสายเลื่อน จะได้ไม่หายไปกับเนื้อหา
+          บอกด้วยว่ามีข้อความใหม่ไหม คนที่เลื่อนขึ้นไปอ่านของเก่าจะได้รู้ว่า AI ตอบแล้ว */}
+      {showJump && (
+        <button type="button" onClick={jumpToBottom}
+          className="absolute bottom-[4.75rem] left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-neutral-200 bg-white/95 px-3.5 py-2 text-xs font-medium text-neutral-700 shadow-lg backdrop-blur transition-colors hover:bg-neutral-50">
+          <ArrowDown className="h-3.5 w-3.5" />
+          {busy || reading ? "กำลังตอบอยู่ด้านล่าง" : "ไปข้อความล่าสุด"}
+        </button>
+      )}
 
       <div className="border-t border-neutral-100 p-3">
         {pendingFiles.length > 0 && (
