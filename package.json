@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "check": "tsx scripts/check-accounting.mjs",
-    "verify": "npm run typecheck && npm run check && npm run build"
+    "check:ui": "tsx scripts/check-ui-hazards.mjs",
+    "verify": "npm run typecheck && npm run check && npm run check:ui && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
