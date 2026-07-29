@@ -58,10 +58,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
           บนมือถือไม่มีแถบเมนูซ้าย ถ้าไม่วางรูปบัญชีไว้ตรงนี้ จะไม่เหลือที่ไหน
           ให้ผู้ใช้เช็คเลยว่ากำลังล็อกอินด้วยบัญชีไหน (มือถือคือเครื่องที่คนสลับบัญชีบ่อยที่สุด) */}
       <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+        {/* จอแคบเหลือแค่โลโก้ ไม่เอาตัวอักษร — คืนพื้นที่ ~105px ให้ชื่อกิจการ
+            บนจอ 360px ถ้าโชว์ตัวอักษรด้วย ชื่อกิจการจะเหลือที่แค่ 8 ตัวอักษร
+            "ตอนนี้ทำบัญชีของบริษัทไหน" สำคัญกว่าการเห็นชื่อแบรนด์ตัวเองซ้ำทุกหน้า */}
         <Link href="/dashboard" aria-label="กลับหน้าภาพรวม" className="shrink-0 rounded-lg transition-opacity active:opacity-60">
-          <Logo />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-mark.png" alt="SudoChatBot" width={28} height={28} className="h-7 w-7 rounded-lg object-cover sm:hidden" />
+          <Logo className="hidden sm:inline-flex" />
         </Link>
-        <div className="ml-auto min-w-0 flex-1 sm:max-w-[16rem]">
+        <div className="min-w-0 flex-1">
           <CompanySwitcher companies={companies} currentId={shop.id} />
         </div>
         <AccountMenu me={me} signOut={signOut} variant="icon" />
