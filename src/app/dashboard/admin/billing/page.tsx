@@ -41,7 +41,7 @@ export default async function AdminBillingPage() {
   ];
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       <div>
         <h1 className="text-xl font-bold">ภาพรวมรายได้ (ผู้ดูแลแพลตฟอร์ม)</h1>
         <p className="text-sm text-neutral-400">รายได้จากการเติมเงิน · ยืนยันสลิป · ตั้งค่าบัญชีรับเงิน</p>

@@ -57,7 +57,7 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
   const isMoneyDoc = doc.doc_type === "invoice";
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="mx-auto w-full max-w-3xl space-y-4">
       <BackLink href="/dashboard/sales" label="กลับไปเอกสารขาย" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

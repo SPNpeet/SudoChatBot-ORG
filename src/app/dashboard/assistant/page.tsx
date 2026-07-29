@@ -22,7 +22,7 @@ export default async function AssistantPage() {
 
   if (!canManage) {
     return (
-      <div className="max-w-xl">
+      <div className="mx-auto w-full max-w-xl">
         <h1 className="text-xl font-bold">ผู้ช่วยบัญชี AI</h1>
         <p className="mt-3 rounded-xl bg-neutral-50 px-4 py-2.5 text-sm text-neutral-500">
           สิทธิ์ผู้ชม (viewer) ใช้ผู้ช่วย AI สั่งงานไม่ได้ — ดูรายงานและเอกสารได้ตามปกติ

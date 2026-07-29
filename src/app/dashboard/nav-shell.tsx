@@ -45,7 +45,10 @@ export function MainArea({ children }: { children: React.ReactNode }) {
       "transition-[margin] duration-200 ease-out motion-reduce:transition-none",
       collapsed ? "md:ml-16" : "md:ml-56",
     )}>
-      {children}
+      {/* ตีคอกเนื้อหาไว้กลางจอ — บนจอกว้าง 1900px ตารางเดิมกางเต็มจน
+          คอลัมน์ซ้ายสุดกับขวาสุดห่างกันเป็นเมตร สายตากวาดแล้วหลงบรรทัด
+          1280px คือความกว้างที่ตารางบัญชี 6-7 คอลัมน์ยังอ่านสบายและไม่อึดอัด */}
+      <div className="mx-auto w-full max-w-7xl">{children}</div>
     </main>
   );
 }

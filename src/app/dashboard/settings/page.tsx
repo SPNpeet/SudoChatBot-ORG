@@ -65,7 +65,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const active = TABS.find((t) => t.id === tab)!;
 
   return (
-    <div className="max-w-3xl space-y-5">
+    <div className="mx-auto w-full max-w-3xl space-y-5">
       <PageHeader
         title="ตั้งค่า"
         lead={<>ตั้งครั้งเดียวใช้ได้ตลอดสำหรับ {shop.name}</>}

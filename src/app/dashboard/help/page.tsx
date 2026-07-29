@@ -68,7 +68,7 @@ const SECTIONS: { title: string; icon: LucideIcon; items: { q: string; a: string
 
 export default function HelpPage() {
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader
         title="คู่มือใช้งาน"
         lead="ตอบคำถามที่คนใช้ครั้งแรกถามบ่อยที่สุด"

@@ -54,7 +54,7 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
   const outstanding = docOutstanding(doc);
 
   return (
-    <div className="max-w-3xl space-y-4">
+    <div className="mx-auto w-full max-w-3xl space-y-4">
       <BackLink href="/dashboard/expenses" label="กลับไปค่าใช้จ่าย" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

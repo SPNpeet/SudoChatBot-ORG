@@ -257,7 +257,14 @@ export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCell
  *   เดสก์ท็อปไม่แสดงเพราะมีหัวตารางอยู่แล้ว · ไม่ใส่ก็ยังใช้ได้ แค่การ์ดจะไม่มีชื่อฟิลด์กำกับ
  */
 export function Td({ label, className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement> & { label?: string }) {
-  return <td data-label={label} className={cn("border-t border-neutral-100 px-4 py-3 align-middle", className)} {...props} />;
+  // ช่องที่ชิดขวาคือช่องตัวเลขเสมอในตารางบัญชี — บังคับ tabular-nums ให้หลักตรงกันทุกแถว
+  // ไม่งั้นเลข 1 กับ 8 กว้างไม่เท่ากัน ทานยอดทีละคอลัมน์แล้วตาหลุดบรรทัด
+  const isNum = (className ?? "").includes("text-right");
+  return (
+    <td data-label={label}
+      className={cn("border-t border-neutral-100 px-4 py-3 align-middle", isNum && "tabular-nums", className)}
+      {...props} />
+  );
 }
 
 /**
