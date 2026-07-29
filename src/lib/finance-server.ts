@@ -117,15 +117,31 @@ export async function reverseJournalOf(
   sourceId: string, memo: string,
 ): Promise<void> {
   const { data: entries } = await svc.from("journal_entries")
-    .select("id, entry_number, journal_lines(account_id, debit, credit)")
+    .select("id, entry_number, entry_date, journal_lines(account_id, debit, credit)")
     .eq("shop_id", shopId).eq("source_id", sourceId).neq("source_type", "reversal");
   const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
   for (const e of entries ?? []) {
     const lines = (e.journal_lines ?? []) as { account_id: string; debit: number; credit: number }[];
     if (!lines.length) continue;
+
+    /**
+     * วันที่ของรายการกลับ = วันที่หลังสุดระหว่าง "วันนี้" กับ "วันของรายการต้นฉบับ"
+     *
+     * ปกติต้นฉบับอยู่ในอดีต -> กลับรายการวันนี้ ซึ่งถูกต้อง เพราะห้ามแตะงวดที่ยื่นภาษีไปแล้ว
+     *
+     * แต่ถ้าต้นฉบับลงวันที่ไว้ในอนาคต (เช่น กรอก พ.ศ. ลงช่อง ค.ศ. จนกลายเป็นปี 2069)
+     * การกลับรายการ "วันนี้" จะทำให้งบทดลอง ณ วันใด ๆ ก่อนวันนั้น
+     * เห็นแต่รายการกลับโดยไม่มีต้นฉบับมาหักล้าง = เดบิตไม่เท่าเครดิต
+     * ของจริงที่เจอ: เอกสาร 63,750 บาทลงวันที่ 19/06/2069 ถ้ากดยกเลิกจะทำให้งบเพี้ยนทันที
+     *
+     * ใช้ max() แล้วงบสมดุลที่ทุกจุดเวลา ไม่ว่าต้นฉบับจะอยู่อดีตหรืออนาคต
+     */
+    const originDate = String((e as { entry_date?: string }).entry_date ?? today);
+    const revDate = originDate > today ? originDate : today;
+
     const { data: num } = await svc.rpc("next_fin_doc_number", { p_shop_id: shopId, p_doc_type: "journal" });
     const { data: rev } = await svc.from("journal_entries").insert({
-      shop_id: shopId, entry_number: num as string, entry_date: today,
+      shop_id: shopId, entry_number: num as string, entry_date: revDate,
       memo: `กลับรายการ ${e.entry_number}: ${memo}`.slice(0, 500),
       source_type: "reversal", source_id: sourceId, created_by: userId,
     }).select("id").single();
