@@ -93,12 +93,12 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
                       className={cn("font-medium text-emerald-700 hover:underline", d.status === "void" && "text-neutral-400 line-through")}>
                       {d.doc_number}
                     </Link></Td>
-                    <Td>{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
-                    <Td>{d.contact_name ?? "-"}</Td>
-                    <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
-                    <Td className="text-right">{baht(d.total)}</Td>
-                    <Td className="text-right">{d.doc_type === "invoice" && ["awaiting", "partial"].includes(d.status) ? <span className="font-medium text-amber-600">{baht(docOutstanding(d))}</span> : "-"}</Td>
-                    <Td><Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge></Td>
+                    <Td label="ประเภท">{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
+                    <Td label="ลูกค้า">{d.contact_name ?? "-"}</Td>
+                    <Td label="วันที่" className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
+                    <Td label="ยอด" className="text-right">{baht(d.total)}</Td>
+                    <Td label="ค้างรับ" className="text-right">{d.doc_type === "invoice" && ["awaiting", "partial"].includes(d.status) ? <span className="font-medium text-amber-600">{baht(docOutstanding(d))}</span> : "-"}</Td>
+                    <Td label="สถานะ"><Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge></Td>
                   </RowLink>
                 ))}
               </tbody>

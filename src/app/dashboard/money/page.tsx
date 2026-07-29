@@ -112,11 +112,11 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
                   const cells = (
                     <>
                       <Td className="text-neutral-400">{dateTH(p.paid_at)}</Td>
-                      <Td>{p.direction === "in" ? <Badge tone="green">เงินเข้า</Badge> : <Badge tone="red">เงินออก</Badge>}</Td>
-                      <Td className={cn("text-right font-medium", p.direction === "in" ? "text-emerald-700" : "text-red-600")}>
+                      <Td label="ทิศทาง">{p.direction === "in" ? <Badge tone="green">เงินเข้า</Badge> : <Badge tone="red">เงินออก</Badge>}</Td>
+                      <Td label="ยอด" className={cn("text-right font-medium", p.direction === "in" ? "text-emerald-700" : "text-red-600")}>
                         {p.direction === "in" ? "+" : "-"}{baht(p.amount)}
                       </Td>
-                      <Td className="text-neutral-500">{PAY_METHOD_TH[p.method] ?? p.method}</Td>
+                      <Td label="ช่องทาง" className="text-neutral-500">{PAY_METHOD_TH[p.method] ?? p.method}</Td>
                       <Td>
                         {p.fin_docs ? (
                           <Link href={p.fin_docs.doc_type === "expense" ? `/dashboard/expenses/${p.doc_id}` : `/dashboard/sales/${p.doc_id}`}

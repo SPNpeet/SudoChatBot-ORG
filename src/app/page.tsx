@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import HeroCommand from "./hero-command";
 import { FileText, ScanLine, BookOpenText, Landmark, ShieldCheck, ArrowRight, Check, Calculator, Clock, X as XIcon, Lock, Users } from "lucide-react";
 import LandingSandboxChat from "./landing-sandbox-chat";
 
@@ -64,7 +65,7 @@ const faqs = [
 
 export default function Landing() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-[#F5F4EE]">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <Logo />
         <div className="flex items-center gap-3">
@@ -78,22 +79,29 @@ export default function Landing() {
       <section className="mx-auto max-w-6xl px-6 pb-20 pt-14">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="text-center lg:text-left">
-            <p className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-              ระบบบัญชี + ผู้ช่วย AI — เริ่มฟรี ไม่ต้องใช้บัตร
-            </p>
-            <h1 className="text-4xl font-bold leading-[1.15] tracking-tight sm:text-5xl">
-              บัญชีทั้งบริษัท<br /><span className="text-emerald-600">เสร็จด้วยการพิมพ์สั่ง</span>
+            {/* ไม่มีป้ายแคปซูลบอกว่า "นี่คือระบบบัญชี + AI" แล้ว
+                ป้ายแบบนั้นเป็นองค์ประกอบที่หน้าเว็บซึ่ง AI สร้างมีเหมือนกันแทบทุกอัน
+                และมันบรรยายสินค้าแทนที่จะพิสูจน์ — ให้ช่องสั่งงานพิสูจน์แทน */}
+            <h1 className="text-[34px] font-extrabold leading-[1.08] tracking-[-.03em] text-neutral-900 sm:text-[52px]">
+              พิมพ์สั่ง<br />
+              <span className="relative whitespace-nowrap text-[#0B6B4A]">
+                บัญชีเสร็จทั้งบริษัท
+                <span aria-hidden className="absolute inset-x-0 bottom-[.08em] -z-10 h-[.16em] rounded bg-[#0B6B4A]/15" />
+              </span>
             </h1>
-            <p className="mt-5 max-w-xl text-[15px] leading-relaxed text-neutral-500 lg:mx-0 mx-auto">
-              ออกใบแจ้งหนี้-ใบกำกับภาษี เก็บเงินผ่าน QR ตรวจสลิปอัตโนมัติ ถ่ายรูปบิลให้ AI ลงบัญชี
-              สมุดรายวันเดบิต/เครดิตอัตโนมัติ จนถึงรายงาน ภ.พ.30 / ภ.ง.ด. พร้อมยื่น — ครบในระบบเดียว
-              ใช้ง่ายทั้งเจ้าของกิจการและสำนักงานบัญชี
+            <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-neutral-600 lg:mx-0 mx-auto">
+              ใบกำกับภาษีถูกตามกฎหมาย สมุดรายวันเดบิต–เครดิต และรายงานยื่นภาษี
+              เกิดขึ้นพร้อมกันจากประโยคเดียว — ใช้ง่ายทั้งเจ้าของกิจการและสำนักงานบัญชี
             </p>
-            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start justify-center">
-              <Link href="/signup" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-500">
+
+            {/* พระเอกของหน้า: ลองสั่งได้เลยตั้งแต่วินาทีแรก ไม่ต้องสมัคร */}
+            <HeroCommand />
+
+            <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row lg:justify-start justify-center">
+              <Link href="/signup" className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-700">
                 เริ่มใช้ฟรี <ArrowRight className="h-4 w-4" />
               </Link>
-              <a href="#pricing" className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-medium text-neutral-700 transition hover:border-neutral-400 hover:bg-neutral-50">
+              <a href="#pricing" className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-medium text-neutral-700 transition hover:border-neutral-400 hover:bg-white">
                 ดูราคา
               </a>
             </div>

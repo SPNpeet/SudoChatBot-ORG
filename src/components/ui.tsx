@@ -234,7 +234,7 @@ export function Badge({ className, tone = "neutral", ...props }: React.HTMLAttri
 export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
   return (
     <div
-      className="overflow-x-auto"
+      className="rtable overflow-x-auto"
       style={{
         backgroundImage:
           "linear-gradient(to right, white 30%, transparent), linear-gradient(to left, white 30%, transparent), linear-gradient(to right, rgba(16,24,40,.10), transparent 14px), linear-gradient(to left, rgba(16,24,40,.10), transparent 14px)",
@@ -251,8 +251,13 @@ export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTab
 export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return <th className={cn("whitespace-nowrap px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-400", className)} {...props} />;
 }
-export function Td({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
-  return <td className={cn("border-t border-neutral-100 px-4 py-3 align-middle", className)} {...props} />;
+/**
+ * ช่องข้อมูลในตาราง
+ * @param label ชื่อคอลัมน์ — ใช้เฉพาะตอนแสดงเป็นการ์ดบนมือถือ (ดู .rtable ใน globals.css)
+ *   เดสก์ท็อปไม่แสดงเพราะมีหัวตารางอยู่แล้ว · ไม่ใส่ก็ยังใช้ได้ แค่การ์ดจะไม่มีชื่อฟิลด์กำกับ
+ */
+export function Td({ label, className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement> & { label?: string }) {
+  return <td data-label={label} className={cn("border-t border-neutral-100 px-4 py-3 align-middle", className)} {...props} />;
 }
 
 /**

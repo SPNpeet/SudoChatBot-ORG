@@ -5,6 +5,7 @@
 //  ไม่มี tool/ข้อมูลจริงใดๆ ฝั่งเซิร์ฟเวอร์ — ปลอดภัยเต็มที่ ดู /api/public/guest-assistant
 // ============================================================
 import { useEffect, useRef, useState } from "react";
+import { HERO_ASK_EVENT } from "./hero-command";
 import Link from "next/link";
 import { Send, Calculator, Loader2, ArrowRight } from "lucide-react";
 
@@ -23,6 +24,22 @@ export default function LandingSandboxChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
+
+  // ช่องสั่งงานบนหัวหน้าส่งคำถามลงมาที่นี่ — คนพิมพ์ที่เดียวแล้วเห็นคำตอบเลย
+  // ไม่ต้องพิมพ์ซ้ำสองที่ ซึ่งเป็นจุดที่คนเลิกกลางคันบ่อยที่สุด
+  //
+  // ผูก listener ครั้งเดียว แล้วยิงผ่าน ref เสมอ — ถ้าใส่ send ตรง ๆ ใน deps
+  // listener จะจับ closure ที่มีค่า busy/locked ณ ตอนผูก แล้วเช็คเงื่อนไขผิด
+  const sendRef = useRef<(raw: string) => void>(() => {});
+
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const q = (e as CustomEvent<string>).detail;
+      if (typeof q === "string" && q.trim()) sendRef.current(q);
+    };
+    window.addEventListener(HERO_ASK_EVENT, onAsk);
+    return () => window.removeEventListener(HERO_ASK_EVENT, onAsk);
+  }, []);
 
   async function send(raw: string) {
     const text = raw.trim().slice(0, MAX_LEN);
@@ -52,8 +69,11 @@ export default function LandingSandboxChat() {
     }
   }
 
+  // อัปเดตทุก render ให้ listener ด้านบนเรียกตัวล่าสุดเสมอ
+  sendRef.current = send;
+
   return (
-    <div className="mx-auto mt-6 w-full max-w-sm rounded-3xl border border-neutral-200 bg-neutral-50 p-4 shadow-sm">
+    <div id="try" className="mx-auto mt-6 w-full max-w-sm scroll-mt-24 rounded-3xl border border-neutral-200 bg-neutral-50 p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2 border-b border-neutral-200 pb-3">
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-600 text-white"><Calculator className="h-4 w-4" /></div>
         <div className="min-w-0 flex-1">

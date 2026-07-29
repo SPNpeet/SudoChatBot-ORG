@@ -71,14 +71,14 @@ export default async function ProductsPage() {
                         </div>
                       </div>
                     </Td>
-                    <Td className="text-neutral-500">{p.sku ?? "-"}</Td>
-                    <Td className="font-semibold">{baht(p.price)}</Td>
-                    <Td className="text-neutral-500">{p.cost != null ? baht(p.cost) : "-"}</Td>
+                    <Td label="SKU" className="text-neutral-500">{p.sku ?? "-"}</Td>
+                    <Td label="ราคาขาย" className="font-semibold">{baht(p.price)}</Td>
+                    <Td label="ต้นทุน" className="text-neutral-500">{p.cost != null ? baht(p.cost) : "-"}</Td>
                     <Td>
                       <span className={p.track_stock && p.stock <= 3 ? "font-semibold text-red-600" : ""}>{p.track_stock ? p.stock : "ไม่นับ"}</span>
                     </Td>
-                    <Td><Badge tone={p.status === "active" ? "green" : "neutral"}>{p.status === "active" ? "ใช้งาน" : "พัก"}</Badge></Td>
-                    <Td className="text-neutral-400">{dateTH(p.created_at)}</Td>
+                    <Td label="สถานะ"><Badge tone={p.status === "active" ? "green" : "neutral"}>{p.status === "active" ? "ใช้งาน" : "พัก"}</Badge></Td>
+                    <Td label="เพิ่มเมื่อ" className="text-neutral-400">{dateTH(p.created_at)}</Td>
                     {canEdit && (
                       <Td>
                         <div className="flex items-center justify-end gap-2">

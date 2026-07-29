@@ -27,6 +27,61 @@ body {
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .rise { animation: rise .3s ease both; }
 
+/* ==== ตารางบนมือถือ -> การ์ด ====
+   ปัญหาที่ลูกค้าจริงเจอ: ตาราง 6 คอลัมน์ยัดลงจอ 375px ไม่ได้ เบราว์เซอร์เลย
+   บีบคอลัมน์จนข้อความแตกเป็นแนวตั้ง — "EXP-2 026-0 002" ร่วงลงมาเป็นแถวเดี่ยว
+   คำว่า "รอชำระ" เหลือบรรทัดละ 1 ตัวอักษร อ่านไม่ออกและดูไม่เป็นมืออาชีพ
+
+   แก้ที่ตัวคอมโพเนนต์ Table ที่เดียว ทุกหน้าที่ใช้ได้ผลทันที
+   เดสก์ท็อป = ตารางเหมือนเดิม · มือถือ = การ์ดใบละแถว
+   ชื่อคอลัมน์มาจาก data-label ที่ <Td label="..."> ใส่ให้
+   หน้าที่ยังไม่ได้ใส่ label ก็ยังดีขึ้นมาก เพราะอย่างน้อยไม่บีบเป็นแนวตั้งแล้ว */
+@media (max-width: 767px) {
+  .rtable { overflow: visible !important; background-image: none !important; }
+  .rtable table, .rtable tbody, .rtable tr, .rtable td { display: block; width: 100%; }
+  .rtable thead { display: none; }
+  .rtable tr {
+    border: 1px solid rgb(229 229 229);
+    border-radius: 14px;
+    background: #fff;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .rtable tr:last-child { margin-bottom: 0; }
+  .rtable td {
+    border: 0 !important;
+    padding: 3px 0 !important;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 14px;
+    text-align: right;
+    min-width: 0;
+  }
+  /* ชื่อฟิลด์อยู่ซ้าย ค่าอยู่ขวา — กวาดตาอ่านได้เร็วกว่าตารางบีบ */
+  .rtable td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    color: rgb(163 163 163);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+  }
+  /* ช่องแรกคือตัวระบุรายการ ให้เด่นเป็นหัวการ์ด */
+  .rtable td:first-child {
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 15px;
+    font-weight: 700;
+    padding-bottom: 8px !important;
+    margin-bottom: 6px;
+    border-bottom: 1px solid rgb(245 245 245) !important;
+  }
+  .rtable td:first-child::before { display: none; }
+  /* เซลล์ว่างไม่ต้องกินที่ */
+  .rtable td:empty { display: none; }
+}
+
 /* ==== ตอบสนองการแตะบนมือถือ ====
    เครื่องที่ไม่มีเมาส์ไม่มี :hover เลย ทุกเอฟเฟกต์ hover: จึงตายสนิทบนมือถือ
    ผู้ใช้แตะการ์ด/ปุ่มแล้วไม่เห็นอะไรตอบกลับ เข้าใจว่ากดไม่ติดหรือแอปค้าง

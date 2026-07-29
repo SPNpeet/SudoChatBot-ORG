@@ -41,7 +41,7 @@ export function MainArea({ children }: { children: React.ReactNode }) {
     <main className={cn(
       // เว้นที่ด้านบนบนเดสก์ท็อปให้ปุ่มค้นหาที่ลอยอยู่มุมขวาบน (fixed top-3 สูง 36px)
       // ไม่งั้นมันจะทับปุ่มของหัวข้อหน้า เช่น ปุ่ม "ส่งออก" บนหน้ารายงาน
-      "px-4 py-5 pb-[calc(7.75rem+env(safe-area-inset-bottom))] md:px-8 md:pt-16 md:pb-7",
+      "px-4 py-5 pb-[calc(9.5rem+env(safe-area-inset-bottom))] md:px-8 md:pt-16 md:pb-7",
       "transition-[margin] duration-200 ease-out motion-reduce:transition-none",
       collapsed ? "md:ml-16" : "md:ml-56",
     )}>

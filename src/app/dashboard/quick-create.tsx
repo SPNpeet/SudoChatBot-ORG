@@ -25,14 +25,20 @@ export default function QuickCreate() {
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
+    // หน้าผู้ช่วย AI สั่งงานด้วยการพิมพ์อยู่แล้ว ปุ่มสร้างเอกสารลอยทับจึงซ้ำซ้อน
+  // และไปบังกล่องแชทซึ่งเป็นสิ่งเดียวที่หน้านั้นต้องใช้
+  if (path?.startsWith("/dashboard/assistant")) return null;
+
+  return () => window.removeEventListener("keydown", esc);
   }, []);
 
   return (
     <>
       {open && <div className="fixed inset-0 z-[45] bg-black/20 backdrop-blur-[1px]" onClick={() => setOpen(false)} />}
 
-      <div className="fixed right-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-[46] flex flex-col items-end gap-2 md:bottom-6">
+      {/* เมนูล่างสูงประมาณ 60px + safe area — เดิมตั้ง 4.75rem (76px) ซึ่งเฉียดจนนิ้วกดพลาด
+          ดันเป็น 6.25rem (100px) ให้มีระยะปลอดภัยจริง ๆ ระหว่างปุ่มลอยกับแถบเมนู */}
+      <div className="fixed right-4 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-[46] flex flex-col items-end gap-2 md:bottom-6">
         {open && ACTIONS.map((a) => (
           <Link key={a.href} href={a.href}
             className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white py-2.5 pl-3.5 pr-4 shadow-lg transition hover:border-emerald-300 active:scale-[0.98]">
