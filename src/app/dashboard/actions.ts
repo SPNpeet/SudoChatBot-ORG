@@ -351,3 +351,41 @@ export async function unlinkLine(shopId: string): Promise<ActionResult> {
     return { ok: false, error: friendly(e, "ยกเลิกการเชื่อมต่อไม่สำเร็จ") };
   }
 }
+
+// ---------- บัญชีผู้ใช้ของตัวเอง ----------
+/**
+ * แก้ชื่อที่แสดง/เบอร์ของตัวเอง
+ *
+ * ⚠️ ใช้ client ปกติ (ไม่ใช่ service role) โดยตั้งใจ — RLS ของตาราง profiles
+ * บังคับ id = auth.uid() อยู่แล้ว จึงแก้ของคนอื่นไม่ได้แม้ส่ง id มาเอง
+ * ที่นี่ไม่รับ id จากฝั่ง client เลยด้วยซ้ำ ยึดจาก session ฝั่งเซิร์ฟเวอร์อย่างเดียว
+ *
+ * ไม่ให้แก้อีเมลตรงนี้ — อีเมลคือกุญแจล็อกอินและเป็นตัวระบุตัวตนใน audit log
+ * การเปลี่ยนต้องยืนยันทางอีเมลทั้งใบเก่าและใบใหม่ ไม่ใช่แค่พิมพ์ทับ
+ */
+export async function updateMyProfile(formData: FormData): Promise<ActionResult> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "กรุณาเข้าสู่ระบบใหม่" };
+
+    const name = String(formData.get("display_name") ?? "").trim().slice(0, 80);
+    const phone = String(formData.get("phone") ?? "").trim().slice(0, 30);
+    if (name.length < 2) return { ok: false, error: "ชื่อที่แสดงต้องยาวอย่างน้อย 2 ตัวอักษร" };
+
+    // upsert เพราะแถว profiles อาจไม่มีถ้าสมัครก่อนที่ระบบจะมี trigger สร้างให้
+    const { error } = await supabase.from("profiles").upsert({
+      id: user.id,
+      display_name: name,
+      phone: phone || null,
+      email: user.email ?? null,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) return { ok: false, error: "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง" };
+
+    revalidatePath("/dashboard", "layout");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "บันทึกไม่สำเร็จ") };
+  }
+}

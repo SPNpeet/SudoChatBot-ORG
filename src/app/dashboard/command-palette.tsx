@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn, baht } from "@/lib/utils";
 import {
   Search, CornerDownLeft, LayoutDashboard, Calculator, FileText, Receipt, Banknote,
-  Users, Package, BookOpenText, PieChart, Wallet, Settings, CircleHelp, Loader2, Plus,
+  Users, Package, BookOpenText, PieChart, Wallet, Settings, CircleHelp, Loader2, Plus, UserRound,
 } from "lucide-react";
 
 interface Row { id: string; label: string; sub?: string; href: string; icon: typeof FileText; group: string }
@@ -32,6 +32,7 @@ const PAGES: Row[] = [
   { id: "p10", label: "แพ็กเกจ/เครดิต", href: "/dashboard/billing", icon: Wallet, group: "ไปที่หน้า" },
   { id: "p11", label: "ตั้งค่า", href: "/dashboard/settings", icon: Settings, group: "ไปที่หน้า" },
   { id: "p12", label: "คู่มือใช้งาน", href: "/dashboard/help", icon: CircleHelp, group: "ไปที่หน้า" },
+  { id: "p13", label: "บัญชีของฉัน", sub: "ชื่อผู้ใช้ · อีเมล · รหัสผ่าน", href: "/dashboard/account", icon: UserRound, group: "ไปที่หน้า" },
 ];
 
 const ACTIONS: Row[] = [

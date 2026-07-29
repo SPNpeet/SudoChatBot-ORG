@@ -18,16 +18,23 @@ export function Bar({ className }: { className?: string }) {
   return <div className={cn("h-4 animate-pulse rounded-md bg-neutral-100 motion-reduce:animate-none", className)} />;
 }
 
-/** ส่วนหัวหน้า — ต้องตรงกับ <PageHeader> ทั้งความสูงและลำดับ */
-function Head({ hint }: { hint?: boolean }) {
+/**
+ * ส่วนหัวหน้า — ต้องตรงกับ <PageHeader> ทั้งความสูงและลำดับ
+ *
+ * action ต้องตรงกับหน้าจริงด้วย ไม่ใช่วาดปุ่มไว้ทุกหน้า
+ * บนมือถือปุ่มหัวข้อเป็น w-full สูง 44px ถ้าหน้าจริงไม่มีปุ่ม เนื้อหาจะเลื่อนขึ้น
+ * 44px + ระยะห่าง ทันทีที่โหลดเสร็จ (หน้า ทรัพย์สิน · แพ็กเกจ · คู่มือ · การเงิน · ตั้งค่า)
+ */
+function Head({ hint, action = true, back }: { hint?: boolean; action?: boolean; back?: boolean }) {
   return (
     <div className="space-y-3">
+      {back && <Bar className="h-4 w-24" />}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <Bar className="h-[26px] w-44" />
           <Bar className="h-4 w-56" />
         </div>
-        <Bar className="h-11 w-full rounded-xl sm:w-36" />
+        {action && <Bar className="h-11 w-full rounded-xl sm:w-36" />}
       </div>
       {hint && <Bar className="h-[52px] w-full rounded-xl" />}
     </div>
@@ -62,14 +69,15 @@ function Rows({ rows }: { rows: number }) {
  * @param head   หน้านี้มีหัวเรื่อง (PageHeader) ไหม
  * @param hint   หัวเรื่องมีกล่องคำแนะนำใต้ชื่อไหม (prop `help` ของ PageHeader)
  * @param filters หน้านี้มีแถบปุ่มตัวกรองไหม
- * ทั้งสามอย่างต้องตรงกับหน้าจริง ไม่งั้นเนื้อหาจะกระโดดตอนโหลดเสร็จ
+ * @param action หัวเรื่องมีปุ่มหลักมุมขวาไหม (prop `action` ของ PageHeader)
+ * ทุกอย่างต้องตรงกับหน้าจริง ไม่งั้นเนื้อหาจะกระโดดตอนโหลดเสร็จ
  */
 export function ListSkeleton({
-  rows = 6, head = true, hint = true, filters = true,
-}: { rows?: number; head?: boolean; hint?: boolean; filters?: boolean }) {
+  rows = 6, head = true, hint = true, filters = true, action = true,
+}: { rows?: number; head?: boolean; hint?: boolean; filters?: boolean; action?: boolean }) {
   return (
     <div className="space-y-5" aria-busy="true" aria-label="กำลังโหลด">
-      {head && <Head hint={hint} />}
+      {head && <Head hint={hint} action={action} />}
       {filters && <Filters />}
       <Rows rows={rows} />
     </div>
@@ -109,12 +117,12 @@ export function DashboardSkeleton() {
  * @param width ต้องตรงกับความกว้างที่หน้าจริงใช้ ไม่งั้นเนื้อหาจะขยับด้านข้างตอนโหลดเสร็จ
  */
 export function FormSkeleton({
-  head = true, hint = false, tabs = false, fields = 4, width = "max-w-3xl",
-}: { head?: boolean; hint?: boolean; tabs?: boolean; fields?: number; width?: string }) {
+  head = true, hint = false, tabs = false, fields = 4, width = "max-w-3xl", action = true, back = false,
+}: { head?: boolean; hint?: boolean; tabs?: boolean; fields?: number; width?: string; action?: boolean; back?: boolean }) {
   return (
     // mx-auto ต้องมี — หน้าจริงจัดกลางแล้ว ถ้าโครงชิดซ้ายจะกระโดดตอนสลับ
     <div className={cn("mx-auto w-full space-y-5", width)} aria-busy="true" aria-label="กำลังโหลด">
-      {head && <Head hint={hint} />}
+      {head && <Head hint={hint} action={action} back={back} />}
       {tabs && <div className="flex flex-wrap gap-2">
         {Array.from({ length: 5 }).map((_, i) => <Bar key={i} className="h-10 w-28 rounded-xl" />)}
       </div>}

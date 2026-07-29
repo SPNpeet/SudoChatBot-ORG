@@ -15,6 +15,7 @@ import FeedbackWidget from "./feedback-widget";
 import QuickCreate from "./quick-create";
 import CompanySwitcher from "./company-switcher";
 import { type AiQuota } from "./ai-quota-bar";
+import AccountMenu, { type Me } from "./account-menu";
 import { Logo } from "@/components/logo";
 
 async function signOut() {
@@ -25,9 +26,21 @@ async function signOut() {
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [{ supabase, shop, memberships }, isAdmin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
+  const [{ supabase, shop, memberships, user, role }, isAdmin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
   const companies = memberships.map((m) => ({ id: m.shop.id, name: m.shop.name, role: m.role }));
-  const { data: quota } = await supabase.rpc("get_ai_quota_status", { p_shop_id: shop.id });
+  const [{ data: quota }, { data: prof }] = await Promise.all([
+    supabase.rpc("get_ai_quota_status", { p_shop_id: shop.id }),
+    supabase.from("profiles").select("display_name,email").eq("id", user.id).maybeSingle(),
+  ]);
+
+  // อีเมลยึดจาก auth เป็นหลัก — แถว profiles อาจตกหล่นได้ถ้า trigger ตอนสมัครพลาด
+  // แต่ตัวตนที่ใช้ล็อกอินจริงอยู่ที่ auth เสมอ ตรงนี้ผิดไม่ได้เพราะคือสิ่งที่ผู้ใช้ใช้ยืนยันตัวเอง
+  const me: Me = {
+    name: prof?.display_name ?? (user.user_metadata?.full_name as string | undefined) ?? null,
+    email: user.email ?? prof?.email ?? null,
+    role,
+    shopName: shop.name,
+  };
 
   return (
     <ToastProvider>
@@ -37,18 +50,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* ส่งได้เฉพาะข้อมูลที่ serialize ได้ (boolean / object ธรรมดา / server action / JSX)
           รายการเมนูพร้อมไอคอนอยู่ใน side-nav.tsx ฝั่ง client แล้ว ห้ามย้ายกลับมาที่นี่ */}
       <SideNav isAdmin={!!isAdmin}
-        foot={<SidebarFoot quota={quota as AiQuota | null} signOut={signOut} />}>
+        foot={<SidebarFoot quota={quota as AiQuota | null} me={me} signOut={signOut} />}>
         <SidebarHead companies={companies} currentId={shop.id} />
       </SideNav>
 
-      {/* Header — มือถือ */}
-      <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
+      {/* Header — มือถือ
+          บนมือถือไม่มีแถบเมนูซ้าย ถ้าไม่วางรูปบัญชีไว้ตรงนี้ จะไม่เหลือที่ไหน
+          ให้ผู้ใช้เช็คเลยว่ากำลังล็อกอินด้วยบัญชีไหน (มือถือคือเครื่องที่คนสลับบัญชีบ่อยที่สุด) */}
+      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
         <Link href="/dashboard" aria-label="กลับหน้าภาพรวม" className="shrink-0 rounded-lg transition-opacity active:opacity-60">
           <Logo />
         </Link>
-        <div className="w-44">
+        <div className="ml-auto min-w-0 flex-1 sm:max-w-[16rem]">
           <CompanySwitcher companies={companies} currentId={shop.id} />
         </div>
+        <AccountMenu me={me} signOut={signOut} variant="icon" />
       </header>
 
       {/* เนื้อหา — pb มือถือ = bottom nav + ปุ่มลอย ปุ่มแถวล่างสุดต้องกดได้เสมอ */}

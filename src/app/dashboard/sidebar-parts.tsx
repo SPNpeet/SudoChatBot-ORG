@@ -1,12 +1,12 @@
 "use client";
 // หัวและท้ายของแถบเมนู — ต้องรู้ว่ากำลังพับอยู่ไหม เพื่อย่อ/ซ่อนของที่ไม่จำเป็น
 import Link from "next/link";
-import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNav } from "./nav-shell";
 import { Logo } from "@/components/logo";
 import CompanySwitcher from "./company-switcher";
 import AiQuotaBar, { type AiQuota } from "./ai-quota-bar";
+import AccountMenu, { type Me } from "./account-menu";
 
 export function SidebarHead({ companies, currentId }: {
   companies: { id: string; name: string; role: string }[]; currentId: string;
@@ -31,7 +31,15 @@ export function SidebarHead({ companies, currentId }: {
   );
 }
 
-export function SidebarFoot({ quota, signOut }: { quota: AiQuota | null; signOut: () => Promise<void> }) {
+/**
+ * ท้ายแถบเมนู = ที่ที่ผู้ใช้มองหา "บัญชีของฉัน" อยู่แล้วจากเว็บอื่นทั้งหมด
+ * เดิมมีแต่ปุ่มออกจากระบบลอย ๆ ไม่มีอะไรบอกว่ากำลังเป็นใครอยู่
+ * ตอนนี้ปุ่มออกจากระบบย้ายเข้าไปอยู่ในเมนูบัญชี ซึ่งเป็นที่ที่ควรอยู่ —
+ * และได้ผลพลอยได้คือกดพลาดยากขึ้น เดิมมันอยู่ติดเมนูสุดท้ายจนกดโดนบ่อย
+ */
+export function SidebarFoot({ quota, me, signOut }: {
+  quota: AiQuota | null; me: Me; signOut: () => Promise<void>;
+}) {
   const { collapsed } = useNav();
   return (
     <>
@@ -40,15 +48,9 @@ export function SidebarFoot({ quota, signOut }: { quota: AiQuota | null; signOut
           <AiQuotaBar quota={quota} />
         </div>
       )}
-      <form action={signOut} className={cn("pb-3 pt-1", collapsed ? "px-2" : "p-3 pt-1")}>
-        <button title="ออกจากระบบ"
-          className={cn(
-            "flex w-full items-center rounded-xl py-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800",
-            collapsed ? "justify-center px-0" : "gap-2.5 px-3",
-          )}>
-          <LogOut className="h-4 w-4 shrink-0" />{!collapsed && "ออกจากระบบ"}
-        </button>
-      </form>
+      <div className={cn("border-t border-neutral-100 pb-3 pt-2", collapsed ? "flex justify-center px-2" : "px-2")}>
+        <AccountMenu me={me} signOut={signOut} variant={collapsed ? "icon" : "row"} />
+      </div>
     </>
   );
 }

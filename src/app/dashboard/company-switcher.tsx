@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Building2, ChevronDown, Plus, X } from "lucide-react";
 import { Button, Input, Label } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { roleLabel } from "@/lib/roles";
 import { switchShop, createShop } from "./actions";
 
 export interface CompanyLite { id: string; name: string; role: string }
@@ -85,7 +86,7 @@ export default function CompanySwitcher({ companies, currentId }: { companies: C
                 c.id === currentId && "bg-emerald-50 text-emerald-700",
               )}>
               <span className="flex-1 truncate">{c.name}</span>
-              <span className="text-[10px] text-neutral-400">{c.role === "owner" ? "เจ้าของ" : c.role === "admin" ? "ผู้ดูแล" : c.role === "agent" ? "พนักงาน" : "ผู้ชม"}</span>
+              <span className="text-[10px] text-neutral-400">{roleLabel(c.role)}</span>
             </button>
           ))}
           <button onClick={() => { setCreateOpen(true); setOpen(false); }}
