@@ -6,3 +6,6 @@ out/
 .vercel
 *.tsbuildinfo
 .DS_Store
+
+# ไฟล์สำรองมีข้อมูลลูกค้าจริง ห้ามขึ้นกิตเด็ดขาด
+backups/

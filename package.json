@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "check": "tsx scripts/check-accounting.mjs",
     "check:ui": "tsx scripts/check-ui-hazards.mjs",
+    "backup": "tsx scripts/backup-data.mjs",
     "verify": "npm run typecheck && npm run check && npm run check:ui && npm run build"
   },
   "dependencies": {
