@@ -1,4 +1,4 @@
-export const metadata = { title: "ข้อกำหนดการใช้งาน — SudoChatBot" };
+export const metadata = { title: "ข้อกำหนดการใช้งาน" };
 
 // ============================================================
 //  ⚠️ URL นี้ลงทะเบียนไว้กับ LINE Developers และ Meta และผู้ใช้ยอมรับตอนสมัคร

@@ -1,4 +1,4 @@
-export const metadata = { title: "นโยบายความเป็นส่วนตัว — SudoChatBot" };
+export const metadata = { title: "นโยบายความเป็นส่วนตัว" };
 
 // ============================================================
 //  ⚠️ เอกสารนี้เป็น URL ที่ลงทะเบียนไว้กับ LINE Developers และ Meta (Facebook Login)
