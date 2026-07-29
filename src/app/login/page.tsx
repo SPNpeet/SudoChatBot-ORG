@@ -89,8 +89,12 @@ export default function LoginPage() {
 
         </div>
 
-        <p className="mt-4 text-center text-[11px] text-neutral-400">
+        {/* ต้องมีนโยบายความเป็นส่วนตัวด้วย ไม่ใช่เงื่อนไขอย่างเดียว —
+            หน้านี้มีปุ่มเข้าระบบด้วย Google/Facebook ซึ่งทั้งสองค่ายบังคับให้ลิงก์นโยบายไว้
+            และ PDPA ก็ต้องแจ้งก่อน/ขณะเก็บข้อมูล (หน้าสมัครมีครบอยู่แล้ว หน้านี้ตกไป) */}
+        <p className="mt-4 text-center text-[11px] leading-relaxed text-neutral-400">
           การเข้าสู่ระบบถือว่ายอมรับ<Link href="/terms" className="underline">เงื่อนไขการใช้งาน</Link>
+          และ<Link href="/privacy" className="underline">นโยบายความเป็นส่วนตัว</Link>
         </p>
       </div>
     </main>

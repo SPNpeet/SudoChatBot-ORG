@@ -18,7 +18,8 @@ import { PageHeader, Card, CardHeader, CardTitle, CardContent } from "@/componen
 // Server Component เรียกฟังก์ชันจากไฟล์ client ไม่ได้ (build ผ่านแต่พังตอนรันจริง)
 import { roleLabel } from "@/lib/roles";
 import AccountForm from "./account-form";
-import { Building2, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { Building2, ShieldCheck, FileText, ExternalLink } from "lucide-react";
 
 export default async function AccountPage() {
   const { supabase, user, memberships } = await getCurrentShop();
@@ -73,6 +74,33 @@ export default async function AccountPage() {
           หรือกดออกจากระบบเมื่อใช้เสร็จ
         </p>
       </div>
+
+      {/* ทั้งหลังบ้านไม่มีทางเข้าถึงเอกสารกฎหมายเลยแม้แต่ลิงก์เดียว
+          มีแค่ที่หน้าแรกกับหน้าสมัคร ซึ่งลูกค้าที่ใช้อยู่ไม่ได้กลับไปแล้ว
+          PDPA ให้สิทธิเจ้าของข้อมูลเข้าถึง/ขอลบได้ตลอดเวลา จึงต้องหาเจอจากในระบบ */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-neutral-400" /> ข้อมูลส่วนตัวและข้อกำหนด
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-1.5">
+          {[
+            { href: "/privacy", label: "นโยบายความเป็นส่วนตัว", hint: "เราเก็บอะไร ใช้ทำอะไร เก็บนานแค่ไหน" },
+            { href: "/terms", label: "ข้อกำหนดการใช้งาน", hint: "ขอบเขตบริการและความรับผิดชอบของแต่ละฝ่าย" },
+            { href: "/data-deletion", label: "ขอลบข้อมูล / ปิดบัญชี", hint: "อ่านเรื่องหน้าที่เก็บเอกสาร 5 ปีก่อนตัดสินใจ" },
+          ].map((l) => (
+            <Link key={l.href} href={l.href} target="_blank"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-neutral-50">
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm text-neutral-800">{l.label}</span>
+                <span className="block text-[11px] text-neutral-400">{l.hint}</span>
+              </span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-neutral-300" />
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }
