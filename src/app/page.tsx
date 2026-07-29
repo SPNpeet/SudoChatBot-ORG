@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import HeroCommand from "./hero-command";
+import PricingCards from "./pricing-cards";
 import { FileText, ScanLine, BookOpenText, Landmark, ShieldCheck, ArrowRight, Check, Calculator, Clock, X as XIcon, Lock, Users } from "lucide-react";
 import LandingSandboxChat from "./landing-sandbox-chat";
 
@@ -200,38 +201,7 @@ export default function Landing() {
       <section id="pricing" className="mx-auto max-w-5xl px-6 py-16">
         <h2 className="text-center text-2xl font-bold tracking-tight">ราคาตรงไปตรงมา</h2>
         <p className="mt-2 text-center text-sm text-neutral-500">เริ่มฟรี อัปเกรดเมื่อธุรกิจโต ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด</p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {/* การ์ดราคาเดิมเป็น div เปล่า กดทั้งใบไม่ได้ ต้องเล็งกดปุ่มเล็ก ๆ ท้ายการ์ด
-              และบนมือถือไม่มี hover จึงแตะแล้วไม่มีอะไรตอบกลับเลย ดูเหมือนกดไม่ติด
-              เปลี่ยนทั้งใบเป็นลิงก์ + ใส่สถานะตอนแตะ (active:) ให้เห็นว่ากดโดน */}
-          {plans.map((p) => (
-            <Link key={p.name} href="/signup"
-              aria-label={`เลือกแพ็กเกจ ${p.name} ${p.price}${p.per}`}
-              className={`group relative flex flex-col rounded-2xl border p-6 transition-all duration-150 active:scale-[0.985] ${
-                p.hot
-                  ? "border-emerald-300 bg-emerald-50/40 shadow-sm hover:border-emerald-400 hover:shadow-md active:bg-emerald-50"
-                  : "border-neutral-200 bg-white hover:border-emerald-300 hover:shadow-md active:bg-neutral-50"
-              }`}>
-              {p.hot && <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-emerald-600 px-3 py-0.5 text-[11px] font-medium text-white">ยอดนิยม</span>}
-              <p className="text-sm font-semibold">{p.name}</p>
-              <p className="mt-2 text-3xl font-bold tracking-tight">{p.price}<span className="ml-1 text-sm font-normal text-neutral-400">{p.per}</span></p>
-              <ul className="mt-4 flex-1 space-y-2">
-                {p.items.map((it) => (
-                  <li key={it} className="flex items-start gap-2 text-sm text-neutral-600">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" /> {it}
-                  </li>
-                ))}
-              </ul>
-              <span className={`mt-5 block rounded-xl py-2.5 text-center text-sm font-medium transition-colors ${
-                p.hot
-                  ? "bg-emerald-600 text-white group-hover:bg-emerald-500"
-                  : "border border-neutral-300 text-neutral-700 group-hover:border-emerald-400 group-hover:text-emerald-700"
-              }`}>
-                {p.cta}
-              </span>
-            </Link>
-          ))}
-        </div>
+        <PricingCards plans={plans} />
         <p className="mt-4 text-center text-xs text-neutral-400">
           <b>พนักงานใช้ฟรีไม่จำกัดทุกแพ็ก</b> — เชิญทีมขาย ทีมแอดมิน นักบัญชี เข้ามาได้หมด ·
           เริ่มทดลองใช้ฟรีก่อนได้ (AI 30 ครั้ง/วัน) · คีย์เอกสารเองไม่จำกัดทุกแพ็ก

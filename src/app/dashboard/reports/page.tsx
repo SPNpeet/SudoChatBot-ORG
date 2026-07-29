@@ -17,6 +17,7 @@ import AccountantPackage from "./accountant-package";
 import { whtIncomeLabel, whtIncomeDesc, branchCode, rdFormFor } from "@/lib/tax-th";
 import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, selectWhtReceivableDocs,
   vatSign, sumVat, sumBase, recognitionsAsDocs, type VatRecognitionRow } from "@/lib/vat-docs";
+import IntegrityCard from "../admin/integrity-card";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,11 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         help="ตัวเลขทุกช่องมาจากเอกสารจริงที่คุณบันทึกไว้ ไม่ต้องรอปิดงบ — ดูกำไร-ขาดทุน ใครค้างเรานานแค่ไหน และภาษีที่ต้องยื่นเดือนนี้ · โหลดเป็น Excel ส่งนักบัญชี หรือโหลดไฟล์ยื่นสรรพากรได้เลย"
         action={<PeriodPicker tab={t} period={period.key} />}
       />
+
+      {/* ยามเฝ้าความถูกต้องทางบัญชี — รันสดทุกครั้งที่เปิดหน้า
+          เดิมการตรวจ 11 ข้อนี้ทำด้วยมือครั้งเดียวตอนออดิต ซึ่งเป็นภาพนิ่ง
+          ลูกค้าบันทึกข้อมูลทุกวัน ถ้าวันไหนเพี้ยนต้องรู้ทันที ไม่ใช่รู้ตอนใกล้ยื่นภาษี */}
+      <IntegrityCard shopId={shop.id} />
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((x) => (
