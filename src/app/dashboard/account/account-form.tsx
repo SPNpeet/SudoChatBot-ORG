@@ -10,6 +10,7 @@
 import { useState, useTransition } from "react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
+import { dateOnlyTH } from "@/lib/utils";
 import { updateMyProfile } from "../actions";
 import { CheckCircle2, KeyRound, Mail, UserRound } from "lucide-react";
 
@@ -48,9 +49,10 @@ export default function AccountForm({ email, displayName, phone, joined }: {
     }
   }
 
-  const joinedTH = joined
-    ? new Date(joined).toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" })
-    : null;
+  // ใช้ตัวจัดรูปแบบกลางที่ปักเขตเวลา Asia/Bangkok ไว้แล้ว
+  // ถ้าฟอร์แมตเองโดยไม่ระบุเขตเวลา เซิร์ฟเวอร์ (UTC) กับเบราว์เซอร์ไทยจะได้คนละวัน
+  // สำหรับเวลาที่ใกล้เที่ยงคืน = hydration ไม่ตรงกัน และวันที่ที่ผู้ใช้เห็นก็ผิดด้วย
+  const joinedTH = joined ? dateOnlyTH(joined) : null;
 
   return (
     <Card>
