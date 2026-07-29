@@ -155,15 +155,19 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   // ข้อความใหม่เข้ามา — ตามให้เฉพาะตอนที่ผู้ใช้ยังจอดอยู่ล่างสุด
   // ถ้าเขากำลังอ่านของเก่าอยู่ ไม่แตะจอเขา แค่ขึ้นปุ่มบอกว่ามีของใหม่
   useEffect(() => {
-    if (!restored) return;
+    // ยังไม่มีข้อความ = หน้าจอต้อนรับ ห้ามเลื่อนเด็ดขาด
+    // ของเดิมเลื่อนลงล่างสุดตั้งแต่เปิดหน้า ทำให้ไอคอนกับคำอธิบายด้านบน
+    // ถูกดันพ้นขอบการ์ดไป เห็นเป็นไอคอนโดนตัดครึ่งค้างอยู่ที่ขอบบน
+    if (!restored || msgs.length === 0) return;
     if (stickRef.current) scrollForNewMessage();
     else setShowJump(true);
   }, [msgs, restored, scrollForNewMessage]);
 
   // "กำลังคิด" / "กำลังอ่านบิลใบที่ n/4" — เลื่อนตามได้ แต่ห้ามกระชากคนที่เลื่อนหนีไปแล้ว
   useEffect(() => {
+    if (msgs.length === 0) return;
     if (stickRef.current) scrollToBottom();
-  }, [busy, reading, scrollToBottom]);
+  }, [busy, reading, msgs.length, scrollToBottom]);
 
   /** ยิงข้อความให้ AI แล้วต่อคำตอบเข้าแชท — userMsg ต้องถูกใส่ใน msgs มาก่อนแล้ว */
   async function askAi(history: Msg[]) {
@@ -283,9 +287,12 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
               <Paperclip className="h-3 w-3 shrink-0" /> แนบรูปบิลได้ทีละหลายใบ พิมพ์สั่งกำกับได้เลย เช่น &ldquo;ค่าเช่า ยังไม่จ่าย&rdquo; · ตัวเลขไม่ชัดระบบจะถามก่อนบันทึกเสมอ
             </p>
             <div className="mx-auto mt-4 flex max-w-md flex-wrap justify-center gap-1.5">
+              {/* ปุ่มตัวอย่างคำสั่งเป็นสิ่งแรกที่คนกดในหน้านี้ ต้องกดง่ายจริง
+                  ของเดิม py-1.5 + text-xs = สูง 28px ต่ำกว่าเกณฑ์เป้ากดขั้นต่ำ 44px
+                  และตัวหนังสือ 12px เล็กไปสำหรับผู้ใช้สูงวัยที่เป็นลูกค้าหลักของระบบบัญชี */}
               {STARTERS.map((s) => (
                 <button key={s} onClick={() => send(s)}
-                  className="rounded-full border border-neutral-200 px-3 py-1.5 text-xs text-neutral-600 hover:border-emerald-300 hover:text-emerald-700">
+                  className="inline-flex min-h-[44px] items-center rounded-full border border-neutral-200 px-4 py-2.5 text-[13px] leading-snug text-neutral-600 transition-colors hover:border-emerald-300 hover:text-emerald-700">
                   {s}
                 </button>
               ))}

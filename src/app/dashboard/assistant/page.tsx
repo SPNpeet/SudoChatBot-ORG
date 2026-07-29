@@ -34,7 +34,14 @@ export default async function AssistantPage() {
   return (
     // หน้านี้มีงานเดียวคือ "คุย" — จึงให้แชทกินพื้นที่จอทั้งหมด ไม่มีอะไรมาแย่งสายตา
     // (เดิมมีการ์ดบอกความสามารถ 6 ใบดันแชทตกจอ ทั้งที่ตัวอย่างคำสั่งอยู่ในแชทอยู่แล้ว)
-    <div className="flex h-[calc(100svh-13rem)] min-h-[28rem] flex-col gap-3 md:h-[calc(100svh-7.5rem)]">
+    //
+    // ความสูงต้องหักส่วนที่กินที่จริงให้ครบ ไม่งั้นหน้าจะสูงเกินจอแล้วเลื่อนได้นิดหน่อย
+    // ทำให้ช่องพิมพ์ไหลลงไปใกล้แถบเมนูล่างจนดูเบียด
+    // มือถือ = หัวเว็บ 65px (py-3 + ปุ่มบัญชี 40px + เส้นขอบ) + MainArea py-5 บน 20px
+    //          + MainArea pb 9.5rem (152px) = 237px ≈ 15rem
+    //          ของเดิมหักแค่ 13rem = เกินจอไป 29px
+    // เดสก์ท็อป = MainArea md:pt-16 (64px) + md:pb-7 (28px) = 92px หัก 7.5rem เผื่อไว้แล้ว
+    <div className="flex h-[calc(100svh-15rem)] min-h-[28rem] flex-col gap-3 md:h-[calc(100svh-7.5rem)]">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-[22px] font-bold leading-tight tracking-tight">
