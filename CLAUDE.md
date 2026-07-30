@@ -69,6 +69,15 @@ npm run verify     # typecheck + ตรวจบัญชี + ด่าน UI +
 
 เคย push โค้ดที่ build ไม่ผ่านขึ้น production เพราะ `grep` แล้วบรรทัด error ถูกกลืน
 
+**clone ใหม่ต้องเปิดด่าน pre-push ครั้งเดียว** ไม่งั้นข้อนี้เป็นแค่คำสัญญา:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+hook รัน 3 ด่านเร็ว (5 วินาที) ไม่รัน build เพราะ Vercel ตรวจ build ให้แล้ว
+build ไม่ผ่าน = ไม่ deploy ขึ้น production แต่ `check`/`check:ui` ไม่มีใครรันให้เลย
+
 ## 7. เรื่องบัญชี-ภาษี
 
 - **กฎถาวร → โค้ด · ประกาศที่มีวันหมดอายุ → ตาราง** (`vat_rates`, `rd_filing_extensions`,
