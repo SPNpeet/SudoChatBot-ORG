@@ -61,6 +61,7 @@ async function makeThumbs(files: File[], max = 4): Promise<string[]> {
 }
 
 interface Msg extends AssistantTurn {
+  id?: string;                                     // ใช้หาข้อความให้ถูกตัวตอนแทนรูปย่อทีหลัง (ห้ามอ้าง "ตัวสุดท้าย")
   display?: string;                                // ข้อความที่ "คนเห็น" (content คือที่ส่งให้ AI)
   images?: string[];                               // รูปย่อที่แนบมากับข้อความนี้
   fileNames?: string[];
@@ -99,6 +100,8 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   // ============================================================
   const stickRef = useRef(true);        // ผู้ใช้ยังจอดอยู่ล่างสุดไหม (ref ไม่ใช่ state — ห้าม re-render ทุกพิกเซลที่เลื่อน)
   const [showJump, setShowJump] = useState(false);
+  // onListScroll เป็น handler ธรรมดา อ่าน state ตรง ๆ จะได้ค่าเก่า — เก็บจำนวนข้อความไว้ใน ref
+  const msgsRef = useRef(0);
 
   const NEAR_BOTTOM = 80;   // ห่างขอบล่างไม่เกินนี้ ถือว่ายังตามอยู่
   const FAR_ENOUGH = 160;   // ห่างเกินนี้ค่อยโชว์ปุ่ม ไม่งั้นปุ่มกะพริบตอนเลื่อนนิดเดียว
@@ -108,7 +111,10 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     if (!el) return;
     const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
     stickRef.current = dist < NEAR_BOTTOM;
-    setShowJump(dist > FAR_ENOUGH);
+    // ⚠️ ห้ามโชว์ปุ่ม "ไปข้อความล่าสุด" ตอนยังไม่มีข้อความ
+    // เจ้าของเจอจริง: หน้าต้อนรับมีการ์ด 6 ใบ สูงกว่าจอ -> dist เกิน 160
+    // ปุ่มเลยโผล่ลอยทับการ์ดทั้งที่ไม่มีข้อความให้ไปหาสักข้อความ
+    setShowJump(msgsRef.current > 0 && dist > FAR_ENOUGH);
   }
 
   const scrollToBottom = useCallback((smooth = false) => {
@@ -172,7 +178,8 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     // ยังไม่มีข้อความ = หน้าจอต้อนรับ ห้ามเลื่อนเด็ดขาด
     // ของเดิมเลื่อนลงล่างสุดตั้งแต่เปิดหน้า ทำให้ไอคอนกับคำอธิบายด้านบน
     // ถูกดันพ้นขอบการ์ดไป เห็นเป็นไอคอนโดนตัดครึ่งค้างอยู่ที่ขอบบน
-    if (!restored || msgs.length === 0) return;
+    msgsRef.current = msgs.length;
+    if (!restored || msgs.length === 0) { setShowJump(false); return; }
     if (stickRef.current) scrollForNewMessage();
     else setShowJump(true);
   }, [msgs, restored, scrollForNewMessage]);
@@ -223,7 +230,13 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     const names = files.map((f) => f.name);
     // blob url ขึ้นทันที (เร็ว) — แล้วค่อยแทนด้วยภาพย่อถาวรเบื้องหลัง
     const previews = files.filter((f) => f.type.startsWith("image/")).map((f) => URL.createObjectURL(f));
+    // ⚠️ ต้องมี id ประจำข้อความ — เจ้าของเจอบั๊กรูปขึ้นเป็นไอคอนรูปแตก
+    // ต้นเหตุ: ของเดิมหาข้อความที่จะใส่รูปด้วย "ตัวสุดท้ายที่เป็น user"
+    // ถ้าย่อรูปเสร็จช้ากว่า AI ตอบ ตัวสุดท้ายจะเป็นข้อความ AI แล้ว -> ใส่รูปไม่ลง
+    // แต่โค้ดยัง revoke blob url ต่อ = รูปที่โชว์อยู่ตาย กลายเป็นรูปแตกทันที
+    const mid = `m${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
     const shown: Msg[] = keepLast([...msgs, {
+      id: mid,
       role: "user",
       content: "",                     // เดี๋ยวเติมหลังอ่านบิลเสร็จ
       display: note.trim() || `แนบบิล ${files.length} ใบ`,
@@ -233,9 +246,17 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
 
     // แปลงเป็นภาพย่อ data URL เพื่อให้ย้อนดูประวัติแล้วยังเห็นว่าส่งบิลใบไหนไป
     void makeThumbs(files).then((thumbs) => {
+      // ย่อไม่สำเร็จ (เช่นไฟล์ HEIC จาก iPhone ที่ createImageBitmap อ่านไม่ได้)
+      // ให้คา blob url ไว้ใช้ต่อในรอบนี้ ห้าม revoke ไม่งั้นรูปที่กำลังโชว์ตายทันที
       if (!thumbs.length) return;
-      setMsgs((cur) => cur.map((m, i) => (i === cur.length - 1 && m.role === "user" ? { ...m, images: thumbs } : m)));
-      previews.forEach((u) => URL.revokeObjectURL(u));
+      let replaced = false;
+      setMsgs((cur) => cur.map((m) => {
+        if (m.id !== mid) return m;
+        replaced = true;
+        return { ...m, images: thumbs };
+      }));
+      // revoke เฉพาะตอนแทนสำเร็จจริง — ไม่งั้นทิ้ง url ที่จอยังใช้อยู่
+      if (replaced) previews.forEach((u) => URL.revokeObjectURL(u));
     });
     setPendingFiles([]);
     setInput("");
@@ -318,22 +339,29 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
                 </p>
               </div>
 
-              <div className="mt-6 grid gap-2.5 sm:grid-cols-2">
-                {STARTERS.map((s) => (
+              {/* ⚠️ มือถือต้องพอดีจอ ห้ามให้ต้องเลื่อนกว่าจะเจอช่องพิมพ์
+                  เจ้าของเจอจริง: การ์ด 6 ใบเต็มรูปแบบสูงเกินจอ "ใช้งานยากมาก"
+                  จอแคบ = 4 ใบแรก + คำอธิบายซ่อน (เหลือแค่หัวข้อ) · จอกว้าง = ครบ 6 ใบ 2 คอลัมน์
+                  4 ใบแรกคืองานที่ใช้บ่อยที่สุด — ที่เหลือพิมพ์สั่งได้อยู่แล้ว */}
+              <div className="mt-5 grid gap-2 sm:mt-6 sm:gap-2.5 sm:grid-cols-2">
+                {STARTERS.map((s, i) => (
                   <button key={s.title} onClick={() => send(s.prompt)}
-                    className="flex items-start gap-3 rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50/50">
-                    <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100">
+                    className={cn(
+                      "flex min-h-[52px] items-center gap-3 rounded-2xl border border-neutral-200 bg-white px-3.5 py-2.5 text-left transition-colors hover:border-emerald-300 hover:bg-emerald-50/50 sm:items-start sm:px-4 sm:py-3",
+                      i >= 4 && "hidden sm:flex",
+                    )}>
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-neutral-100 sm:mt-0.5">
                       <s.icon className="h-4 w-4 text-emerald-700" />
                     </span>
                     <span className="min-w-0">
                       <span className="block text-[13.5px] font-semibold leading-snug text-neutral-800">{s.title}</span>
-                      <span className="mt-0.5 block text-[12px] leading-relaxed text-neutral-500">{s.desc}</span>
+                      <span className="mt-0.5 hidden text-[12px] leading-relaxed text-neutral-500 sm:block">{s.desc}</span>
                     </span>
                   </button>
                 ))}
               </div>
 
-              <p className="mx-auto mt-5 flex max-w-md items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-neutral-400">
+              <p className="mx-auto mt-4 hidden max-w-md items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-neutral-400 sm:flex">
                 <Paperclip className="mt-[1px] h-3 w-3 shrink-0" />
                 แนบรูปบิลได้ทีละหลายใบ พิมพ์กำกับได้ เช่น &ldquo;ค่าเช่า ยังไม่จ่าย&rdquo; · ตัวเลขไม่ชัดระบบจะถามก่อนบันทึกเสมอ
               </p>
@@ -361,8 +389,12 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
               {m.images && m.images.length > 0 && (
                 <div className="mb-1.5 flex flex-wrap gap-1.5">
                   {m.images.map((src, j) => (
+                    // onError: blob url ที่ตายแล้ว (ปิดแท็บ/รีเฟรช) จะโชว์ไอคอนรูปแตก
+                    // ซึ่งดูเหมือนระบบพัง — ซ่อนตัวเองไปเลยดีกว่า ชื่อไฟล์ยังอยู่ให้อ่าน
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img key={j} src={src} alt={`บิล ${j + 1}`} className="h-20 w-20 rounded-lg border border-white/20 object-cover" />
+                    <img key={j} src={src} alt={`บิล ${j + 1}`} loading="lazy"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      className="h-20 w-20 rounded-lg border border-white/20 bg-white/10 object-cover" />
                   ))}
                 </div>
               )}

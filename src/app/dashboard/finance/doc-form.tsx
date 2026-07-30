@@ -37,6 +37,10 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // ตีกรอบแดงที่ช่องรายการที่ยังว่าง — โชว์หลังกดบันทึกครั้งแรกเท่านั้น
+  // (ไม่ตีแดงตั้งแต่เปิดฟอร์ม ฟอร์มเปล่าที่แดงทั้งใบทำให้คนกลัวมากกว่าช่วย)
+  const [showRowErrors, setShowRowErrors] = useState(false);
+  const rowsRef = useRef<HTMLDivElement>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiWarn, setAiWarn] = useState<string[]>([]);   // จุดที่ AI อ่านไม่ชัด/ยอดไม่ลงตัว — ให้คนตรวจก่อนบันทึก
   const [ocrTotal, setOcrTotal] = useState<number | null>(null); // ยอดรวมที่ AI อ่านได้จากท้ายบิล
@@ -155,10 +159,20 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
 
   function submit(status: "draft" | "awaiting") {
     setError(null);
+    setShowRowErrors(false);
     const items = rows
       .filter((r) => r.name.trim() && Number(r.qty) > 0)
       .map((r) => ({ name: r.name, qty: Number(r.qty), unit: r.unit || undefined, unit_price: Number(r.unit_price) || 0, product_id: r.product_id }));
-    if (!items.length) { setError("ใส่รายการอย่างน้อย 1 บรรทัด"); return; }
+    if (!items.length) {
+      // ⚠️ เดิมขึ้นแค่ "ใส่รายการอย่างน้อย 1 บรรทัด" ไว้ท้ายฟอร์ม
+      // ผู้ใช้ไม่รู้ว่าต้องกรอกช่องไหน ต้องไล่เดาเอง (เจ้าของแจ้งเอง)
+      // ตอนนี้ตีกรอบแดงที่ช่องที่ยังว่างจริง + บอกตรง ๆ ว่าขาดอะไร
+      setShowRowErrors(true);
+      const need = rows.some((r) => !r.name.trim()) ? "ชื่อรายการ" : "จำนวน";
+      setError(`ยังกรอกไม่ครบ — ต้องมี${need}อย่างน้อย 1 บรรทัด (ช่องที่ต้องกรอกขึ้นกรอบแดงไว้ให้แล้ว)`);
+      rowsRef.current?.querySelector<HTMLInputElement>("input[aria-invalid='true']")?.focus();
+      return;
+    }
     const input: SaveDocInput = {
       id: draft?.id,
       doc_type: docType,
@@ -247,7 +261,11 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
                   value={contactName} onChange={(e) => setContactName(e.target.value)} />
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            {/* ⚠️ ห้ามบังคับ 2 คอลัมน์บนจอแคบ — เจ้าของเจอจริงว่าช่อง "ยืนราคาถึง" ล้นออกนอกจอ
+                ช่องวันที่มีทั้งข้อความ + ไอคอนปฏิทิน + บรรทัดอ่านค่าเป็นภาษาไทยใต้ช่อง
+                ยัดสองช่องในแถวเดียวบนจอ 375px = อันขวาโดนดันพ้นขอบ กดไม่ได้เลย
+                จอแคบเรียงลงมา · จอ 400px ขึ้นไปค่อยแบ่งสองคอลัมน์ */}
+            <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2">
               <DateField label="วันที่เอกสาร" value={issueDate} onChange={setIssueDate} />
               <DateField label={docType === "quotation" ? "ยืนราคาถึง" : "ครบกำหนด"}
                 value={dueDate} onChange={setDueDate} min={issueDate} hideToday />
@@ -266,12 +284,17 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
           {/* รายการ */}
           <div>
             <Label>รายการ</Label>
-            <div className="space-y-2">
+            <div ref={rowsRef} className="space-y-2">
               {rows.map((r, i) => (
                 <div key={i} className="grid grid-cols-[1fr_3.5rem_4.75rem_1.75rem] sm:grid-cols-[1fr_4.5rem_5.5rem_2rem] items-center gap-2 sm:grid-cols-[1fr_5rem_4rem_7rem_2rem]">
                   <Input list={products.length ? "product-list" : undefined} placeholder="ชื่อรายการ/สินค้า"
+                    aria-invalid={showRowErrors && !r.name.trim() ? true : undefined}
+                    className={showRowErrors && !r.name.trim() ? "border-red-400 bg-red-50/40 focus:border-red-500" : undefined}
                     value={r.name} onChange={(e) => pickProduct(i, e.target.value)} />
-                  <Input inputMode="decimal" placeholder="จำนวน" value={r.qty} onChange={(e) => setRow(i, { qty: e.target.value })} />
+                  <Input inputMode="decimal" placeholder="จำนวน" value={r.qty}
+                    aria-invalid={showRowErrors && !(Number(r.qty) > 0) ? true : undefined}
+                    className={showRowErrors && !(Number(r.qty) > 0) ? "border-red-400 bg-red-50/40 focus:border-red-500" : undefined}
+                    onChange={(e) => setRow(i, { qty: e.target.value })} />
                   <Input className="hidden sm:block" placeholder="หน่วย" value={r.unit} onChange={(e) => setRow(i, { unit: e.target.value })} />
                   <Input inputMode="decimal" placeholder="ราคา/หน่วย" value={r.unit_price} onChange={(e) => setRow(i, { unit_price: e.target.value })} />
                   <button type="button" onClick={() => setRows((rs) => rs.length > 1 ? rs.filter((_, j) => j !== i) : rs)}

@@ -81,6 +81,26 @@ console.log('\n== Server Component import ฟังก์ชันจากไ�
   if (!found) console.log('  ถูก  ไม่มี Server Component ดึงฟังก์ชันจากไฟล์ "use client"');
 }
 
+// ---------- 3. useEffect ที่สั่งเลื่อนจอโดยไม่มีเงื่อนไข ----------
+console.log("\n== useEffect ที่เลื่อนจอตอน mount (จอเด้งเองตอนเปิดหน้า) ==");
+{
+  let found = 0;
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    // จับ useEffect ที่มี scrollIntoView แต่ในตัว effect ไม่มี early return / เงื่อนไขกันไว้เลย
+    for (const m of src.matchAll(/useEffect\(\(\)\s*=>\s*\{?([\s\S]{0,320}?)\}?,\s*\[/g)) {
+      const body = m[1];
+      if (!body.includes("scrollIntoView")) continue;
+      if (/return|length === 0|length > 0|\.length/.test(body)) continue;   // มีเงื่อนไขแล้ว
+      found++;
+      fail(`${rel(f)} — useEffect สั่ง scrollIntoView โดยไม่เช็คว่ามีอะไรให้เลื่อนไปหา`);
+      console.log('         effect วิ่งตอน mount ด้วย -> เปิดหน้ามาจอเด้งไปกลางหน้าเอง');
+      console.log('         (เกิดจริง 2 รอบ: หน้าผู้ช่วย AI และหน้าแรก) ให้ใส่ if (xxx.length === 0) return;');
+    }
+  }
+  if (!found) console.log("  ถูก  ทุก scrollIntoView มีเงื่อนไขกันไว้แล้ว");
+}
+
 // ---------- 3. รายงานเป้ากดที่เล็กกว่าเกณฑ์ (บอกเฉย ๆ ไม่บล็อก) ----------
 // ไม่ทำให้ build ไม่ผ่าน เพราะของเดิมที่ใช้งานได้อยู่ไม่ควรถูกบังคับให้รื้อ
 // แต่ต้องเห็นตัวเลข จะได้ทยอยแก้ตอนแตะไฟล์นั้นอยู่แล้ว

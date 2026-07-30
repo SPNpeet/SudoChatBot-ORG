@@ -33,10 +33,15 @@ export default function FeedbackWidget({ shopId }: { shopId: string }) {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} aria-label="แนะนำ/ติชม"
-        className="fixed right-[4.75rem] bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-[35] md:bottom-[1.4rem] flex h-10 w-10 items-center justify-center rounded-full bg-neutral-900/90 text-white shadow-lg transition hover:bg-neutral-700 active:scale-95 md:h-11 md:w-11">
-        <MessageCirclePlus className="h-5 w-5" />
-      </button>
+      {/* ============================================================
+          ⚠️ ไม่มีปุ่มลอยของตัวเองอีกแล้ว (30 ก.ค. 2569)
+          เดิมเป็นปุ่มดำลอยข้างปุ่ม + เขียว = ปุ่ม fixed สองอันซ้อนกันทุกหน้า
+          ทับเช็กบ็อกซ์ "จด VAT แล้ว" · ปุ่ม "บันทึกบัญชีรับเงิน" · การ์ดในหน้าภาพรวม
+          เจ้าของเจอเองว่า "ช่องทับกันหลายจุด" และ "รกมาก" — ถูกทั้งสองข้อ
+          ย้าย "แนะนำ/ติชม" ไปเป็นรายการหนึ่งในเมนูของปุ่ม + เขียว
+          เหลือปุ่มลอยอันเดียวทั้งระบบ กล่องยังเปิดจากที่นั่นได้เหมือนเดิม
+          ============================================================ */}
+      <button onClick={() => setOpen(true)} data-feedback-open className="hidden" aria-hidden tabIndex={-1} />
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 px-4 pb-10 pt-14 sm:items-center" onClick={() => setOpen(false)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>

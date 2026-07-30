@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, X, Receipt, FileText, Camera, Calculator } from "lucide-react";
+import { Plus, X, Receipt, FileText, Camera, Calculator, MessageCirclePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ACTIONS = [
@@ -40,18 +40,39 @@ export default function QuickCreate() {
       {/* เมนูล่างสูงประมาณ 60px + safe area — เดิมตั้ง 4.75rem (76px) ซึ่งเฉียดจนนิ้วกดพลาด
           ดันเป็น 6.25rem (100px) ให้มีระยะปลอดภัยจริง ๆ ระหว่างปุ่มลอยกับแถบเมนู */}
       <div className="fixed right-4 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-[46] flex flex-col items-end gap-2 md:bottom-6">
-        {open && ACTIONS.map((a) => (
-          <Link key={a.href} href={a.href}
-            className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white py-2.5 pl-3.5 pr-4 shadow-lg transition hover:border-emerald-300 active:scale-[0.98]">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-50">
-              <a.icon className="h-4 w-4 text-emerald-600" />
-            </span>
-            <span className="text-left">
-              <span className="block text-[13px] font-semibold leading-tight text-neutral-800">{a.label}</span>
-              <span className="block text-[10px] text-neutral-400">{a.hint}</span>
-            </span>
-          </Link>
-        ))}
+        {/* หุบขึ้น-ลงจากปุ่มเดียว — ไม่มีปุ่มลอยตัวที่สองมาทับของใต้มันอีก
+            ใช้ animate เข้าจากล่างเล็กน้อยเพื่อให้รู้ว่าโผล่มาจากปุ่ม ไม่ใช่จู่โจม */}
+        {open && (
+          <div className="flex flex-col items-end gap-2 duration-150 animate-in fade-in slide-in-from-bottom-2 motion-reduce:animate-none">
+            {ACTIONS.map((a) => (
+              <Link key={a.href} href={a.href}
+                className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white py-2.5 pl-3.5 pr-4 shadow-lg transition hover:border-emerald-300 active:scale-[0.98]">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-50">
+                  <a.icon className="h-4 w-4 text-emerald-600" />
+                </span>
+                <span className="text-left">
+                  <span className="block text-[13px] font-semibold leading-tight text-neutral-800">{a.label}</span>
+                  <span className="block text-[10px] text-neutral-400">{a.hint}</span>
+                </span>
+              </Link>
+            ))}
+            {/* ติชมย้ายมาอยู่ในเมนูนี้แทนการเป็นปุ่มลอยอีกอัน */}
+            <button type="button"
+              onClick={() => {
+                setOpen(false);
+                document.querySelector<HTMLButtonElement>("[data-feedback-open]")?.click();
+              }}
+              className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white py-2.5 pl-3.5 pr-4 shadow-lg transition hover:border-neutral-400 active:scale-[0.98]">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-neutral-100">
+                <MessageCirclePlus className="h-4 w-4 text-neutral-600" />
+              </span>
+              <span className="text-left">
+                <span className="block text-[13px] font-semibold leading-tight text-neutral-800">แนะนำ/ติชม</span>
+                <span className="block text-[10px] text-neutral-400">ส่งตรงถึงทีมงาน</span>
+              </span>
+            </button>
+          </div>
+        )}
 
         <button onClick={() => setOpen((v) => !v)}
           aria-label={open ? "ปิดเมนูสร้าง" : "สร้างเอกสารใหม่"} aria-expanded={open}

@@ -23,7 +23,18 @@ export default function LandingSandboxChat() {
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
+  // ⚠️ ห้ามเลื่อนจอตอนยังไม่มีข้อความ
+  // เจ้าของเจอจริง: เปิดหน้าแรกมาแล้วจอเด้งลงล่างเอง ทั้งที่ยังไม่ได้กดอะไร
+  // เพราะ effect นี้วิ่งตอน mount แล้วสั่ง scrollIntoView ไปที่ก้นกล่องทดลอง
+  // ซึ่งอยู่กลางหน้า = คนไม่ได้เห็นหัวเรื่องเลย เข้ามาก็โดนพาไปที่อื่นทันที
+  //
+  // เป็นบั๊กชนิดเดียวกับหน้าผู้ช่วยบัญชี AI ที่แก้ไปแล้ว — รอบนั้นแก้แค่จุดที่เห็น
+  // ไม่ได้ไล่ดูว่ามีที่อื่นซ้ำอีก จึงหลุดมาจนเจ้าของเจอเองอีกรอบ
+  // กติกา: ทุก scrollIntoView ในระบบต้องมีเงื่อนไขว่า "มีอะไรให้เลื่อนไปหาแล้วจริง"
+  useEffect(() => {
+    if (msgs.length === 0) return;
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [msgs, busy]);
 
   // ช่องสั่งงานบนหัวหน้าส่งคำถามลงมาที่นี่ — คนพิมพ์ที่เดียวแล้วเห็นคำตอบเลย
   // ไม่ต้องพิมพ์ซ้ำสองที่ ซึ่งเป็นจุดที่คนเลิกกลางคันบ่อยที่สุด

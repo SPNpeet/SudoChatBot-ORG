@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { baht, dateOnlyTH, cn } from "@/lib/utils";
 import { docOutstanding } from "@/lib/finance";
-import { AlarmClock, HandCoins, ClipboardCheck, PartyPopper, ArrowRight, Landmark } from "lucide-react";
+import { AlarmClock, HandCoins, ClipboardCheck, ArrowRight, Landmark, Check } from "lucide-react";
 
 // ============================================================
 //  "วันนี้ต้องทำ" — แทนที่จะโชว์ตัวเลขเฉยๆ แล้วให้ผู้ใช้คิดเองว่าต้องทำอะไร
@@ -66,15 +66,19 @@ export default function TodayPanel({ overdue, pendingApproval, unmatchedSlips, t
 
   if (!tasks.length) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-5 py-4">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-emerald-100">
-          <PartyPopper className="h-5 w-5 text-emerald-600" />
+      /* ============================================================
+         "ไม่มีงานค้าง" คือข่าวดีที่ไม่ต้องการพื้นที่
+         เดิมเป็นการ์ดสูง 76px มีไอคอนวงกลม 44px + สองบรรทัด + พื้นไล่เฉดเขียว
+         กินที่เท่าการ์ดที่มีงานให้ทำจริง ทั้งที่ไม่มีอะไรให้ทำ = รกเปล่า ๆ
+         (เจ้าของชี้ตรงจุดนี้เอง) ยุบเป็นบรรทัดเดียว จุดเขียวเล็ก ๆ พอ
+         หลักการ: ความสูงบนจอควรสัมพันธ์กับจำนวนงานที่ต้องทำ ศูนย์งาน = เกือบศูนย์พื้นที่
+         ============================================================ */
+      <p className="flex items-center gap-2 px-1 text-[13px] text-neutral-500">
+        <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-100">
+          <Check className="h-3 w-3 text-emerald-600" />
         </span>
-        <div>
-          <p className="text-sm font-semibold text-neutral-800">เคลียร์หมดแล้ว ไม่มีงานค้าง</p>
-          <p className="text-xs text-neutral-500">ไม่มีเอกสารเกินกำหนด ไม่มีรายการรออนุมัติ ไม่มีสลิปค้างจับคู่</p>
-        </div>
-      </div>
+        <span><b className="font-semibold text-neutral-700">เคลียร์หมดแล้ว</b> — ไม่มีเอกสารเกินกำหนด ไม่มีรายการรออนุมัติ ไม่มีสลิปค้าง</span>
+      </p>
     );
   }
 
