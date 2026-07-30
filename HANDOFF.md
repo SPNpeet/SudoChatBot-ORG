@@ -23,15 +23,31 @@
 - npm run backup สำรองทุกตารางเป็น JSON (แพ็กฟรี Supabase ไม่มี backup ให้)
 - Supabase usage ตรวจแล้ว: egress <1% — **ไม่ต้องอัป Pro** แบนเนอร์เป็น Fair Use ทั่วไป
 
-**ค้างฝั่งเจ้าของ (เรียงตามด่วน):**
-1. 🔴 ทดสอบไฟล์ .txt กับโปรแกรม RD Prep จริง — ก่อน 7 ส.ค.
+**ค้างฝั่งเจ้าของ (ปรับปรุง 30 ก.ค. 2569 บ่าย):**
+1. 🔴 ทดสอบไฟล์ .txt กับโปรแกรม RD Prep จริง — ก่อน 7 ส.ค. (เจ้าของโหลดโปรแกรมแล้ว)
 2. 🔴 Supabase Site URL ยังเป็น vercel.app → เปลี่ยนเป็น https://sudochatbot.online
-   (auth/url-configuration) — อีเมลระบบพาลูกค้าไปโดเมน vercel
-3. 🟠 แก้เอกสาร 2 ใบผ่านหน้าเว็บ: EXP-2026-0003 (ทีเด็ดอาหารปลา ปี 2069, 63,750)
-   ยกเลิก+ออกใหม่วันที่ 19/06/2026 · EXP-2026-0003 (King, 54 บาทซ้ำ) ยกเลิก 1 ใบ
-4. 🟠 จัดการบัญชี facebook (ตั้งรหัสหรือลบ) + บัญชี .con (กิจการ Sudo ว่างเปล่า ลบได้)
-5. 🟡 Rotate LINE token (วางใน /dashboard/admin เท่านั้น)
-6. 🟡 สมัครบัญชีทดสอบ + ใส่ TEST_EMAIL/TEST_PASSWORD ใน .env.local ให้ Claude ตรวจหลังล็อกอินได้
+   ที่ `auth/url-configuration` + เพิ่ม `https://sudochatbot.online/**` ใน Redirect URLs
+   **Claude ทำแทนไม่ได้** — MCP ไม่มีคำสั่งแตะ auth config, ไม่มี SUPABASE_ACCESS_TOKEN ใน .env.local,
+   ไม่มี Chrome ที่ล็อกอิน Supabase ต่ออยู่ · ฝั่งโค้ดแก้ให้แล้วด้วย `authOrigin()` (`429040f`)
+3. 🟠 ยกเลิกเอกสาร 2 ใบผ่านหน้าเว็บ (ห้าม SQL) — ตรวจแล้วว่ากดได้ปลอดภัย ไม่ติดล็อกงวด:
+   - กิจการ **King** (`justin.minnie89@gmail.com` = ของเจ้าของเอง) `EXP-2026-0003` 54 บาท ซ้ำกับ `EXP-2026-0002`
+     `/dashboard/expenses/d5c700e1-9e53-4f85-a0f4-dda165b31143`
+   - กิจการ **ทีเด็ดอาหารปลา** (`jj@gmail.com` — ต้องล็อกอินบัญชีนั้น) `EXP-2026-0003` วันที่ 2069-06-19
+     63,750 บาท สถานะ awaiting · ยกเลิกแล้วออกใหม่วันที่ 19/06/2026
+     `/dashboard/expenses/1fb01b05-8fbf-4477-9321-be591346ee3b`
+   - ระบบไม่มีปุ่มแก้ไขเอกสารที่ออกแล้ว (มีแค่ voidDoc / credit-debit note) จึงต้องยกเลิก+ออกใหม่เท่านั้น
+4. 🟡 Rotate LINE token (วางใน /dashboard/admin เท่านั้น ห้ามวางในแชท)
+5. 🟡 สมัครบัญชีทดสอบ + ใส่ TEST_EMAIL/TEST_PASSWORD ใน .env.local ให้ Claude ตรวจหลังล็อกอินได้
+6. 🟡 บัญชี `ta_free14@hotmail.con` (พิมพ์ .con ผิด) ยังอยู่ — มีรหัสผ่านแต่กู้ทางอีเมลไม่ได้
+   ถือกิจการ "Sudo" ที่ว่างเปล่า (0 เอกสาร) จะลบก็สั่งได้
+
+**เสร็จแล้ววันนี้ (30 ก.ค. บ่าย):**
+- ลบ `ta_free14@hotmail.com` + กิจการ "admin" ตามคำสั่งเจ้าของ — 4 เอกสารตัวอย่าง 0 เอกสารจริง
+  ก่อนลบต้อง null `ai_settings.updated_by` (4) และ `ai_provider_keys.updated_by` (2) เพราะ FK เป็น NO ACTION
+  หลังลบ: platform admin เหลือ `justin.minnie89@gmail.com` (ยังเข้าหน้า admin ได้), คีย์ AI ครบ 2 ตัว,
+  ทดสอบ AI จริงผ่าน guest endpoint แล้วตอบปกติ, ไม่มีกิจการ/สมาชิกกำพร้า
+- ✅ backup: เจ้าของรัน + ก๊อปขึ้น Google Drive แล้ว · Claude รันเพิ่มก่อนลบข้อมูล → `backups/2026-07-30/` 25 ตาราง 886 แถว
+- ด่าน pre-push ที่บล็อกได้จริง (`012c203`) + `CLAUDE.md` โหลดอัตโนมัติ (`d1034a6`)
 
 ---
 
@@ -135,8 +151,8 @@
 
 ### ⚠️ ค้างที่เจ้าของเท่านั้น
 
-1. **อัปเกรด Supabase เป็น Pro** — dashboard ขึ้น "Grace period is over" โปรเจกต์อาจหยุดให้บริการ
-2. เปิด Leaked Password Protection → `/project/uafnpbawajgonarvlurj/auth/protection`
+1. ~~**อัปเกรด Supabase เป็น Pro**~~ — ❌ **ยกเลิกข้อนี้แล้ว** ตรวจ usage จริง 30 ก.ค.: egress 0.045/5 GB · DB 77/500 MB · MAU 20/50,000 ไม่เกินโควตาสักตัว **ห้ามจ่าย Pro**
+2. ~~เปิด Leaked Password Protection~~ — ❌ **ฟีเจอร์นี้เฉพาะแพ็ก Pro** ใช้ความยาวรหัสผ่านขั้นต่ำ 8 แทนแล้ว
 3. แก้ 2 เอกสาร: `EXP-2026-0003 (มานิตย์ฟาร์ม)` วันที่ปี 2069 · `CJ 1446` ซ้ำ 2 ใบ — **กดยกเลิกในระบบ ห้ามลบด้วย SQL**
 4. ทดสอบไฟล์ `.txt` กับ RD Prep จริง แล้วบันทึกเวอร์ชันที่ทดสอบ
 5. Rotate LINE token (platform OA + Login channel มีอยู่จริง) · ลบ edge function 8 ตัว
