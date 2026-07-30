@@ -7,6 +7,8 @@ import { Logo } from "@/components/logo";
 import CompanySwitcher from "./company-switcher";
 import AiQuotaBar, { type AiQuota } from "./ai-quota-bar";
 import AccountMenu, { type Me } from "./account-menu";
+import SystemInbox from "./system-inbox";
+import type { Notice } from "@/lib/notices";
 
 export function SidebarHead({ companies, currentId }: {
   companies: { id: string; name: string; role: string }[]; currentId: string;
@@ -37,8 +39,9 @@ export function SidebarHead({ companies, currentId }: {
  * ตอนนี้ปุ่มออกจากระบบย้ายเข้าไปอยู่ในเมนูบัญชี ซึ่งเป็นที่ที่ควรอยู่ —
  * และได้ผลพลอยได้คือกดพลาดยากขึ้น เดิมมันอยู่ติดเมนูสุดท้ายจนกดโดนบ่อย
  */
-export function SidebarFoot({ quota, me, signOut }: {
+export function SidebarFoot({ quota, me, signOut, shopId, notices }: {
   quota: AiQuota | null; me: Me; signOut: () => Promise<void>;
+  shopId: string; notices: Notice[];
 }) {
   const { collapsed } = useNav();
   return (
@@ -48,6 +51,11 @@ export function SidebarFoot({ quota, me, signOut }: {
           <AiQuotaBar quota={quota} />
         </div>
       )}
+      {/* กล่องจดหมายระบบ — เดิมเป็นแบนเนอร์ 3 กล่องบนหน้าภาพรวม
+          พับอยู่ก็ยังต้องเห็นเลขว่ามีเรื่องค้างกี่เรื่อง จึงโชว์ทั้งสองโหมด */}
+      <div className={cn("border-t border-neutral-100 pt-2", collapsed ? "flex justify-center px-2" : "px-2")}>
+        <SystemInbox shopId={shopId} notices={notices} variant={collapsed ? "icon" : "row"} />
+      </div>
       <div className={cn("border-t border-neutral-100 pb-3 pt-2", collapsed ? "flex justify-center px-2" : "px-2")}>
         <AccountMenu me={me} signOut={signOut} variant={collapsed ? "icon" : "row"} />
       </div>

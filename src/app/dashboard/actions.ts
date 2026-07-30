@@ -159,6 +159,44 @@ export async function removeMember(memberId: string, shopId: string): Promise<Ac
 }
 
 // ---------- แจ้งเตือน ----------
+/**
+ * กดอ่านข้อความในกล่องจดหมายระบบ
+ *
+ * กุญแจขึ้นต้น row: = แถวจริงในตาราง notifications -> อัปเดต read ที่แถวนั้น
+ * กุญแจอื่น = ข้อความที่คำนวณสดจากสถานะ -> บันทึกลง notice_dismissals
+ *
+ * ⚠️ กุญแจผูกกับสถานะ (เช่น health:partners:3) ถ้าสถานะแย่ลงกุญแจเปลี่ยน
+ * แล้วข้อความเด้งขึ้นใหม่ — กดอ่านครั้งเดียวไม่ได้ปิดปัญหาที่โตขึ้นไปตลอด
+ */
+export async function dismissNotice(shopId: string, noticeKey: string): Promise<ActionResult> {
+  try {
+    await assertMember(shopId);
+    const key = String(noticeKey).slice(0, 200);
+    if (!key) return { ok: false, error: "ไม่พบข้อความที่จะปิด" };
+    const supabase = await createClient();
+
+    if (key.startsWith("row:")) {
+      const id = key.slice(4);
+      const { error } = await supabase.from("notifications")
+        .update({ read: true }).eq("id", id).eq("shop_id", shopId);
+      if (error) return { ok: false, error: error.message };
+    } else {
+      const { data: me } = await supabase.auth.getUser();
+      if (!me?.user) return { ok: false, error: "เซสชันหมดอายุ เข้าระบบใหม่อีกครั้ง" };
+      // กดซ้ำจากหลายแท็บได้ไม่พัง — คีย์หลักคือ (shop, user, key)
+      const { error } = await supabase.from("notice_dismissals")
+        .upsert({ shop_id: shopId, user_id: me.user.id, notice_key: key },
+          { onConflict: "shop_id,user_id,notice_key" });
+      if (error) return { ok: false, error: error.message };
+    }
+
+    revalidatePath("/dashboard", "layout");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ปิดข้อความไม่สำเร็จ") };
+  }
+}
+
 export async function markNotificationRead(notificationId: string, shopId: string): Promise<ActionResult> {
   try {
     await assertMember(shopId);

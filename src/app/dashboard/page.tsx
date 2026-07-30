@@ -15,9 +15,6 @@ import { TrendingUp, TrendingDown, Users, Receipt, ArrowUpRight, ArrowDownRight,
 import Link from "next/link";
 import RowLink from "@/components/row-link";
 import DataHealth from "./data-health";
-import SystemAlertBanner from "./system-alert-banner";
-import VatRateAlert from "./vat-rate-alert";
-import Notifications from "./notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -105,16 +102,14 @@ export default async function Overview() {
 
   return (
     <div className="space-y-6">
-      {/* ย้ายมาจาก layout (30 ก.ค. 2569) — เดิม 3 กล่องนี้อยู่ใน layout
-          เปิดหน้าไหนก็เจอ กินที่บนสุดของทุกหน้า เจ้าของบอกว่า "รกจัด ๆ"
-          ตอนนี้โผล่เฉพาะหน้าภาพรวม ทุกหน้าอื่นสะอาดแล้ว
-          รอบถัดไปยกเข้ากล่องจดหมายระบบ (กระดิ่ง) ให้หน้านี้สะอาดด้วย
-          ทั้งสามตัวคืน null เองถ้าไม่มีอะไรต้องบอก จึงไม่กินที่เปล่า ๆ */}
-      <div data-noprint className="space-y-3 empty:hidden">
-        <SystemAlertBanner />
-        <VatRateAlert />
-        <Notifications />
-      </div>
+      {/* ⚠️ ห้ามเอา 3 กล่องนี้กลับมา — ประกาศระบบ · อัตรา VAT · แจ้งเตือน
+          ย้ายเข้ากล่องจดหมายระบบที่กระดิ่งแล้ว (src/lib/notices.ts)
+          รอบ 1 ย้ายออกจาก layout มาที่นี่ · รอบ 2 ยกออกจากที่นี่อีกชั้น
+          เอากลับมาคือโชว์ซ้ำสองที่ ทั้งสาม component ยังอยู่ในโปรเจกต์ ไม่ได้ลบ
+
+          DataHealth ด้านล่างยังอยู่โดยเจตนา: เป็นเรื่องที่ทำให้ยื่นภาษีผิดจริง
+          ต้องขวางตา ไม่ควรซ่อนใต้กระดิ่งที่ผู้ใช้อาจไม่กด และเป็นชั้นสำรอง
+          ถ้ากล่องจดหมายล่ม (layout จับ error ไว้แล้วให้กระดิ่งว่าง) */}
 
       {/* ข้อมูลที่ขาดไม่ทำให้ระบบพัง แต่จะระเบิดตอนวันยื่นภาษีซึ่งแก้ไม่ทันแล้ว
           ระบบรู้ได้ตั้งแต่วันนี้ จึงต้องบอกตั้งแต่วันนี้ (ไม่ขึ้นถ้าข้อมูลครบ) */}

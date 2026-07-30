@@ -8,6 +8,8 @@ import { NavShell, MainArea } from "./nav-shell";
 import { SidebarHead, SidebarFoot } from "./sidebar-parts";
 import { ToastProvider } from "@/components/toast";
 import CommandPalette from "./command-palette";
+import SystemInbox from "./system-inbox";
+import { getNotices } from "@/lib/notices";
 import FeedbackWidget from "./feedback-widget";
 import QuickCreate from "./quick-create";
 import CompanySwitcher from "./company-switcher";
@@ -30,6 +32,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     supabase.from("profiles").select("display_name,email").eq("id", user.id).maybeSingle(),
   ]);
 
+  // ⚠️ ห้ามให้กล่องจดหมายล้มทั้ง layout
+  // ไฟล์นี้หุ้มทุกหน้าใน dashboard ถ้า getNotices โยน error ขึ้นมา
+  // ผู้ใช้จะเข้าระบบไม่ได้เลยทั้งระบบ แลกกับข้อความแจ้งเตือนไม่กี่บรรทัด — ไม่คุ้ม
+  // ล้มแล้วให้กระดิ่งว่าง ส่วนเรื่องที่กระทบภาษียังมีแถบบนหน้าภาพรวมรับอยู่อีกชั้น
+  const notices = await getNotices(shop.id).then((r) => r.notices).catch(() => []);
+
   // อีเมลยึดจาก auth เป็นหลัก — แถว profiles อาจตกหล่นได้ถ้า trigger ตอนสมัครพลาด
   // แต่ตัวตนที่ใช้ล็อกอินจริงอยู่ที่ auth เสมอ ตรงนี้ผิดไม่ได้เพราะคือสิ่งที่ผู้ใช้ใช้ยืนยันตัวเอง
   const me: Me = {
@@ -47,7 +55,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* ส่งได้เฉพาะข้อมูลที่ serialize ได้ (boolean / object ธรรมดา / server action / JSX)
           รายการเมนูพร้อมไอคอนอยู่ใน side-nav.tsx ฝั่ง client แล้ว ห้ามย้ายกลับมาที่นี่ */}
       <SideNav isAdmin={!!isAdmin}
-        foot={<SidebarFoot quota={quota as AiQuota | null} me={me} signOut={signOut} />}>
+        foot={<SidebarFoot quota={quota as AiQuota | null} me={me} signOut={signOut}
+          shopId={shop.id} notices={notices} />}>
         <SidebarHead companies={companies} currentId={shop.id} />
       </SideNav>
 
@@ -66,6 +75,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="min-w-0 flex-1">
           <CompanySwitcher companies={companies} currentId={shop.id} />
         </div>
+        <SystemInbox shopId={shop.id} notices={notices} variant="icon" />
         <AccountMenu me={me} signOut={signOut} variant="icon" />
       </header>
 
