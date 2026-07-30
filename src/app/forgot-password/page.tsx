@@ -14,6 +14,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/logo";
 import { MailCheck } from "lucide-react";
+import { authOrigin } from "@/lib/app-origin";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -28,7 +29,7 @@ export default function ForgotPasswordPage() {
       const supabase = createClient();
       const { error: err } = await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
-        { redirectTo: `${window.location.origin}/auth/callback?next=/reset-password` },
+        { redirectTo: `${authOrigin()}/auth/callback?next=/reset-password` },
       );
       // ยิงถี่เกินเป็นข้อจำกัดจริงที่ต้องบอก ส่วนกรณีอื่นกลืนไว้ไม่ให้เดาได้ว่ามีอีเมลนี้ไหม
       if (err && /rate limit|too many/i.test(err.message)) {

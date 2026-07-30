@@ -19,6 +19,7 @@
 // ============================================================
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { authOrigin } from "@/lib/app-origin";
 
 export type OAuthProvider = "google";
 
@@ -58,7 +59,7 @@ export default function OAuthButtons({ mode, providers = ["google"] }: {
       }
       const supabase = createClient();
       const { error: e } = await supabase.auth.signInWithOAuth({
-        provider, options: { redirectTo: `${location.origin}/auth/callback` },
+        provider, options: { redirectTo: `${authOrigin()}/auth/callback` },
       });
       if (e) { setLoading(null); setError("ช่องทางนี้ยังไม่พร้อม — ใช้อีเมล/รหัสผ่านแทนได้เลย"); }
     } catch {

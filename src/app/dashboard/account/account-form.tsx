@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { dateOnlyTH } from "@/lib/utils";
 import { updateMyProfile } from "../actions";
 import { CheckCircle2, KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { authOrigin } from "@/lib/app-origin";
 
 const PROVIDER_LABEL: Record<string, string> = {
   email: "อีเมล + รหัสผ่าน",
@@ -44,7 +45,7 @@ export default function AccountForm({ email, displayName, phone, joined, provide
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        redirectTo: `${authOrigin()}/auth/callback?next=/reset-password`,
       });
       if (error && /rate limit|too many/i.test(error.message)) {
         setPwState("error"); setPwMsg("ขอลิงก์ถี่เกินไป — รอสัก 1 นาทีแล้วลองใหม่");
