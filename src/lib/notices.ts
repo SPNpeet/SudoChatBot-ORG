@@ -15,6 +15,7 @@
 //  กดปิดครั้งเดียวไม่ได้แปลว่าปิดปัญหาที่แย่ลงไปตลอด
 // ============================================================
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { selectWhtPayableDocs } from "@/lib/vat-docs";
 
 export type NoticeTone = "critical" | "warn" | "info";
 
@@ -141,6 +142,61 @@ export async function getNotices(shopId: string): Promise<{ notices: Notice[]; u
           href: "/dashboard/expenses", cta: "ไปตรวจเอกสาร",
         });
       }
+    }
+  } catch { /* ข้าม */ }
+
+  // ---------- กำหนดนำส่ง ภ.ง.ด. ที่ใกล้ถึง / เลยมาแล้ว ----------
+  //
+  // ⚠️ เตือนเฉพาะงวดที่ "มีภาษีต้องนำส่งจริง" เท่านั้น
+  // ถ้าเตือนทุกเดือนไม่ดูข้อมูล ร้านที่ไม่เคยหักภาษีใครจะโดนเตือนทุกเดือนเปล่า ๆ
+  // แล้วก็จะเลิกอ่านกระดิ่ง ซึ่งทำให้เรื่องที่สำคัญจริงถูกกลืนไปด้วย
+  //
+  // ดู 2 งวด: เดือนก่อนกับเดือนนี้ เพราะ ม.52 ให้ยื่นภายใน 7 วันนับจากสิ้นเดือนที่จ่าย
+  // ต้นเดือนจึงมีทั้งงวดเดือนก่อน (ใกล้ครบกำหนด) และงวดเดือนนี้ (ยังสะสมอยู่)
+  try {
+    const supabase = await createClient();
+    const now = new Date(Date.now() + 7 * 3600_000);            // เวลาไทย
+    const today = now.toISOString().slice(0, 10);
+    const months = [
+      new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 7),
+      now.toISOString().slice(0, 7),
+    ];
+
+    for (const period of months) {
+      const start = `${period}-01`;
+      const [y, m] = period.split("-").map(Number);
+      const end = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+
+      const { data: rows } = await supabase.from("fin_docs")
+        .select("doc_type,status,wht_amount,vat_amount,total,ref_doc_id")
+        .eq("shop_id", shopId).gt("wht_amount", 0)
+        .gte("issue_date", start).lt("issue_date", end);
+      const payable = selectWhtPayableDocs((rows ?? []) as never[]);
+      if (!payable.length) continue;
+
+      const tax = payable.reduce((a, d) => a + Number((d as { wht_amount?: number }).wht_amount ?? 0), 0);
+      const { data: dueRaw } = await supabase.rpc("wht_due_dates", { p_period: period });
+      const due = dueRaw as { paper?: string | null; online?: string | null } | null;
+      const paper = due?.paper ?? null;
+      if (!paper) continue;
+
+      const daysLeft = Math.round((Date.parse(`${paper}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+      // เตือนเมื่อเหลือ ≤ 14 วัน หรือเลยกำหนดมาแล้ว — ก่อนนั้นยังไม่ต้องรบกวน
+      if (daysLeft > 14) continue;
+
+      const late = daysLeft < 0;
+      all.push({
+        // ผูกกับงวด ไม่ใช่จำนวนวัน ไม่งั้นกุญแจเปลี่ยนทุกวันแล้วเด้งใหม่ทุกวัน
+        key: `wht_due:${period}`,
+        tone: late || daysLeft <= 3 ? "critical" : "warn",
+        title: late
+          ? `เลยกำหนดนำส่งภาษีหัก ณ ที่จ่ายงวด ${period} มา ${Math.abs(daysLeft)} วัน`
+          : `อีก ${daysLeft} วันครบกำหนดนำส่งภาษีหัก ณ ที่จ่ายงวด ${period}`,
+        body: `${payable.length} รายการ ภาษีที่ต้องนำส่ง ${tax.toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท `
+          + `· ยื่นกระดาษภายใน ${paper}${due?.online ? ` · ยื่นออนไลน์ได้ถึง ${due.online}` : ""}`
+          + (late ? " — ยื่นช้ามีเงินเพิ่ม 1.5% ต่อเดือนของภาษีที่ต้องนำส่ง (ม.27)" : ""),
+        href: "/dashboard/reports", cta: "ไปโหลดไฟล์ยื่น",
+      });
     }
   } catch { /* ข้าม */ }
 

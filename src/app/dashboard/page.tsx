@@ -14,7 +14,6 @@ import TodayPanel, { type TodoDoc } from "./today-panel";
 import { TrendingUp, TrendingDown, Users, Receipt, ArrowUpRight, ArrowDownRight, LineChart, FileText } from "lucide-react";
 import Link from "next/link";
 import RowLink from "@/components/row-link";
-import DataHealth from "./data-health";
 
 export const dynamic = "force-dynamic";
 
@@ -107,13 +106,12 @@ export default async function Overview() {
           รอบ 1 ย้ายออกจาก layout มาที่นี่ · รอบ 2 ยกออกจากที่นี่อีกชั้น
           เอากลับมาคือโชว์ซ้ำสองที่ ทั้งสาม component ยังอยู่ในโปรเจกต์ ไม่ได้ลบ
 
-          DataHealth ด้านล่างยังอยู่โดยเจตนา: เป็นเรื่องที่ทำให้ยื่นภาษีผิดจริง
-          ต้องขวางตา ไม่ควรซ่อนใต้กระดิ่งที่ผู้ใช้อาจไม่กด และเป็นชั้นสำรอง
-          ถ้ากล่องจดหมายล่ม (layout จับ error ไว้แล้วให้กระดิ่งว่าง) */}
+          DataHealth ก็ยกเข้ากระดิ่งแล้วเหมือนกัน (กุญแจ health:*) เจ้าของสั่งเมื่อ 30 ก.ค.
+          เดิมกันไว้เป็นชั้นสำรองเพราะกลัวกระดิ่งล่มแล้วคำเตือนหายเงียบ
+          แก้ด้วยวิธีที่ตรงกว่า: ถ้า getNotices ล้ม layout จะยัดข้อความ
+          "ตรวจสถานะระบบไม่สำเร็จ" เข้ากระดิ่งแทนที่จะเงียบ — ดู layout.tsx
+          จึงไม่ต้องมีแถบซ้ำสองที่อีก */}
 
-      {/* ข้อมูลที่ขาดไม่ทำให้ระบบพัง แต่จะระเบิดตอนวันยื่นภาษีซึ่งแก้ไม่ทันแล้ว
-          ระบบรู้ได้ตั้งแต่วันนี้ จึงต้องบอกตั้งแต่วันนี้ (ไม่ขึ้นถ้าข้อมูลครบ) */}
-      <DataHealth shopId={shop.id} />
 
       {/* ทักทาย + สรุปหนึ่งบรรทัดที่บอกสถานะเงินสดทันที */}
       <div>

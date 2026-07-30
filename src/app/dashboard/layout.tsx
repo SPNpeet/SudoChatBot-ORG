@@ -9,7 +9,7 @@ import { SidebarHead, SidebarFoot } from "./sidebar-parts";
 import { ToastProvider } from "@/components/toast";
 import CommandPalette from "./command-palette";
 import SystemInbox from "./system-inbox";
-import { getNotices } from "@/lib/notices";
+import { getNotices, type Notice } from "@/lib/notices";
 import FeedbackWidget from "./feedback-widget";
 import QuickCreate from "./quick-create";
 import CompanySwitcher from "./company-switcher";
@@ -35,8 +35,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // ⚠️ ห้ามให้กล่องจดหมายล้มทั้ง layout
   // ไฟล์นี้หุ้มทุกหน้าใน dashboard ถ้า getNotices โยน error ขึ้นมา
   // ผู้ใช้จะเข้าระบบไม่ได้เลยทั้งระบบ แลกกับข้อความแจ้งเตือนไม่กี่บรรทัด — ไม่คุ้ม
-  // ล้มแล้วให้กระดิ่งว่าง ส่วนเรื่องที่กระทบภาษียังมีแถบบนหน้าภาพรวมรับอยู่อีกชั้น
-  const notices = await getNotices(shop.id).then((r) => r.notices).catch(() => []);
+  //
+  // ⚠️ ล้มแล้วต้อง "บอกว่าล้ม" ไม่ใช่เงียบเป็นกระดิ่งว่าง
+  // ตั้งแต่ยกแถบเตือนออกจากหน้าภาพรวมหมดแล้ว กระดิ่งคือที่เดียวที่คำเตือนอยู่
+  // ถ้าล้มแล้วเงียบ ผู้ใช้จะอ่านว่า "ไม่มีเรื่องค้าง" ทั้งที่ระบบตรวจไม่ได้ต่างหาก
+  // ซึ่งอันตรายกว่าคำเตือนรก เพราะเป็นการโกหกแบบที่ไม่มีใครรู้
+  const notices: Notice[] = await getNotices(shop.id).then((r) => r.notices).catch(() => [{
+    key: "notices:unavailable",
+    tone: "warn" as const,
+    title: "ตรวจสถานะระบบไม่สำเร็จชั่วคราว",
+    body: "กล่องจดหมายอ่านข้อมูลไม่ได้รอบนี้ จึงยังบอกไม่ได้ว่ามีเรื่องค้างหรือไม่ "
+      + "ถ้าใกล้กำหนดยื่นภาษี ให้เปิดหน้ารายงานตรวจเองอีกครั้ง",
+    href: "/dashboard/reports", cta: "ไปหน้ารายงาน",
+  }]);
 
   // อีเมลยึดจาก auth เป็นหลัก — แถว profiles อาจตกหล่นได้ถ้า trigger ตอนสมัครพลาด
   // แต่ตัวตนที่ใช้ล็อกอินจริงอยู่ที่ auth เสมอ ตรงนี้ผิดไม่ได้เพราะคือสิ่งที่ผู้ใช้ใช้ยืนยันตัวเอง
@@ -84,8 +95,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           เดิมมี 3 กล่อง (ประกาศระบบ · อัตรา VAT · แจ้งเตือน) วางไว้ตรงนี้
           ผลคือเปิดหน้าไหนก็เจอ กินที่บนสุดของทุกหน้าตลอดเวลา
           เจ้าของใช้คำว่า "รกจัด ๆ" ซึ่งถูก — คำเตือนที่เห็นทุกวันคือคำเตือนที่ตาชา
-          ย้ายไปไว้หน้าภาพรวมที่เดียว (dashboard/page.tsx) แล้ว
-          รอบถัดไปจะยกเข้ากล่องจดหมายระบบให้หน้าภาพรวมสะอาดด้วย */}
+          รอบ 1 ย้ายไปหน้าภาพรวม · รอบ 2 ยกเข้ากล่องจดหมายระบบ (กระดิ่ง) แล้วทั้งหมด
+          ตอนนี้ไม่มีแถบเตือนอยู่ทั้ง layout และหน้าภาพรวม — ดู src/lib/notices.ts */}
       <MainArea>{children}</MainArea>
 
       {/* ปุ่มลอยทั้งหมด — ต้องไม่ติดไปกับกระดาษ (globals.css ซ่อน [data-noprint] ตอนพิมพ์) */}

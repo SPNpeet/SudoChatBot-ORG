@@ -1,0 +1,62 @@
+# ============================================================
+#  ด่านฝั่งคลาวด์ — ชั้นที่ข้ามไม่ได้
+#
+#  ทำไมต้องมีทั้งที่มี .githooks/pre-push อยู่แล้ว:
+#  hook อยู่บนเครื่องคนที่ push · ต้องสั่ง git config เปิดเองทีละ clone
+#  และข้ามได้ตลอดด้วย --no-verify ซึ่งคนรีบ ๆ ตอนดึกจะทำ
+#  ด่านนี้รันบนเครื่องของ GitHub จึงข้ามไม่ได้ และรันครบรวม build ด้วย
+#
+#  hook = กันลืม (5 วินาที ไม่มี build) · ด่านนี้ = กันเจตนา (ครบทุกอย่าง)
+#
+#  ⚠️ ด่านนี้ไม่บล็อกการ deploy ของ Vercel — Vercel ดู push ไม่ได้ดูผลด่านนี้
+#  ถ้าต้องการให้ deploy รอผลด่าน ต้องไปตั้ง branch protection ที่ GitHub
+#  (ต้องทำในหน้าเว็บ GitHub เจ้าของทำเอง — เขียนไว้ใน HANDOFF.md)
+#  แต่ build ที่พังจะไม่ขึ้น production อยู่แล้วเพราะ Vercel build เอง
+# ============================================================
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# push ซ้อนกันหลายรอบให้ยกเลิกรอบเก่า ไม่เผา minutes ฟรีทิ้ง
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # ---- ด่านที่ไม่ต้องมีคีย์ก็รันได้ ----
+      - name: typecheck
+        run: npm run typecheck
+
+      - name: ตรวจกฎบัญชี-ภาษี (ปัดเศษ · ค่าเสื่อม · ไฟล์ยื่นสรรพากร · วันที่)
+        run: npm run check
+
+      - name: ด่าน UI (className ชนกัน · ข้ามเส้น server/client · จอเด้งเอง)
+        run: npm run check:ui
+
+      # ---- build ต้องมีค่า env ฝั่ง public ถึงจะผ่าน ----
+      # ใส่ค่าปลอมที่รูปแบบถูกต้องพอให้ build ผ่าน ไม่ได้ต่อฐานข้อมูลจริง
+      # ⚠️ ห้ามใส่ SUPABASE_SERVICE_ROLE_KEY ที่นี่เด็ดขาด — คีย์นั้นข้าม RLS ได้ทั้งฐาน
+      # build ไม่ต้องใช้ และ log ของ Actions เปิดดูได้จากภายนอกถ้า repo เป็น public
+      - name: build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build-only-placeholder-not-a-real-key
+          NEXT_PUBLIC_APP_ORIGIN: https://sudochatbot.online
+        run: npm run build
