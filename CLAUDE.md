@@ -94,6 +94,12 @@ build ไม่ผ่าน = ไม่ deploy ขึ้น production แต่
   (ถ้าวางแล้ว = ถือว่าหลุด ต้อง rotate)
 - Server Action ต้อง `assertMember(shopId, roles)` ก่อนแตะ service client · หน้า admin ต้อง `is_platform_admin()`
 - ห้ามเก็บ IP ดิบ — HMAC-SHA256 เท่านั้น (คอลัมน์ `guest_ai_usage.ip_hash`)
+- **repo นี้เป็น public** (`github.com/SPNpeet/SudoChatBot-ORG`) ทุกไฟล์ที่ commit คนนอกอ่านได้
+  ห้ามเขียนอีเมล ชื่อคน ชื่อกิจการลูกค้า เลขผู้เสียภาษี หรือยอดเงินที่ระบุตัวบุคคลได้
+  ลงไฟล์เอกสาร/คอมเมนต์/commit message — ให้เรียกเป็นบทบาท ("บัญชีลูกค้า" / "กิจการลูกค้า A")
+  หรือใช้ UUID ซึ่งเปิดดูได้เฉพาะคนที่เข้าฐานข้อมูลได้อยู่แล้ว
+  เกิดจริง 30 ก.ค.: เขียนอีเมลลูกค้าลง HANDOFF.md แล้ว push (`8c713bd`) — ลบจากไฟล์ได้
+  แต่ git history ลบไม่ได้ถ้าไม่ rewrite ทั้ง repo · `npm run check:ui` ดักอีเมลใน .md แล้ว
 - เพดาน/โควตา/kill switch ตรวจฝั่ง server และ **fail-closed** เสมอ
 - ห้ามแตะ Auth config (provider, Site URL, redirect) — เจ้าของทำเอง
   ปิด provider ที่ยังมีบัญชีผูกอยู่ = ล็อกคนนั้นออกถาวร (เกิดจริงกับ Facebook)

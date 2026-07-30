@@ -122,6 +122,31 @@ console.log("\n== useEffect ที่เลื่อนจอตอน mount (�
     : "  ไม่พบ");
 }
 
+// ---------- 4. ข้อมูลส่วนบุคคลในไฟล์เอกสารที่ commit (repo เป็น public) ----------
+//
+// เกิดจริง 30 ก.ค. 2569: ผมเขียนอีเมลลูกค้าจริงลง HANDOFF.md แล้ว push
+// ขึ้น repo ที่ visibility = public โดยไม่ได้ตรวจว่า repo เป็น public หรือ private
+// อีเมลบวกชื่อกิจการบวกยอดเงิน = ข้อมูลส่วนบุคคลตาม PDPA เผยแพร่สู่สาธารณะ
+// ลบออกจากไฟล์ได้ แต่ git history ลบไม่ได้ถ้าไม่ rewrite ทั้ง repo
+//
+// ด่านนี้จับเฉพาะอีเมลของผู้ให้บริการฟรีที่คนใช้เป็นอีเมลส่วนตัว
+// ไม่จับ @sudochatbot.online (อีเมลระบบ) และ example.com (ตัวอย่างในเอกสาร)
+console.log("\n== อีเมลส่วนบุคคลในไฟล์เอกสาร (repo เป็น public) ==");
+{
+  let found = 0;
+  const docs = readdirSync(".").filter((f) => /\.md$/i.test(f));
+  for (const f of [...docs, ...(() => { try { return readdirSync("docs").map((d) => `docs/${d}`); } catch { return []; } })()]) {
+    if (!/\.md$/i.test(f)) continue;
+    const src = readFileSync(f, "utf8");
+    for (const m of src.matchAll(/[A-Za-z0-9._%+-]+@(?:gmail|hotmail|outlook|yahoo|live|icloud)\.[a-z.]+/gi)) {
+      found++;
+      fail(`${f} — มีอีเมลส่วนบุคคล: ${m[0].slice(0, 3)}***@${m[0].split("@")[1]}`);
+      console.log("         repo เป็น public ห้ามเขียนอีเมลจริงลงไฟล์ ให้เรียกเป็นบทบาทแทน");
+    }
+  }
+  if (!found) console.log("  ถูก  ไม่มีอีเมลส่วนบุคคลในไฟล์เอกสาร");
+}
+
 console.log(failures === 0
   ? "\nสรุปด่าน UI: ผ่านทั้งหมด\n"
   : `\nสรุปด่าน UI: ไม่ผ่าน ${failures} ข้อ — ห้าม deploy จนกว่าจะแก้\n`);
