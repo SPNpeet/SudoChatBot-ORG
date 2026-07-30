@@ -9,7 +9,7 @@ import { SidebarHead, SidebarFoot } from "./sidebar-parts";
 import { ToastProvider } from "@/components/toast";
 import CommandPalette from "./command-palette";
 import SystemInbox from "./system-inbox";
-import { getNotices, type Notice } from "@/lib/notices";
+import { getNotices, type Notice, type QuotaLike } from "@/lib/notices";
 import FeedbackWidget from "./feedback-widget";
 import QuickCreate from "./quick-create";
 import CompanySwitcher from "./company-switcher";
@@ -40,7 +40,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // ตั้งแต่ยกแถบเตือนออกจากหน้าภาพรวมหมดแล้ว กระดิ่งคือที่เดียวที่คำเตือนอยู่
   // ถ้าล้มแล้วเงียบ ผู้ใช้จะอ่านว่า "ไม่มีเรื่องค้าง" ทั้งที่ระบบตรวจไม่ได้ต่างหาก
   // ซึ่งอันตรายกว่าคำเตือนรก เพราะเป็นการโกหกแบบที่ไม่มีใครรู้
-  const notices: Notice[] = await getNotices(shop.id).then((r) => r.notices).catch(() => [{
+  // ส่ง quota ที่ดึงไว้แล้วเข้าไปด้วย ไม่ให้ยิง RPC ซ้ำ — layout นี้รันทุกหน้า
+  const notices: Notice[] = await getNotices(shop.id, quota as QuotaLike | null).then((r) => r.notices).catch(() => [{
     key: "notices:unavailable",
     tone: "warn" as const,
     title: "ตรวจสถานะระบบไม่สำเร็จชั่วคราว",

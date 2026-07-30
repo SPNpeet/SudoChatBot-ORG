@@ -16,20 +16,11 @@
 // ============================================================
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { selectWhtPayableDocs } from "@/lib/vat-docs";
+import { quotaNotice, TONE_ORDER, type Notice, type NoticeTone, type QuotaLike } from "@/lib/notice-rules";
 
-export type NoticeTone = "critical" | "warn" | "info";
-
-export interface Notice {
-  /** กุญแจผูกกับสถานะจริง — เปลี่ยนเมื่อสถานะเปลี่ยน */
-  key: string;
-  tone: NoticeTone;
-  title: string;
-  body?: string;
-  href?: string;
-  cta?: string;
-  /** ISO — ใช้เรียงลำดับ ถ้าไม่มีถือว่าเป็นเรื่องที่เป็นอยู่ตอนนี้ */
-  at?: string;
-}
+// re-export ให้ที่ import จาก "@/lib/notices" เดิมไม่ต้องแก้
+export { quotaNotice };
+export type { Notice, NoticeTone, QuotaLike };
 
 interface Health {
   tax_id_ok: boolean; address_ok: boolean;
@@ -37,14 +28,11 @@ interface Health {
   odd_dates: number; odd_list: string;
   error?: string;
 }
-
 interface VatStatus {
   status?: "ok" | "warn" | "expired";
   rate?: number; percent?: number;
   valid_until?: string | null; days_left?: number | null; note?: string | null;
 }
-
-const TONE_ORDER: Record<NoticeTone, number> = { critical: 0, warn: 1, info: 2 };
 
 /**
  * รวมทุกเรื่องที่ต้องบอก แล้วคัดที่ผู้ใช้กดอ่านไปแล้วออก
@@ -52,8 +40,11 @@ const TONE_ORDER: Record<NoticeTone, number> = { critical: 0, warn: 1, info: 2 }
  *
  * ทุกแหล่งหุ้ม try/catch แยกกัน แหล่งเดียวล่มต้องไม่ทำให้กระดิ่งหายทั้งอัน
  */
-export async function getNotices(shopId: string): Promise<{ notices: Notice[]; unread: number }> {
+export async function getNotices(shopId: string, quota?: QuotaLike | null): Promise<{ notices: Notice[]; unread: number }> {
   const all: Notice[] = [];
+
+  const q = quotaNotice(quota);
+  if (q) all.push(q);
 
   // ---------- ประกาศจากแพลตฟอร์ม ----------
   try {
