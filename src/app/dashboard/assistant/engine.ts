@@ -52,8 +52,9 @@ function collectArtifacts(r: LoopResult, resultStr: string) {
 /** ดึงตัวเลือกจาก tool ask_user มาโชว์เป็นปุ่ม */
 function collectChoices(r: LoopResult, resultStr: string) {
   try {
-    const j = JSON.parse(resultStr) as { __choices?: AssistantChoice[] };
+    const j = JSON.parse(resultStr) as { __choices?: AssistantChoice[]; __question?: string };
     if (Array.isArray(j?.__choices)) r.choices.push(...j.__choices);
+    if (j?.__question) r.question = j.__question;
   } catch { /* ข้าม */ }
 }
 
@@ -315,8 +316,12 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
           .slice(0, 4)
           .map((o) => ({ label: String(o.label).slice(0, 40), reply: String(o.reply).slice(0, 300) }));
         if (!opts.length) return JSON.stringify({ error: "ต้องมีอย่างน้อย 1 ตัวเลือก" });
+        // ส่ง __question กลับมาด้วย — ใช้เป็นข้อความที่ผู้ใช้เห็นถ้าโมเดลไม่ยอมพิมพ์อะไรต่อ
+        // เดิมพึ่ง note บอกโมเดลให้ "ตอบเป็นคำถามแล้วหยุด" ซึ่งเป็นการขอร้อง ไม่ใช่การบังคับ
+        // โมเดลไม่ทำตาม -> r.text ว่าง -> ผู้ใช้เห็น "ขอโทษค่ะ ลองพิมพ์ใหม่" ทั้งที่ปุ่มขึ้นแล้ว
         return JSON.stringify({
           ok: true, __choices: opts,
+          __question: String(input.question ?? "").slice(0, 300),
           note: "แสดงปุ่มให้ผู้ใช้แล้ว — ตอบเป็นคำถามสั้นๆ ตามที่ระบุ แล้วหยุดรอคำตอบ ห้ามเรียก tool บันทึกต่อ",
         });
       }
@@ -711,7 +716,13 @@ function buildSystemPrompt(ctx: AssistantCtx): string {
 }
 
 // ---------- provider loops ----------
-interface LoopResult { text: string; inTok: number; outTok: number; toolCalls: { name: string; label: string }[]; artifacts: AssistantArtifact[]; choices: AssistantChoice[] }
+interface LoopResult {
+  text: string; inTok: number; outTok: number;
+  toolCalls: { name: string; label: string }[];
+  artifacts: AssistantArtifact[]; choices: AssistantChoice[];
+  /** คำถามจาก ask_user รอบล่าสุด — ใช้เป็นข้อความสำรองและเป็นสัญญาณให้หยุดลูป */
+  question?: string;
+}
 
 async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, system: string): Promise<LoopResult> {
   const messages: Record<string, unknown>[] = ctx.history.map((h) => ({ role: h.role, content: h.content }));
@@ -740,6 +751,10 @@ async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, sy
       results.push({ type: "tool_result", tool_use_id: tu.id, content: out });
     }
     messages.push({ role: "user", content: results });
+    // ⚠️ ask_user = ส่งไม้ต่อให้คน ต้องหยุดลูปที่นี่ ไม่ใช่ขอให้โมเดลหยุดเอง
+    // เดิมวนต่อ โมเดลที่ถามไปแล้วมักไม่มีอะไรจะพิมพ์ -> ข้อความว่าง -> ขึ้น "ขอโทษค่ะ"
+    // ทั้งที่ปุ่มตัวเลือกขึ้นให้กดแล้ว (เจ้าของเจอเองตอนกดปุ่มพนักงานสำรองจ่าย)
+    if (r.question) break;
   }
   return r;
 }
@@ -778,6 +793,8 @@ async function runOpenAI(ctx: AssistantCtx, model: string, apiKey: string, syste
       collectChoices(r, out);
       messages.push({ role: "tool", tool_call_id: tc.id, content: out });
     }
+    // ask_user = ส่งไม้ต่อให้คน หยุดลูปที่นี่ (เหตุผลเดียวกับใน runAnthropic)
+    if (r.question) break;
   }
   return r;
 }
@@ -822,6 +839,8 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
       respParts.push({ functionResponse: { name: fc.name, response: { result: out } } });
     }
     contents.push({ role: "user", parts: respParts });
+    // ask_user = ส่งไม้ต่อให้คน หยุดลูปที่นี่ (เหตุผลเดียวกับใน runAnthropic)
+    if (r.question) break;
   }
   return r;
 }
@@ -880,7 +899,14 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
   });
 
   return {
-    text: r.text || "ขอโทษค่ะ ลองพิมพ์ใหม่อีกครั้งนะคะ",
+    // ลำดับข้อความสำรอง: ข้อความจริง -> คำถามจาก ask_user -> ยอมรับตรง ๆ ว่าทำอะไรไปแล้ว
+    // ห้ามขึ้น "ขอโทษค่ะ ลองพิมพ์ใหม่" ถ้ามีปุ่มให้กดหรือมีการบันทึกไปแล้ว
+    // เพราะผู้ใช้เห็นปุ่มขึ้นมาพร้อมคำขอโทษ = สับสนว่าตกลงสำเร็จหรือไม่สำเร็จ
+    text: r.text
+      || r.question
+      || (r.toolCalls.some((c) => WRITE_TOOLS.has(c.name))
+        ? "บันทึกให้แล้วค่ะ — ตรวจรายการได้ที่สมุดรายวัน"
+        : "ยังไม่ได้ข้อมูลที่ต้องใช้ค่ะ ลองบอกใหม่อีกครั้งให้ละเอียดขึ้นหน่อยนะคะ"),
     toolCalls: r.toolCalls,
     artifacts: r.artifacts.slice(0, 6),
     choices: r.choices.slice(0, 4),
