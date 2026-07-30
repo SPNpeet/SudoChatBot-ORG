@@ -11,6 +11,7 @@ import type { DocStatus, DocType, VatMode } from "@/lib/types/finance";
 import NoteDialog from "./note-dialog";
 import DateField from "@/components/date-field";
 import { useDismiss } from "@/components/use-dismiss";
+import { authOrigin } from "@/lib/app-origin";
 
 export interface DocActionsProps {
   doc: {
@@ -85,7 +86,10 @@ export default function DocActions({ doc }: DocActionsProps) {
 
   async function copyShareLink() {
     if (!doc.shareKey) return;
-    await navigator.clipboard.writeText(`${window.location.origin}/doc/${doc.shareKey}`);
+    // ⚠️ ต้องใช้ authOrigin() ไม่ใช่ window.location.origin
+    // ลิงก์นี้ถูกส่งต่อให้ "ลูกค้าของลูกค้า" ถ้าคนกดคัดลอกเผลอเปิดเว็บทาง vercel.app
+    // ลิงก์ที่ส่งออกไปจะเป็นโดเมนที่เราไม่ได้ใช้จริง และเสียหน้าผู้ประกอบการที่ส่งไป
+    await navigator.clipboard.writeText(`${authOrigin()}/doc/${doc.shareKey}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   }
