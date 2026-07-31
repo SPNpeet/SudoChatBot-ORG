@@ -100,6 +100,21 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
     else setRow(i, { name, product_id: null });
   }
 
+  /**
+   * เลือกจากช่อง select — ยึด id ไม่ใช่ชื่อ
+   *
+   * ⚠️ ต้องตั้ง product_id ให้ถูก ไม่ใช่แค่เติมชื่อกับราคา
+   * ฝั่งเซิร์ฟเวอร์ใช้ product_id ตัดสินว่าจะตัดสต๊อกและลงต้นทุนขายให้ไหม
+   * (actions.ts: ถ้า product_id ว่างจะ continue ข้ามไปเลย)
+   * เลือกสินค้าแล้วสต๊อกไม่ลด = ของในคลังไม่ตรงจริงและงบกำไรขาดทุนไม่มีต้นทุน
+   */
+  function pickProductById(i: number, id: string) {
+    if (!id) { setRow(i, { product_id: null }); return; }
+    const p = products.find((x) => x.id === id);
+    if (!p) return;
+    setRow(i, { name: p.name, unit_price: String(p.price), product_id: p.id });
+  }
+
   async function attachFile(fRaw: File, runAi: boolean) {
     setError(null);
     setAiBusy(true); // เปิด spinner ก่อนเริ่มบีบอัด — กันผู้ใช้คิดว่าเว็บค้าง
@@ -285,20 +300,62 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
           <div>
             <Label>รายการ</Label>
             <div ref={rowsRef} className="space-y-2">
+              {/*
+                ⚠️ เดิมบรรทัดนี้มี sm:grid-cols- ซ้ำสองอันในคลาสเดียวกัน (4 ช่อง กับ 5 ช่อง)
+                CSS ตัดสินคลาสน้ำหนักเท่ากันจากลำดับในไฟล์สไตล์ ไม่ใช่ลำดับที่เขียน
+                จอ sm+ มีลูก 5 ตัวแต่บางครั้งได้กริด 4 ช่อง ปุ่มลบจึงตกบรรทัดและช่องเบียดกัน
+                นี่คือ "ช่องกรอกเตลิดออกนอกกรอบ" ที่เจ้าของเจอ — เหลือชุดเดียวแล้ว
+
+                ⚠️ มือถือห้ามยัด ชื่อ+จำนวน+ราคา+ปุ่มลบ ไว้แถวเดียว
+                จอ 390px แบ่ง 4 ช่องทำให้ช่องชื่อเหลือ ~150px อ่าน placeholder ไม่จบ
+                ("ชื่อรายการ/สินค" · "ราคา/ห") เจ้าของบอกว่า "ใช้งานยากมากในมือถือ"
+                มือถือจึงแยกเป็น 2 ชั้น · sm+ ใช้ sm:contents ให้ลูกไหลกลับเข้ากริดแถวเดียวเหมือนเดิม
+              */}
               {rows.map((r, i) => (
-                <div key={i} className="grid grid-cols-[1fr_3.5rem_4.75rem_1.75rem] sm:grid-cols-[1fr_4.5rem_5.5rem_2rem] items-center gap-2 sm:grid-cols-[1fr_5rem_4rem_7rem_2rem]">
-                  <Input list={products.length ? "product-list" : undefined} placeholder="ชื่อรายการ/สินค้า"
-                    aria-invalid={showRowErrors && !r.name.trim() ? true : undefined}
-                    className={showRowErrors && !r.name.trim() ? "border-red-400 bg-red-50/40 focus:border-red-500" : undefined}
-                    value={r.name} onChange={(e) => pickProduct(i, e.target.value)} />
-                  <Input inputMode="decimal" placeholder="จำนวน" value={r.qty}
-                    aria-invalid={showRowErrors && !(Number(r.qty) > 0) ? true : undefined}
-                    className={showRowErrors && !(Number(r.qty) > 0) ? "border-red-400 bg-red-50/40 focus:border-red-500" : undefined}
-                    onChange={(e) => setRow(i, { qty: e.target.value })} />
-                  <Input className="hidden sm:block" placeholder="หน่วย" value={r.unit} onChange={(e) => setRow(i, { unit: e.target.value })} />
-                  <Input inputMode="decimal" placeholder="ราคา/หน่วย" value={r.unit_price} onChange={(e) => setRow(i, { unit_price: e.target.value })} />
-                  <button type="button" onClick={() => setRows((rs) => rs.length > 1 ? rs.filter((_, j) => j !== i) : rs)}
-                    className="text-neutral-300 hover:text-red-500"><Trash2 className="h-4 w-4 shrink-0" /></button>
+                <div key={i} className={cn(
+                  "rounded-xl border border-neutral-200 bg-neutral-50/60 p-2.5",
+                  "sm:grid sm:grid-cols-[1fr_5rem_4rem_7rem_2rem] sm:items-center sm:gap-2",
+                  "sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0",
+                )}>
+                  {/* ชื่อ + ตัวเลือกสินค้า */}
+                  <div className="min-w-0">
+                    {products.length > 0 && (
+                      /*
+                        ⚠️ ห้ามพึ่ง <datalist> อย่างเดียว
+                        Safari บน iOS ไม่แสดงรายการของ datalist เลย ผู้ใช้ iPhone จึงไม่มีทาง
+                        เลือกสินค้าได้ -> product_id เป็น null ทุกใบ -> ระบบไม่ตัดสต๊อกและไม่ลง
+                        ต้นทุนขายให้ ซึ่งเป็นปัญหาบัญชี ไม่ใช่แค่ความสะดวก
+                        select ธรรมดาใช้ได้ทุกเบราว์เซอร์ ส่วนช่องพิมพ์ยังพิมพ์เองได้ถ้าไม่มีในรายการ
+                      */
+                      <Select className="mb-2 w-full" value={r.product_id ?? ""}
+                        aria-label="เลือกสินค้า/บริการที่บันทึกไว้"
+                        onChange={(e) => pickProductById(i, e.target.value)}>
+                        <option value="">— เลือกสินค้า/บริการ หรือพิมพ์เองด้านล่าง —</option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} · {baht(p.price)}{p.track_stock ? ` · เหลือ ${p.stock}` : ""}
+                          </option>
+                        ))}
+                      </Select>
+                    )}
+                    <Input list={products.length ? "product-list" : undefined} placeholder="ชื่อรายการ/สินค้า"
+                      aria-invalid={showRowErrors && !r.name.trim() ? true : undefined}
+                      className={cn("w-full", showRowErrors && !r.name.trim() && "border-red-400 bg-red-50/40 focus:border-red-500")}
+                      value={r.name} onChange={(e) => pickProduct(i, e.target.value)} />
+                  </div>
+
+                  {/* จำนวน · หน่วย · ราคา · ลบ — sm:contents ทำให้ลูกกลายเป็นช่องของกริดแม่ */}
+                  <div className="mt-2 grid grid-cols-[1fr_1fr_2rem] items-center gap-2 sm:mt-0 sm:contents">
+                    <Input inputMode="decimal" placeholder="จำนวน" value={r.qty}
+                      aria-invalid={showRowErrors && !(Number(r.qty) > 0) ? true : undefined}
+                      className={cn("min-w-0", showRowErrors && !(Number(r.qty) > 0) && "border-red-400 bg-red-50/40 focus:border-red-500")}
+                      onChange={(e) => setRow(i, { qty: e.target.value })} />
+                    <Input className="hidden min-w-0 sm:block" placeholder="หน่วย" value={r.unit} onChange={(e) => setRow(i, { unit: e.target.value })} />
+                    <Input inputMode="decimal" placeholder="ราคา/หน่วย" className="min-w-0" value={r.unit_price} onChange={(e) => setRow(i, { unit_price: e.target.value })} />
+                    <button type="button" aria-label="ลบบรรทัดนี้"
+                      onClick={() => setRows((rs) => rs.length > 1 ? rs.filter((_, j) => j !== i) : rs)}
+                      className="grid h-9 w-8 place-items-center text-neutral-400 hover:text-red-500"><Trash2 className="h-4 w-4 shrink-0" /></button>
+                  </div>
                 </div>
               ))}
             </div>

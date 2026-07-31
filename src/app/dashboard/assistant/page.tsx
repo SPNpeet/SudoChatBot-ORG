@@ -2,6 +2,7 @@ import { getCurrentShop } from "@/lib/shop";
 import { Card, CardContent } from "@/components/ui";
 import { Calculator, FileText, Banknote, Receipt, BarChart3, Package, Landmark, CircleHelp } from "lucide-react";
 import AssistantChat from "./chat";
+import FitViewport from "@/components/fit-viewport";
 
 export const dynamic = "force-dynamic";
 // agent วนลูป tool กับฐานข้อมูล/AI สูงสุด 10 รอบ — กัน Vercel ตัดกลางคัน
@@ -35,13 +36,12 @@ export default async function AssistantPage() {
     // หน้านี้มีงานเดียวคือ "คุย" — จึงให้แชทกินพื้นที่จอทั้งหมด ไม่มีอะไรมาแย่งสายตา
     // (เดิมมีการ์ดบอกความสามารถ 6 ใบดันแชทตกจอ ทั้งที่ตัวอย่างคำสั่งอยู่ในแชทอยู่แล้ว)
     //
-    // ความสูงต้องหักส่วนที่กินที่จริงให้ครบ ไม่งั้นหน้าจะสูงเกินจอแล้วเลื่อนได้นิดหน่อย
-    // ทำให้ช่องพิมพ์ไหลลงไปใกล้แถบเมนูล่างจนดูเบียด
-    // มือถือ = หัวเว็บ 65px (py-3 + ปุ่มบัญชี 40px + เส้นขอบ) + MainArea py-5 บน 20px
-    //          + MainArea pb 9.5rem (152px) = 237px ≈ 15rem
-    //          ของเดิมหักแค่ 13rem = เกินจอไป 29px
-    // เดสก์ท็อป = MainArea md:pt-16 (64px) + md:pb-7 (28px) = 92px หัก 7.5rem เผื่อไว้แล้ว
-    <div className="flex h-[calc(100svh-15rem)] min-h-[28rem] flex-col gap-3 md:h-[calc(100svh-7.5rem)]">
+    // ⚠️ ห้ามกลับไปตั้งความสูงเป็นตัวเลขคงที่ (เดิมคือ h-[calc(100svh-15rem)] min-h-[28rem])
+    // 15rem = การเดาว่าหัวเว็บ+พาดหัว+แถบล่างกินที่ 240px แต่ของจริงบนมือถือ ~317px
+    // กล่องจึงสูงเกินที่ว่าง -> หน้าเลื่อนได้ และในกล่องก็เลื่อนได้อีก = เลื่อน 2 ชั้น
+    // เจ้าของเจอเองว่า "มันเลื่อนแม่ง 2 อัน ทั้งจอและกรอบที่ให้คุยแชท"
+    // FitViewport วัดของจริงทุกครั้ง รวมตอนหมุนจอและตอนแป้นพิมพ์มือถือเด้งขึ้นมา
+    <FitViewport className="flex flex-col gap-3" minHeight={340}>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-[22px] font-bold leading-tight tracking-tight">
@@ -53,7 +53,12 @@ export default async function AssistantPage() {
           <summary className="inline-flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
             <CircleHelp className="h-3.5 w-3.5" />ทำอะไรได้บ้าง
           </summary>
-          <div className="absolute right-0 z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] space-y-1.5 rounded-2xl border border-neutral-200 bg-white p-3 shadow-lg">
+          {/* ⚠️ มือถือต้องยึดขอบจอ ไม่ใช่ขอบปุ่ม
+              absolute + right-0 ตรึงขอบขวาของแผงไว้กับขอบขวาของ "ปุ่ม"
+              ตอนนี้ยังพอดีเพราะปุ่มอยู่ชิดขอบเนื้อหาแล้ว แต่ถ้ามีอะไรมาวางขวาปุ่มอีก
+              แผงจะเลื่อนไปทางซ้ายจนหลุดจอทันที (เกิดจริงกับกระดิ่งกล่องจดหมาย 31 ก.ค.)
+              fixed + inset-x-3 บนมือถือทำให้ไม่มีทางหลุดจอไม่ว่าปุ่มจะย้ายไปไหน */}
+          <div className="fixed inset-x-3 z-20 mt-2 space-y-1.5 rounded-2xl border border-neutral-200 bg-white p-3 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:w-[22rem]">
             {CAPABILITIES.map((c) => (
               <div key={c.text} className="flex items-start gap-2 text-[12.5px] leading-relaxed text-neutral-600">
                 <c.icon className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{c.text}
@@ -68,6 +73,6 @@ export default async function AssistantPage() {
           <AssistantChat shopId={shop.id} />
         </CardContent>
       </Card>
-    </div>
+    </FitViewport>
   );
 }

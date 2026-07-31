@@ -147,6 +147,48 @@ console.log("\n== อีเมลส่วนบุคคลในไฟล์�
   if (!found) console.log("  ถูก  ไม่มีอีเมลส่วนบุคคลในไฟล์เอกสาร");
 }
 
+// ---------- 5. คลาสตระกูลเดียวกัน + breakpoint เดียวกัน ซ้ำในสตริงเดียว ----------
+//
+// เกิดจริง 31 ก.ค. 2569: แถวรายการสินค้าในฟอร์มเอกสารเขียนไว้ว่า
+//   grid-cols-[...4 ช่อง] sm:grid-cols-[...4 ช่อง] items-center gap-2 sm:grid-cols-[...5 ช่อง]
+// มี sm:grid-cols- สองอันในคลาสเดียว CSS ตัดสินจากลำดับในไฟล์สไตล์ ไม่ใช่ลำดับที่เขียน
+// ผลคือบางจอได้กริด 4 ช่องทั้งที่มีลูก 5 ตัว ปุ่มลบตกบรรทัดและช่องกรอกเบียดจนล้นกรอบ
+// เจ้าของเจอเองว่า "ช่องกรอกมั่ว เตลิดกรอบไปไกล" — build/typecheck/lint ไม่มีใครฟ้อง
+//
+// ตระกูลเดียวกับเคส Logo (ข้อ 1) ต่างกันที่อันนั้นมาจากการต่อ prop
+// อันนี้เขียนซ้ำในสตริงเดียวไปเลย จึงต้องมีด่านแยก
+//
+// ⚠️ ตรวจเฉพาะสตริงตรง ๆ ไม่ตรวจใน cn() เพราะ twMerge จัดการให้อยู่แล้ว
+// และตรวจเฉพาะตระกูลที่ "ซ้ำแล้วพังจริง" (โครงเลย์เอาต์) ไม่ตรวจ padding/สี ที่ซ้ำได้ตามปกติ
+console.log("\n== คลาสจัดเลย์เอาต์ซ้ำตัวเองในสตริงเดียว ==");
+{
+  const FAMILY = /^((?:sm|md|lg|xl|2xl):)?(grid-cols|flex-col|flex-row|hidden|inline-flex|justify|items|absolute|fixed|relative|sticky|col-span|order)(-|$)/;
+  let found = 0;
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    for (const m of src.matchAll(/className="([^"]{10,})"/g)) {
+      const seen = new Map();
+      for (const t of m[1].split(/\s+/)) {
+        const g = t.match(FAMILY);
+        if (!g) continue;
+        const key = (g[1] || "") + g[2];
+        const prev = seen.get(key);
+        if (!prev) { seen.set(key, [t]); continue; }
+        if (!prev.includes(t)) prev.push(t);
+      }
+      for (const [key, list] of seen) {
+        if (list.length < 2) continue;
+        found++;
+        const line = src.slice(0, m.index).split("\n").length;
+        fail(`${rel(f)}:${line} — "${key}" ถูกกำหนดซ้ำ: ${list.join("  กับ  ")}`);
+        console.log("         CSS เลือกจากลำดับในไฟล์สไตล์ ไม่ใช่ลำดับที่เขียน = ผลลัพธ์เดาไม่ได้");
+        console.log("         ให้เหลือชุดเดียว หรือใช้ cn() ให้ twMerge ตัดตัวที่ทับกันออก");
+      }
+    }
+  }
+  if (!found) console.log("  ถูก  ไม่มีคลาสจัดเลย์เอาต์ที่ซ้ำตัวเองในสตริงเดียว");
+}
+
 console.log(failures === 0
   ? "\nสรุปด่าน UI: ผ่านทั้งหมด\n"
   : `\nสรุปด่าน UI: ไม่ผ่าน ${failures} ข้อ — ห้าม deploy จนกว่าจะแก้\n`);

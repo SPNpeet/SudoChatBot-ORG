@@ -25,11 +25,17 @@ const TONE: Record<NoticeTone, { ring: string; text: string; Icon: typeof Info }
   info: { ring: "border-blue-200 bg-blue-50", text: "text-blue-800", Icon: Info },
 };
 
-export default function SystemInbox({ shopId, notices, variant = "icon" }: {
+export default function SystemInbox({ shopId, notices, variant = "icon", place = "header" }: {
   shopId: string;
   notices: Notice[];
-  /** icon = ปุ่มกลมในหัวมือถือ · row = แถวเต็มความกว้างในแถบเมนูซ้าย */
+  /** icon = ปุ่มกลม · row = แถวเต็มความกว้างในแถบเมนูซ้าย */
   variant?: "icon" | "row";
+  /**
+   * อยู่ตรงไหนของหน้า — ใช้ตัดสินว่าแผงต้องกางไปทางไหน
+   * ⚠️ ห้ามเดาจาก variant: variant="icon" ถูกใช้ทั้งในหัวมือถือ (ปุ่มชิดขวา ต้องกางไปซ้าย)
+   * และในเมนูซ้ายตอนพับ (ปุ่มชิดซ้าย ต้องกางไปขวา) ถ้ายึดขอบผิดด้านแผงจะหลุดออกนอกจอ
+   */
+  place?: "header" | "sidebar";
 }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -73,12 +79,27 @@ export default function SystemInbox({ shopId, notices, variant = "icon" }: {
 
       {open && (
         <>
-          {/* ฉากหลังบนมือถือ — กดที่ไหนก็ปิดได้ ไม่ต้องเล็งปุ่มเล็ก ๆ */}
-          <div className="fixed inset-0 z-40 sm:hidden" onClick={() => setOpen(false)} />
+          {/* ฉากหลัง — กดที่ไหนก็ปิดได้ ไม่ต้องเล็งปุ่มเล็ก ๆ */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          {/*
+            ⚠️ ห้ามใช้ absolute + right-0 + w-[22rem] บนมือถือ
+            เกิดจริง 31 ก.ค. 2569 (บั๊กที่เพิ่ง deploy ไปเมื่อวาน): กระดิ่งอยู่เกือบชิดขวาของหัวเว็บ
+            right-0 จึงตรึงขอบขวาของแผงไว้ที่ขอบขวาของ "ปุ่ม" ไม่ใช่ขอบขวาของ "จอ"
+            แผงกว้าง 22rem (352px) บนจอ 390px จึงล้นออกไปทางซ้ายนอกจอ หัวข้อโดนตัดหาย
+            w-[min(...,100vw-2rem)] คุมแค่ "ความกว้าง" ไม่ได้คุม "ตำแหน่ง" จึงไม่ช่วยอะไร
+
+            มือถือ: fixed + ยึดขอบจอทั้งซ้ายขวา = อยู่ในจอเสมอไม่ว่าปุ่มจะอยู่ตรงไหน
+            เดสก์ท็อป (sm+): กลับไปห้อยจากปุ่มตามปกติ เพราะมีที่เหลือพอ
+          */}
           <div className={cn(
-            "absolute z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl",
-            // หัวมือถือ: ห้อยลงมาชิดขวา · แถบเมนูซ้าย: เด้งขึ้นด้านบน
-            variant === "icon" ? "right-0 top-[calc(100%+0.5rem)]" : "bottom-[calc(100%+0.5rem)] left-0",
+            "z-50 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl",
+            "fixed inset-x-3 top-[4.25rem] sm:absolute sm:inset-x-auto sm:top-auto sm:w-[22rem]",
+            place === "header"
+              // หัวเว็บ: ห้อยลงมาจากปุ่ม ยึดขอบขวาเพราะปุ่มอยู่ฝั่งขวาของหัว
+              ? "sm:right-0 sm:top-[calc(100%+0.5rem)]"
+              // เมนูซ้าย: เด้งขึ้นด้านบน ยึดขอบซ้ายเสมอ ไม่ว่าจะพับอยู่หรือไม่
+              // (พับแล้วปุ่มกว้างแค่ 44px ถ้ายึดขวาแผงจะยื่นออกไปนอกจอทางซ้าย)
+              : "sm:bottom-[calc(100%+0.5rem)] sm:left-0",
           )}>
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
               <p className="text-sm font-semibold">กล่องจดหมายระบบ</p>

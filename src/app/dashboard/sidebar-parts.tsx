@@ -54,7 +54,7 @@ export function SidebarFoot({ quota, me, signOut, shopId, notices }: {
       {/* กล่องจดหมายระบบ — เดิมเป็นแบนเนอร์ 3 กล่องบนหน้าภาพรวม
           พับอยู่ก็ยังต้องเห็นเลขว่ามีเรื่องค้างกี่เรื่อง จึงโชว์ทั้งสองโหมด */}
       <div className={cn("border-t border-neutral-100 pt-2", collapsed ? "flex justify-center px-2" : "px-2")}>
-        <SystemInbox shopId={shopId} notices={notices} variant={collapsed ? "icon" : "row"} />
+        <SystemInbox shopId={shopId} notices={notices} variant={collapsed ? "icon" : "row"} place="sidebar" />
       </div>
       <div className={cn("border-t border-neutral-100 pb-3 pt-2", collapsed ? "flex justify-center px-2" : "px-2")}>
         <AccountMenu me={me} signOut={signOut} variant={collapsed ? "icon" : "row"} />

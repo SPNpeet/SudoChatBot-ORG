@@ -1,6 +1,6 @@
 "use client";
 // สลับกิจการ (สำนักงานบัญชีดูแลหลายบริษัทในบัญชีเดียว) + สร้างกิจการใหม่
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { usePathname, useRouter } from "next/navigation";
 import { Building2, ChevronDown, Plus, X } from "lucide-react";
@@ -38,6 +38,34 @@ export default function CompanySwitcher({ companies, currentId }: { companies: C
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // ---- วางรายการให้ตรงกับปุ่มเป๊ะ ----------------------------------------
+  //
+  // ⚠️ ห้ามใช้ fixed inset-x-4 (ของเดิม) — นั่นคือ "เต็มความกว้างจอ" ไม่ใช่ "เท่าปุ่ม"
+  // ปุ่มอยู่ในช่อง flex-1 ของหัวมือถือ ซึ่งแคบกว่าจอมาก เพราะมีโลโก้/กระดิ่ง/รูปบัญชีกินที่
+  // ผลคือรายการที่กางออกมากว้างกว่าปุ่มเห็นได้ชัด เจ้าของเจอเองว่า "มันใหญ่กว่าที่เป็น drop down จริง ๆ"
+  //
+  // วัดจากปุ่มจริงด้วย getBoundingClientRect แทนการเดาตัวเลข เพราะ component นี้
+  // ถูกใช้ทั้งในหัวมือถือและในแถบเมนูซ้าย ซึ่งกว้างไม่เท่ากันและเปลี่ยนตามฟอนต์/ภาษา
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [box, setBox] = useState<{ left: number; top: number; width: number } | null>(null);
+
+  const measure = useCallback(() => {
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
+    // กว้างเท่าปุ่ม แต่ไม่แคบจนอ่านชื่อกิจการไม่ได้ แล้วหนีบไม่ให้ล้นขอบจอ
+    const width = Math.min(Math.max(r.width, 208), window.innerWidth - 16);
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
+    setBox({ left, top: r.bottom + 6, width });
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    measure();
+    // จอหมุน/แป้นพิมพ์เด้ง = ตำแหน่งปุ่มเปลี่ยน ต้องวัดใหม่ ไม่ใช่ค้างที่เดิม
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [open, measure]);
+
   /**
    * ⚠️ ต้องยิงออกไปที่ document.body ผ่าน portal
    * component นี้อยู่ในแถบหัวมือถือซึ่งเป็น `sticky z-20` = สร้าง stacking context
@@ -66,7 +94,7 @@ export default function CompanySwitcher({ companies, currentId }: { companies: C
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen((v) => !v)}
+      <button ref={btnRef} onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-2 rounded-xl border border-neutral-200 px-2.5 py-2 text-left text-sm hover:bg-neutral-50">
         <Building2 className="h-4 w-4 shrink-0 text-emerald-600" />
         <span className="flex-1 truncate font-medium">{current?.name ?? "เลือกกิจการ"}</span>
@@ -78,7 +106,12 @@ export default function CompanySwitcher({ companies, currentId }: { companies: C
           {/* แตะข้างนอกเพื่อปิด — เดิมไม่มี ต้องเลือกกิจการหรือเปลี่ยนหน้าเท่านั้นถึงจะปิดได้ */}
           <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)} aria-hidden />
           <div role="menu" aria-label="เลือกกิจการ"
-            className="fixed inset-x-4 top-[4.25rem] z-[61] max-h-[60vh] overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-xl sm:left-auto sm:right-6 sm:w-72 md:left-4 md:right-auto md:top-16">
+            style={box ? { left: box.left, top: box.top, width: box.width } : undefined}
+            className={cn(
+              "fixed z-[61] max-h-[60vh] overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-xl",
+              // ยังไม่ได้วัด (เฟรมแรก) ให้ซ่อนไว้ก่อน ดีกว่ากระพริบผิดที่แล้วค่อยเด้งไปถูกที่
+              !box && "invisible",
+            )}>
           {companies.map((c) => (
             <button key={c.id} onClick={() => choose(c.id)} disabled={pending}
               className={cn(
