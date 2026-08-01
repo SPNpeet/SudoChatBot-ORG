@@ -34,6 +34,22 @@ export default async function AdminShopsPage({ searchParams }: { searchParams: P
     for (const o of ov ?? []) overrideMap.set(o.id, o.ai_quota_override);
   }
 
+  // การใช้ AI จริงของแต่ละกิจการ — เจ้าของแพลตฟอร์มบอกตรง ๆ ว่า
+  // "แต่ละที่ไม่มีบอกว่าใช้ไปเท่าไหร่แล้วครบเท่าไหร่ admin ไม่รู้เลย" (1 ส.ค. 2569)
+  // ใช้ RPC ตัวเดียวกับที่แถบโควตาของผู้ใช้ใช้ เพื่อให้เลขตรงกันเสมอ — เลข 2 ชุด
+  // จากสูตรคนละที่คือความเสื่อมศรัทธาของหน้าจอ admin
+  // ⚠️ ต้องเรียกผ่าน service client เท่านั้น: RPC เช็ค is_shop_member เมื่อมี auth.uid
+  // แอดมินแพลตฟอร์มไม่ได้เป็นสมาชิกร้านลูกค้า เรียกด้วย client ปกติจะได้ null ทุกร้าน
+  type Quota = { used_today: number; cap_today: number | null; used_month: number; cap_month: number | null } | null;
+  const quotaMap = new Map<string, Quota>();
+  if (rows.length) {
+    const qs = await Promise.all(rows.map(async (r) => {
+      const { data } = await svc.rpc("get_ai_quota_status", { p_shop_id: r.id });
+      return [r.id, data as Quota] as const;
+    }));
+    for (const [id, qv] of qs) quotaMap.set(id, qv);
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -54,11 +70,11 @@ export default async function AdminShopsPage({ searchParams }: { searchParams: P
             <p className="py-14 text-center text-sm text-neutral-400">ไม่พบร้านค้า</p>
           ) : (
             <Table>
-              <thead><tr><Th>กิจการ</Th><Th>เจ้าของ</Th><Th>แพ็ก</Th><Th>โควตา AI/วัน</Th><Th>สถานะ</Th><Th>สมัครเมื่อ</Th></tr></thead>
+              <thead><tr><Th>กิจการ</Th><Th>เจ้าของ</Th><Th>แพ็ก</Th><Th>โควตา AI/วัน</Th><Th>ใช้ AI แล้ว</Th><Th>สถานะ</Th><Th>สมัครเมื่อ</Th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <ShopRow key={r.id} id={r.id} name={r.name} ownerEmail={r.owner_email} plan={r.plan} status={r.status} createdAt={r.created_at}
-                    quotaOverride={overrideMap.get(r.id) ?? null} />
+                    quotaOverride={overrideMap.get(r.id) ?? null} quota={quotaMap.get(r.id) ?? null} />
                 ))}
               </tbody>
             </Table>

@@ -129,7 +129,7 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
                           <a href={url} target="_blank" rel="noreferrer" className="text-xs text-emerald-700 hover:underline">
                             {p.verify_status === "verified" ? "ตรวจแล้ว" : p.verify_status === "failed" ? "มีปัญหา" : "ดูสลิป"}
                           </a>
-                        ) : <span className="text-neutral-300">-</span>}
+                        ) : null}
                       </Td>
                     </>
                   );

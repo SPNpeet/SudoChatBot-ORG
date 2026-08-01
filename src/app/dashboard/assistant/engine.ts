@@ -39,12 +39,20 @@ function collectArtifacts(r: LoopResult, resultStr: string) {
     const j = JSON.parse(resultStr) as Record<string, unknown>;
     if (!j || j.error) return;
     const doc = (j.doc_number ?? j.new_doc_number ?? "เอกสาร") as string;
+
+    // ⚠️ เอกสารใบที่ 2 ขึ้นไปในรอบเดียวกัน: เหลือปุ่ม "เปิด" ปุ่มเดียวต่อใบ
+    // เกิดจริง (1 ส.ค. 2569): ผู้ใช้ส่งสลิป 3 ใบ ระบบออกใบเสร็จ 3 ใบ = ปุ่ม 9 ปุ่ม
+    // ท่วมจอมือถือจนต้องเลื่อนหาช่องพิมพ์ เจ้าของบอกว่า "ตัวเลือกที่ให้เลือกไม่โอเค"
+    // ปุ่มพิมพ์/ลิงก์ส่งลูกค้ายังใช้ได้จากหน้าเอกสารที่ปุ่ม "เปิด" พาไปเสมอ
+    const isFirstDoc = !r.artifacts.some((a) => a.label.startsWith("เปิด "));
     if (typeof j.view_link === "string") r.artifacts.push({ label: `เปิด ${doc}`, href: j.view_link });
-    if (typeof j.print_link === "string") r.artifacts.push({ label: `พิมพ์/PDF ${doc}`, href: j.print_link });
-    if (typeof j.share_link === "string") r.artifacts.push({ label: `ลิงก์ส่งลูกค้า ${doc}`, href: j.share_link });
-    // ปุ่มทำต่อหลังออกเอกสารเสร็จ — ผู้ใช้ไม่ต้องคิดเองว่าขั้นถัดไปพิมพ์อะไร
+    if (isFirstDoc && typeof j.print_link === "string") r.artifacts.push({ label: `พิมพ์/PDF ${doc}`, href: j.print_link });
+    if (isFirstDoc && typeof j.share_link === "string") r.artifacts.push({ label: `ลิงก์ส่งลูกค้า ${doc}`, href: j.share_link });
+
+    // ปุ่มทำต่อหลังออกเอกสารเสร็จ — เก็บของรอบล่าสุดพอ ไม่สะสมข้ามใบ
+    // (3 ใบ x 2 ตัวเลือก = 6 ปุ่มที่ความหมายซ้ำกัน กดอันไหนก็ได้ผลเหมือนกัน)
     if (typeof j.next_choices === "string") {
-      try { r.choices.push(...(JSON.parse(j.next_choices) as AssistantChoice[])); } catch { /* ข้าม */ }
+      try { r.choices = JSON.parse(j.next_choices) as AssistantChoice[]; } catch { /* ข้าม */ }
     }
   } catch { /* ผลลัพธ์ไม่ใช่ JSON — ข้าม */ }
 }
@@ -144,6 +152,7 @@ const TOOLS = [
         items: DOC_ITEM_SCHEMA,
         vat_mode: { type: "string", enum: ["none", "exclusive", "inclusive"], description: "ไม่ระบุ = none" },
         wht_rate: { type: "number", description: "% หัก ณ ที่จ่ายที่ลูกค้าจะหัก (0-15)" },
+        issue_date: { type: "string", description: "วันที่เอกสาร YYYY-MM-DD — **บันทึกจากสลิปโอนต้องใช้วันที่โอนในสลิป ห้ามใช้วันนี้** ใบเสร็จขายสดระบบจะใช้วันเดียวกันเป็นวันรับเงินด้วย (จุดความรับผิดภาษีของขายสดคือวันรับเงิน)" },
         due_date: { type: "string", description: "YYYY-MM-DD" },
         discount: { type: "number" },
         notes: { type: "string" },
@@ -417,6 +426,11 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
           items: (input.items as SaveDocInput["items"]) ?? [],
           vat_mode: (input.vat_mode as VatMode) ?? "none",
           wht_rate: Number(input.wht_rate) || 0,
+          // ⚠️ ต้องส่งต่อ issue_date เสมอ — เคยตกหล่นแล้วเกิดเรื่องจริง (1 ส.ค. 2569):
+          // ผู้ใช้ส่งสลิป 3 ใบ (31 ก.ค. / 19 ก.ค. / 10 ก.ค.) AI อ่านวันที่ถูกทุกใบ
+          // แต่ schema ไม่มีช่องให้ใส่ → เอกสารทั้งสามใบลงวันที่ "วันนี้" หมด
+          // วันที่ในสมุดรายวันจึงไม่ตรงกับวันเงินเข้าจริง = กระทบงวดภาษี
+          issue_date: typeof input.issue_date === "string" ? input.issue_date : undefined,
           due_date: typeof input.due_date === "string" ? input.due_date : null,
           discount: Number(input.discount) || 0,
           notes: typeof input.notes === "string" ? input.notes : undefined,
@@ -734,6 +748,10 @@ function buildSystemPrompt(ctx: AssistantCtx): string {
      เลือกแบบเดียว → บันทึกรวดเดียวทุกใบแล้วสรุปเป็นรายการเดียว · เลือก "คละกัน" เท่านั้นจึงค่อยไล่ถามทีละใบ
      **ห้ามยิงคำถามทีละใบตั้งแต่แรก** — ผู้ใช้ต้องกดตอบหลายรอบโดยไม่จำเป็น
    - doc_kind = "slip" คือสลิปโอนเงิน ไม่ใช่บิลสินค้า — ชื่อในสลิปคือคนรับโอน ไม่ใช่ชื่อรายการค่าใช้จ่าย **ต้อง ask_user ถามว่าโอนค่าอะไร** ห้ามลงเป็น "อื่น ๆ" เด็ดขาด
+   - **วันที่ในสลิป/บิล = issue_date เสมอ ห้ามใช้วันนี้แทน** — สลิปเงินเข้าที่ผู้ใช้บอกว่าเป็นรายได้
+     ให้ออกใบเสร็จ (create_sales_doc doc_type:"receipt") โดย issue_date = วันที่โอนในสลิปใบนั้น **ทีละใบตามวันจริง**
+     เพราะขายสดจุดความรับผิดภาษีคือวันรับเงิน ลงผิดวัน = ยอดขายไปโผล่ผิดงวดภาษี
+     ใส่เลขอ้างอิงสลิปไว้ใน notes ด้วยถ้ามี · อ่านวันที่ในสลิปไม่ชัด → ask_user ห้ามเดา
    - needs_confirm = true หรือมี unclear/issues → **ห้ามบันทึก** ทวนเลขที่อ่านได้แล้ว ask_user ถามเฉพาะจุดที่ไม่ชัด (เช่น ตัวเลือก "27,490" / "27,500" / "ขอพิมพ์เอง")
    - duplicate_suspected = true → **ห้ามบันทึกซ้ำเอง** ask_user ถามก่อนตามที่ instruction บอก
    - ครบและลงตัวและรู้ประเภทแน่ชัดแล้ว → บันทึกเลย (ใส่ file_path ที่ให้มา) แล้วรายงานเลขเอกสาร + ทวนยอด
@@ -770,7 +788,7 @@ async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, sy
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-      body: JSON.stringify({ model, max_tokens: 1500, temperature: 0.3, system, tools: TOOLS, messages }),
+      body: JSON.stringify({ model, max_tokens: 4000, temperature: 0.3, system, tools: TOOLS, messages }),
     });
     if (!res.ok) throw new Error(`anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
     const data = await res.json();
@@ -805,7 +823,7 @@ async function runOpenAI(ctx: AssistantCtx, model: string, apiKey: string, syste
   ];
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
   const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [], choices: [] };
-  const tokenParam = baseUrl ? { max_tokens: 1500 } : { max_completion_tokens: 1500 };
+  const tokenParam = baseUrl ? { max_tokens: 4000 } : { max_completion_tokens: 4000 };
   for (let i = 0; i < 10; i++) {
     const res = await fetch(`${baseUrl ?? "https://api.openai.com/v1"}/chat/completions`, {
       method: "POST",
@@ -854,7 +872,7 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents, tools,
-          generationConfig: { temperature: 0.3, maxOutputTokens: 1500 },
+          generationConfig: { temperature: 0.3, maxOutputTokens: 4000 },
         }),
       },
     );

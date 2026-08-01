@@ -17,8 +17,16 @@ export function bahtDoc(n: number | string | null | undefined): string {
 
 export function dateTH(d: string | Date | null | undefined): string {
   if (!d) return "-";
-  return new Date(d).toLocaleString("th-TH", {
-    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+  const dt = new Date(d);
+  // ⚠️ 12:00 เที่ยงตรงเป๊ะ = เครื่องหมาย "รู้แค่วันที่" ไม่ใช่เวลาเกิดรายการจริง
+  // (recordPayment เก็บ paid_at ที่รู้เฉพาะวันเป็น T12:00+07:00 กันวันเพี้ยนข้ามโซนเวลา)
+  // เจ้าของเจอจริง (1 ส.ค. 2569): ทุกแถวหน้าการเงินขึ้น "12:00" เรียงกันทั้งหน้า
+  // ซึ่งอ่านแล้วเข้าใจผิดว่าโอนเที่ยงตรงพร้อมกันหมด — เวลาปลอมแย่กว่าไม่มีเวลา
+  const bkk = new Date(dt.getTime() + 7 * 3600_000);
+  const isDateOnlyMarker = bkk.getUTCHours() === 12 && bkk.getUTCMinutes() === 0 && bkk.getUTCSeconds() === 0;
+  return dt.toLocaleString("th-TH", {
+    day: "numeric", month: "short",
+    ...(isDateOnlyMarker ? {} : { hour: "2-digit", minute: "2-digit" }),
     timeZone: "Asia/Bangkok",
   });
 }

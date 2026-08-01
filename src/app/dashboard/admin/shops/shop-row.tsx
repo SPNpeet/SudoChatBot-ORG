@@ -6,9 +6,11 @@ import { setShopStatus, setShopPlan, setShopQuotaOverride } from "./actions";
 
 const STATUS_TONE: Record<string, "green" | "amber" | "neutral"> = { active: "green", suspended: "amber", closed: "neutral" };
 
-export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt, quotaOverride }: {
+export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt, quotaOverride, quota: usage }: {
   id: string; name: string; ownerEmail: string | null; plan: string; status: string; createdAt: string;
   quotaOverride: number | null;
+  /** การใช้ AI จริงจาก get_ai_quota_status — RPC ตัวเดียวกับแถบของผู้ใช้ เลขต้องตรงกันเสมอ */
+  quota: { used_today: number; cap_today: number | null; used_month: number; cap_month: number | null } | null;
 }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -72,6 +74,22 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
             </button>
           </div>
         </Td>
+        {/* ใช้ AI แล้ว — เจ้าของแพลตฟอร์มขอเอง (1 ส.ค. 2569): "แต่ละที่ไม่มีบอกว่าใช้ไปเท่าไหร่
+            แล้วครบเท่าไหร่ admin ไม่รู้เลย" · แดง = ชนเพดาน · เหลือง = >=80% (เกณฑ์เดียวกับ ai-quota-bar) */}
+        <Td className="whitespace-nowrap text-xs tabular-nums">
+          {usage ? (
+            <>
+              <span className={
+                usage.cap_today && usage.used_today >= usage.cap_today ? "font-semibold text-red-600"
+                  : usage.cap_today && usage.used_today >= usage.cap_today * 0.8 ? "font-medium text-amber-600"
+                  : "text-neutral-600"
+              }>
+                วันนี้ {usage.used_today}{usage.cap_today ? `/${usage.cap_today}` : ""}
+              </span>
+              <span className="text-neutral-400"> · เดือน {usage.used_month}{usage.cap_month ? `/${usage.cap_month}` : ""}</span>
+            </>
+          ) : <span className="text-neutral-300">-</span>}
+        </Td>
         <Td>
           <div className="flex items-center gap-2">
             <Badge tone={STATUS_TONE[status] ?? "neutral"}>{SHOP_STATUS_TH[status] ?? status}</Badge>
@@ -92,7 +110,7 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
         <Td className="text-neutral-400">{dateTH(createdAt)}</Td>
       </tr>
       {err && (
-        <tr><Td colSpan={6} className="!border-t-0 !py-1.5"><p className="rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-600">{err}</p></Td></tr>
+        <tr><Td colSpan={7} className="!border-t-0 !py-1.5"><p className="rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-600">{err}</p></Td></tr>
       )}
     </>
   );

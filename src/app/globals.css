@@ -42,15 +42,16 @@ body {
   .rtable thead { display: none; }
   .rtable tr {
     border: 1px solid rgb(229 229 229);
-    border-radius: 14px;
+    border-radius: 12px;
     background: #fff;
-    padding: 12px 14px;
-    margin-bottom: 10px;
+    padding: 9px 12px;
+    margin-bottom: 8px;
   }
   .rtable tr:last-child { margin-bottom: 0; }
   .rtable td {
     border: 0 !important;
-    padding: 3px 0 !important;
+    padding: 2px 0 !important;
+    font-size: 13px;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -71,15 +72,16 @@ body {
   .rtable td:first-child {
     justify-content: flex-start;
     text-align: left;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
-    padding-bottom: 8px !important;
-    margin-bottom: 6px;
+    padding-bottom: 6px !important;
+    margin-bottom: 4px;
     border-bottom: 1px solid rgb(245 245 245) !important;
   }
   .rtable td:first-child::before { display: none; }
   /* เซลล์ว่างไม่ต้องกินที่ */
   .rtable td:empty { display: none; }
+  .rtable td:has(> span:empty:only-child) { display: none; }
 }
 
 /* ==== ตอบสนองการแตะบนมือถือ ====
