@@ -244,8 +244,11 @@ export async function POST(request: Request) {
     }
 
     // เก็บไฟล์ไว้แนบเอกสาร (bucket slips เป็น private)
-    const path = `${shopId}/finance/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-ก-๙]/g, "_")}`;
-    await svc.storage.from("slips").upload(path, buf, { contentType: mime });
+    // no_store=1 = ผู้เรียกเก็บไฟล์ไว้แล้ว (เช่น การ์ดจับคู่สลิปที่อัปโหลดผ่าน uploadAndMatchSlip
+    // ก่อนค่อยมาให้ AI อ่าน) — ไม่เก็บซ้ำ ไม่งั้นสลิปเดียวกินที่ 2 ไฟล์ทุกครั้ง
+    const noStore = String(fd.get("no_store") ?? "") === "1";
+    const path = noStore ? null : `${shopId}/finance/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-ก-๙]/g, "_")}`;
+    if (path) await svc.storage.from("slips").upload(path, buf, { contentType: mime });
 
     // ---- สร้างลำดับเอนจิน (Auto-Fallback) ----
     // 1) การ์ด "AI อ่านบิล" (purpose ocr) — ค่าย+โมเดลที่แอดมินตั้งเอง

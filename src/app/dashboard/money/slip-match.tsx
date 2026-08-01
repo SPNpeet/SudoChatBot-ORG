@@ -57,7 +57,7 @@ export default function SlipMatch({ shopId }: { shopId: string }) {
           const fd2 = new FormData();
           fd2.append("file", f);
           fd2.append("shop_id", shopId);
-          fd2.append("kind", "expense");
+          fd2.append("no_store", "1");   // ไฟล์ถูกเก็บแล้วโดย uploadAndMatchSlip — ห้ามเก็บซ้ำ
           const res = await fetch("/api/finance/extract", { method: "POST", body: fd2 });
           const j = await res.json();
           const d = j?.ok ? (j.data as { total?: number; date?: string }) : null;

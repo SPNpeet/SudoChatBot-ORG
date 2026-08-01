@@ -51,7 +51,9 @@ function collectArtifacts(r: LoopResult, resultStr: string) {
 
     // ปุ่มทำต่อหลังออกเอกสารเสร็จ — เก็บของรอบล่าสุดพอ ไม่สะสมข้ามใบ
     // (3 ใบ x 2 ตัวเลือก = 6 ปุ่มที่ความหมายซ้ำกัน กดอันไหนก็ได้ผลเหมือนกัน)
-    if (typeof j.next_choices === "string") {
+    // ⚠️ แต่ถ้ามีคำถามจาก ask_user ค้างอยู่ ห้ามทับ — ปุ่มที่ค้างคือ "ตัวเลือกคำตอบ"
+    // ของคำถามที่ผู้ใช้กำลังจะเห็น ทับแล้วผู้ใช้เจอคำถามพร้อมปุ่มที่ไม่เกี่ยวกัน
+    if (typeof j.next_choices === "string" && !r.question) {
       try { r.choices = JSON.parse(j.next_choices) as AssistantChoice[]; } catch { /* ข้าม */ }
     }
   } catch { /* ผลลัพธ์ไม่ใช่ JSON — ข้าม */ }
