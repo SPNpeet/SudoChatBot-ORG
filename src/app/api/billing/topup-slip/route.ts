@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { notifyPlatformAdmins } from "@/lib/notify";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -56,5 +57,22 @@ export async function POST(request: Request) {
       } catch { /* fallback manual */ }
     }
   }
-  return NextResponse.json({ ok: true, auto: false, message: "ได้รับสลิปแล้ว รอผู้ดูแลยืนยัน (ปกติภายในไม่กี่นาที)" });
+  // มาถึงตรงนี้ = ต้องให้คนกดอนุมัติ ต้องปลุกผู้ดูแลทันที
+  // เดิมไม่แจ้งใครเลย รายการไปกองเงียบ ๆ ในหน้าแอดมิน คนจ่ายตอนกลางคืนรอถึงเช้า
+  // (วัดจากข้อมูลจริง: มีคนเดินมาถึงขั้นจ่าย 7 ครั้ง ไม่สำเร็จสักครั้ง)
+  const { data: shop } = await svc.from("shops").select("name").eq("id", topup.shop_id).maybeSingle();
+  const { data: amt } = await svc.from("topups").select("amount,plan_code").eq("id", topupId).single();
+  await notifyPlatformAdmins(svc, {
+    title: "มีคนรอจ่ายเงิน — กดยืนยันให้เขาด้วย",
+    body: `${shop?.name ?? "กิจการ"} อัปสลิป ${Number(amt?.amount ?? 0).toLocaleString("th-TH")} บาท`
+      + `${amt?.plan_code ? ` (แพ็ก ${amt.plan_code})` : ""} · เขากำลังรออยู่ตอนนี้`,
+    url: "/dashboard/admin/billing",
+    tag: `topup:${topupId}`,
+  });
+
+  // บอกความจริงกับคนจ่าย — "ไม่กี่นาที" ที่ไม่มีใครรับประกันได้ ทำให้เขารู้สึกโดนลอยแพเมื่อมันนาน
+  return NextResponse.json({
+    ok: true, auto: false,
+    message: "ได้รับสลิปแล้ว — แจ้งผู้ดูแลให้ตรวจแล้ว ระบบจะเปิดแพ็กเกจให้ทันทีที่ยืนยัน",
+  });
 }
