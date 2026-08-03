@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, Table, Th, Td, Input, Button, Badge } from "@/components/ui";
 import { dateTH } from "@/lib/utils";
+import { auditActionLabel, auditSummary } from "@/lib/audit-label";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 50;
@@ -37,7 +38,7 @@ export default async function AdminLogsPage({ searchParams }: { searchParams: Pr
       </div>
 
       <form className="flex gap-2" action="/dashboard/admin/logs">
-        <Input name="q" defaultValue={search} placeholder="ค้นหา action เช่น topup_confirmed..." className="max-w-xs" />
+        <Input name="q" defaultValue={search} placeholder="ค้นหาเหตุการณ์ เช่น fin_doc_created..." className="max-w-xs" />
         <Button type="submit" variant="outline">ค้นหา</Button>
       </form>
 
@@ -49,18 +50,20 @@ export default async function AdminLogsPage({ searchParams }: { searchParams: Pr
             <p className="py-14 text-center text-sm text-neutral-400">ไม่พบรายการ</p>
           ) : (
             <Table>
-              <thead><tr><Th>เหตุการณ์</Th><Th>ร้าน</Th><Th>ผู้กระทำ</Th><Th>รายละเอียด</Th><Th>เมื่อ</Th></tr></thead>
+              <thead><tr><Th>เหตุการณ์</Th><Th>รายละเอียด</Th><Th>กิจการ</Th><Th>โดย</Th><Th>เมื่อ</Th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id}>
-                    <Td className="font-medium">{r.action}</Td>
-                    <Td className="text-neutral-500">{r.shops?.name ?? "-"}</Td>
-                    <Td><Badge tone={r.actor_type === "system" ? "neutral" : "blue"}>{r.actor_type}</Badge></Td>
-                    <Td className="max-w-72 truncate text-neutral-400" title={JSON.stringify(r.details)}>
-                      {r.resource_type ? `${r.resource_type}${r.resource_id ? `:${r.resource_id.slice(0, 8)}` : ""}` : "-"}
-                      {Object.keys(r.details ?? {}).length > 0 && ` · ${JSON.stringify(r.details).slice(0, 60)}`}
+                    {/* ⚠️ log มีไว้ตอบ 3 คำถาม: ใคร ทำอะไร กับอะไร
+                        เดิมโชว์ชื่อ action ดิบ + JSON ทั้งก้อน ซึ่งไม่ตอบสักข้อโดยไม่ต้องแปลในหัว
+                        ชื่อ action จริงยังอยู่ใน title (hover ดูได้) และในฐานข้อมูลครบเหมือนเดิม */}
+                    <Td className="font-medium" label="เหตุการณ์" title={r.action}>{auditActionLabel(r.action)}</Td>
+                    <Td className="max-w-80 truncate text-neutral-500" label="รายละเอียด" title={JSON.stringify(r.details)}>
+                      {auditSummary(r.action, r.details) || <span className="text-neutral-300">-</span>}
                     </Td>
-                    <Td className="text-neutral-400">{dateTH(r.created_at)}</Td>
+                    <Td className="text-neutral-500" label="กิจการ">{r.shops?.name ?? "-"}</Td>
+                    <Td label="โดย"><Badge tone={r.actor_type === "system" ? "neutral" : "blue"}>{r.actor_type === "system" ? "ระบบ" : "ผู้ใช้"}</Badge></Td>
+                    <Td className="text-neutral-400" label="เมื่อ">{dateTH(r.created_at)}</Td>
                   </tr>
                 ))}
               </tbody>

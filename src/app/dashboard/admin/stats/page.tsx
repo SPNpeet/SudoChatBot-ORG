@@ -13,10 +13,11 @@ export const dynamic = "force-dynamic";
 // ============================================================
 
 interface Stats {
-  users: { total: number; new_today: number; new_7d: number; active_24h: number };
+  users: { total: number; new_today: number; new_7d: number; signed_in_24h: number };
+  active_24h: number; active_now: number; shops_active_24h: number;
   shops: { total: number; active: number; new_7d: number; by_plan: Record<string, number> };
   revenue: { topups_paid_total: number; topups_paid_30d: number; billed_this_month: number; credit_outstanding: number; pending_topups: number };
-  usage: { messages_total: number; messages_today: number; bot_replies_month: number; ai_cost_month_usd: number; active_conversations_15m: number };
+  usage: { messages_total: number; messages_today: number; bot_replies_month: number; ai_cost_month_usd: number; ai_shops_15m: number };
   orders: { total: number; paid_month: number; gmv_month: number };
   health: { webhook_failed_24h: number; client_errors_7d: number; shops_blocked: number };
   daily: { d: string; users: number; msgs: number }[];
@@ -77,7 +78,11 @@ export default async function PlatformStatsPage() {
       {/* ===== ผู้ใช้ ===== */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={Users} label="ผู้ใช้ทั้งหมด" value={s.users.total.toLocaleString()} sub={`สมัครวันนี้ ${s.users.new_today} · 7 วัน ${s.users.new_7d}`} />
-        <Stat icon={Activity} label="ผู้ใช้ active (24 ชม.)" value={s.users.active_24h.toLocaleString()} tone="green" sub={`แชทลูกค้ากำลังคุย (15 นาที) ${s.usage.active_conversations_15m}`} />
+        {/* ⚠️ "ใช้งานจริง" ต้องนับจากการลงมือทำ (audit_logs) ไม่ใช่ last_sign_in_at
+            last_sign_in_at อัปเดตเฉพาะตอนล็อกอินใหม่ ไม่อัปเดตตอน refresh token
+            คนใช้ทั้งวันแต่ไม่ล็อกอินใหม่จึงไม่ถูกนับ — วัดจริง 3 ส.ค.: ทำงานจริง 5 คน แต่เดิมโชว์ 3 */}
+        <Stat icon={Activity} label="ใช้งานจริง (24 ชม.)" value={s.active_24h.toLocaleString()} tone="green"
+          sub={`กำลังใช้อยู่ตอนนี้ ${s.active_now} คน · ${s.shops_active_24h} กิจการ · ล็อกอินใหม่ ${s.users.signed_in_24h}`} />
         <Stat icon={Store} label="ร้านค้าทั้งหมด" value={`${s.shops.active}/${s.shops.total}`} sub={`เปิดใหม่ 7 วัน ${s.shops.new_7d} · ${Object.entries(s.shops.by_plan).map(([p, c]) => `${PLAN_TH[p] ?? p} ${c}`).join(" · ")}`} />
         <Stat icon={MessageSquare} label="ข้อความวันนี้" value={s.usage.messages_today.toLocaleString()} sub={`สะสมทั้งหมด ${s.usage.messages_total.toLocaleString()} · บอทตอบเดือนนี้ ${s.usage.bot_replies_month.toLocaleString()}`} />
       </div>

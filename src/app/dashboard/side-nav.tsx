@@ -99,6 +99,22 @@ export default function SideNav({ isAdmin, children, foot }: {
     )}>
       {children}
 
+      {/* ⚠️ ปุ่มพับเมนูต้องอยู่บน ไม่ใช่ล่างสุด
+        เจ้าของเจอจริง (3 ส.ค. 2569): "พับเมนูมันอยู่ล่างกดยากมาก"
+        เมนูยาวกว่าจอ ปุ่มที่อยู่ล่างสุดของ <aside> จึงต้องเลื่อนหาก่อนถึงจะกดได้
+        ย้ายมาไว้เหนือรายการเมนู = เห็นและกดได้ทันทีเสมอ ไม่ว่าเมนูจะยาวแค่ไหน */}
+
+      <button type="button" onClick={toggle}
+        aria-label={collapsed ? "ขยายเมนู" : "พับเมนู"} aria-expanded={!collapsed}
+        title={collapsed ? "ขยายเมนู" : "พับเมนู"}
+        className={cn(
+          "mx-2 mb-1 flex min-h-9 items-center gap-2 rounded-lg px-2.5 text-xs text-neutral-400",
+          "transition-colors hover:bg-neutral-100 hover:text-neutral-700",
+          collapsed && "justify-center px-0",
+        )}>
+        {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <><PanelLeftClose className="h-4 w-4" />พับเมนู</>}
+      </button>
+
       <nav className={cn("flex-1 space-y-0.5 overflow-y-auto overflow-x-visible", collapsed ? "px-2" : "px-3")}>
         {items.map((i) => row(i))}
         {adminItems.length > 0 && (
@@ -110,16 +126,6 @@ export default function SideNav({ isAdmin, children, foot }: {
           </>
         )}
       </nav>
-
-      <button type="button" onClick={toggle}
-        aria-label={collapsed ? "ขยายเมนู" : "พับเมนู"} aria-expanded={!collapsed}
-        className={cn(
-          "mx-2 mb-1 mt-2 flex items-center gap-2.5 rounded-xl px-3 py-2 text-xs text-neutral-400",
-          "transition-colors hover:bg-neutral-100 hover:text-neutral-700",
-          collapsed && "justify-center px-0",
-        )}>
-        {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <><PanelLeftClose className="h-4 w-4" />พับเมนู</>}
-      </button>
 
       {foot}
     </aside>
