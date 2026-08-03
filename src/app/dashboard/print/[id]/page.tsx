@@ -279,6 +279,8 @@ export default async function PrintDocPage({ params, searchParams }: {
                   )}
                 </div>
                 <p className="mt-2 break-words">ผู้มีอำนาจลงนาม ({shopName})</p>
+                {/* ช่องชื่อตัวบรรจง — ธรรมเนียมเอกสารไทย ผู้รับต้องอ่านออกว่าลายเซ็นเป็นของใคร */}
+                <p className="mt-1 text-neutral-400">( ................................................ )</p>
               </div>
             </div>
           </>
@@ -396,6 +398,7 @@ function WhtCert({ doc, shopName, shopTaxId, shopAddress }: {
           <div>
             <div className="mx-auto w-56 border-b border-dotted border-neutral-400 pb-8" />
             <p className="mt-2">ผู้จ่ายเงิน / ผู้มีอำนาจลงนาม</p>
+            <p className="mt-1 text-neutral-400">( ................................................ )</p>
           </div>
           <div>
             <div className="mx-auto w-56 border-b border-dotted border-neutral-400 pb-8" />

@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { Shop } from "@/lib/types/db";
-import { CheckCircle2, Circle, ArrowRight } from "lucide-react";
+import { CheckCircle2, Circle, ArrowRight, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default async function SetupChecklist({ shop }: { shop: Shop }) {
@@ -56,14 +56,20 @@ export default async function SetupChecklist({ shop }: { shop: Shop }) {
   if (doneCount === steps.length) return null;
 
   return (
-    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5">
-      <div className="flex items-center justify-between">
-        <div>
+    // หุบได้ — เจ้าของแจ้ง 4 ส.ค. 2569 ว่าการ์ดนี้กินที่ทั้งจอทั้งที่เหลือข้อเดียว
+    // เปิดอัตโนมัติเฉพาะผู้ใช้ใหม่ที่ยังไม่ทำสักข้อ คนที่เดินมาไกลแล้วเห็นแถบสรุป+ตัวเลขพอ
+    // ใช้ <details> ไม่ใช่ state ฝั่ง client: หน้านี้เป็น server component ไม่ต้องส่ง JS เพิ่มเลย
+    <details open={doneCount === 0} className="group rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+        <div className="min-w-0">
           <h2 className="text-sm font-bold text-emerald-900">เริ่มต้นให้ระบบบัญชีทำงานเต็มตัว</h2>
           <p className="mt-0.5 text-xs text-emerald-700">ทำครบ 5 ข้อ — เอกสาร บัญชี ภาษี พร้อมใช้จริงทั้งระบบ</p>
         </div>
-        <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">{doneCount}/{steps.length}</span>
-      </div>
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">{doneCount}/{steps.length}</span>
+          <ChevronDown className="h-4 w-4 text-emerald-700 transition-transform group-open:rotate-180" />
+        </span>
+      </summary>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-emerald-100">
         <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
       </div>
@@ -85,6 +91,6 @@ export default async function SetupChecklist({ shop }: { shop: Shop }) {
           </Link>
         ))}
       </div>
-    </div>
+    </details>
   );
 }

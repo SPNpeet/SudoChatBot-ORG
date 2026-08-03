@@ -5,6 +5,13 @@ import { savePaymentSettings } from "../actions";
 import type { ShopPaymentSettings } from "@/lib/types/db";
 import { CheckCircle2 } from "lucide-react";
 
+// ธนาคารไทยที่คนใช้จริง เรียงตามส่วนแบ่งลูกค้ารายย่อย — ชื่อทางการแบบสั้นที่พิมพ์บนเอกสารได้เลย
+const THAI_BANKS = [
+  "กสิกรไทย", "ไทยพาณิชย์", "กรุงเทพ", "กรุงไทย", "กรุงศรีอยุธยา",
+  "ทีเอ็มบีธนชาต (ttb)", "ออมสิน", "เกียรตินาคินภัทร", "ซีไอเอ็มบี ไทย",
+  "ยูโอบี", "แลนด์ แอนด์ เฮ้าส์", "ธ.ก.ส.", "อาคารสงเคราะห์", "อิสลามแห่งประเทศไทย",
+];
+
 export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: Partial<ShopPaymentSettings> }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
@@ -27,7 +34,19 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
           <Input name="promptpay_id" defaultValue={p.promptpay_id ?? ""} placeholder="0812345678" />
         </div>
         <div><Label>ชื่อบัญชี</Label><Input name="account_name" defaultValue={p.account_name ?? ""} /></div>
-        <div><Label>ธนาคาร</Label><Input name="bank_name" defaultValue={p.bank_name ?? ""} /></div>
+        <div>
+          <Label>ธนาคาร</Label>
+          {/* เลือกจากรายการแทนพิมพ์เอง (เจ้าของขอ 4 ส.ค. 2569) — พิมพ์เองสะกดเพี้ยน
+              ("กรุงไทย/krungthai/KTB") แล้วไปโชว์บนเอกสารที่ส่งลูกค้า
+              ค่าที่เคยพิมพ์ไว้เดิมถ้าไม่อยู่ในรายการ จะถูกเติมเป็นตัวเลือกให้ ไม่หายเงียบ */}
+          <Select name="bank_name" defaultValue={p.bank_name ?? ""}>
+            <option value="">— เลือกธนาคาร —</option>
+            {THAI_BANKS.map((b) => <option key={b} value={b}>{b}</option>)}
+            {p.bank_name && !THAI_BANKS.includes(p.bank_name) && (
+              <option value={p.bank_name}>{p.bank_name}</option>
+            )}
+          </Select>
+        </div>
       </div>
       <p className="text-[11px] text-neutral-400">QR พร้อมเพย์จะขึ้นบนใบแจ้งหนี้และลิงก์เอกสารที่ส่งให้ลูกค้า — ลูกค้าสแกนจ่ายเข้าบัญชีคุณตรง 100%</p>
 
