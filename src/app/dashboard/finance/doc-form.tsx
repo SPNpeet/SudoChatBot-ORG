@@ -32,7 +32,13 @@ export interface DocFormProps {
 
 const emptyRow = (): Row => ({ name: "", qty: "1", unit: "", unit_price: "", product_id: null });
 
-export default function DocForm({ shopId, docType, contacts, products = [], categories = [], draft }: DocFormProps) {
+export default function DocForm({ shopId, docType: initialDocType, contacts, products = [], categories = [], draft }: DocFormProps) {
+  // ประเภทเอกสารสลับได้ในฟอร์ม (เฉพาะฝั่งขาย ไม่ใช่ตอนแก้ร่าง)
+  // เดิมล็อกจาก ?type= ใน URL อย่างเดียว: เข้ามาแล้วไม่เห็นและเปลี่ยนไม่ได้ว่ากำลังออกใบอะไร
+  // เจ้าของ + ลูกค้าจริงถามตรงกัน (2 ส.ค. 2569): "ใบเสนอราคากับใบแจ้งหนี้ทำไมต้องอันเดียวกัน"
+  // ทุกเงื่อนไขในฟอร์มอ่านค่านี้ตอน render อยู่แล้ว (ป้ายวันครบกำหนด/จุดภาษี/ปุ่มบันทึก)
+  // จึงสลับได้โดยไม่เสียข้อมูลที่พิมพ์ไว้
+  const [docType, setDocType] = useState<DocType>(initialDocType);
   const isExpense = docType === "expense";
   const contactKind = isExpense ? "vendor" : "customer";
   const router = useRouter();
@@ -219,6 +225,28 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
 
   return (
     <div className="max-w-3xl space-y-4">
+      {/* แถบสลับประเภท — โชว์เฉพาะเอกสารขายและไม่ใช่ตอนแก้ร่าง (ร่างต้องคงประเภทเดิม) */}
+      {!isExpense && !draft && (
+        <div role="tablist" aria-label="ประเภทเอกสาร" className="flex gap-1 rounded-xl border border-neutral-200 bg-neutral-100/70 p-1">
+          {(["quotation", "invoice", "receipt"] as const).map((t) => (
+            <button key={t} type="button" role="tab" aria-selected={docType === t}
+              onClick={() => setDocType(t)}
+              className={cn(
+                "min-h-10 flex-1 rounded-lg px-2 text-sm font-medium transition-colors",
+                docType === t ? "border border-neutral-200 bg-white text-emerald-700 shadow-sm" : "text-neutral-500 hover:text-neutral-700",
+              )}>
+              {DOC_TYPE_TH[t]}
+            </button>
+          ))}
+        </div>
+      )}
+      {!isExpense && !draft && (
+        <p className="text-xs text-neutral-400">
+          {docType === "quotation" ? "ยังไม่ตกลงราคา — ยังไม่ลงบัญชี แปลงเป็นใบแจ้งหนี้ทีหลังได้"
+            : docType === "invoice" ? "ขายเชื่อ ตั้งลูกหนี้ — ระบบตามยอดค้างให้"
+            : "ขายสด รับเงินทันที — ลงบัญชีเงินเข้าเลย"}
+        </p>
+      )}
       {isExpense && (
         <Card className="border-dashed">
           <CardContent className="flex flex-wrap items-center gap-3 pt-4">

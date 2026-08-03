@@ -78,9 +78,21 @@ export default async function PrintDocPage({ params, searchParams }: {
       <style>{`
         .sheet { width: 100%; max-width: 210mm; padding: 1.15rem 1rem; font-size: 11.5px; }
         @media (min-width: 640px) { .sheet { padding: 15mm; font-size: 13px; min-height: 297mm; } }
+
+        /* ⚠️ สองกติกาที่แก้อาการ "พิมพ์ออก 2 แผ่น + ชื่อเว็บติดหัวกระดาษ" (เจ้าของแคปจริง 2 ส.ค. 2569)
+
+           1) @page margin: 0 — ชื่อเว็บ/URL/เลขหน้า ที่เบราว์เซอร์พิมพ์เอง อยู่ใน "ขอบกระดาษ"
+              ตัดขอบเป็นศูนย์ = ไม่มีที่ให้พิมพ์ = หาย (ขอบสวยงามใช้ padding 15mm ของ .sheet แทน)
+
+           2) min-height ตอนพิมพ์ต้องเป็น auto — เดิมบังคับ 297mm เท่ากระดาษ A4 เป๊ะ
+              สูงเกินมาแม้เศษพิกเซลเดียว (เส้นขอบ/การปัดเศษ) เนื้อหาก็ทะลักไปแผ่นที่สองทั้งที่ว่างเปล่า
+              ความสูงหน้ากระดาษปล่อยให้กระดาษจริงเป็นตัวกำหนด ไม่ใช่กล่องเนื้อหา */
+        @page { size: A4; margin: 0; }
         @media print {
-          .sheet { width: 210mm !important; max-width: none !important; min-height: 297mm !important;
-                   padding: 15mm !important; font-size: 13px !important; box-shadow: none !important; }
+          html, body { min-height: 0 !important; height: auto !important; }
+          .sheet { width: 210mm !important; max-width: none !important; min-height: auto !important;
+                   padding: 15mm !important; font-size: 13px !important; box-shadow: none !important;
+                   page-break-after: avoid; }
         }
       `}</style>
 

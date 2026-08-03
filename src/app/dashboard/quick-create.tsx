@@ -7,12 +7,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, X, Receipt, FileText, Camera, Calculator, MessageCirclePlus } from "lucide-react";
+import { Plus, X, Receipt, FileText, Camera, Calculator, MessageCirclePlus, FileSignature } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ACTIONS = [
   { href: "/dashboard/sales/new?type=receipt", icon: Receipt, label: "ขายสด / ใบเสร็จ", hint: "รับเงินแล้ว" },
   { href: "/dashboard/sales/new?type=invoice", icon: FileText, label: "ใบแจ้งหนี้", hint: "ขายเชื่อ ตั้งลูกหนี้" },
+  // ⚠️ ต้องมีใบเสนอราคาในเมนูนี้ — ปุ่ม + คือทางสร้างเอกสารหลักบนมือถือ
+  // เดิมไม่มี ลูกค้าจริงและเจ้าของถามตรงกันว่า "ทำไมไม่มีใบเสนอราคาเลย" (2 ส.ค. 2569)
+  // ทั้งที่ฟีเจอร์มีอยู่ แค่เข้าไม่ถึง — ฟีเจอร์ที่หาไม่เจอ = ไม่มีฟีเจอร์
+  { href: "/dashboard/sales/new?type=quotation", icon: FileSignature, label: "ใบเสนอราคา", hint: "ยังไม่ตกลงราคา แปลงทีหลังได้" },
   { href: "/dashboard/expenses/new", icon: Camera, label: "ถ่ายรูปบิล", hint: "ให้ AI ลงบัญชีให้" },
   { href: "/dashboard/assistant", icon: Calculator, label: "สั่งผู้ช่วย AI", hint: "พิมพ์เป็นภาษาคน" },
 ];

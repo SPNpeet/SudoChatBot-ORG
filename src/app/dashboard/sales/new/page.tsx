@@ -19,7 +19,7 @@ export default async function NewSalesDocPage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold">ออก{DOC_TYPE_TH[docType]}</h1>
+        <h1 className="text-xl font-bold">ออกเอกสารขาย</h1>
         <p className="text-sm text-neutral-400">
           {docType === "receipt"
             ? "ขายสด — รับเงินทันที ระบบบันทึกเงินเข้า ตัดสต๊อก และลงบัญชีให้ครบ"
