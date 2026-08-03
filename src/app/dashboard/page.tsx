@@ -159,17 +159,26 @@ export default async function Overview() {
           hint={ap > 0 ? "ดูบิลที่ต้องจ่าย →" : "ไม่มีบิลค้าง"} />
       </div>
 
-      <Card>
-        <CardHeader><CardTitle>เงินเข้า-ออก 30 วันล่าสุด</CardTitle></CardHeader>
-        <CardContent>
-          {chartData.length > 1
-            ? <CashflowChart data={chartData} />
-            : <EmptyState icon={LineChart} title="ยังไม่มีข้อมูลเงินเข้า-ออก" hint="พอมีเงินเข้าหรือออกครั้งแรก กราฟจะขึ้นที่นี่ให้เอง ไม่ต้องตั้งค่าอะไร" />}
-        </CardContent>
-      </Card>
+      {/* ⚠️ กราฟขึ้นเฉพาะตอนมีข้อมูลพอจะเห็น "แนวโน้ม" จริง (>= 4 วันที่มีเงินเคลื่อนไหว)
+          เจ้าของเจอเอง: มีข้อมูลจริง 2 วัน แต่กราฟลากเส้นโค้งสวยเต็มการ์ด
+          ซึ่งอ่านแล้วเข้าใจผิดว่ามีแนวโน้ม ทั้งที่เส้นระหว่างจุด 2 จุดไม่ได้บอกอะไรเลย
+          กราฟที่ข้อมูลไม่พอคือการตกแต่ง ไม่ใช่ข้อมูล — และกินพื้นที่ที่ควรเป็นของงานจริง
+          ต่ำกว่าเกณฑ์ = ไม่โชว์การ์ดเลย ดีกว่าโชว์กล่องว่างที่กินที่เท่ากัน */}
+      {chartData.length >= 4 && (
+        <Card>
+          <CardHeader><CardTitle>เงินเข้า-ออก 30 วันล่าสุด</CardTitle></CardHeader>
+          <CardContent><CashflowChart data={chartData} /></CardContent>
+        </Card>
+      )}
 
       <Card>
-        <CardHeader><CardTitle>เอกสารล่าสุด</CardTitle></CardHeader>
+        <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
+          <CardTitle>เอกสารล่าสุด</CardTitle>
+          {/* ทางออกจากการ์ด — เดิมดูได้แค่ 6 ใบแล้วตัน ต้องไปหาเมนูเอง */}
+          <Link href="/dashboard/sales" className="shrink-0 text-xs font-medium text-emerald-700 hover:underline">
+            ดูทั้งหมด →
+          </Link>
+        </CardHeader>
         <CardContent className="px-0 pb-0">
           {(recentDocs ?? []).length === 0 ? (
             <EmptyState icon={FileText} title="ยังไม่มีเอกสาร"

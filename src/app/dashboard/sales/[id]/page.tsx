@@ -9,6 +9,7 @@ import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding, PAY_METHOD_
 import type { DocStatus, DocType, FinDoc, FinPayment } from "@/lib/types/finance";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
 import DocActions from "../../finance/doc-actions";
 
@@ -55,6 +56,29 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
 
   const outstanding = docOutstanding(doc);
   const isMoneyDoc = doc.doc_type === "invoice";
+
+  // ขั้นถัดไปตามชนิด+สถานะจริง — ปุ่มบนหัวบอกว่า "ทำอะไรได้" อันนี้บอกว่า "ควรทำอะไรต่อ"
+  const kind = doc.doc_type as DocType;
+  const nextStep: { title: string; hint: string; cta: string; href?: string } | null =
+    kind === "quotation"
+      ? (related ?? []).length
+        ? null   // แปลงไปแล้ว มีเอกสารต่อเนื่องแสดงอยู่ด้านล่าง
+        : { title: "ส่งให้ลูกค้า แล้วรอตอบรับ",
+            hint: "กด “ลิงก์ส่งลูกค้า” ด้านบนส่งให้ดูได้เลย · ตกลงราคาแล้วกด “แปลงเป็นใบแจ้งหนี้” ไม่ต้องพิมพ์ใหม่",
+            cta: "ดูวิธีส่ง", href: "/dashboard/help" }
+      : kind === "invoice"
+        ? outstanding > 0
+          ? { title: "เก็บเงิน " + bahtDoc(outstanding),
+              hint: "ส่งลิงก์ให้ลูกค้าสแกน QR จ่ายได้เลย · ได้เงินแล้วกด “บันทึกรับเงิน” ระบบตัดยอดค้างและลงบัญชีให้",
+              cta: "ไปหน้าการเงิน", href: "/dashboard/money" }
+          : { title: "รับเงินครบแล้ว — ออกใบเสร็จให้ลูกค้า",
+              hint: "กด “ออกใบเสร็จ” ด้านบน ถ้าคิด VAT ใบเสร็จจะเป็นใบกำกับภาษีในตัว",
+              cta: "" }
+        : kind === "receipt"
+          ? { title: "เรียบร้อย — เอกสารนี้จบแล้ว",
+              hint: "ระบบบันทึกเงินเข้า ตัดสต๊อก และลงบัญชีให้ครบแล้ว · ส่งให้ลูกค้าด้วยปุ่ม “ลิงก์ส่งลูกค้า” ได้",
+              cta: "ออกเอกสารใบใหม่", href: "/dashboard/sales/new?type=receipt" }
+          : null;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">

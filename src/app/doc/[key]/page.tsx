@@ -123,8 +123,23 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
           </p>
         )}
 
-        <div className="flex items-center justify-center gap-1.5 pb-4 text-[11px] text-neutral-400">
-          เอกสารออกโดยระบบ <Logo />
+        {/* แถบท้ายเอกสาร — หน้านี้คือหน้าเดียวที่ "ลูกค้าของลูกค้า" เห็น
+            ทุกใบที่ผู้ประกอบการส่งต่อ = คนใหม่ได้เห็นระบบโดยเราไม่ได้จ่ายค่าโฆษณา
+            จึงต้องดูตั้งใจ ไม่ใช่โลโก้ลอย ๆ ท้ายหน้า และต้องกดมาดูต่อได้จริง
+            แต่ห้ามเด่นกว่าตัวเอกสาร — คนเปิดมาเพื่อดูยอดเงิน ไม่ได้มาดูโฆษณาเรา */}
+        <div className="border-t border-neutral-200/70 pb-6 pt-5">
+          <a href="https://sudochatbot.online" target="_blank" rel="noopener"
+            className="group mx-auto flex max-w-xs flex-col items-center gap-1.5 rounded-2xl px-4 py-3 transition-colors hover:bg-neutral-50">
+            <span className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+              เอกสารนี้ออกด้วย <Logo />
+            </span>
+            <span className="text-center text-[11px] leading-relaxed text-neutral-400">
+              ระบบบัญชีออนไลน์สำหรับธุรกิจไทย — ออกใบแจ้งหนี้ รับเงิน ลงบัญชี ยื่นภาษี ครบในที่เดียว
+            </span>
+            <span className="text-[11px] font-semibold text-emerald-700 group-hover:underline">
+              ทดลองใช้ฟรี ไม่ต้องใส่บัตร →
+            </span>
+          </a>
         </div>
       </div>
     </main>
