@@ -128,7 +128,9 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
             จึงต้องดูตั้งใจ ไม่ใช่โลโก้ลอย ๆ ท้ายหน้า และต้องกดมาดูต่อได้จริง
             แต่ห้ามเด่นกว่าตัวเอกสาร — คนเปิดมาเพื่อดูยอดเงิน ไม่ได้มาดูโฆษณาเรา */}
         <div className="border-t border-neutral-200/70 pb-6 pt-5">
-          <a href="https://sudochatbot.online" target="_blank" rel="noopener"
+          {/* ชี้เข้าหน้าลองใช้ ไม่ใช่หน้าแรก — คนที่เปิดลิงก์นี้คือคนที่ถือเอกสารของเราอยู่ในมือแล้ว
+              พาไปที่ที่ลองออกเอกสารได้ทันทีย่อมตรงกับสิ่งที่เขาเพิ่งเห็นมากกว่าหน้าโฆษณา */}
+          <a href="https://sudochatbot.online/try" target="_blank" rel="noopener"
             className="group mx-auto flex max-w-xs flex-col items-center gap-1.5 rounded-2xl px-4 py-3 transition-colors hover:bg-neutral-50">
             <span className="flex items-center gap-1.5 text-[11px] text-neutral-400">
               เอกสารนี้ออกด้วย <Logo />

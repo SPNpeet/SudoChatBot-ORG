@@ -106,6 +106,11 @@ export default function Landing() {
               <Link href="/signup" className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-700">
                 เริ่มใช้ฟรี <ArrowRight className="h-4 w-4" />
               </Link>
+              {/* คนที่ยังไม่เชื่อว่าระบบดีจะไม่ยอมสมัครเพื่อมาดู — ให้ลองออกเอกสารจริงก่อนได้เลย
+                  ต้องอยู่ข้างปุ่มสมัคร ไม่ใช่ซ่อนท้ายหน้า ไม่งั้นเท่ากับไม่มี */}
+              <Link href="/try" className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/60 px-5 py-3 text-sm font-semibold text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-50">
+                ลองออกเอกสารก่อน ไม่ต้องสมัคร
+              </Link>
               <a href="#pricing" className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-medium text-neutral-700 transition hover:border-neutral-400 hover:bg-white">
                 ดูราคา
               </a>
@@ -232,9 +237,14 @@ export default function Landing() {
       <section className="mx-auto max-w-3xl px-6 py-16 text-center">
         <h2 className="text-2xl font-bold tracking-tight">พร้อมให้บัญชีเสร็จเองทั้งระบบ?</h2>
         <p className="mt-2 text-sm text-neutral-500">สมัครฟรี ออกเอกสารใบแรกได้ใน 3 นาที — สั่งผู้ช่วย AI เป็นภาษาคนได้ทันที</p>
-        <Link href="/signup" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500">
-          เริ่มเลย <ArrowRight className="h-4 w-4" />
-        </Link>
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link href="/signup" className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-500">
+            เริ่มเลย <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link href="/try" className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-5 py-3 text-sm font-medium text-neutral-700 hover:border-neutral-400">
+            ขอลองออกเอกสารดูก่อน
+          </Link>
+        </div>
       </section>
 
       {/* แถบ CTA ติดล่างบนมือถือ — เลื่อนอ่านถึงไหนก็สมัครได้ทันที */}
