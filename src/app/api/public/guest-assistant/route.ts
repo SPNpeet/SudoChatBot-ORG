@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies, headers } from "next/headers";
 import { createHmac } from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
+import { platformAiGuard } from "@/lib/ai-guard";
 import { resolvePurposeKey } from "@/lib/ai-config";
 
 // ============================================================
@@ -84,10 +85,8 @@ export async function POST(request: Request) {
     const ipHash = hashIp(rawIp);
 
     // เกราะแพลตฟอร์ม: kill switch + เพดานค่า AI/วัน ใน RPC เดียว
-    const { data: pfOk } = await svc.rpc("platform_ai_ok");
-    if (pfOk === false) {
-      return json({ ok: false, error: "ระบบ AI ปิดปรับปรุงชั่วคราว — สมัครสมาชิกไว้ก่อนได้เลยค่ะ" }, guestId, needsCookie, 503);
-    }
+    const guard = await platformAiGuard(svc, "สมัครสมาชิกไว้ก่อนได้เลยค่ะ");
+    if (!guard.ok) return json({ ok: false, error: guard.error }, guestId, needsCookie, 503);
 
     // เช็ค+จองโควตาใน RPC เดียว (atomic, advisory lock) — ล่ม = fail-closed ไม่ปล่อยผ่าน
     const { data: quota, error: quotaErr } = await svc.rpc("consume_guest_ai_quota", { p_guest: guestId, p_ip_hash: ipHash });

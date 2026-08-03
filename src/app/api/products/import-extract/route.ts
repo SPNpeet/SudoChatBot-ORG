@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { platformAiGuard } from "@/lib/ai-guard";
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
 
@@ -180,13 +181,38 @@ export async function POST(request: Request) {
     const b64 = Buffer.from(await file.arrayBuffer()).toString("base64");
     const svc = createServiceClient();
 
-    // เพดานรายวัน — AI อ่านไฟล์ใช้ key ของแพลตฟอร์ม ต้องมีเพดานกันกดรัว
+    // ============================================================
+    //  ด่านกันโควตารั่ว — ตรวจ 4 ส.ค. 2569 พบว่าทางนี้เผา token ได้โดยไม่ผ่านด่านกลาง
+    //  ต้องเรียงแบบเดียวกับผู้ช่วย AI: เกราะแพลตฟอร์ม -> โควตาผู้ใช้ -> เพดานเฉพาะทาง
+    // ============================================================
+
+    // ด่าน 0: kill switch + เพดานค่า AI/วันของแพลตฟอร์ม
+    // เดิมไม่มีด่านนี้ = ปิดสวิตช์ AI ทั้งระบบแล้วทางนี้ยังยิงออกอยู่
+    const guard = await platformAiGuard(svc, "นำเข้าด้วยไฟล์ Excel/CSV ใช้ได้ตามปกติ");
+    if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error });
+
+    // ด่าน 1: โควตา AI ของผู้ใช้ (ต่อวัน/ต่อเดือน) — เดิมทางนี้ไม่ถูกนับเลย
+    // ผลคือแพ็กที่เขียนว่า "30 คำสั่ง/วัน" ใช้ได้จริงเกินกว่านั้นผ่านหน้านำเข้าสินค้า
+    const { data: quota } = await svc.rpc("consume_ai_quota", { p_shop_id: shopId });
+    const q = quota as { allowed?: boolean; reason?: string } | null;
+    if (q && q.allowed === false) {
+      return NextResponse.json({ ok: false, error: q.reason === "daily"
+        ? "โควตางาน AI วันนี้เต็มแล้ว — พรุ่งนี้ใช้ต่อได้ หรือนำเข้าด้วยไฟล์ Excel/CSV (ไม่จำกัด)"
+        : "โควตางาน AI ของแพ็กเกจเดือนนี้เต็มแล้ว — อัปเกรดแพ็กเกจ หรือนำเข้าด้วยไฟล์ Excel/CSV (ไม่จำกัด)" });
+    }
+
+    // ด่าน 2: เพดานเฉพาะการนำเข้า — AI อ่านไฟล์ใช้ key ของแพลตฟอร์ม ต้องกันกดรัว
+    // ⚠️ ต้อง fail-closed: เดิมใช้ (used ?? 0) ซึ่งถ้าคิวรีพัง count เป็น null -> 0 >= 20 เป็นเท็จ
+    // = นับไม่ได้แล้วปล่อยผ่าน ซึ่งตรงข้ามกับที่ควรเป็น (นับไม่ได้ต้องไม่ให้ใช้)
     const IMPORT_LIMIT_PER_DAY = 20;
     const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
-    const { count: used } = await svc.from("ai_usage_logs")
+    const { count: used, error: countErr } = await svc.from("ai_usage_logs")
       .select("id", { count: "exact", head: true })
       .eq("shop_id", shopId).eq("purpose", "ocr").like("model", "import/%").gte("created_at", dayAgo);
-    if ((used ?? 0) >= IMPORT_LIMIT_PER_DAY) {
+    if (countErr || used == null) {
+      return NextResponse.json({ ok: false, error: "ตรวจโควตาไม่สำเร็จ ลองใหม่อีกครั้ง — ระหว่างนี้นำเข้าด้วยไฟล์ Excel/CSV ได้ตามปกติ" });
+    }
+    if (used >= IMPORT_LIMIT_PER_DAY) {
       return NextResponse.json({ ok: false, error: `ครบโควตานำเข้าด้วย AI วันนี้แล้ว (${IMPORT_LIMIT_PER_DAY} ไฟล์/วัน) — พรุ่งนี้นำเข้าต่อได้ หรือใช้ไฟล์ Excel/CSV แทน (ไม่จำกัด)` });
     }
     const keyOf = async (p: string) => (await svc.rpc("get_ai_key", { p_provider: p })).data as string | null;
