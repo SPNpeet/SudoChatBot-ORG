@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { platformAiGuard } from "@/lib/ai-guard";
+import { platformAiGuard, consumeAiQuota } from "@/lib/ai-guard";
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
 import { resolvePurposeKey } from "@/lib/ai-config";
@@ -228,18 +228,13 @@ export async function POST(request: Request) {
 
     // ด่าน 0: เกราะแพลตฟอร์ม (kill switch + เพดานค่า AI/วัน) — เช็คก่อนกินโควตาผู้ใช้
     const guard = await platformAiGuard(svc, "คีย์ข้อมูลเองได้ตามปกติค่ะ");
-    if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error });
+    if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 503 });
 
     // โควตากลางต่อ "เจ้าของ" (นับรวมทุกกิจการ กันปั๊มโควตาหลายบริษัท) + แจ้งเตือน 80%/95% อัตโนมัติ
-    const { data: quota } = await svc.rpc("consume_ai_quota", { p_shop_id: shopId });
-    const q = quota as { allowed?: boolean; reason?: string } | null;
-    if (q && q.allowed === false) {
-      return NextResponse.json({
-        ok: false, quotaExceeded: true,
-        error: q.reason === "daily"
-          ? "โควตางาน AI วันนี้เต็มแล้ว — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจที่หน้า แพ็กเกจ/เครดิต (คีย์เอกสารเองได้ไม่จำกัด)"
-          : "โควตางาน AI ของแพ็กเกจเดือนนี้เต็มแล้ว — สมัคร/อัปเกรดแพ็กเกจที่หน้า แพ็กเกจ/เครดิต เพื่อใช้งานต่อทันที (คีย์เองได้ไม่จำกัด)",
-      });
+    const quota = await consumeAiQuota(svc, shopId, "คีย์ข้อมูลเองได้ตามปกติค่ะ");
+    if (!quota.ok) {
+      return NextResponse.json({ ok: false, error: quota.error, quotaExceeded: quota.quotaExceeded },
+        { status: quota.quotaExceeded ? 429 : 503 });
     }
 
     // เก็บไฟล์ไว้แนบเอกสาร (bucket slips เป็น private)

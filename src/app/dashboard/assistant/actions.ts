@@ -6,7 +6,7 @@
 //  · คืน {ok} เสมอ ห้าม throw
 // ============================================================
 import { assertMember } from "@/lib/shop";
-import { platformAiGuard } from "@/lib/ai-guard";
+import { platformAiGuard, consumeAiQuota } from "@/lib/ai-guard";
 import { createServiceClient } from "@/lib/supabase/server";
 import { friendlyAiError } from "@/lib/ai-errors";
 import { runAssistant, type AssistantCtx } from "./engine";
@@ -32,19 +32,11 @@ export async function assistantReply(shopId: string, history: AssistantTurn[]): 
 
     // ด่าน 0: เกราะแพลตฟอร์ม (kill switch + เพดานค่า AI/วัน) — เช็คก่อนกินโควตาผู้ใช้
     const guard = await platformAiGuard(svc, "งานเอกสาร/บัญชีคีย์เองใช้ได้ตามปกติค่ะ");
-    if (!guard.ok) return { ok: false, error: guard.error! };
+    if (!guard.ok) return { ok: false, error: guard.error };
 
     // โควตากลางต่อ "เจ้าของ" (นับรวมทุกกิจการ กันปั๊มโควตาหลายบริษัท) + แจ้งเตือน 80%/95% อัตโนมัติ
-    const { data: quota } = await svc.rpc("consume_ai_quota", { p_shop_id: shopId });
-    const q = quota as { allowed?: boolean; reason?: string } | null;
-    if (q && q.allowed === false) {
-      return {
-        ok: false, quotaExceeded: true,
-        error: q.reason === "daily"
-          ? "โควตางาน AI วันนี้เต็มแล้ว — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา"
-          : "โควตางาน AI ของแพ็กเกจเดือนนี้เต็มแล้ว — สมัคร/อัปเกรดแพ็กเกจเพื่อใช้งานต่อทันที",
-      };
-    }
+    const quota = await consumeAiQuota(svc, shopId, "งานเอกสาร/บัญชีคีย์เองใช้ได้ตามปกติค่ะ");
+    if (!quota.ok) return { ok: false, error: quota.error, quotaExceeded: quota.quotaExceeded };
 
     const { data: shop } = await svc.from("shops").select("name,status").eq("id", shopId).single();
     if (!shop || shop.status !== "active") return { ok: false, error: "บัญชีธุรกิจถูกระงับการใช้งาน — ติดต่อผู้ดูแลระบบ" };

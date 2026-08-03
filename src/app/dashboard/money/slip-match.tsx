@@ -60,6 +60,10 @@ export default function SlipMatch({ shopId }: { shopId: string }) {
           fd2.append("no_store", "1");   // ไฟล์ถูกเก็บแล้วโดย uploadAndMatchSlip — ห้ามเก็บซ้ำ
           const res = await fetch("/api/finance/extract", { method: "POST", body: fd2 });
           const j = await res.json();
+          // ⚠️ ต้องบอกเหตุผลเมื่ออ่านไม่สำเร็จ — เดิมกลืนเงียบแล้วปล่อยช่องยอดว่าง
+          // พอเกราะ AI เป็น fail-closed (4 ส.ค. 2569) เคสนี้เกิดจริงตอน DB สะดุด
+          // ผู้ใช้กรอกเองต่อได้ แต่ต้องรู้ว่าทำไมระบบอ่านให้ไม่ได้
+          if (!j?.ok && j?.error) setError(String(j.error));
           const d = j?.ok ? (j.data as { total?: number; date?: string }) : null;
           if (d?.total && d.total > 0) {
             setAmount(String(d.total));

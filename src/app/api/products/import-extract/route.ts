@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { platformAiGuard } from "@/lib/ai-guard";
+import { platformAiGuard, consumeAiQuota } from "@/lib/ai-guard";
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
 
@@ -178,7 +178,6 @@ export async function POST(request: Request) {
     if (!OK_TYPES[mime]) return NextResponse.json({ ok: false, error: "รองรับเฉพาะ PDF, PNG, JPG, WebP (ไฟล์ Excel/CSV ระบบอ่านเองไม่ต้องใช้ AI)" });
     if (file.size > MAX_BYTES) return NextResponse.json({ ok: false, error: "ไฟล์ใหญ่เกิน 4MB — ลดขนาด/แยกไฟล์ แล้วลองใหม่" });
 
-    const b64 = Buffer.from(await file.arrayBuffer()).toString("base64");
     const svc = createServiceClient();
 
     // ============================================================
@@ -189,32 +188,42 @@ export async function POST(request: Request) {
     // ด่าน 0: kill switch + เพดานค่า AI/วันของแพลตฟอร์ม
     // เดิมไม่มีด่านนี้ = ปิดสวิตช์ AI ทั้งระบบแล้วทางนี้ยังยิงออกอยู่
     const guard = await platformAiGuard(svc, "นำเข้าด้วยไฟล์ Excel/CSV ใช้ได้ตามปกติ");
-    if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error });
+    if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 503 });
 
-    // ด่าน 1: โควตา AI ของผู้ใช้ (ต่อวัน/ต่อเดือน) — เดิมทางนี้ไม่ถูกนับเลย
-    // ผลคือแพ็กที่เขียนว่า "30 คำสั่ง/วัน" ใช้ได้จริงเกินกว่านั้นผ่านหน้านำเข้าสินค้า
-    const { data: quota } = await svc.rpc("consume_ai_quota", { p_shop_id: shopId });
-    const q = quota as { allowed?: boolean; reason?: string } | null;
-    if (q && q.allowed === false) {
-      return NextResponse.json({ ok: false, error: q.reason === "daily"
-        ? "โควตางาน AI วันนี้เต็มแล้ว — พรุ่งนี้ใช้ต่อได้ หรือนำเข้าด้วยไฟล์ Excel/CSV (ไม่จำกัด)"
-        : "โควตางาน AI ของแพ็กเกจเดือนนี้เต็มแล้ว — อัปเกรดแพ็กเกจ หรือนำเข้าด้วยไฟล์ Excel/CSV (ไม่จำกัด)" });
-    }
+    // ⚠️ ลำดับด่านสำคัญมาก (แก้จากผลรีวิว 4 ส.ค. 2569)
+    // เดิมเรียกโควตากลางก่อนแล้วค่อยเช็คเพดานนำเข้า -> ร้านที่นำเข้าครบ 20 ไฟล์แล้ว
+    // กดไฟล์ที่ 21 จะโดน "ตัดโควตาผู้ช่วย AI" ทิ้งฟรีแล้วค่อยถูกปฏิเสธ กด 10 ครั้ง = หาย 10 หน่วย
+    // ด่านที่ "ปฏิเสธเฉย ๆ" ต้องอยู่ก่อนด่านที่ "ตัดโควตา" เสมอ
 
-    // ด่าน 2: เพดานเฉพาะการนำเข้า — AI อ่านไฟล์ใช้ key ของแพลตฟอร์ม ต้องกันกดรัว
-    // ⚠️ ต้อง fail-closed: เดิมใช้ (used ?? 0) ซึ่งถ้าคิวรีพัง count เป็น null -> 0 >= 20 เป็นเท็จ
-    // = นับไม่ได้แล้วปล่อยผ่าน ซึ่งตรงข้ามกับที่ควรเป็น (นับไม่ได้ต้องไม่ให้ใช้)
+    // ด่าน 1: เพดานเฉพาะการนำเข้า — AI อ่านไฟล์ใช้ key ของแพลตฟอร์ม ต้องกันกดรัว
+    // fail-closed: นับไม่ได้ = ไม่ให้ใช้ (เดิม (used ?? 0) ทำให้คิวรีพังแล้วปล่อยผ่าน)
     const IMPORT_LIMIT_PER_DAY = 20;
     const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
     const { count: used, error: countErr } = await svc.from("ai_usage_logs")
       .select("id", { count: "exact", head: true })
       .eq("shop_id", shopId).eq("purpose", "ocr").like("model", "import/%").gte("created_at", dayAgo);
-    if (countErr || used == null) {
-      return NextResponse.json({ ok: false, error: "ตรวจโควตาไม่สำเร็จ ลองใหม่อีกครั้ง — ระหว่างนี้นำเข้าด้วยไฟล์ Excel/CSV ได้ตามปกติ" });
+    // ⚠️ ใช้ Number.isFinite ไม่ใช่ == null — PostgREST ตอบ Content-Range: */* ได้
+    // แล้ว parseInt ได้ NaN ซึ่ง NaN == null เป็นเท็จ และ NaN >= 20 ก็เป็นเท็จ = หลุดทั้งสองด่าน
+    if (countErr || !Number.isFinite(used)) {
+      console.error("import-extract นับโควตาไม่สำเร็จ", countErr?.message ?? `count=${String(used)}`);
+      return NextResponse.json({ ok: false, error: "ตรวจโควตาไม่สำเร็จ ลองใหม่อีกครั้ง — ระหว่างนี้นำเข้าด้วยไฟล์ Excel/CSV ได้ตามปกติ" }, { status: 503 });
     }
-    if (used >= IMPORT_LIMIT_PER_DAY) {
-      return NextResponse.json({ ok: false, error: `ครบโควตานำเข้าด้วย AI วันนี้แล้ว (${IMPORT_LIMIT_PER_DAY} ไฟล์/วัน) — พรุ่งนี้นำเข้าต่อได้ หรือใช้ไฟล์ Excel/CSV แทน (ไม่จำกัด)` });
+    if ((used as number) >= IMPORT_LIMIT_PER_DAY) {
+      return NextResponse.json({ ok: false, error: `ครบโควตานำเข้าด้วย AI ในรอบ 24 ชม.แล้ว (${IMPORT_LIMIT_PER_DAY} ไฟล์) — รอครบรอบแล้วนำเข้าต่อได้ หรือใช้ไฟล์ Excel/CSV แทน (ไม่จำกัด)` }, { status: 429 });
     }
+
+    // ด่าน 2: โควตา AI ของผู้ใช้ (ต่อวัน/ต่อเดือน) — ตัวนี้ "ตัดโควตา" จึงต้องอยู่ท้ายสุด
+    // เดิมทางนี้ไม่ถูกนับเลย แพ็กที่เขียนว่า "30 คำสั่ง/วัน" ใช้เกินได้ผ่านหน้านำเข้าสินค้า
+    const quota = await consumeAiQuota(svc, shopId, "นำเข้าด้วยไฟล์ Excel/CSV ใช้ได้ไม่จำกัด");
+    if (!quota.ok) {
+      return NextResponse.json({ ok: false, error: quota.error, quotaExceeded: quota.quotaExceeded },
+        { status: quota.quotaExceeded ? 429 : 503 });
+    }
+
+    // แปลง base64 หลังผ่านด่านครบแล้วเท่านั้น — สตริงที่ได้ใหญ่ราว 5.6MB
+    // ถ้าแปลงก่อน ทุกคำขอที่ถูกปฏิเสธ (สวิตช์ปิด/โควตาเต็ม/เกินเพดาน) จะเผา CPU+แรมทิ้งฟรี
+    const b64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+
     const keyOf = async (p: string) => (await svc.rpc("get_ai_key", { p_provider: p })).data as string | null;
 
     // ลำดับ: Mistral OCR (เก่งตาราง/สแกน) -> Gemini -> Claude -> GPT

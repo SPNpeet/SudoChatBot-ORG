@@ -23,7 +23,7 @@
   ปิด 4 ชั้น: ฟอร์ม · `saveDoc` · `issueCreditDebitNote` · ข้อความ error เป็นภาษาคน
 - เก็บชื่อผู้ติดต่อที่พิมพ์เองอัตโนมัติ (เดิมพิมพ์ใหม่ทุกครั้ง = บ่อเกิดชื่อเพี้ยน)
 - แจ้งผู้ดูแลทันทีเมื่อมีคนอัปสลิปรออนุมัติ (`notifyPlatformAdmins`)
-- `src/lib/ai-guard.ts` — kill switch **fail-closed** ทุกทางเข้า (เดิม fail-open ทั้ง 4 จุด:
+- `src/lib/ai-guard.ts` — kill switch **fail-closed** ที่ 4 ทางเข้าหลัก (ยกเว้น `/api/admin/test-ai` โดยเจตนา) (เดิม fail-open ทั้ง 4 จุด:
   RPC พังคืน null ไม่ใช่ false เงื่อนไข `=== false` จึงเป็นเท็จแล้วยิง AI ต่อ)
 - `/api/products/import-extract` เดิมไม่ผ่านทั้ง kill switch และโควตาผู้ใช้ + เพดานวันเป็น fail-open
 
