@@ -90,6 +90,13 @@ const PRICE_TABLE: [string, [number, number]][] = [
 ];
 
 /** ประมาณต้นทุน USD — model รับได้ทั้ง "provider/model" หรือ "model" ล้วน */
+/** ต้นทุนประมาณการต่อการอ่านไฟล์ 1 ครั้ง (OCR/vision) — จงใจเผื่อสูงเล็กน้อย
+ *  ทำไมต้องมี: เดิมทางอ่านไฟล์ทั้งสองบันทึก cost_usd: 0 ตายตัว ทำให้เพดานค่า AI/วัน
+ *  (platform_ai_ok เทียบผลรวม cost_usd) มองไม่เห็นการใช้ทางนี้เลย = เพดานปลอม
+ *  ทางอ่านไฟล์ไม่รู้ token จริง (หลายค่าย ฟอร์แมตตอบต่างกัน) จึงใช้ค่าคงที่
+ *  ประมาณเกินปลอดภัยกว่าประมาณขาด เพราะนี่คือเกราะกันเงินรั่ว ไม่ใช่ใบแจ้งหนี้ */
+export const OCR_EST_COST_USD = 0.02;
+
 export function estimateAiCost(model: string, inTok: number, outTok: number): number {
   const m = model.includes("/") ? model.split("/").pop()! : model;
   let price: [number, number] = [3, 15];

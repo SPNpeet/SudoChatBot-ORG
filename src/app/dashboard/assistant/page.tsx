@@ -2,6 +2,7 @@ import { getCurrentShop } from "@/lib/shop";
 import { Card, CardContent } from "@/components/ui";
 import { Calculator, FileText, Banknote, Receipt, BarChart3, Package, Landmark, CircleHelp } from "lucide-react";
 import AssistantChat from "./chat";
+import AssistantNameEditor from "./name-editor";
 import FitViewport from "@/components/fit-viewport";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,8 @@ const CAPABILITIES = [
 export default async function AssistantPage() {
   const { shop, role } = await getCurrentShop();
   const canManage = ["owner", "admin", "agent"].includes(role);
+  // ชื่อที่ลูกค้าตั้งให้ผู้ช่วย — คำขอเจ้าของ 4 ส.ค. 2569: อยากให้ "น้อง" มีชื่อเหมือนเลขาจริง
+  const assistantName = String((((shop as { settings?: Record<string, unknown> | null }).settings ?? {}) as Record<string, unknown>).assistant_name ?? "").trim() || null;
 
   if (!canManage) {
     return (
@@ -45,9 +48,12 @@ export default async function AssistantPage() {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-[22px] font-bold leading-tight tracking-tight">
-            <Calculator className="h-5 w-5 shrink-0 text-emerald-600" />ผู้ช่วยบัญชี AI
+            <Calculator className="h-5 w-5 shrink-0 text-emerald-600" />{assistantName ?? "ผู้ช่วยบัญชี AI"}
           </h1>
-          <p className="mt-0.5 truncate text-sm text-neutral-500">พิมพ์สั่งเป็นภาษาคน หรือส่งรูปบิลมาให้ลงบัญชีให้</p>
+          <div className="mt-0.5 flex items-center gap-1.5">
+            <p className="truncate text-sm text-neutral-500">พิมพ์สั่งเป็นภาษาคน หรือส่งรูปบิลมาให้ลงบัญชีให้</p>
+            {["owner", "admin"].includes(role) && <AssistantNameEditor shopId={shop.id} current={assistantName} />}
+          </div>
         </div>
         <details className="relative shrink-0">
           <summary className="inline-flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">

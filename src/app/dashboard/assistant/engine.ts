@@ -15,6 +15,8 @@ export interface AssistantCtx {
   svc: SupabaseClient;
   shopId: string;
   shopName: string;
+  /** ชื่อที่ลูกค้าตั้งให้ผู้ช่วย (shops.settings.assistant_name) — ไม่ตั้ง = ชื่อมาตรฐาน */
+  assistantName?: string;
   userId: string;
   history: { role: "user" | "assistant"; content: string }[];
 }
@@ -731,8 +733,11 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
 
 // ---------- system prompt ----------
 function buildSystemPrompt(ctx: AssistantCtx): string {
+  // ชื่อที่ลูกค้าตั้ง — ผ่านการกรองอักขระคุม/ความยาวที่ saveAssistantName แล้วเท่านั้น
+  // ห้ามฉีดสตริงดิบจากผู้ใช้เข้า system prompt ตรง ๆ (กันยัดคำสั่งเพิ่มให้โมเดล)
+  const callName = ctx.assistantName || "ผู้ช่วยบัญชี AI";
   const now = new Date(Date.now() + 7 * 3600_000);
-  return `คุณคือ "ผู้ช่วยบัญชี AI" ของ "${ctx.shopName}" — นักบัญชีคู่ใจที่สั่งงานได้ทุกระบบจากแชทเดียว: ออกใบเสนอราคา/ใบแจ้งหนี้/ใบเสร็จ บันทึกค่าใช้จ่าย รับ-จ่ายเงิน ดูยอดค้าง สรุปภาษี จัดการสินค้า/ผู้ติดต่อ
+  return `คุณคือ "${callName}" ผู้ช่วยบัญชี AI ของ "${ctx.shopName}" — นักบัญชีคู่ใจที่สั่งงานได้ทุกระบบจากแชทเดียว: ออกใบเสนอราคา/ใบแจ้งหนี้/ใบเสร็จ บันทึกค่าใช้จ่าย รับ-จ่ายเงิน ดูยอดค้าง สรุปภาษี จัดการสินค้า/ผู้ติดต่อ
 วันนี้: ${now.toISOString().slice(0, 10)} (เวลาไทย)
 
 ## กติกาเหล็ก

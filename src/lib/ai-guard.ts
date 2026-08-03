@@ -113,3 +113,23 @@ export async function consumeAiQuota(
     return { ok: false, error: UNAVAILABLE_MSG };
   }
 }
+
+/**
+ * กิจการต้องสถานะ active เท่านั้นถึงใช้ AI ได้ — ตรวจพบ 4 ส.ค. 2569 ว่า
+ * assertMember ตรวจแค่ "เป็นสมาชิกไหม" ไม่ได้ดู shops.status
+ * กิจการที่ถูกระงับ (เช่น ค้างจ่าย) จึงยังเรียก AI ผ่านทางอ่านไฟล์ได้ไม่จำกัด
+ * ตรวจไม่ได้ = ไม่ให้ใช้ (fail-closed) เหมือนด่านอื่นทุกตัวในไฟล์นี้
+ */
+export async function assertShopActive(svc: SupabaseClient, shopId: string): Promise<AiGuardResult> {
+  try {
+    const { data, error } = await svc.from("shops").select("status").eq("id", shopId).maybeSingle();
+    if (error || !data) return { ok: false, error: UNAVAILABLE_MSG };
+    if (data.status !== "active") {
+      return { ok: false, error: "บัญชีธุรกิจถูกระงับการใช้งาน — ติดต่อผู้ดูแลระบบ" };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error("assertShopActive threw", (e as Error).message);
+    return { ok: false, error: UNAVAILABLE_MSG };
+  }
+}

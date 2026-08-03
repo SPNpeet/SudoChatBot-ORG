@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { platformAiGuard, consumeAiQuota } from "@/lib/ai-guard";
+import { platformAiGuard, consumeAiQuota, assertShopActive } from "@/lib/ai-guard";
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
 import { resolvePurposeKey } from "@/lib/ai-config";
-import { OCR_DEFAULT_MODEL } from "@/lib/ai-catalog";
+import { OCR_DEFAULT_MODEL, OCR_EST_COST_USD } from "@/lib/ai-catalog";
 
 // ============================================================
 //  AI อ่านเอกสารการเงิน (บิล/ใบเสร็จ/ใบกำกับภาษี/ใบแจ้งหนี้) -> JSON
@@ -230,6 +230,10 @@ export async function POST(request: Request) {
     const guard = await platformAiGuard(svc, "คีย์ข้อมูลเองได้ตามปกติค่ะ");
     if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 503 });
 
+    // กิจการที่ถูกระงับต้องใช้ AI ไม่ได้ (ช่องหลุดเดียวกับหน้านำเข้าสินค้า — กวาดทั้งระบบแล้ว)
+    const active = await assertShopActive(svc, shopId);
+    if (!active.ok) return NextResponse.json({ ok: false, error: active.error }, { status: 403 });
+
     // โควตากลางต่อ "เจ้าของ" (นับรวมทุกกิจการ กันปั๊มโควตาหลายบริษัท) + แจ้งเตือน 80%/95% อัตโนมัติ
     const quota = await consumeAiQuota(svc, shopId, "คีย์ข้อมูลเองได้ตามปกติค่ะ");
     if (!quota.ok) {
@@ -278,13 +282,17 @@ export async function POST(request: Request) {
     for (const eng of engines) {
       try {
         const data = await eng.run();
-        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `finance/${eng.name}`, cost_usd: 0 });
+        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `finance/${eng.name}`, cost_usd: OCR_EST_COST_USD });
         return NextResponse.json({ ok: true, data, engine: eng.name, file_path: path });
       } catch (e) {
         lastErr = (e as Error).message;
         console.error(`finance-extract ${eng.name} failed`, lastErr);
       }
     }
+    // พังทุกเอนจินก็บันทึก — เหตุผลเดียวกับหน้านำเข้าสินค้า (กันกดซ้ำเผา token ฟรี)
+    try {
+      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: "finance/failed", cost_usd: OCR_EST_COST_USD });
+    } catch { /* อย่าทับ error จริง */ }
     return NextResponse.json({ ok: false, error: friendlyAiError(lastErr), file_path: path });
   } catch (e) {
     const m = (e as Error).message;

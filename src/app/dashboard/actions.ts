@@ -494,3 +494,34 @@ export async function updateMyProfile(formData: FormData): Promise<ActionResult>
     return { ok: false, error: friendly(e, "บันทึกไม่สำเร็จ") };
   }
 }
+
+/**
+ * ตั้งชื่อผู้ช่วย AI ประจำกิจการ — ลูกค้าตั้งเองได้เหมือนตั้งชื่อเลขา (ว่าง = กลับชื่อมาตรฐาน)
+ * เก็บใน shops.settings ไม่ใช่ localStorage: ทั้งทีมเห็นชื่อเดียวกัน และ AI รู้จักชื่อตัวเอง
+ */
+export async function saveAssistantName(
+  shopId: string, name: string,
+): Promise<{ ok: true; name: string | null } | { ok: false; error: string }> {
+  try {
+    const { user } = await assertMember(shopId, ["owner", "admin"]);
+    const svc = createServiceClient();
+    // ⚠️ ชื่อนี้ถูกฉีดเข้า system prompt ของ AI — ต้องตัดอักขระคุม/เครื่องหมายคำพูด/บรรทัดใหม่
+    // และจำกัดสั้น ไม่งั้นช่องตั้งชื่อกลายเป็นช่องยัดคำสั่งเพิ่มให้โมเดล (prompt injection)
+    const clean = name.replace(/[\r\n"`\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 30);
+    const { data: shop } = await svc.from("shops").select("settings").eq("id", shopId).single();
+    const settings = { ...((shop?.settings ?? {}) as Record<string, unknown>), assistant_name: clean || null };
+    const { error } = await svc.from("shops").update({ settings }).eq("id", shopId);
+    if (error) return { ok: false, error: error.message };
+    try {
+      await svc.from("audit_logs").insert({
+        shop_id: shopId, actor_type: "user", actor_id: user.id,
+        action: "assistant_renamed", resource_type: "shop", resource_id: shopId,
+        details: { name: clean || null },
+      });
+    } catch { /* log ไม่ได้อย่าให้การตั้งชื่อพัง */ }
+    revalidatePath("/dashboard/assistant");
+    return { ok: true, name: clean || null };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "บันทึกชื่อไม่สำเร็จ") };
+  }
+}

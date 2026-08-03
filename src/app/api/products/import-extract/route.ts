@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { platformAiGuard, consumeAiQuota } from "@/lib/ai-guard";
+import { platformAiGuard, consumeAiQuota, assertShopActive } from "@/lib/ai-guard";
+import { OCR_EST_COST_USD } from "@/lib/ai-catalog";
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
 
@@ -190,6 +191,10 @@ export async function POST(request: Request) {
     const guard = await platformAiGuard(svc, "นำเข้าด้วยไฟล์ Excel/CSV ใช้ได้ตามปกติ");
     if (!guard.ok) return NextResponse.json({ ok: false, error: guard.error }, { status: 503 });
 
+    // กิจการที่ถูกระงับต้องใช้ AI ไม่ได้ — ก่อนหน้านี้ทางนี้เป็นช่องหลุด (ดูคอมเมนต์ใน assertShopActive)
+    const active = await assertShopActive(svc, shopId);
+    if (!active.ok) return NextResponse.json({ ok: false, error: active.error }, { status: 403 });
+
     // ⚠️ ลำดับด่านสำคัญมาก (แก้จากผลรีวิว 4 ส.ค. 2569)
     // เดิมเรียกโควตากลางก่อนแล้วค่อยเช็คเพดานนำเข้า -> ร้านที่นำเข้าครบ 20 ไฟล์แล้ว
     // กดไฟล์ที่ 21 จะโดน "ตัดโควตาผู้ช่วย AI" ทิ้งฟรีแล้วค่อยถูกปฏิเสธ กด 10 ครั้ง = หาย 10 หน่วย
@@ -245,13 +250,19 @@ export async function POST(request: Request) {
     for (const eng of engines) {
       try {
         const rows = await eng.run();
-        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `import/${eng.name}`, cost_usd: 0 });
+        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `import/${eng.name}`, cost_usd: OCR_EST_COST_USD });
         return NextResponse.json({ ok: true, rows, engine: eng.name });
       } catch (e) {
         lastErr = (e as Error).message;
         console.error(`import-extract ${eng.name} failed`, lastErr);
       }
     }
+    // ⚠️ พังทุกเอนจินก็ต้องบันทึก — ยิงผู้ให้บริการจริงไปแล้วสูงสุด 4 ค่าย
+    // เดิมบันทึกเฉพาะตอนสำเร็จ ไฟล์เสียใบเดียวจึงกดซ้ำเผา token ได้ไม่จำกัด
+    // โดยตัวนับทุกชั้น (โควตาผู้ใช้/เพดานนำเข้า/เพดานแพลตฟอร์ม) มองไม่เห็นเลย
+    try {
+      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: "import/failed", cost_usd: OCR_EST_COST_USD });
+    } catch { /* บันทึกไม่สำเร็จอย่าไปทับ error จริงของผู้ใช้ */ }
     return NextResponse.json({ ok: false, error: friendlyAiError(lastErr) });
   } catch (e) {
     const m = (e as Error).message;

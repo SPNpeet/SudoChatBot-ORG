@@ -34,6 +34,7 @@ export const AUDIT_ACTION_TH: Record<string, string> = {
   platform_admin_added: "เพิ่มผู้ดูแลแพลตฟอร์ม",
   topup_confirmed: "ยืนยันการเติมเงิน",
   topup_rejected: "ปฏิเสธการเติมเงิน",
+  assistant_renamed: "ตั้งชื่อผู้ช่วย AI",
   client_error: "ข้อผิดพลาดฝั่งผู้ใช้",
 };
 

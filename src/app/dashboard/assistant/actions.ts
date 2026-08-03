@@ -34,12 +34,14 @@ export async function assistantReply(shopId: string, history: AssistantTurn[]): 
     const guard = await platformAiGuard(svc, "งานเอกสาร/บัญชีคีย์เองใช้ได้ตามปกติค่ะ");
     if (!guard.ok) return { ok: false, error: guard.error };
 
+    // เช็คสถานะกิจการ "ก่อน" ตัดโควตา — เดิมตัดโควตาแล้วค่อยเช็ค กิจการที่ถูกระงับ
+    // จึงเสียโควตาฟรีทั้งที่ถูกปฏิเสธอยู่ดี · ด่านปฏิเสธเฉย ๆ ต้องมาก่อนด่านที่ตัดโควตาเสมอ
+    const { data: shop } = await svc.from("shops").select("name,status,settings").eq("id", shopId).single();
+    if (!shop || shop.status !== "active") return { ok: false, error: "บัญชีธุรกิจถูกระงับการใช้งาน — ติดต่อผู้ดูแลระบบ" };
+
     // โควตากลางต่อ "เจ้าของ" (นับรวมทุกกิจการ กันปั๊มโควตาหลายบริษัท) + แจ้งเตือน 80%/95% อัตโนมัติ
     const quota = await consumeAiQuota(svc, shopId, "งานเอกสาร/บัญชีคีย์เองใช้ได้ตามปกติค่ะ");
     if (!quota.ok) return { ok: false, error: quota.error, quotaExceeded: quota.quotaExceeded };
-
-    const { data: shop } = await svc.from("shops").select("name,status").eq("id", shopId).single();
-    if (!shop || shop.status !== "active") return { ok: false, error: "บัญชีธุรกิจถูกระงับการใช้งาน — ติดต่อผู้ดูแลระบบ" };
 
     const trimmed = history
       .filter((h) => (h.role === "user" || h.role === "assistant") && typeof h.content === "string" && h.content.trim())
@@ -51,6 +53,7 @@ export async function assistantReply(shopId: string, history: AssistantTurn[]): 
 
     const ctx: AssistantCtx = {
       svc, shopId, shopName: shop.name, userId: user.id, history: trimmed,
+      assistantName: String(((shop.settings ?? {}) as Record<string, unknown>).assistant_name ?? "").trim() || undefined,
     };
     const r = await runAssistant(ctx);
     return { ok: true, text: r.text, toolCalls: r.toolCalls, artifacts: r.artifacts, choices: r.choices };
