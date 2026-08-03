@@ -191,6 +191,18 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       }));
     if (!items.length) return { ok: false, error: "ต้องมีรายการอย่างน้อย 1 บรรทัด" };
 
+    // ⚠️ ด่านกันเอกสารยอด 0 — ห้ามถอดออก (บั๊กจริง 4 ส.ค. 2569)
+    // ฟอร์มเดิมตรวจแค่ชื่อ+จำนวน ไม่ตรวจราคา ผู้ใช้ลืมใส่ราคาแล้วกดบันทึกได้
+    // เอกสารถูกสร้างสำเร็จ แต่ตอนลงสมุดรายวันไม่มีบรรทัดให้ลง (ทุกยอดเป็น 0) จึงพัง
+    // ผลคือเหลือเอกสารที่ไม่มีคู่บัญชีค้างในระบบ ตัวตรวจความถูกต้องขึ้นธงแดง
+    // และผู้ใช้กดซ้ำเพราะไม่เข้าใจข้อความ error เลยได้เอกสารเสียหลายใบติดกัน
+    //
+    // ต้องกันฝั่ง server ด้วย ไม่ใช่แค่ฝั่งฟอร์ม เพราะผู้ช่วย AI ก็เรียกทางนี้เหมือนกัน
+    // กันแค่หน้าจอ = ยังสร้างเอกสารเสียผ่านแชทได้อยู่
+    if (!(items.reduce((a, it) => a + it.qty * it.unit_price, 0) > 0)) {
+      return { ok: false, error: "ยอดรวมเป็น 0 — ต้องใส่ราคาอย่างน้อย 1 รายการ ระบบถึงลงบัญชีให้ได้" };
+    }
+
     const vatMode: VatMode = ["none", "exclusive", "inclusive"].includes(String(input.vat_mode)) ? input.vat_mode! : "none";
     // จุดความรับผิด VAT: delivery = ทันที (ม.78 สินค้า) · payment = เมื่อรับเงิน (ม.78/1 บริการ)
     // ใช้ได้กับใบแจ้งหนี้ที่คิด VAT เท่านั้น — ขายสดรับเงินแล้วจึงไม่มีอะไรให้พัก
@@ -231,10 +243,36 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       }
     }
 
+    // ⚠️ พิมพ์ชื่อเองแล้วต้องถูกเก็บเป็นผู้ติดต่อด้วย — เกิดจริง 4 ส.ค. 2569
+    // เดิมชื่อที่พิมพ์เองถูกเก็บเป็นข้อความบนเอกสารเท่านั้น ไม่ได้สร้างผู้ติดต่อ
+    // ผลคือ: ออกบิลให้เจ้าเดิม 5 ครั้ง ต้องพิมพ์ชื่อใหม่ทั้ง 5 ครั้ง ช่องเลือกยังว่างเปล่า
+    // ซึ่งเป็นบ่อเกิดของการพิมพ์ผิด (ชื่อเพี้ยนกันคนละใบ = ยอดลูกหนี้แตกเป็นหลายราย)
+    // และทำให้ใบกำกับภาษีไม่มีเลขผู้เสียภาษี/ที่อยู่ ซึ่งผิด ม.86/4
+    //
+    // เก็บให้อัตโนมัติ: มีชื่อเดิมอยู่แล้วใช้ซ้ำ (เทียบแบบไม่สนตัวพิมพ์เล็กใหญ่) ไม่มีค่อยสร้างใหม่
+    // ล้มเหลวก็ไม่ทำให้การออกเอกสารพัง — การออกเอกสารสำคัญกว่าการเก็บรายชื่อ
+    let autoContactId: string | null = null;
+    if (!input.contact_id && contactName && input.status !== "draft") {
+      try {
+        const kind = input.doc_type === "expense" ? "vendor" : "customer";
+        const { data: found } = await svc.from("contacts")
+          .select("id").eq("shop_id", shopId).eq("status", "active")
+          .in("kind", [kind, "both"]).ilike("name", contactName).limit(1).maybeSingle();
+        if (found?.id) {
+          autoContactId = found.id;
+        } else {
+          const { data: made } = await svc.from("contacts")
+            .insert({ shop_id: shopId, kind, name: contactName, recipient_kind: guessRecipientKind(null) })
+            .select("id").single();
+          autoContactId = made?.id ?? null;
+        }
+      } catch { /* เก็บรายชื่อไม่สำเร็จก็ปล่อยผ่าน ห้ามบล็อกการออกเอกสาร */ }
+    }
+
     const baseRow = {
       shop_id: shopId,
       doc_type: input.doc_type,
-      contact_id: input.contact_id || null,
+      contact_id: input.contact_id || autoContactId || null,
       contact_name: contactName,
       contact_tax_id: contactTaxId,
       contact_address: contactAddress,
@@ -531,6 +569,12 @@ export async function issueCreditDebitNote(shopId: string, input: NoteInput): Pr
         unit_price: Math.max(0, Number(it.unit_price) || 0),
       }));
     if (!items.length) return { ok: false, error: "ต้องมีรายการอย่างน้อย 1 บรรทัด" };
+
+    // กันยอด 0 แบบเดียวกับ saveDoc — ใบลดหนี้/เพิ่มหนี้ยอด 0 ก็ลงบัญชีไม่ได้เหมือนกัน
+    // และผิดกฎหมายด้วย เพราะ ม.86/9-86/10 บังคับให้ระบุ "มูลค่าที่ลด/เพิ่ม" ซึ่ง 0 ไม่ใช่การลด/เพิ่ม
+    if (!(items.reduce((a, it) => a + it.qty * it.unit_price, 0) > 0)) {
+      return { ok: false, error: "ยอดที่ลด/เพิ่มเป็น 0 — ต้องใส่ราคาอย่างน้อย 1 รายการ" };
+    }
 
     // ⚠️ ต้องใช้อัตรา VAT ของ "ใบเดิม" ไม่ใช่อัตราวันนี้
     // ใบลดหนี้ไปหักยอดที่เคยเสียภาษีในอัตราเดิม ถ้าใช้อัตราใหม่ ภาษีที่หักออกจะไม่เท่าที่เคยเสีย

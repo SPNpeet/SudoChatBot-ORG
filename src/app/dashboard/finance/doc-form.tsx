@@ -196,6 +196,19 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
       rowsRef.current?.querySelector<HTMLInputElement>("input[aria-invalid='true']")?.focus();
       return;
     }
+
+    // ⚠️ ยอดรวมต้องมากกว่า 0 — บั๊กจริง 4 ส.ค. 2569 ที่ทำข้อมูลบัญชีเสีย
+    // เดิมตรวจแค่ "มีชื่อ + จำนวน > 0" ไม่ได้ตรวจราคา ลืมใส่ราคาแล้วกดบันทึกได้
+    // -> เอกสารถูกสร้างจริง -> ตอนลงสมุดรายวันไม่มีบรรทัดให้ลง (ยอด 0) -> ลงบัญชีพัง
+    // -> เหลือเอกสารยอด 0 ค้างในระบบที่ไม่มีคู่บัญชี ตัวตรวจความถูกต้องขึ้นธงแดง
+    // เจ้าของกดซ้ำเพราะไม่เข้าใจข้อความ error เลยได้เอกสารเสีย 2 ใบติดกัน (EXP-0007/0008)
+    // กันที่นี่ = ไม่มีทางสร้างเอกสารยอด 0 ได้อีก (ฝั่ง server กันซ้ำอีกชั้น)
+    if (!(items.reduce((a, it) => a + it.qty * it.unit_price, 0) > 0)) {
+      setShowRowErrors(true);
+      setError("ยังไม่ได้ใส่ราคา — ยอดรวมเป็น 0 บันทึกไม่ได้ เพราะลงบัญชีไม่ได้ (ช่อง “ราคา/หน่วย” ขึ้นกรอบแดงไว้ให้แล้ว)");
+      rowsRef.current?.querySelector<HTMLInputElement>("input[aria-invalid='true']")?.focus();
+      return;
+    }
     const input: SaveDocInput = {
       id: draft?.id,
       doc_type: docType,
@@ -385,7 +398,11 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
                       className={cn("min-w-0", showRowErrors && !(Number(r.qty) > 0) && "border-red-400 bg-red-50/40 focus:border-red-500")}
                       onChange={(e) => setRow(i, { qty: e.target.value })} />
                     <Input className="hidden min-w-0 sm:block" placeholder="หน่วย" value={r.unit} onChange={(e) => setRow(i, { unit: e.target.value })} />
-                    <Input inputMode="decimal" placeholder="ราคา/หน่วย" className="min-w-0" value={r.unit_price} onChange={(e) => setRow(i, { unit_price: e.target.value })} />
+                    {/* ราคาว่าง = ยอดรวม 0 = ลงบัญชีไม่ได้ ต้องเห็นตั้งแต่ตอนกรอก ไม่ใช่ไปตายตอนกดบันทึก */}
+                    <Input inputMode="decimal" placeholder="ราคา/หน่วย" value={r.unit_price}
+                      aria-invalid={showRowErrors && !(Number(r.unit_price) > 0) ? true : undefined}
+                      className={cn("min-w-0", showRowErrors && !(Number(r.unit_price) > 0) && "border-red-400 bg-red-50/40 focus:border-red-500")}
+                      onChange={(e) => setRow(i, { unit_price: e.target.value })} />
                     <button type="button" aria-label="ลบบรรทัดนี้"
                       onClick={() => setRows((rs) => rs.length > 1 ? rs.filter((_, j) => j !== i) : rs)}
                       className="grid h-9 w-8 place-items-center text-neutral-400 hover:text-red-500"><Trash2 className="h-4 w-4 shrink-0" /></button>
@@ -398,6 +415,13 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
                 {products.map((p) => <option key={p.id} value={p.name}>{`${baht(p.price)}${p.track_stock ? ` · เหลือ ${p.stock}` : ""}`}</option>)}
               </datalist>
             )}
+            {/* คำกำกับใต้ช่อง — บอกกติกาไว้ก่อนที่ผู้ใช้จะกดบันทึกแล้วเจอ error
+                ข้อความสั้นตรงจุดที่กรอก ได้ผลกว่าข้อความยาวท้ายฟอร์มที่คนไม่อ่าน */}
+            <p className={cn("mt-1.5 text-[11px] leading-relaxed",
+              showRowErrors ? "font-medium text-red-600" : "text-neutral-400")}>
+              ต้องกรอก <b>ชื่อรายการ · จำนวน · ราคา/หน่วย</b> ให้ครบอย่างน้อย 1 บรรทัด — ยอดรวมต้องมากกว่า 0 ระบบถึงลงบัญชีให้ได้
+            </p>
+
             <button type="button" onClick={() => setRows((rs) => [...rs, emptyRow()])}
               className="mt-2 inline-flex items-center gap-1 text-sm text-emerald-700 hover:text-emerald-800">
               <Plus className="h-4 w-4" /> เพิ่มบรรทัด

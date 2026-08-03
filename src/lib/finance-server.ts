@@ -52,7 +52,9 @@ export async function postJournal(
   const lines = input.lines
     .map((l) => ({ ...l, debit: r2(Number(l.debit ?? 0)), credit: r2(Number(l.credit ?? 0)) }))
     .filter((l) => l.debit > 0 || l.credit > 0);
-  if (!lines.length) return { ok: false, error: "ไม่มีบรรทัดบัญชีให้ลง" };
+  // ข้อความนี้ผู้ใช้ทั่วไปได้เห็นจริงตอนเอกสารยอด 0 (เกิดจริง 4 ส.ค. 2569)
+  // เจ้าของบอกว่า "ถ้าผมไม่ใช่คนทำระบบนี้ลูกค้างงตาย" — ต้องบอกว่าต้องทำอะไรต่อ ไม่ใช่ศัพท์บัญชี
+  if (!lines.length) return { ok: false, error: "ยอดเงินเป็น 0 จึงไม่มีอะไรให้ลงบัญชี — กลับไปใส่ราคาในรายการก่อน" };
 
   const dr = r2(lines.reduce((a, l) => a + l.debit, 0));
   const cr = r2(lines.reduce((a, l) => a + l.credit, 0));
