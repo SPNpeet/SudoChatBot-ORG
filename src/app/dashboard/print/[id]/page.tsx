@@ -33,6 +33,7 @@ export default async function PrintDocPage({ params, searchParams }: {
   const doc = data as unknown as FinDoc;
 
   const shopName = shop.billing_name || shop.name;
+  const signatureUrl = ((shop.settings ?? {}) as { signature_url?: string }).signature_url ?? null;
   const isWhtForm = form === "wht" && Number(doc.wht_amount) > 0;
   // ใบลดหนี้/ใบเพิ่มหนี้ต้องมีรายการบังคับชุดเดียวกับใบกำกับภาษี (ม.86/10, 86/9)
   // รวมถึงข้อมูลผู้ซื้อครบ และ สำนักงานใหญ่/สาขา ทั้งสองฝ่าย
@@ -269,7 +270,14 @@ export default async function PrintDocPage({ params, searchParams }: {
                 <p className="mt-2">ผู้รับเอกสาร / วันที่</p>
               </div>
               <div>
-                <div className="mx-auto w-full max-w-56 border-b border-dotted border-neutral-400 pb-8" />
+                {/* ลายเซ็นวางทับเส้น — PNG พื้นโปร่งใสจึงไม่มีกล่องขาวบัง
+                    ไม่มีลายเซ็น = เส้นประเปล่าให้เซ็นด้วยปากกาเหมือนเดิม (พฤติกรรมเดิมไม่เปลี่ยน) */}
+                <div className="relative mx-auto w-full max-w-56 border-b border-dotted border-neutral-400 pb-8">
+                  {signatureUrl && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={signatureUrl} alt="ลายเซ็น" className="absolute inset-x-0 bottom-0 mx-auto h-14 object-contain" />
+                  )}
+                </div>
                 <p className="mt-2 break-words">ผู้มีอำนาจลงนาม ({shopName})</p>
               </div>
             </div>

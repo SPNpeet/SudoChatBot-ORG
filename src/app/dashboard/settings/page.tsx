@@ -16,6 +16,7 @@ import NotifySettingsForm from "./notify-settings-form";
 import PeriodLockForm from "./period-lock-form";
 import PushToggle from "./push-toggle";
 import type { ShopPaymentSettings } from "@/lib/types/db";
+import SignaturePad from "./signature-pad";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,9 @@ type TabId = (typeof TABS)[number]["id"];
 export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ line?: string; s?: string }> }) {
   const { supabase, shop, role } = await getCurrentShop();
   const { line: lineStatus, s } = await searchParams;
+  // ลายเซ็นเก็บเป็น URL ใน shops.settings (ตัวไฟล์อยู่ storage) — ดู saveSignature
+  const signatureUrl = ((shop.settings ?? {}) as { signature_url?: string }).signature_url ?? null;
+
   const canEdit = role === "owner" || role === "admin";
   // เชื่อม LINE เสร็จแล้วเด้งกลับมา ต้องเปิดแท็บแจ้งเตือนให้เห็นผลทันที
   const tab: TabId = (TABS.some((t) => t.id === s) ? s : lineStatus ? "notify" : "business") as TabId;
@@ -103,7 +107,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         </CardHeader>
         <CardContent className="space-y-4">
           {tab === "business" && (canEdit
-            ? <TaxInfoForm shopId={shop.id} taxInfo={taxInfo} />
+            ? (
+              <>
+                <TaxInfoForm shopId={shop.id} taxInfo={taxInfo} />
+                {/* ลายเซ็นอยู่หมวดเดียวกับข้อมูลกิจการ เพราะทั้งคู่คือ "หน้าตาเอกสารที่ส่งออกไป"
+                    ไม่แยกเป็นหมวดใหม่ — เมนูตั้งค่ายาวขึ้นอีกหนึ่งเพื่อของที่ตั้งครั้งเดียวจบ */}
+                <div className="border-t border-neutral-100 pt-4">
+                  <p className="mb-1 text-sm font-semibold text-neutral-800">ลายเซ็นบนเอกสาร</p>
+                  <p className="mb-3 text-xs leading-relaxed text-neutral-500">
+                    เซ็นครั้งเดียว ใช้กับเอกสารที่พิมพ์ทุกใบ — ไม่ต้องปริ้นออกมาเซ็นแล้วสแกนกลับ
+                  </p>
+                  <SignaturePad shopId={shop.id} current={signatureUrl} />
+                </div>
+              </>
+            )
             : <Locked />)}
 
           {tab === "payment" && (canEdit

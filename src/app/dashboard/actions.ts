@@ -231,6 +231,73 @@ export async function saveTaxInfo(shopId: string, formData: FormData): Promise<A
   }
 }
 
+// ---------- ลายเซ็นอิเล็กทรอนิกส์บนเอกสาร ----------
+//
+// เก็บเป็นไฟล์ PNG ใน bucket shop-assets แล้วอ้าง URL ใน shops.settings
+// ⚠️ ห้ามเก็บ data URL ลงฐานข้อมูลตรง ๆ — ภาพ base64 ยาว ~30-80KB ต่อรูป
+// ถูกดึงมาพร้อม shop ทุกครั้งที่โหลดหน้าไหนก็ตามใน dashboard (layout ดึง shop เสมอ)
+// = จ่ายค่า egress ทุกการเปิดหน้าเพื่อรูปที่ใช้เฉพาะตอนพิมพ์เอกสาร
+
+const SIG_MAX_BYTES = 300 * 1024;   // 600x200 PNG ลายเส้นจริงอยู่ราว 10-40KB
+
+export async function saveSignature(shopId: string, dataUrl: string): Promise<ActionResult> {
+  try {
+    await assertMember(shopId, ["owner", "admin"]);
+    const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl ?? "");
+    if (!m) return { ok: false, error: "รูปลายเซ็นไม่ถูกต้อง" };
+    const bytes = Buffer.from(m[1], "base64");
+    if (!bytes.length) return { ok: false, error: "ยังไม่ได้วาดลายเซ็น" };
+    if (bytes.length > SIG_MAX_BYTES) return { ok: false, error: "ลายเซ็นใหญ่เกินไป ลองวาดใหม่ให้เส้นน้อยลง" };
+
+    const svc = createServiceClient();
+    // ชื่อไฟล์คงที่ + upsert — เปลี่ยนลายเซ็นแล้วไม่ทิ้งไฟล์เก่าค้างใน storage
+    // ต่อท้ายด้วย ?v= ตอนอ่าน เพื่อให้เบราว์เซอร์ไม่โชว์รูปเก่าจาก cache
+    const path = `${shopId}/signature.png`;
+    const { error: upErr } = await svc.storage.from("shop-assets")
+      .upload(path, bytes, { contentType: "image/png", upsert: true });
+    if (upErr) return { ok: false, error: upErr.message };
+    const { data: pub } = svc.storage.from("shop-assets").getPublicUrl(path);
+    const url = `${pub.publicUrl}?v=${Date.now()}`;
+
+    const { data: shop } = await svc.from("shops").select("settings").eq("id", shopId).maybeSingle();
+    const settings = { ...((shop?.settings ?? {}) as Record<string, unknown>), signature_url: url };
+    const { error } = await svc.from("shops").update({ settings }).eq("id", shopId);
+    if (error) return { ok: false, error: error.message };
+
+    await svc.from("audit_logs").insert({
+      shop_id: shopId, action: "signature_updated", actor_type: "user",
+      resource_type: "shop", resource_id: shopId, details: {},
+    });
+    revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/print", "layout");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "บันทึกลายเซ็นไม่สำเร็จ") };
+  }
+}
+
+export async function clearSignature(shopId: string): Promise<ActionResult> {
+  try {
+    await assertMember(shopId, ["owner", "admin"]);
+    const svc = createServiceClient();
+    await svc.storage.from("shop-assets").remove([`${shopId}/signature.png`]);
+    const { data: shop } = await svc.from("shops").select("settings").eq("id", shopId).maybeSingle();
+    const settings = { ...((shop?.settings ?? {}) as Record<string, unknown>) };
+    delete settings.signature_url;
+    const { error } = await svc.from("shops").update({ settings }).eq("id", shopId);
+    if (error) return { ok: false, error: error.message };
+    await svc.from("audit_logs").insert({
+      shop_id: shopId, action: "signature_cleared", actor_type: "user",
+      resource_type: "shop", resource_id: shopId, details: {},
+    });
+    revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/print", "layout");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ลบลายเซ็นไม่สำเร็จ") };
+  }
+}
+
 // ---------- ปิดงวด / ปลดล็อกงวด ----------
 // ตัวเลขที่ยื่น ภ.พ.30 หรือ ภ.ง.ด. ไปแล้วต้องนิ่งตลอดไป ถ้ายังแก้ย้อนหลังได้
 // ระบบจะไม่ตรงกับแบบที่ยื่น และอธิบายกับสรรพากรตอนตรวจย้อนหลังไม่ได้

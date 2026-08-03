@@ -5,6 +5,8 @@ export interface Shop {
   billing_name?: string | null; billing_address?: string | null; tax_id?: string | null;
   /** "สำนักงานใหญ่" หรือ "สาขาที่ NNNNN" — บังคับบนใบกำกับภาษีเต็มรูป (ประกาศอธิบดีฯ 199) */
   branch?: string | null;
+  /** ค่าตั้งเบ็ดเตล็ดของกิจการ (jsonb) — signature_url = ลายเซ็นบนเอกสารที่พิมพ์ */
+  settings?: { signature_url?: string } & Record<string, unknown> | null;
   created_at: string;
 }
 export interface Product {
