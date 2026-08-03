@@ -16,6 +16,7 @@ import type { DocType, VatMode, ExpenseCategory, Contact, FinDoc } from "@/lib/t
 import { saveDoc, uploadFinFile, type SaveDocInput } from "./actions";
 import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
 import DateField from "@/components/date-field";
+import { useToast } from "@/components/toast";
 
 interface ProductLite { id: string; name: string; price: number; stock: number; track_stock: boolean }
 interface Row { name: string; qty: string; unit: string; unit_price: string; product_id: string | null }
@@ -35,6 +36,7 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
   const isExpense = docType === "expense";
   const contactKind = isExpense ? "vendor" : "customer";
   const router = useRouter();
+  const toast = useToast();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   // ตีกรอบแดงที่ช่องรายการที่ยังว่าง — โชว์หลังกดบันทึกครั้งแรกเท่านั้น
@@ -206,8 +208,12 @@ export default function DocForm({ shopId, docType, contacts, products = [], cate
     };
     start(async () => {
       const r = await saveDoc(shopId, input);
-      if (r.ok) router.push(isExpense ? `/dashboard/expenses` : `/dashboard/sales/${r.docId}`);
-      else setError(r.error);
+      if (r.ok) {
+        // บอกให้ชัดว่าสำเร็จก่อนพาไปหน้าใหม่ — หน้าใหม่โหลดช้าบนมือถือ
+        // ช่วงรอยต่อนั้นถ้าไม่มีอะไรบอก ผู้ใช้เข้าใจว่ากดแล้วไม่เกิดอะไร (เกิดจริง 2 ส.ค. 2569)
+        toast({ text: `บันทึก ${r.docNumber} แล้ว`, tone: "success" });
+        router.push(isExpense ? `/dashboard/expenses` : `/dashboard/sales/${r.docId}`);
+      } else setError(r.error);
     });
   }
 

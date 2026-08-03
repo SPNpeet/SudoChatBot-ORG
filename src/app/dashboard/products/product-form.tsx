@@ -7,11 +7,15 @@ import type { ActionResult } from "../actions";
 import { uploadProductImage } from "../actions";
 import { Plus, Pencil, X, Upload } from "lucide-react";
 import { useDismiss } from "@/components/use-dismiss";
+import { useToast } from "@/components/toast";
+import { useRouter } from "next/navigation";
 
 export default function ProductForm({
   shopId, action, product,
 }: { shopId: string; action: (fd: FormData) => Promise<ActionResult>; product?: Product }) {
   const [open, setOpen] = useState(false);
+  const toast = useToast();
+  const router = useRouter();
   useDismiss(open, () => setOpen(false));
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +45,11 @@ export default function ProductForm({
       const r = await action(fd);
       if (!r.ok) { setError(r.error); return; }
       setOpen(false);
+      // ⚠️ ต้องมีทั้ง toast และ refresh — เกิดจริง (2 ส.ค. 2569): modal ปิดเงียบ ๆ
+      // แล้วการ์ดในหน้ายังโชว์ข้อมูลเก่า (รายการเป็น server component ไม่รู้ว่ามีการแก้)
+      // เจ้าของเข้าใจว่า "บันทึกแล้วมันไม่ได้มั้ง" ทั้งที่บันทึกลงฐานข้อมูลสำเร็จ
+      toast({ text: product ? "บันทึกสินค้าแล้ว" : "เพิ่มสินค้าแล้ว", tone: "success" });
+      router.refresh();
     });
   }
 

@@ -87,7 +87,11 @@ export default function DateField({
           onChange={(e) => onChange(e.target.value)}
           onClick={openPicker}
           className={cn(
-            "h-11 w-full rounded-xl border bg-white px-3.5 pr-11 text-base outline-none transition-colors sm:text-sm",
+            "h-11 w-full min-w-0 max-w-full rounded-xl border bg-white px-3.5 pr-11 text-base outline-none transition-colors sm:text-sm",
+            // ⚠️ appearance-none จำเป็นบน iOS — Safari ให้ input[type=date] มีความกว้าง
+            // ตามเนื้อหาของตัวเอง ไม่ยอมหดตาม w-full ช่องเลยล้นออกนอกการ์ด
+            // (เจ้าของแคปมาจริงจาก iPhone 2 ส.ค. 2569: ไอคอนปฏิทินโผล่นอกขอบขาว)
+            "appearance-none [&::-webkit-date-and-time-value]:text-left",
             "[&::-webkit-calendar-picker-indicator]:opacity-0",
             farFuture ? "border-red-400 focus:border-red-500"
               : "border-neutral-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15",
