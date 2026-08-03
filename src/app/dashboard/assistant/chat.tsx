@@ -10,7 +10,7 @@ import { compressImage } from "@/lib/compress-image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Send, Calculator, Paperclip, X, Loader2, Trash2, Zap, ArrowDown,
+  Send, Calculator, Paperclip, X, Loader2, Trash2, Zap, ArrowDown, Plus,
   FileText, Receipt, BarChart3, Users, Landmark, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -72,13 +72,56 @@ interface Msg extends AssistantTurn {
 
 const MAX_FILES = 8;
 const MAX_KEEP = 20;   // เก็บแชทล่าสุด 20 ข้อความ — เกินแล้วตัดอันเก่าสุดออกทีละอัน
-const storeKey = (shopId: string) => `sc_chat_${shopId}`;
+// ============================================================
+//  ห้องแชทหลายห้อง + เก็บถาวร
+//
+//  ⚠️ เดิมใช้ sessionStorage โดยตั้งใจว่า "ปิดแท็บแล้วเริ่มใหม่ ไม่ค้างข้ามวัน"
+//  แต่เจ้าของเจอจริง 4 ส.ค. 2569: "กลับมาหน้าแชทที่คุยไว้ก็หายไปตลอด"
+//  งานบัญชีไม่ใช่แชทเล่น — สั่งค้างไว้แล้วปิดแท็บไปทำอย่างอื่น กลับมาต้องยังอยู่
+//  จึงย้ายมา localStorage และแยกเป็นห้อง เพื่อให้แยกงานคนละเรื่องได้
+//  (เช่น ห้องออกบิลลูกค้า กับ ห้องปิดงบ ไม่ต้องปนกันจน AI สับสนบริบท)
+//
+//  เก็บฝั่งเครื่องผู้ใช้เท่านั้น ไม่ขึ้นฐานข้อมูล — ประวัติแชทมีทั้งชื่อลูกค้าและยอดเงิน
+//  เก็บขึ้นเซิร์ฟเวอร์เท่ากับเพิ่มพื้นที่ข้อมูลส่วนบุคคลที่ต้องดูแลตาม PDPA โดยไม่จำเป็น
+// ============================================================
+const MAX_THREADS = 8;
+const threadsKey = (shopId: string) => `sc_chat_threads_${shopId}`;
+const storeKey = (shopId: string, threadId: string) => `sc_chat_${shopId}_${threadId}`;
+/** คีย์เดิมสมัยห้องเดียว — ใช้ย้ายของเก่าเข้าห้องแรกครั้งเดียว ไม่ให้แชทที่ค้างอยู่หาย */
+const legacyKey = (shopId: string) => `sc_chat_${shopId}`;
+
+interface Thread { id: string; title: string; at: number }
+
+const newThreadId = () => `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+/** ตั้งชื่อห้องจากสิ่งที่ผู้ใช้พิมพ์ประโยคแรก — ผู้ใช้ไม่ต้องมานั่งตั้งชื่อเอง
+ *  ใช้ display ก่อน content เพราะ content คือข้อความที่ส่งให้ AI (อาจมีบริบทพ่วง)
+ *  ส่วน display คือสิ่งที่ผู้ใช้เห็นว่าตัวเองพิมพ์ ซึ่งตรงกับที่เขาจำได้มากกว่า */
+function titleFrom(msgs: Msg[]): string {
+  const first = msgs.find((m) => m.role === "user" && (m.display ?? m.content)?.trim());
+  const t = (first?.display ?? first?.content ?? "").trim().replace(/\s+/g, " ");
+  return t ? (t.length > 26 ? t.slice(0, 26) + "…" : t) : "ห้องใหม่";
+}
+
+function readThreads(shopId: string): Thread[] {
+  try {
+    const raw = localStorage.getItem(threadsKey(shopId));
+    const list = raw ? (JSON.parse(raw) as Thread[]) : [];
+    return Array.isArray(list) ? list.filter((t) => t && typeof t.id === "string") : [];
+  } catch { return []; }
+}
+
+function writeThreads(shopId: string, list: Thread[]) {
+  try { localStorage.setItem(threadsKey(shopId), JSON.stringify(list.slice(0, MAX_THREADS))); } catch { /* เต็มก็ข้าม */ }
+}
 /** ตัดให้เหลือ 20 ล่าสุดเสมอ (ทั้งบนจอและที่เก็บไว้) */
 const keepLast = <T,>(list: T[]) => (list.length > MAX_KEEP ? list.slice(-MAX_KEEP) : list);
 
 export default function AssistantChat({ shopId }: { shopId: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [restored, setRestored] = useState(false);
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [threadId, setThreadId] = useState<string>("");
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState("");                    // ข้อความความคืบหน้าตอนอ่านบิล
@@ -147,30 +190,63 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     scrollToBottom(true);
   }
 
-  // กู้แชทเดิมกลับมาเมื่อสลับหน้าไป-กลับ (เก็บใน sessionStorage: ปิดแท็บแล้วเริ่มใหม่ ไม่ค้างข้ามวัน)
+  // เปิดหน้า/สลับกิจการ -> โหลดรายการห้อง แล้วเปิดห้องล่าสุด
   useEffect(() => {
+    setRestored(false);
+    let list = readThreads(shopId);
+
+    // ย้ายแชทเดิมสมัยห้องเดียวเข้าห้องแรกครั้งเดียว — ของที่ค้างอยู่ต้องไม่หายตอนอัปเดต
+    if (!list.length) {
+      let legacy: Msg[] = [];
+      try {
+        const raw = sessionStorage.getItem(legacyKey(shopId)) ?? localStorage.getItem(legacyKey(shopId));
+        if (raw) legacy = keepLast(JSON.parse(raw) as Msg[]);
+      } catch { /* ของเก่าเสียก็ข้าม */ }
+      const id = newThreadId();
+      list = [{ id, title: legacy.length ? titleFrom(legacy) : "ห้องใหม่", at: Date.now() }];
+      if (legacy.length) {
+        try { localStorage.setItem(storeKey(shopId, id), JSON.stringify(legacy)); } catch { /* ข้าม */ }
+      }
+      writeThreads(shopId, list);
+      try { sessionStorage.removeItem(legacyKey(shopId)); localStorage.removeItem(legacyKey(shopId)); } catch { /* ข้าม */ }
+    }
+
+    const active = list[0];
+    setThreads(list);
+    setThreadId(active.id);
     try {
-      const raw = sessionStorage.getItem(storeKey(shopId));
-      if (raw) setMsgs(keepLast(JSON.parse(raw) as Msg[]));
-    } catch { /* อ่านไม่ได้ = เริ่มใหม่ */ }
+      const raw = localStorage.getItem(storeKey(shopId, active.id));
+      setMsgs(raw ? keepLast(JSON.parse(raw) as Msg[]) : []);
+    } catch { setMsgs([]); }
     setRestored(true);
   }, [shopId]);
 
   useEffect(() => {
-    if (!restored) return;
+    if (!restored || !threadId) return;
     // เก็บรูปย่อ (data URL) ไปด้วย — เดิมลบทิ้งเพราะเก็บ blob url ที่ตายเมื่อรีเฟรช
     // ผลคือย้อนดูประวัติแล้วเห็นแต่ชื่อไฟล์ ไม่รู้ว่าส่งบิลใบไหนไป
     const keep = keepLast(msgs);
     try {
-      sessionStorage.setItem(storeKey(shopId), JSON.stringify(keep));
+      localStorage.setItem(storeKey(shopId, threadId), JSON.stringify(keep));
     } catch {
       // พื้นที่เต็ม (รูปกินที่) — ทิ้งรูปของข้อความเก่า เก็บแค่ 3 ข้อความล่าสุดที่มีรูป
       try {
         const trimmed = keep.map((m, i) => (i < keep.length - 3 ? { ...m, images: undefined } : m));
-        sessionStorage.setItem(storeKey(shopId), JSON.stringify(trimmed));
+        localStorage.setItem(storeKey(shopId, threadId), JSON.stringify(trimmed));
       } catch { /* ยังไม่พออีก = ข้ามไป ไม่ทำให้แชทพัง */ }
     }
-  }, [msgs, shopId, restored]);
+    // ตั้งชื่อห้องตามประโยคแรก + ดันห้องที่เพิ่งคุยขึ้นบนสุด
+    if (!keep.length) return;
+    setThreads((cur) => {
+      const t = cur.find((x) => x.id === threadId);
+      if (!t) return cur;
+      const title = titleFrom(keep);
+      if (t.title === title && cur[0]?.id === threadId) return cur;
+      const next = [{ ...t, title, at: Date.now() }, ...cur.filter((x) => x.id !== threadId)];
+      writeThreads(shopId, next);
+      return next;
+    });
+  }, [msgs, shopId, restored, threadId]);
 
   // ข้อความใหม่เข้ามา — ตามให้เฉพาะตอนที่ผู้ใช้ยังจอดอยู่ล่างสุด
   // ถ้าเขากำลังอ่านของเก่าอยู่ ไม่แตะจอเขา แค่ขึ้นปุ่มบอกว่ามีของใหม่
@@ -298,15 +374,90 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
     else send(input);
   }
 
+  /** ล้างเฉพาะข้อความในห้องนี้ ห้องยังอยู่ (ผู้ใช้มักอยากเริ่มเรื่องใหม่ในห้องเดิม) */
   function clearChat() {
     setMsgs([]);
     setError(null);
     setQuotaWall(null);
-    try { sessionStorage.removeItem(storeKey(shopId)); } catch { /* ข้าม */ }
+    if (threadId) { try { localStorage.removeItem(storeKey(shopId, threadId)); } catch { /* ข้าม */ } }
+  }
+
+  function openThread(id: string) {
+    if (id === threadId) return;
+    setError(null);
+    setQuotaWall(null);
+    setThreadId(id);
+    try {
+      const raw = localStorage.getItem(storeKey(shopId, id));
+      setMsgs(raw ? keepLast(JSON.parse(raw) as Msg[]) : []);
+    } catch { setMsgs([]); }
+  }
+
+  function addThread() {
+    // เต็มเพดานแล้วให้ทิ้งห้องที่เก่าที่สุด — ไม่งั้น localStorage บวมไปเรื่อย ๆ
+    const id = newThreadId();
+    const next = [{ id, title: "ห้องใหม่", at: Date.now() }, ...threads].slice(0, MAX_THREADS);
+    const dropped = threads.find((t) => !next.some((n) => n.id === t.id));
+    if (dropped) { try { localStorage.removeItem(storeKey(shopId, dropped.id)); } catch { /* ข้าม */ } }
+    setThreads(next);
+    writeThreads(shopId, next);
+    setError(null);
+    setQuotaWall(null);
+    setThreadId(id);
+    setMsgs([]);
+  }
+
+  function removeThread(id: string) {
+    const rest = threads.filter((t) => t.id !== id);
+    try { localStorage.removeItem(storeKey(shopId, id)); } catch { /* ข้าม */ }
+    // ปิดห้องสุดท้ายแล้วต้องมีห้องว่างเสมอ ไม่งั้นหน้าจะไม่มีที่ให้พิมพ์
+    const list = rest.length ? rest : [{ id: newThreadId(), title: "ห้องใหม่", at: Date.now() }];
+    setThreads(list);
+    writeThreads(shopId, list);
+    if (id === threadId) {
+      setThreadId(list[0].id);
+      try {
+        const raw = localStorage.getItem(storeKey(shopId, list[0].id));
+        setMsgs(raw ? keepLast(JSON.parse(raw) as Msg[]) : []);
+      } catch { setMsgs([]); }
+    }
   }
 
   return (
     <div className="flex h-full flex-col">
+      {/* แถบห้องแชท — โผล่เมื่อเริ่มคุยแล้วเท่านั้น
+          ผู้ใช้เปิดหน้ามาครั้งแรกเจอห้องว่างห้องเดียว การโชว์แถบตั้งแต่ยังไม่มีอะไร
+          คือเพิ่มของรกโดยไม่ตอบคำถามอะไรของเขาเลย */}
+      {(threads.length > 1 || msgs.length > 0) && (
+        <div className="flex items-center gap-1.5 overflow-x-auto border-b border-neutral-100 px-3 py-2">
+          {threads.map((t) => (
+            <div key={t.id}
+              className={cn(
+                "group flex shrink-0 items-center gap-1 rounded-full border pl-3 pr-1 transition-colors",
+                t.id === threadId
+                  ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                  : "border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300",
+              )}>
+              <button type="button" onClick={() => openThread(t.id)}
+                className="max-w-[9rem] truncate py-2 text-[12px] font-medium">
+                {t.title}
+              </button>
+              <button type="button" aria-label={`ปิดห้อง ${t.title}`}
+                onClick={() => removeThread(t.id)}
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-neutral-300 hover:bg-white hover:text-red-500">
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+          {threads.length < MAX_THREADS && (
+            <button type="button" onClick={addThread}
+              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-neutral-300 px-3 py-2 text-[12px] font-medium text-neutral-500 hover:border-emerald-400 hover:text-emerald-700">
+              <Plus className="h-3.5 w-3.5" /> ห้องใหม่
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ครอบสายเลื่อนด้วยกล่อง relative ของตัวเอง — ปุ่มลอยจะได้เกาะ "ขอบล่างของสายเลื่อน"
           ไม่ใช่ขอบล่างของทั้งแชท ถ้าเกาะทั้งแชท พอแนบบิลไว้ช่องพิมพ์จะสูงขึ้นอีก ~80px
           แล้วปุ่มจะไปทับรูปบิลที่แนบค้างไว้ */}

@@ -41,7 +41,13 @@ export function MainArea({ children }: { children: React.ReactNode }) {
     <main className={cn(
       // เว้นที่ด้านบนบนเดสก์ท็อปให้ปุ่มค้นหาที่ลอยอยู่มุมขวาบน (fixed top-3 สูง 36px)
       // ไม่งั้นมันจะทับปุ่มของหัวข้อหน้า เช่น ปุ่ม "ส่งออก" บนหน้ารายงาน
-      "px-4 py-5 pb-[calc(9.5rem+env(safe-area-inset-bottom))] md:px-8 md:pt-16 md:pb-7",
+      //
+      // ⚠️ ระยะล่างต้องมากกว่าที่ปุ่ม + ลอยกินจริง ไม่งั้นมันทับบรรทัดสุดท้ายของตาราง
+      // เจ้าของแคปมาจริง 4 ส.ค. 2569: ยอด "รวม" คอลัมน์เครดิตในสมุดรายวันโดนปุ่มบัง
+      // คำนวณจากของจริง: ปุ่มสูง h-14 (56px)
+      //   เดสก์ท็อป ปุ่มอยู่ bottom-6 (24px) -> กินถึง 80px แต่เดิมเว้น pb-7 (28px) = ขาด 52px
+      //   มือถือ ปุ่มอยู่ 6.25rem (100px) -> กินถึง 156px แต่เดิมเว้น 9.5rem (152px) = ขาด 4px
+      "px-4 py-5 pb-[calc(11rem+env(safe-area-inset-bottom))] md:px-8 md:pt-16 md:pb-24",
       "transition-[margin] duration-200 ease-out motion-reduce:transition-none",
       collapsed ? "md:ml-16" : "md:ml-56",
     )}>
