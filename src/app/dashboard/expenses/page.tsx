@@ -30,7 +30,19 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   if (t === "pending") q = q.eq("approval_status", "pending");
   if (t === "unpaid") q = q.in("status", ["awaiting", "partial"]);
   if (t === "paid") q = q.eq("status", "paid");
-  const { data } = await q;
+  // แท็บ "รออนุมัติ" มีความหมายเฉพาะกิจการที่มีพนักงาน (agent) เป็นคนคีย์แล้วรอเจ้าของอนุมัติ
+  // กิจการทำคนเดียว (เกือบทุกกิจการตอนนี้) ไม่มีทางมีรายการรออนุมัติ — แท็บว่างตลอดกาล
+  // เจ้าของเจอเอง 4 ส.ค. 2569: "ตรงรออนุมัติผมยังไม่เห็นอันไหนมีให้ใช้เลย" = ของรกที่ทำให้งง
+  // จึงโชว์แท็บนี้เฉพาะเมื่อ (ก) มีพนักงานในทีม หรือ (ข) มีรายการค้างอนุมัติจริง
+  const [{ data }, { count: agentCount }, { count: pendingCount }] = await Promise.all([
+    q,
+    supabase.from("shop_members").select("user_id", { count: "exact", head: true })
+      .eq("shop_id", shop.id).eq("role", "agent"),
+    supabase.from("fin_docs").select("id", { count: "exact", head: true })
+      .eq("shop_id", shop.id).eq("doc_type", "expense").eq("approval_status", "pending"),
+  ]);
+  const showPendingTab = (agentCount ?? 0) > 0 || (pendingCount ?? 0) > 0 || t === "pending";
+  const tabs = TABS.filter((x) => x.id !== "pending" || showPendingTab);
   const rows = (data ?? []) as (FinDoc & { expense_categories: { name: string } | null })[];
 
   const unpaidTotal = rows.filter((d) => ["awaiting", "partial"].includes(d.status)).reduce((a, d) => a + docOutstanding(d), 0);
@@ -49,7 +61,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
       />
 
       <div className="flex flex-wrap gap-2">
-        {TABS.map((x) => (
+        {tabs.map((x) => (
           <Link key={x.id} href={x.id === "all" ? "/dashboard/expenses" : `/dashboard/expenses?t=${x.id}`}
             className={cn(
               "inline-flex min-h-[36px] items-center rounded-full px-4 py-1.5 text-sm font-medium",
