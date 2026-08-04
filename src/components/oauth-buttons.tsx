@@ -17,7 +17,7 @@
 //     ที่ผูกกับ Facebook เหลืออยู่จริง — ตราบใดที่ยังถือข้อมูลที่ได้จาก Facebook อยู่
 //     หน้าที่ตามข้อกำหนดของ Meta และ PDPA ยังไม่จบ
 // ============================================================
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { authOrigin } from "@/lib/app-origin";
 
@@ -76,7 +76,35 @@ export default function OAuthButtons({ mode, providers = ["google"] }: {
           <GoogleMark /> {loading === "google" ? "กำลังเชื่อมต่อ..." : `${verb} Google`}
         </button>
       )}
+      <LineLoginButton verb={verb} />
       {error && <p className="text-center text-xs text-red-600">{error}</p>}
     </div>
+  );
+}
+
+// ============================================================
+//  ปุ่ม LINE Login — flow ทำเองฝั่ง server (/api/auth/line/*) เพราะ Supabase ไม่รองรับ LINE
+//  โผล่เฉพาะเมื่อแพลตฟอร์มตั้ง LINE_LOGIN_CHANNEL_ID/SECRET แล้ว (ถาม /status ก่อน)
+//  ยังไม่ตั้ง = ไม่มีปุ่ม = หน้าเดิมไม่เปลี่ยนอะไรเลย — เปิดได้โดยไม่ต้อง deploy ใหม่
+// ============================================================
+function LineLoginButton({ verb }: { verb: string }) {
+  const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    fetch("/api/auth/line/status")
+      .then((r) => r.json())
+      .then((j) => setEnabled(!!j?.enabled))
+      .catch(() => { /* ถามไม่ได้ = ไม่โชว์ปุ่ม ดีกว่าโชว์แล้วกดพัง */ });
+  }, []);
+  if (!enabled) return null;
+  return (
+    <a href="/api/auth/line/start" onClick={() => setLoading(true)}
+      className="flex h-11 w-full items-center justify-center gap-2.5 rounded-xl bg-[#06C755] text-sm font-medium text-white transition hover:brightness-105 disabled:opacity-60">
+      {/* ฟองแชทแบบกลาง ๆ ไม่ใช่โลโก้ทางการของ LINE — เลี่ยงเงื่อนไขการใช้เครื่องหมายการค้า */}
+      <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <path d="M12 3C6.5 3 2 6.6 2 11c0 2.6 1.5 4.9 3.9 6.4-.1.6-.5 2-.6 2.4-.1.5.2.5.5.4.2-.1 2.5-1.6 3.5-2.3.9.2 1.8.3 2.7.3 5.5 0 10-3.6 10-8.1S17.5 3 12 3Z" />
+      </svg>
+      {loading ? "กำลังเชื่อมต่อ..." : `${verb} LINE`}
+    </a>
   );
 }

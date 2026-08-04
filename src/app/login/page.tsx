@@ -5,7 +5,7 @@
 //  ช่องทาง: Google · อีเมล/รหัสผ่าน — ชุดเดียวกับหน้าสมัคร เปลี่ยนแค่คำบนปุ่ม
 // ============================================================
 import { createClient } from "@/lib/supabase/client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { Eye, EyeOff } from "lucide-react";
@@ -17,6 +17,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // LINE Login ล้มเหลวจะเด้งกลับมาที่หน้านี้พร้อม ?line_error= — ต้องบอกผู้ใช้ ไม่ปล่อยเงียบ
+  useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get("line_error");
+    if (!reason) return;
+    setError(reason === "unavailable"
+      ? "LINE Login ยังไม่เปิดใช้งาน — ใช้ Google หรืออีเมลแทนได้เลย"
+      : "เข้าสู่ระบบด้วย LINE ไม่สำเร็จ — ลองใหม่อีกครั้ง หรือใช้ Google/อีเมลแทน");
+  }, []);
 
   async function emailLogin(e: React.FormEvent) {
     e.preventDefault();

@@ -156,3 +156,11 @@ html { scroll-behavior: smooth; }
   }
   button:not(:disabled):active, a[href]:active, [role="button"]:active { transform: none; }
 }
+
+/* ==== ป้ายผลลัพธ์ลอยเบา ๆ ในการ์ด hero (hero-tilt.tsx) ====
+   จอสัมผัสไม่มีเมาส์ให้เอียงการ์ด จึงให้ป้ายลอยช้า ๆ แทนเพื่อสื่อความลึก
+   ผู้ตั้งค่า "ลดการเคลื่อนไหว" ถูกปิดด้วยกฎ prefers-reduced-motion ข้างบนแล้ว */
+@keyframes hero-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
