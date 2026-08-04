@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import ActiveUsersPanel from "./active-users";
 import Link from "next/link";
 import { Badge, Card, CardContent, CardHeader, CardTitle, Table, Th, Td } from "@/components/ui";
 import { baht, dateTH, PLAN_TH } from "@/lib/utils";
@@ -86,6 +87,10 @@ export default async function PlatformStatsPage() {
         <Stat icon={Store} label="ร้านค้าทั้งหมด" value={`${s.shops.active}/${s.shops.total}`} sub={`เปิดใหม่ 7 วัน ${s.shops.new_7d} · ${Object.entries(s.shops.by_plan).map(([p, c]) => `${PLAN_TH[p] ?? p} ${c}`).join(" · ")}`} />
         <Stat icon={MessageSquare} label="ข้อความวันนี้" value={s.usage.messages_today.toLocaleString()} sub={`สะสมทั้งหมด ${s.usage.messages_total.toLocaleString()} · บอทตอบเดือนนี้ ${s.usage.bot_replies_month.toLocaleString()}`} />
       </div>
+
+      {/* รายชื่อคนที่ใช้งานจริง — ตัวเลขในการ์ดด้านบนบอกว่า "กี่คน" แต่ไม่บอกว่า "ใคร"
+          เจ้าของต้องตามผู้ใช้จริงได้ (โทร/ถามคนที่สมัครแล้วเงียบ) จึงต้องมีรายชื่อ */}
+      <ActiveUsersPanel />
 
       {/* ===== เงิน ===== */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
