@@ -67,7 +67,29 @@ export async function POST(request: Request) {
     }
 
     const verify = await verifySlip(provider as string, slipKey as string, bytes);
-    if (!verify?.verified || !verify.amount || verify.amount <= 0) {
+
+    // แยก "ระบบตรวจล่ม/เครดิต API หมด" ออกจาก "สลิปไม่ผ่าน" — คนละความหมายคนละคนผิด
+    // ล่ม = ห้ามโทษสลิปลูกค้า ต้องสวิตช์เป็นโหมดส่งร้านตรวจเอง + ปลุกร้านและแอดมินทันที
+    // (คำวิจารณ์วิศวกร 5 ส.ค. 2569: ไม่มี fallback ตอน SlipOK ล่ม = ธุรกรรมลูกค้าสะดุดเงียบ ๆ)
+    const providerDown = !verify || verify.ok !== true
+      || (!verify.verified && !!verify.error && /quota|credit|limit|expired|timeout|50[023]|unavailable/i.test(String(verify.error)));
+    if (providerDown) {
+      const { notifyShop, notifyPlatformAdmins } = await import("@/lib/notify");
+      await Promise.allSettled([
+        notifyShop(svc, doc.shop_id, {
+          title: "ลูกค้าพยายามชำระเงินแต่ระบบตรวจสลิปขัดข้อง",
+          body: `เอกสาร ${doc.doc_number} — ขอสลิปจากลูกค้าแล้วตรวจเอง จากนั้นบันทึกรับเงินในระบบ`,
+          url: "/dashboard/finance", tag: `slip-down:${doc.id}`,
+        }),
+        notifyPlatformAdmins(svc, {
+          title: "ระบบตรวจสลิปอัตโนมัติขัดข้อง",
+          body: `provider ไม่ตอบ/เครดิตหมด (${String(verify?.error ?? "no response").slice(0, 80)}) — ตรวจที่หน้า รายได้+บัญชีรับเงิน`,
+          url: "/dashboard/admin/billing", tag: "slip-provider-down",
+        }),
+      ]);
+      return NextResponse.json({ ok: false, error: "ระบบตรวจอัตโนมัติขัดข้องชั่วคราว — ส่งสลิปให้ร้านยืนยันโดยตรงได้เลย ร้านได้รับแจ้งแล้วค่ะ" });
+    }
+    if (!verify.verified || !verify.amount || verify.amount <= 0) {
       return NextResponse.json({ ok: false, error: "ตรวจสลิปไม่ผ่าน — เช็คว่าเป็นรูปสลิปโอนเงินที่ชัดเจน หรือติดต่อร้านโดยตรง" });
     }
     const amount = Math.round(verify.amount * 100) / 100;

@@ -10,6 +10,32 @@ import OAuthButtons from "@/components/oauth-buttons";
 
 const PERKS = ["เริ่มฟรี ไม่ต้องใช้บัตรเครดิต", "ผู้ช่วยบัญชี AI + ถ่ายรูปบิลลงบัญชีให้", "ออกใบแจ้งหนี้/ใบกำกับภาษีได้ทันที"];
 
+// ============================================================
+// เดาโดเมนอีเมลที่พิมพ์ผิด — ระบบนี้สมัครแล้วเข้าได้ทันทีโดยไม่รอเมลยืนยัน (ตั้งใจ)
+// ราคาของความสะดวกนั้นคือ อีเมลพิมพ์ผิด = ลืมรหัสผ่านแล้วกู้บัญชีไม่ได้ตลอดไป
+// จึงดักคำผิดยอดฮิตก่อนสมัคร ให้กดแก้ได้คลิกเดียว (ไม่บังคับ — บางคนใช้โดเมนแปลกจริง)
+// ============================================================
+const COMMON_DOMAINS = ["gmail.com", "hotmail.com", "outlook.com", "yahoo.com", "icloud.com", "live.com"];
+function editDistance(a: string, b: string): number {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return dp[a.length][b.length];
+}
+function suggestEmail(email: string): string | null {
+  const at = email.lastIndexOf("@");
+  if (at < 1) return null;
+  const domain = email.slice(at + 1).toLowerCase();
+  if (!domain || COMMON_DOMAINS.includes(domain)) return null;
+  for (const d of COMMON_DOMAINS) {
+    const dist = editDistance(domain, d);
+    if (dist > 0 && dist <= 2) return `${email.slice(0, at)}@${d}`;
+  }
+  return null;
+}
+
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -72,8 +98,17 @@ export default function SignupPage() {
           <form onSubmit={submit} className="space-y-3">
             <input type="text" required value={name} onChange={(e) => setName(e.target.value)}
               placeholder="ชื่อของคุณ / ชื่อเล่นก็ได้" autoComplete="name" className={inputCls} />
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="อีเมล" autoComplete="email" className={inputCls} />
+            <div>
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="อีเมล" autoComplete="email" className={inputCls} />
+              {/* อีเมลนี้คือกุญแจกู้บัญชี — เตือนคำผิดตรงนี้ ก่อนที่มันจะกลายเป็นบัญชีที่กู้ไม่ได้ */}
+              {suggestEmail(email) && (
+                <button type="button" onClick={() => setEmail(suggestEmail(email)!)}
+                  className="mt-1 inline-flex min-h-[36px] items-center rounded-lg px-1 text-[12px] text-amber-700 hover:underline">
+                  หมายถึง <span className="mx-1 font-semibold">{suggestEmail(email)}</span> ใช่ไหม? กดเพื่อแก้
+                </button>
+              )}
+            </div>
             <div className="relative">
               <input type={showPw ? "text" : "password"} required minLength={8} value={pw} onChange={(e) => setPw(e.target.value)}
                 placeholder="ตั้งรหัสผ่าน (อย่างน้อย 8 ตัว)" autoComplete="new-password" className={`${inputCls} pr-11`} />
