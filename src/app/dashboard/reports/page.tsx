@@ -18,6 +18,8 @@ import { whtIncomeLabel, whtIncomeDesc, branchCode, rdFormFor } from "@/lib/tax-
 import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, selectWhtReceivableDocs,
   vatSign, sumVat, sumBase, recognitionsAsDocs, type VatRecognitionRow } from "@/lib/vat-docs";
 import IntegrityCard from "../admin/integrity-card";
+import { track } from "@/lib/track";
+import { createServiceClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +64,10 @@ function parsePeriod(raw: string | undefined): Period {
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ t?: string; period?: string; m?: string }> }) {
   const [{ supabase, shop }, admin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
+  // บันทึกว่ามีคนมาถึงหน้ารายงาน/ภาษี — เดิมวัดไม่ได้ว่าคนเดินมาไกลแค่ไหนหลังออกเอกสาร
+  // ไม่ await เพราะหน้าไม่ควรรอ log และ track() กลืน error อยู่แล้ว
+  void supabase.auth.getUser().then(({ data }) =>
+    track(createServiceClient(), shop.id, data.user?.id ?? null, "report_viewed"));
   const sp = await searchParams;
   const t = TABS.some((x) => x.id === sp.t) ? sp.t! : "summary";
   const period = parsePeriod(sp.period ?? sp.m);

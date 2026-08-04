@@ -12,6 +12,7 @@ import NoteDialog from "./note-dialog";
 import DateField from "@/components/date-field";
 import { useDismiss } from "@/components/use-dismiss";
 import { authOrigin } from "@/lib/app-origin";
+import { trackUsage } from "./track-action";
 
 export interface DocActionsProps {
   doc: {
@@ -90,6 +91,9 @@ export default function DocActions({ doc }: DocActionsProps) {
     // ลิงก์นี้ถูกส่งต่อให้ "ลูกค้าของลูกค้า" ถ้าคนกดคัดลอกเผลอเปิดเว็บทาง vercel.app
     // ลิงก์ที่ส่งออกไปจะเป็นโดเมนที่เราไม่ได้ใช้จริง และเสียหน้าผู้ประกอบการที่ส่งไป
     await navigator.clipboard.writeText(`${authOrigin()}/doc/${doc.shareKey}`);
+    // บันทึกว่าเดินมาถึงขั้น "ส่งให้ลูกค้า" แล้ว — ขั้นก่อนได้เงิน ซึ่งเดิมวัดไม่ได้เลย
+    // ไม่ await เพราะการคัดลอกต้องไวทันมือ และบันทึกไม่สำเร็จก็ไม่กระทบผู้ใช้
+    void trackUsage(doc.shopId, "share_link_copied");
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   }

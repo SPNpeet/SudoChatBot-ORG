@@ -35,6 +35,9 @@ export const AUDIT_ACTION_TH: Record<string, string> = {
   topup_confirmed: "ยืนยันการเติมเงิน",
   topup_rejected: "ปฏิเสธการเติมเงิน",
   assistant_renamed: "ตั้งชื่อผู้ช่วย AI",
+  report_viewed: "เปิดหน้ารายงาน/ภาษี",
+  doc_printed: "เปิดหน้าพิมพ์เอกสาร",
+  share_link_copied: "คัดลอกลิงก์ส่งลูกค้า",
   client_error: "ข้อผิดพลาดฝั่งผู้ใช้",
 };
 

@@ -13,6 +13,8 @@ import type { DocType, FinDoc } from "@/lib/types/finance";
 import { branchLabel, shouldPrintBranch, checkTaxInvoice, formatTaxId, WHT_INCOME_TYPES } from "@/lib/tax-th";
 import { TriangleAlert } from "lucide-react";
 import PrintButton from "./print-button";
+import { track } from "@/lib/track";
+import { createServiceClient } from "@/lib/supabase/server";
 import { rdFormFor } from "@/lib/tax-th";
 import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
 
@@ -22,6 +24,9 @@ export default async function PrintDocPage({ params, searchParams }: {
   params: Promise<{ id: string }>; searchParams: Promise<{ form?: string }>;
 }) {
   const { supabase, shop } = await getCurrentShop();
+  // บันทึกว่ามีคนเปิดหน้าพิมพ์/PDF — ขั้น "เอาเอกสารไปใช้จริง" ที่เดิมมองไม่เห็น
+  void supabase.auth.getUser().then(({ data }) =>
+    track(createServiceClient(), shop.id, data.user?.id ?? null, "doc_printed"));
   const { id } = await params;
   const { form } = await searchParams;
 
