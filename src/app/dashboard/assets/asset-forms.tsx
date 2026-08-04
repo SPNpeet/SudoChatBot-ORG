@@ -2,9 +2,9 @@
 // ฟอร์มฝั่ง client: เพิ่มทรัพย์สิน · ลงค่าเสื่อมรายเดือน · ปิดบัญชีสิ้นปี
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Calculator, BookLock, TriangleAlert } from "lucide-react";
+import { Plus, Calculator, BookLock, TriangleAlert, Camera, X } from "lucide-react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/components/ui";
-import { addFixedAsset, runDepreciation, closeFiscalYear } from "./actions";
+import { addFixedAsset, runDepreciation, closeFiscalYear, uploadAssetPhoto } from "./actions";
 import DateField from "@/components/date-field";
 
 /** อายุการใช้งานที่พบบ่อย — เป็นตัวช่วยกรอก ไม่ใช่คำวินิจฉัยทางภาษี */
@@ -28,6 +28,26 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
   // ตั้งต้นเป็นวันนี้ตามเวลาไทย — ค่าที่คนเลือกบ่อยสุด และกันช่องว่างที่ทำให้ลืมกรอก
   const [acquiredOn, setAcquiredOn] = useState(new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10));
   const [confirmClose, setConfirmClose] = useState(false);
+  // รูปทรัพย์สิน — อัปโหลดก่อนกดบันทึก แล้วส่งแค่ path ไปกับฟอร์ม
+  // (อัปพร้อมฟอร์มไม่ได้ เพราะ server action รับ FormData ที่มีไฟล์ใหญ่แล้วช้า/ติดเพดาน)
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
+  const [photoName, setPhotoName] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoErr, setPhotoErr] = useState<string | null>(null);
+
+  async function pickPhoto(file: File | undefined) {
+    if (!file) return;
+    setPhotoErr(null); setPhotoBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("photo", file);
+      const r = await uploadAssetPhoto(shopId, fd);
+      if (!r.ok) { setPhotoErr(r.error); return; }
+      setPhotoPath(r.path); setPhotoName(file.name);
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   if (!canEdit) {
     return <p className="rounded-xl bg-neutral-50 px-4 py-2.5 text-sm text-neutral-500">
@@ -86,6 +106,36 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
               <div className="sm:col-span-2">
                 <Label>หมายเหตุ</Label>
                 <Input name="note" placeholder="เช่น เลขเครื่อง / ที่ตั้ง / ผู้ครอบครอง" />
+              </div>
+
+              {/* รูปทรัพย์สินจริง — หลักฐานว่าของมีอยู่จริงและอยู่ที่ไหน
+                  ผู้สอบบัญชีขอดูหลักฐานการตรวจนับทุกปี · เก็บใน bucket ส่วนตัว
+                  ไม่ใช่ public เพราะรูปมักติดเลขเครื่อง/ที่ตั้ง/หน้าตาสำนักงาน */}
+              <div className="sm:col-span-2">
+                <Label>รูปทรัพย์สิน (ไม่บังคับ)</Label>
+                <input type="hidden" name="photo_path" value={photoPath ?? ""} />
+                {photoPath ? (
+                  <div className="flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-2">
+                    <Camera className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <span className="min-w-0 flex-1 truncate text-sm text-emerald-800">{photoName}</span>
+                    <button type="button" aria-label="เอารูปออก"
+                      onClick={() => { setPhotoPath(null); setPhotoName(null); }}
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-emerald-700 hover:bg-white">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border border-dashed border-neutral-300 px-3 py-2 text-sm text-neutral-500 transition-colors hover:border-emerald-400 hover:text-emerald-700">
+                    <Camera className="h-4 w-4 shrink-0" />
+                    {photoBusy ? "กำลังอัปโหลด..." : "ถ่ายรูป / เลือกรูปทรัพย์สิน"}
+                    <input type="file" accept="image/*" className="hidden" disabled={photoBusy}
+                      onChange={(e) => pickPhoto(e.target.files?.[0])} />
+                  </label>
+                )}
+                {photoErr && <p className="mt-1 text-[11px] text-red-600">{photoErr}</p>}
+                <p className="mt-1 text-[11px] text-neutral-400">
+                  เก็บเป็นความลับของกิจการ เปิดดูได้เฉพาะคนในทีม · ใช้เป็นหลักฐานตอนตรวจนับ
+                </p>
               </div>
             </div>
             <Button type="submit" disabled={pending}><Plus className="h-4 w-4" /> เพิ่มทรัพย์สิน</Button>

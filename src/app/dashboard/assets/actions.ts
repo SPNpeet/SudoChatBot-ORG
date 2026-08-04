@@ -43,6 +43,8 @@ export async function addFixedAsset(shopId: string, formData: FormData): Promise
     const { error } = await svc.from("fixed_assets").insert({
       shop_id: shopId, name, cost, salvage, acquired_on: acquired,
       life_years: life, note: String(formData.get("note") ?? "").trim().slice(0, 300) || null,
+      // รูปถูกอัปโหลดไปก่อนแล้วโดย uploadAssetPhoto (ฟอร์มส่งมาแค่ path)
+      photo_path: String(formData.get("photo_path") ?? "").trim().slice(0, 400) || null,
       created_by: user.id,
     });
     if (error) return { ok: false, error: error.message };
@@ -204,5 +206,79 @@ export async function closeFiscalYear(shopId: string, yearEnd: string): Promise<
     };
   } catch (e) {
     return { ok: false, error: friendly(e, "ปิดบัญชีสิ้นปีไม่สำเร็จ") };
+  }
+}
+
+/**
+ * อัปโหลดรูปทรัพย์สินจริง — bucket asset-photos เป็น private
+ * รูปทรัพย์สินมักติดเลขเครื่อง ที่ตั้ง หน้าตาสำนักงาน = ข้อมูลภายในกิจการ
+ * ไม่ใช่ของสาธารณะแบบรูปสินค้า จึงห้ามใช้ bucket public
+ */
+export async function uploadAssetPhoto(
+  shopId: string, formData: FormData,
+): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  try {
+    await assertMember(shopId, ["owner", "admin", "agent"]);
+    const file = formData.get("photo") as File | null;
+    if (!file || file.size === 0) return { ok: false, error: "ยังไม่ได้เลือกรูป" };
+    if (file.size > 5 * 1024 * 1024) return { ok: false, error: "รูปใหญ่เกิน 5MB — ถ่ายใหม่หรือย่อขนาดก่อน" };
+    if (!/^image\//.test(file.type)) return { ok: false, error: "รองรับเฉพาะไฟล์รูปภาพ" };
+
+    const svc = createServiceClient();
+    const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "jpg";
+    // path ขึ้นต้นด้วย shop_id เสมอ — RLS ของ storage ตัดสินสิทธิ์จากโฟลเดอร์แรก
+    const path = `${shopId}/asset/${crypto.randomUUID()}.${ext}`;
+    const { error } = await svc.storage.from("asset-photos")
+      .upload(path, file, { contentType: file.type, upsert: false });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, path };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "อัปโหลดรูปไม่สำเร็จ") };
+  }
+}
+
+/**
+ * บันทึกการตรวจนับทรัพย์สิน — ยืนยันว่า "ของอยู่ที่นั่นจริง" ณ วันที่ระบุ
+ *
+ * ทำไมต้องมี: ทะเบียนทรัพย์สินที่ไม่เคยตรวจนับ = ตัวเลขในงบไม่มีหลักฐานรองรับ
+ * ผู้สอบบัญชีขอดูหลักฐานการตรวจนับทุกปี · และช่วยจับของที่หายไปแล้วแต่ยังคิดค่าเสื่อมอยู่
+ * (ค่าเสื่อมของที่ไม่มีจริง = ค่าใช้จ่ายเกินจริง = เสียภาษีผิด)
+ */
+export async function verifyAsset(
+  shopId: string, assetId: string, verifiedOn: string, note: string,
+): Promise<Result> {
+  try {
+    const { user } = await assertMember(shopId, ["owner", "admin", "agent"]);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(verifiedOn)) return { ok: false, error: "เลือกวันที่ตรวจนับ" };
+    // วันตรวจนับในอนาคตไม่มีความหมาย — ตรวจนับคือการยืนยันสิ่งที่เห็นแล้ว
+    if (verifiedOn > bkkToday()) return { ok: false, error: "วันที่ตรวจนับต้องไม่เป็นวันในอนาคต" };
+
+    const svc = createServiceClient();
+    const { error } = await svc.from("fixed_assets")
+      .update({
+        verified_on: verifiedOn,
+        verified_by: user.id,
+        verified_note: note.trim().slice(0, 300) || null,
+      })
+      .eq("id", assetId).eq("shop_id", shopId);
+    if (error) return { ok: false, error: error.message };
+
+    revalidatePath("/dashboard/assets");
+    return { ok: true, message: "บันทึกการตรวจนับแล้ว" };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "บันทึกการตรวจนับไม่สำเร็จ") };
+  }
+}
+
+/** ลิงก์ดูรูปแบบมีอายุ — bucket เป็น private จึงเปิดตรงด้วย URL ไม่ได้ */
+export async function assetPhotoUrl(shopId: string, path: string): Promise<string | null> {
+  try {
+    await assertMember(shopId, ["owner", "admin", "agent", "viewer"]);
+    if (!path.startsWith(`${shopId}/`)) return null;   // กันขอ path ของกิจการอื่น
+    const svc = createServiceClient();
+    const { data } = await svc.storage.from("asset-photos").createSignedUrl(path, 60 * 10);
+    return data?.signedUrl ?? null;
+  } catch {
+    return null;
   }
 }

@@ -7,6 +7,15 @@
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
 import { Card, CardContent, CardHeader, CardTitle, EmptyState, Table, Th, Td, PageHeader, Badge } from "@/components/ui";
+import VerifyAsset from "./verify-asset";
+
+/** ฟิลด์ที่หน้านี้ใช้แสดงผล = ของที่ใช้คำนวณ + ของที่ใช้โชว์เท่านั้น */
+type AssetRow = AssetForDep & {
+  photo_path: string | null;
+  verified_on: string | null;
+  verified_note: string | null;
+};
+import AssetPhoto from "./asset-photo";
 import { baht, dateOnlyTH } from "@/lib/utils";
 import { Boxes } from "lucide-react";
 import AssetForms from "./asset-forms";
@@ -20,14 +29,16 @@ export default async function AssetsPage() {
 
   const [{ data: assetsRaw }, { data: runsRaw }, { data: closesRaw }] = await Promise.all([
     supabase.from("fixed_assets")
-      .select("id,name,cost,salvage,acquired_on,life_years,disposed_on,note")
+      .select("id,name,cost,salvage,acquired_on,life_years,disposed_on,note,photo_path,verified_on,verified_note")
       .eq("shop_id", shop.id).order("acquired_on", { ascending: false }),
     supabase.from("depreciation_runs").select("asset_id,amount,period_month").eq("shop_id", shop.id),
     supabase.from("fiscal_closes").select("year_end,net_profit,closed_at").eq("shop_id", shop.id)
       .order("year_end", { ascending: false }),
   ]);
 
-  const assets = (assetsRaw ?? []) as unknown as AssetForDep[];
+  // ⚠️ ไม่ขยาย AssetForDep — นั่นคือสัญญาของตัวคำนวณค่าเสื่อม (lib/depreciation)
+  // ฟิลด์ที่ใช้แค่แสดงผลไม่ควรไปปนกับฟิลด์ที่ใช้คำนวณ ไม่งั้นแก้ UI แล้วสูตรพังตาม
+  const assets = (assetsRaw ?? []) as unknown as AssetRow[];
   const runs = (runsRaw ?? []) as { asset_id: string; amount: number; period_month: string }[];
   const closes = (closesRaw ?? []) as { year_end: string; net_profit: number; closed_at: string }[];
 
@@ -91,6 +102,9 @@ export default async function AssetsPage() {
                     <Th className="text-right">ค่าเสื่อมสะสม</Th>
                     <Th className="text-right">คงเหลือ</Th>
                     <Th>หมดอายุ</Th>
+                    {/* ตรวจนับ = หลักฐานว่าของอยู่จริง ผู้สอบบัญชีขอดูทุกปี
+                        และช่วยจับของที่หายแล้วแต่ยังคิดค่าเสื่อมอยู่ (ค่าใช้จ่ายเกินจริง) */}
+                    <Th>ตรวจนับล่าสุด</Th>
                   </tr>
                 </thead>
                 <tbody>
@@ -102,6 +116,9 @@ export default async function AssetsPage() {
                     return (
                       <tr key={a.id}>
                         <Td>
+                          {a.photo_path && (
+                            <AssetPhoto shopId={shop.id} path={a.photo_path} name={a.name} />
+                          )}
                           <span className="font-medium">{a.name}</span>
                           {a.disposed_on && <Badge tone="neutral" className="ml-2">จำหน่ายแล้ว</Badge>}
                           {!a.disposed_on && done && <Badge tone="green" className="ml-2">ตัดครบแล้ว</Badge>}
@@ -112,6 +129,10 @@ export default async function AssetsPage() {
                         <Td className="text-right tabular-nums text-amber-700">{baht(taken)}</Td>
                         <Td className="text-right tabular-nums font-medium">{baht(nbv)}</Td>
                         <Td className="text-neutral-500">{dateOnlyTH(end.toISOString().slice(0, 10))}</Td>
+                        <Td>
+                          <VerifyAsset shopId={shop.id} assetId={a.id}
+                            verifiedOn={a.verified_on ?? null} verifiedNote={a.verified_note ?? null} />
+                        </Td>
                       </tr>
                     );
                   })}
