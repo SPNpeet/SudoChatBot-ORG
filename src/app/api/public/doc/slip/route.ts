@@ -59,9 +59,11 @@ export async function POST(request: Request) {
     if (!provider || !slipKey) {
       return NextResponse.json({ ok: false, error: "ร้านยังไม่เปิดตรวจสลิปอัตโนมัติ — ส่งสลิปให้ร้านโดยตรงได้เลย" });
     }
-    const { data: slipQuota } = await svc.rpc("check_slip_quota", { p_shop_id: doc.shop_id });
-    if ((slipQuota as { allowed?: boolean } | null)?.allowed === false) {
-      return NextResponse.json({ ok: false, error: "ระบบตรวจสลิปอัตโนมัติของร้านเต็มโควตาชั่วคราว — ส่งสลิปให้ร้านยืนยันโดยตรงได้เลย" });
+    // fail-closed แบบเดียวกับด่าน AI: RPC พัง/คืน null ต้องไม่แปลว่า "ผ่าน"
+    // (เดิมเช็ค === false แล้ว null หลุดผ่านไปเสียค่า API ตอน DB มีปัญหา)
+    const { data: slipQuota, error: quotaErr } = await svc.rpc("check_slip_quota", { p_shop_id: doc.shop_id });
+    if (quotaErr || (slipQuota as { allowed?: boolean } | null)?.allowed !== true) {
+      return NextResponse.json({ ok: false, error: "ระบบตรวจสลิปอัตโนมัติของร้านไม่พร้อมชั่วคราว — ส่งสลิปให้ร้านยืนยันโดยตรงได้เลย" });
     }
 
     const verify = await verifySlip(provider as string, slipKey as string, bytes);

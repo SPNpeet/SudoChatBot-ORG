@@ -52,15 +52,11 @@ if (!url || !key) {
 
 const db = createClient(url, key, { auth: { persistSession: false } });
 
-// ตารางที่ต้องสำรอง — เรียงตามลำดับที่กู้คืนได้ (ตารางแม่มาก่อนตารางลูก)
-const TABLES = [
-  "shops", "profiles", "shop_members", "shop_settings", "shop_notify_settings",
-  "contacts", "products", "expense_categories", "chart_of_accounts",
-  "fin_docs", "fin_doc_items", "fin_doc_files", "fin_payments", "fin_doc_counters",
-  "journal_entries", "journal_lines", "assets", "period_locks",
-  "plans", "topups", "wallet_transactions", "audit_logs",
-  "vat_rates", "rd_filing_extensions", "th_public_holidays",
-];
+// รายชื่อตารางย้ายไปที่เดียว: src/lib/backup-tables.mjs (ใช้ร่วมกับ cron สำรองรายวัน)
+// เดิมลิสต์ในไฟล์นี้หลุดตารางสำคัญ (หนักสุด: wallets ทั้งตาราง) และมีชื่อตารางที่ไม่มีจริง
+// สำรองลงเครื่องเก็บ "ทุกอย่าง" รวมตารางคีย์ลับด้วย — เครื่องเจ้าของเองรั่วยากกว่า bucket
+import { BACKUP_TABLES, SECRET_TABLES } from "../src/lib/backup-tables.mjs";
+const TABLES = [...BACKUP_TABLES, ...SECRET_TABLES];
 
 const stamp = new Date().toISOString().slice(0, 10);
 const dir = join("backups", stamp);
