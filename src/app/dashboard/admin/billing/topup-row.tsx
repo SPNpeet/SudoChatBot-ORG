@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui";
 import { baht, dateTH } from "@/lib/utils";
 import { confirmTopup } from "./actions";
 
-export default function TopupRow({ id, shopName, amount, status, createdAt, slipUrl }: {
-  id: string; shopName: string; amount: number; status: string; createdAt: string; slipUrl: string | null;
+export default function TopupRow({ id, shopName, amount, status, createdAt, slipUrl, planLabel }: {
+  id: string; shopName: string; amount: number; status: string; createdAt: string; slipUrl: string | null; planLabel?: string | null;
 }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -23,7 +23,10 @@ export default function TopupRow({ id, shopName, amount, status, createdAt, slip
     <div className="rounded-xl border border-neutral-100 px-4 py-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium">{shopName} · {baht(amount)}</p>
+          <p className="text-sm font-medium">{shopName} · {baht(amount)}
+            {/* บอกให้ชัดว่ากดยืนยันแล้วจะเปิดแพ็กด้วย ไม่ใช่แค่เครดิตเข้า */}
+            {planLabel && <> · <Badge tone="blue">{planLabel}</Badge></>}
+          </p>
           <p className="text-[11px] text-neutral-400">{dateTH(createdAt)} · <Badge tone={status === "verifying" ? "amber" : "neutral"}>{status === "verifying" ? "อัปโหลดสลิปแล้ว" : "รอชำระ"}</Badge>
             {slipUrl && <> · <a href={slipUrl} target="_blank" rel="noreferrer" className="text-sky-600">ดูสลิป</a></>}</p>
         </div>

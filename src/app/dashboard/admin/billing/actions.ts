@@ -11,7 +11,9 @@ async function assertPlatformAdmin() {
 }
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-export type PendingTopup = { id: string; shopName: string; amount: number; status: string; createdAt: string; slipUrl: string | null };
+// planLabel: บอกแอดมินว่ารายการนี้คือ "ซื้อแพ็กเกจ" ไม่ใช่เติมเครดิตเฉย ๆ (และรายปีหรือรายเดือน)
+// เดิมเห็นแค่ยอดเงิน แอดมินแยกไม่ออกว่ากดยืนยันแล้วจะเกิดอะไร
+export type PendingTopup = { id: string; shopName: string; amount: number; status: string; createdAt: string; slipUrl: string | null; planLabel: string | null };
 export type ListTopupsResult = { ok: true; rows: PendingTopup[]; hasMore: boolean } | { ok: false; error: string };
 
 const TOPUPS_PAGE_SIZE = 30;
@@ -20,7 +22,7 @@ export async function listPendingTopups(offset: number): Promise<ListTopupsResul
   try {
     await assertPlatformAdmin();
     const svc = createServiceClient();
-    const { data, error } = await svc.from("topups").select("id,amount,status,created_at,slip_path,shops(name)")
+    const { data, error } = await svc.from("topups").select("id,amount,status,created_at,slip_path,plan_code,plan_period,shops(name)")
       .in("status", ["pending", "verifying"]).order("created_at", { ascending: false })
       .range(offset, offset + TOPUPS_PAGE_SIZE);
     if (error) return { ok: false, error: error.message };
@@ -32,6 +34,7 @@ export async function listPendingTopups(offset: number): Promise<ListTopupsResul
       status: t.status,
       createdAt: t.created_at,
       slipUrl: t.slip_path ? svc.storage.from("slips").getPublicUrl(t.slip_path).data.publicUrl : null,
+      planLabel: t.plan_code ? `ซื้อแพ็ก ${t.plan_code}${t.plan_period === "yearly" ? " (รายปี 12 เดือน)" : ""}` : null,
     }));
     return { ok: true, rows, hasMore: all.length > TOPUPS_PAGE_SIZE };
   } catch (e) {

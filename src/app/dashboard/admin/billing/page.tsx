@@ -18,7 +18,7 @@ export default async function AdminBillingPage() {
   const svc = createServiceClient();
   const [{ data: rev }, { data: pending }, { data: pf }] = await Promise.all([
     supabase.rpc("platform_revenue"),
-    svc.from("topups").select("id,amount,status,created_at,slip_path,shops(name)").in("status", ["pending", "verifying"]).order("created_at", { ascending: false }).range(0, TOPUPS_PAGE_SIZE),
+    svc.from("topups").select("id,amount,status,created_at,slip_path,plan_code,plan_period,shops(name)").in("status", ["pending", "verifying"]).order("created_at", { ascending: false }).range(0, TOPUPS_PAGE_SIZE),
     svc.from("platform_billing_settings").select("promptpay_id,account_name,slip_provider,payment_gateway,omise_public_key,company_name,company_address,tax_id,tax_branch,vat_registered,email_from,low_credit_threshold").eq("id", true).single(),
   ]);
   const r = (rev ?? {}) as Record<string, number>;
@@ -30,6 +30,7 @@ export default async function AdminBillingPage() {
     status: t.status,
     createdAt: t.created_at,
     slipUrl: t.slip_path ? svc.storage.from("slips").getPublicUrl(t.slip_path).data.publicUrl : null,
+    planLabel: t.plan_code ? `ซื้อแพ็ก ${t.plan_code}${t.plan_period === "yearly" ? " (รายปี 12 เดือน)" : ""}` : null,
   }));
   const pendingHasMore = pendingAll.length > TOPUPS_PAGE_SIZE;
 
