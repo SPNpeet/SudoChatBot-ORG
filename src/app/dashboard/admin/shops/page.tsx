@@ -50,6 +50,23 @@ export default async function AdminShopsPage({ searchParams }: { searchParams: P
     for (const [id, qv] of qs) quotaMap.set(id, qv);
   }
 
+  // จำนวน OCR แยกต่อกิจการ (เจ้าของขอ 5 ส.ค. 2569) — OCR แพงกว่าคำสั่งแชท ~8 เท่า
+  // ต้องเห็นแยกถึงตั้งเพดานถูก · คิวรีเดียวทั้งหน้า ไม่ยิงทีละกิจการ
+  const ocrMap = new Map<string, { month: number; total: number }>();
+  if (rows.length) {
+    const monthStart = new Date();
+    monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const { data: ocrRows } = await svc.from("ai_usage_logs")
+      .select("shop_id, created_at").eq("purpose", "ocr")
+      .in("shop_id", rows.map((r) => r.id)).limit(10000);
+    for (const o of ocrRows ?? []) {
+      const cur = ocrMap.get(o.shop_id) ?? { month: 0, total: 0 };
+      cur.total += 1;
+      if (new Date(o.created_at) >= monthStart) cur.month += 1;
+      ocrMap.set(o.shop_id, cur);
+    }
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -74,7 +91,7 @@ export default async function AdminShopsPage({ searchParams }: { searchParams: P
               <tbody>
                 {rows.map((r) => (
                   <ShopRow key={r.id} id={r.id} name={r.name} ownerEmail={r.owner_email} plan={r.plan} status={r.status} createdAt={r.created_at}
-                    quotaOverride={overrideMap.get(r.id) ?? null} quota={quotaMap.get(r.id) ?? null} />
+                    quotaOverride={overrideMap.get(r.id) ?? null} quota={quotaMap.get(r.id) ?? null} ocr={ocrMap.get(r.id) ?? null} />
                 ))}
               </tbody>
             </Table>

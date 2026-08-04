@@ -6,11 +6,13 @@ import { setShopStatus, setShopPlan, setShopQuotaOverride } from "./actions";
 
 const STATUS_TONE: Record<string, "green" | "amber" | "neutral"> = { active: "green", suspended: "amber", closed: "neutral" };
 
-export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt, quotaOverride, quota: usage }: {
+export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt, quotaOverride, quota: usage, ocr }: {
   id: string; name: string; ownerEmail: string | null; plan: string; status: string; createdAt: string;
   quotaOverride: number | null;
   /** การใช้ AI จริงจาก get_ai_quota_status — RPC ตัวเดียวกับแถบของผู้ใช้ เลขต้องตรงกันเสมอ */
   quota: { used_today: number; cap_today: number | null; used_month: number; cap_month: number | null } | null;
+  /** จำนวน OCR แยก (เดือนนี้/สะสม) — แพงกว่าคำสั่งแชท ~8 เท่า ต้องเห็นแยกถึงคุมต้นทุนถูก */
+  ocr: { month: number; total: number } | null;
 }) {
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
@@ -87,6 +89,10 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
                 วันนี้ {usage.used_today}{usage.cap_today ? `/${usage.cap_today}` : ""}
               </span>
               <span className="text-neutral-400"> · เดือน {usage.used_month}{usage.cap_month ? `/${usage.cap_month}` : ""}</span>
+              {/* OCR แยกบรรทัด — แพงกว่าคำสั่งแชท ~8 เท่า (0.72฿ vs 0.09฿) ต้องเห็นถึงคุมต้นทุนถูก */}
+              <span className="block text-[11px] text-neutral-400">
+                OCR เดือนนี้ {ocr?.month ?? 0} · สะสม {ocr?.total ?? 0}
+              </span>
             </>
           ) : <span className="text-neutral-300">-</span>}
         </Td>
