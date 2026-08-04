@@ -32,11 +32,20 @@ export async function POST(request: Request) {
     const outstanding = docOutstanding(doc);
     if (outstanding <= 0) return NextResponse.json({ ok: true, paid: true, message: "เอกสารนี้ชำระครบแล้ว" });
 
-    const [{ data: pay }, { data: slipKey }] = await Promise.all([
+    // เจ้าของแพลตฟอร์มตัดสินใจ 5 ส.ค. 2569: ตรวจสลิปรวมศูนย์ที่แพลตฟอร์ม (SlipOK แพ็กฟรี)
+    // ลูกค้าไม่ต้องตั้งค่าผู้ให้บริการเองอีก — ร้านที่ตั้งคีย์ของตัวเองไว้แล้วยังใช้ของตัวเองก่อน
+    // (ไม่ริบของที่เขาตั้งไว้) ร้านที่ไม่ได้ตั้ง = ใช้คีย์กลางของแพลตฟอร์มอัตโนมัติ
+    const [{ data: pay }, { data: shopKey }, { data: pfRow }, { data: pfKey }] = await Promise.all([
       svc.from("shop_payment_settings").select("slip_provider").eq("shop_id", doc.shop_id).maybeSingle(),
       svc.rpc("get_shop_slip_key", { p_shop_id: doc.shop_id }),
+      svc.from("platform_billing_settings").select("slip_provider").eq("id", true).maybeSingle(),
+      svc.rpc("get_platform_slip_key"),
     ]);
-    if (!pay?.slip_provider || pay.slip_provider === "manual" || !slipKey) {
+    const shopReady = !!pay?.slip_provider && pay.slip_provider !== "manual" && !!shopKey;
+    const pfReady = !!pfRow?.slip_provider && pfRow.slip_provider !== "manual" && !!pfKey;
+    const provider = shopReady ? pay!.slip_provider : pfReady ? pfRow!.slip_provider : null;
+    const slipKey = shopReady ? shopKey : pfReady ? pfKey : null;
+    if (!provider || !slipKey) {
       return NextResponse.json({ ok: false, error: "ร้านยังไม่เปิดตรวจสลิปอัตโนมัติ — ส่งสลิปให้ร้านโดยตรงได้เลย" });
     }
     const { data: slipQuota } = await svc.rpc("check_slip_quota", { p_shop_id: doc.shop_id });
@@ -45,7 +54,7 @@ export async function POST(request: Request) {
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const verify = await verifySlip(pay.slip_provider, slipKey as string, bytes);
+    const verify = await verifySlip(provider as string, slipKey as string, bytes);
     if (!verify?.verified || !verify.amount || verify.amount <= 0) {
       return NextResponse.json({ ok: false, error: "ตรวจสลิปไม่ผ่าน — เช็คว่าเป็นรูปสลิปโอนเงินที่ชัดเจน หรือติดต่อร้านโดยตรง" });
     }

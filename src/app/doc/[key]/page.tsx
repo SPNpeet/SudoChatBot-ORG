@@ -31,10 +31,14 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
   if (!data) notFound();
   const doc = data as unknown as FinDoc;
 
-  const [{ data: shop }, { data: pay }] = await Promise.all([
+  const [{ data: shop }, { data: pay }, { data: pf }] = await Promise.all([
     svc.from("shops").select("name,billing_name,billing_address,tax_id").eq("id", doc.shop_id).single(),
     svc.from("shop_payment_settings").select("promptpay_id,account_name,bank_name,slip_provider").eq("shop_id", doc.shop_id).maybeSingle(),
+    // ตรวจสลิปรวมศูนย์ (5 ส.ค. 2569): ร้านไม่ต้องตั้งค่าเอง ถ้าแพลตฟอร์มเปิดไว้ = ตรวจอัตโนมัติได้เลย
+    svc.from("platform_billing_settings").select("slip_provider").eq("id", true).maybeSingle(),
   ]);
+  const autoVerify = (!!pay?.slip_provider && pay.slip_provider !== "manual")
+    || (!!pf?.slip_provider && pf.slip_provider !== "manual");
   const shopName = shop?.billing_name || shop?.name || "";
 
   const outstanding = docOutstanding(doc);
@@ -113,7 +117,7 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
             ) : (
               <p className="text-sm text-neutral-500">โอนชำระตามช่องทางที่ร้านแจ้ง แล้วอัปโหลดสลิปด้านล่าง</p>
             )}
-            <PublicSlipUpload docKey={key} autoVerify={!!pay?.slip_provider && pay.slip_provider !== "manual"} />
+            <PublicSlipUpload docKey={key} autoVerify={autoVerify} />
           </div>
         )}
 
