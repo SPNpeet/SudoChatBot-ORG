@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { platformAiGuard, consumeAiQuota, assertShopActive } from "@/lib/ai-guard";
+import { platformAiGuard, consumeAiQuota, assertShopActive, ocrMonthlyGuard } from "@/lib/ai-guard";
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
 import { resolvePurposeKey } from "@/lib/ai-config";
@@ -233,6 +233,13 @@ export async function POST(request: Request) {
     // กิจการที่ถูกระงับต้องใช้ AI ไม่ได้ (ช่องหลุดเดียวกับหน้านำเข้าสินค้า — กวาดทั้งระบบแล้ว)
     const active = await assertShopActive(svc, shopId);
     if (!active.ok) return NextResponse.json({ ok: false, error: active.error }, { status: 403 });
+
+    // เพดาน OCR ต่อเดือนตามแพ็ก — ปฏิเสธเฉย ๆ จึงอยู่ก่อนด่านที่ตัดโควตา
+    const ocrCap = await ocrMonthlyGuard(svc, shopId);
+    if (!ocrCap.ok) {
+      return NextResponse.json({ ok: false, error: ocrCap.error, quotaExceeded: ocrCap.quotaExceeded },
+        { status: ocrCap.quotaExceeded ? 429 : 503 });
+    }
 
     // โควตากลางต่อ "เจ้าของ" (นับรวมทุกกิจการ กันปั๊มโควตาหลายบริษัท) + แจ้งเตือน 80%/95% อัตโนมัติ
     const quota = await consumeAiQuota(svc, shopId, "คีย์ข้อมูลเองได้ตามปกติค่ะ");

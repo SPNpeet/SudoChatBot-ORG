@@ -133,3 +133,37 @@ export async function assertShopActive(svc: SupabaseClient, shopId: string): Pro
     return { ok: false, error: UNAVAILABLE_MSG };
   }
 }
+
+/** เพดาน OCR ต่อเดือนตามแพ็ก — กฎอยู่ที่นี่ที่เดียว
+ *  ทำไมต้องมี (5 ส.ค. 2569): OCR แพงกว่าคำสั่งแชท ~8 เท่า (0.72฿ vs 0.09฿)
+ *  ถ้าคุมด้วยโควตา AI รวมอย่างเดียว แพ็กธุรกิจ 249฿ ที่ใช้ 400 คำสั่งเป็น OCR ล้วน
+ *  ต้นทุนจะเกินราคาขาย — ด่านนี้ทำให้การขาดทุนเป็นไปไม่ได้เชิงคณิตศาสตร์ ไม่ใช่แค่ "ไม่น่าเกิด" */
+const OCR_MONTHLY_CAP: Record<string, number> = {
+  free: 5, starter: 30, professional: 100, executive: 250, agency: 750,
+};
+
+/** ด่านนี้ "ปฏิเสธเฉย ๆ" ไม่ตัดโควตา — ต้องเรียกก่อน consumeAiQuota เสมอ (กติกาลำดับด่าน) */
+export async function ocrMonthlyGuard(svc: SupabaseClient, shopId: string): Promise<AiGuardResult> {
+  try {
+    const { data: shop, error: shopErr } = await svc.from("shops").select("plan").eq("id", shopId).maybeSingle();
+    if (shopErr || !shop) return { ok: false, error: UNAVAILABLE_MSG };
+    const cap = OCR_MONTHLY_CAP[String(shop.plan)] ?? OCR_MONTHLY_CAP.free;
+    // ขอบเขต "เดือน" ตามเวลาไทย ให้ตรงกับโควตา AI หลัก (ไม่ใช่ rolling window)
+    const bkk = new Date(Date.now() + 7 * 3600_000);
+    const monthStart = new Date(Date.UTC(bkk.getUTCFullYear(), bkk.getUTCMonth(), 1) - 7 * 3600_000).toISOString();
+    const { count, error } = await svc.from("ai_usage_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("shop_id", shopId).eq("purpose", "ocr").gte("created_at", monthStart);
+    if (error || !Number.isFinite(count as number)) return { ok: false, error: UNAVAILABLE_MSG };
+    if ((count as number) >= cap) {
+      return {
+        ok: false, quotaExceeded: true,
+        error: `โควตา AI อ่านไฟล์เดือนนี้เต็มแล้ว (${cap} ไฟล์/เดือนตามแพ็ก) — คีย์ข้อมูลเองได้ตามปกติ หรืออัปเกรดแพ็กเกจที่หน้า แพ็กเกจ/เครดิต`,
+      };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error("ocrMonthlyGuard threw", (e as Error).message);
+    return { ok: false, error: UNAVAILABLE_MSG };
+  }
+}

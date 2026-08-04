@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { platformAiGuard, consumeAiQuota, assertShopActive } from "@/lib/ai-guard";
+import { platformAiGuard, consumeAiQuota, assertShopActive, ocrMonthlyGuard } from "@/lib/ai-guard";
 import { OCR_EST_COST_USD } from "@/lib/ai-catalog";
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
@@ -215,6 +215,13 @@ export async function POST(request: Request) {
     }
     if ((used as number) >= IMPORT_LIMIT_PER_DAY) {
       return NextResponse.json({ ok: false, error: `ครบโควตานำเข้าด้วย AI ในรอบ 24 ชม.แล้ว (${IMPORT_LIMIT_PER_DAY} ไฟล์) — รอครบรอบแล้วนำเข้าต่อได้ หรือใช้ไฟล์ Excel/CSV แทน (ไม่จำกัด)` }, { status: 429 });
+    }
+
+    // เพดาน OCR ต่อเดือนตามแพ็ก — ปฏิเสธเฉย ๆ จึงอยู่ก่อนด่านที่ตัดโควตา
+    const ocrCap = await ocrMonthlyGuard(svc, shopId);
+    if (!ocrCap.ok) {
+      return NextResponse.json({ ok: false, error: ocrCap.error, quotaExceeded: ocrCap.quotaExceeded },
+        { status: ocrCap.quotaExceeded ? 429 : 503 });
     }
 
     // ด่าน 2: โควตา AI ของผู้ใช้ (ต่อวัน/ต่อเดือน) — ตัวนี้ "ตัดโควตา" จึงต้องอยู่ท้ายสุด
