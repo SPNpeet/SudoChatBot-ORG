@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifySlip } from "@/lib/slip-verify";
+import { decodeSlipQr } from "@/lib/slip-qr";
 import { applyPaymentToDoc } from "@/lib/finance-server";
 import { docOutstanding } from "@/lib/finance";
 
@@ -32,6 +33,16 @@ export async function POST(request: Request) {
     const outstanding = docOutstanding(doc);
     if (outstanding <= 0) return NextResponse.json({ ok: true, paid: true, message: "เอกสารนี้ชำระครบแล้ว" });
 
+    // ---------- QR ชั้นฟรี (5 ส.ค. 2569): กันสลิปซ้ำทั้งแพลตฟอร์มก่อนเสียโควตา/ค่า API ----------
+    // ด่านปฏิเสธเฉย ๆ ต้องมาก่อนด่านที่ตัดโควตา (หลักเดียวกับด่าน AI)
+    // อ่าน QR ไม่ออก = ข้ามเฉย ๆ ห้าม reject — ชั้นนี้ปฏิเสธได้ อนุมัติไม่ได้
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const qr = await decodeSlipQr(bytes);
+    if (qr) {
+      const { data: dupRef } = await svc.from("slip_refs").select("trans_ref").eq("trans_ref", qr.transRef).maybeSingle();
+      if (dupRef) return NextResponse.json({ ok: false, error: "สลิปใบนี้ถูกใช้ยืนยันไปแล้ว" });
+    }
+
     // เจ้าของแพลตฟอร์มตัดสินใจ 5 ส.ค. 2569: ตรวจสลิปรวมศูนย์ที่แพลตฟอร์ม (SlipOK แพ็กฟรี)
     // ลูกค้าไม่ต้องตั้งค่าผู้ให้บริการเองอีก — ร้านที่ตั้งคีย์ของตัวเองไว้แล้วยังใช้ของตัวเองก่อน
     // (ไม่ริบของที่เขาตั้งไว้) ร้านที่ไม่ได้ตั้ง = ใช้คีย์กลางของแพลตฟอร์มอัตโนมัติ
@@ -53,7 +64,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "ระบบตรวจสลิปอัตโนมัติของร้านเต็มโควตาชั่วคราว — ส่งสลิปให้ร้านยืนยันโดยตรงได้เลย" });
     }
 
-    const bytes = new Uint8Array(await file.arrayBuffer());
     const verify = await verifySlip(provider as string, slipKey as string, bytes);
     if (!verify?.verified || !verify.amount || verify.amount <= 0) {
       return NextResponse.json({ ok: false, error: "ตรวจสลิปไม่ผ่าน — เช็คว่าเป็นรูปสลิปโอนเงินที่ชัดเจน หรือติดต่อร้านโดยตรง" });
@@ -63,6 +73,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: `ยอดในสลิป (${amount.toLocaleString()} บาท) มากกว่ายอดค้าง (${outstanding.toLocaleString()} บาท) — ติดต่อร้านเพื่อตรวจสอบ` });
     }
 
+    // จองเลขอ้างอิงในทะเบียนกลางก่อนบันทึกรับเงิน — สองร้านใช้สลิปใบเดียวพร้อมกัน
+    // คนที่จองได้คนแรกเท่านั้นที่ได้ใช้ (unique เดิมของ fin_payments กันแค่ในร้านเดียว)
+    const transRef = verify.transRef ?? qr?.transRef ?? null;
+    let refReserved = false;
+    if (transRef) {
+      const { error: refErr } = await svc.from("slip_refs").insert({ trans_ref: transRef, shop_id: doc.shop_id, source: "doc_payment" });
+      if (refErr?.code === "23505") return NextResponse.json({ ok: false, error: "สลิปใบนี้ถูกใช้ยืนยันไปแล้ว" });
+      // ทะเบียนกลางล่มด้วยเหตุอื่น -> ปล่อยผ่านไปพึ่ง unique รายร้านเดิม ดีกว่าทำให้การรับเงินล้มทั้งระบบ
+      refReserved = !refErr;
+    }
+
     // เก็บสลิป + บันทึกรับเงิน (กันสลิปซ้ำด้วย unique trans_ref)
     const path = `${doc.shop_id}/finance/public-${crypto.randomUUID()}.jpg`;
     await svc.storage.from("slips").upload(path, bytes, { contentType: file.type });
@@ -70,10 +91,12 @@ export async function POST(request: Request) {
     const { data: payment, error } = await svc.from("fin_payments").insert({
       shop_id: doc.shop_id, doc_id: doc.id, direction: "in", method: "promptpay",
       amount, paid_at: new Date().toISOString(),
-      slip_storage_path: path, slip_trans_ref: verify.transRef ?? null, slip_data: verify.raw ?? null,
+      slip_storage_path: path, slip_trans_ref: transRef, slip_data: verify.raw ?? null,
       verify_status: "verified", matched_by: "auto",
     }).select("id").single();
     if (error || !payment) {
+      // คืนเลขที่เพิ่งจอง — ไม่งั้นลูกค้าตัวจริงลองใหม่แล้วโดนหาว่าใช้สลิปซ้ำ ทั้งที่ยังไม่มีการบันทึกรับเงิน
+      if (refReserved && transRef) await svc.from("slip_refs").delete().eq("trans_ref", transRef);
       if (error?.message.includes("fin_payments_transref_uniq")) {
         return NextResponse.json({ ok: false, error: "สลิปใบนี้ถูกใช้ยืนยันไปแล้ว" });
       }

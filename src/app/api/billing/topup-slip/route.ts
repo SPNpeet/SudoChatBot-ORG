@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { notifyPlatformAdmins } from "@/lib/notify";
+import { decodeSlipQr } from "@/lib/slip-qr";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -19,7 +20,26 @@ export async function POST(request: Request) {
   const { data: mem } = await supabase.from("shop_members").select("role").eq("shop_id", topup.shop_id).eq("user_id", user.id).maybeSingle();
   if (!mem) return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
 
+  // กันเคสที่เจอ 5 ส.ค. 2569: รายการที่จ่ายแล้ว ถ้าอัปสลิปซ้ำ status จะถูกทับกลับเป็น verifying
+  // แล้วไปโผล่คิวรออนุมัติอีกรอบ — แอดมินกดยืนยันซ้ำ = เครดิตเข้าสองรอบ (credit_wallet ไม่ idempotent)
+  if (topup.status === "paid") {
+    return NextResponse.json({ ok: true, auto: true, message: "รายการนี้ยืนยันแล้ว — เครดิต/แพ็กเกจเข้าเรียบร้อย ไม่ต้องส่งสลิปซ้ำ" });
+  }
+
   const bytes = new Uint8Array(await file.arrayBuffer());
+
+  // QR ชั้นฟรี: อ่าน transRef จาก mini-QR บนสลิป (ไม่เสียเงิน API) เพื่อกันสลิปซ้ำทั้งแพลตฟอร์ม
+  // อ่านไม่ออก = ข้ามเฉย ๆ — ชั้นนี้ปฏิเสธได้ อนุมัติไม่ได้
+  const qr = await decodeSlipQr(bytes);
+  if (qr) {
+    const { data: dupRef } = await svc.from("slip_refs").select("trans_ref").eq("trans_ref", qr.transRef).maybeSingle();
+    if (dupRef) return NextResponse.json({ ok: false, error: "สลิปใบนี้ถูกใช้ยืนยันไปแล้ว — ถ้าเป็นความเข้าใจผิด ติดต่อผู้ดูแลระบบ" });
+    // เก็บเลขติดรายการตั้งแต่ตอนอัป — เส้นอนุมัติมือจะได้ dedupe ด้วย unique index เดียวกัน
+    // และ admin_confirm_topup จะลงทะเบียนกลางให้ตอนกดยืนยัน
+    const { error: refErr } = await svc.from("topups").update({ slip_trans_ref: qr.transRef }).eq("id", topupId);
+    if (refErr) return NextResponse.json({ ok: false, error: "สลิปใบนี้ถูกใช้ยืนยันไปแล้ว — ถ้าเป็นความเข้าใจผิด ติดต่อผู้ดูแลระบบ" });
+  }
+
   const path = `${topup.shop_id}/topup-slip/${topupId}.jpg`;
   await svc.storage.from("slips").upload(path, bytes, { contentType: file.type || "image/jpeg", upsert: true });
   await svc.from("topups").update({ slip_path: path, status: "verifying" }).eq("id", topupId);
@@ -47,6 +67,8 @@ export async function POST(request: Request) {
           const { error: dupErr } = await svc.from("topups").update({ slip_trans_ref: ref, slip_data: j }).eq("id", topupId);
           if (!dupErr) {
             await svc.from("topups").update({ status: "paid", verified_by: "auto", paid_at: new Date().toISOString() }).eq("id", topupId);
+            // ลงทะเบียนกลางกันสลิปซ้ำทั้งแพลตฟอร์ม — พังเงียบได้ (มี unique ของ topups เป็นตาข่ายเดิมอยู่)
+            if (ref) await svc.from("slip_refs").insert({ trans_ref: String(ref), shop_id: topup.shop_id, source: "topup" });
             await svc.rpc("credit_wallet", { p_shop_id: topup.shop_id, p_amount: Number(t.amount), p_type: "topup", p_ref_type: "topup", p_ref_id: topupId, p_note: "เติมเงิน PromptPay (auto)", p_actor: user.id });
             // ซื้อแพ็กเกจจ่ายตรง -> เปิดแพ็ก + ตัดค่าแพ็ก + ตั้งรอบบิลทันที (idempotent)
             const { data: applied } = await svc.rpc("apply_plan_purchase", { p_topup_id: topupId });

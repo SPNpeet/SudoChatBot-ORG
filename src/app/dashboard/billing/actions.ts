@@ -103,20 +103,22 @@ export async function getTopupStatus(shopId: string, topupId: string) {
 }
 
 /** ซื้อ/ต่ออายุแพ็กเกจแบบจ่ายตรง — สร้างรายการยอดเท่าราคาแพ็กพอดี พร้อม QR
- *  เมื่อสลิปผ่าน (อัตโนมัติ/แอดมินยืนยัน) ระบบเปิดแพ็ก + ตั้งรอบบิลถัดไปให้ทันที */
-export async function purchasePlan(shopId: string, planCode: string): Promise<TopupResult> {
+ *  เมื่อสลิปผ่าน (อัตโนมัติ/แอดมินยืนยัน) ระบบเปิดแพ็ก + ตั้งรอบบิลถัดไปให้ทันที
+ *  period "yearly" = จ่าย 10 เดือน ใช้ 12 เดือน — ยอดคำนวณฝั่ง server เท่านั้น ห้ามรับจาก client */
+export async function purchasePlan(shopId: string, planCode: string, period: "monthly" | "yearly" = "monthly"): Promise<TopupResult> {
   try {
     await assertMember(shopId, ["owner"]);
+    if (period !== "monthly" && period !== "yearly") return { ok: false, error: "งวดชำระไม่ถูกต้อง" };
     const svc = createServiceClient();
     const { data: plan } = await svc.from("plans").select("code,name,price_monthly").eq("code", planCode).eq("active", true).maybeSingle();
     if (!plan || Number(plan.price_monthly) <= 0) return { ok: false, error: "แพ็กเกจนี้ไม่เปิดให้ชำระตรง" };
-    const amount = Number(plan.price_monthly);
+    const amount = Number(plan.price_monthly) * (period === "yearly" ? 10 : 1);
 
     const { data: pf } = await svc.from("platform_billing_settings").select("promptpay_id,account_name").eq("id", true).single();
     if (!pf?.promptpay_id) return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่าบัญชีรับเงิน — ติดต่อผู้ดูแลระบบ" };
 
     const { data: topup, error } = await svc.from("topups").insert({
-      shop_id: shopId, amount, method: "promptpay", status: "pending", plan_code: plan.code,
+      shop_id: shopId, amount, method: "promptpay", status: "pending", plan_code: plan.code, plan_period: period,
     }).select("id").single();
     if (error) return { ok: false, error: error.message };
 

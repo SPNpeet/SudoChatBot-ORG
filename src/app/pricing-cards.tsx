@@ -20,6 +20,8 @@ import { Check } from "lucide-react";
 export interface Plan {
   name: string; price: string; per: string;
   items: string[]; cta: string; hot: boolean;
+  // ราคารายปี (จ่าย 10 เดือน ใช้ 12 เดือน) — แสดงเป็นบรรทัดเสริมใต้ราคา ไม่มี = ไม่แสดง
+  yearly?: string;
 }
 
 export default function PricingCards({ plans }: { plans: Plan[] }) {
@@ -77,6 +79,11 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
             <p className="mt-2 text-3xl font-bold tracking-tight">
               {p.price}<span className="ml-1 text-sm font-normal text-neutral-400">{p.per}</span>
             </p>
+            {p.yearly && (
+              <p className="mt-1 text-[12px] text-neutral-500">
+                หรือรายปี <span className="font-semibold text-[#0B6B4A]">{p.yearly} บาท</span> — จ่าย 10 เดือน ใช้ 12 เดือน
+              </p>
+            )}
 
             <ul className="mt-4 flex-1 space-y-2">
               {p.items.map((it) => (

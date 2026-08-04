@@ -25,6 +25,9 @@ export default function BillingClient({
   const isOwnerAdmin = role === "owner" || role === "admin";
   const isOwner = role === "owner";
   const [amount, setAmount] = useState(300);
+  // งวดชำระ: รายปี = จ่าย 10 เดือน ใช้ 12 เดือน — ยอดจริงคำนวณฝั่ง server เสมอ
+  // ตัวเลขบนปุ่มเป็นแค่พรีวิว ถ้าแก้สูตรต้องแก้ที่ purchasePlan + apply_plan_purchase ก่อน
+  const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
   // แพ็กที่ผู้ใช้กำลังเล็งอยู่ — เริ่มที่แพ็กปัจจุบัน กดใบไหนก็เด้งไปเน้นใบนั้น
   const [selected, setSelected] = useState<string>(currentPlan);
   const [buying, setBuying] = useState<string | null>(null);
@@ -55,9 +58,9 @@ export default function BillingClient({
     start(async () => {
       setOmisePaid(false);
       try {
-        const r = await purchasePlan(shopId, planCode);
+        const r = await purchasePlan(shopId, planCode, period);
         if (!r.ok) { setTopupErr(r.error); return; }
-        setTopup({ ...r, planName });
+        setTopup({ ...r, planName: period === "yearly" ? `${planName} รายปี (ใช้ได้ 12 เดือน)` : planName });
         setSlipMsg(null);
       } finally { setBuying(null); }
     });
@@ -101,6 +104,21 @@ export default function BillingClient({
               ระบบรับชำระยังไม่เปิด — ผู้ดูแลแพลตฟอร์มตั้งค่าพร้อมเพย์ได้ที่ <span className="font-medium">รายได้ + บัญชีรับเงิน</span>
             </div>
           )}
+          {/* สวิตช์งวดชำระ — ปุ่มจริง 44px ไม่ใช่ลิงก์จิ๋ว เพราะนี่คือจุดตัดสินใจจ่ายเงิน */}
+          <div className="mb-4 flex justify-center">
+            <div role="radiogroup" aria-label="งวดชำระ" className="inline-flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
+              {([["monthly", "รายเดือน"], ["yearly", "รายปี — จ่าย 10 เดือน ฟรี 2 เดือน"]] as const).map(([v, label]) => (
+                <button key={v} type="button" role="radio" aria-checked={period === v}
+                  onClick={() => setPeriod(v)}
+                  className={cn(
+                    "min-h-[44px] rounded-lg px-4 text-sm font-medium transition-colors",
+                    period === v ? "bg-white text-emerald-700 shadow-sm ring-1 ring-emerald-200" : "text-neutral-500 hover:text-neutral-800",
+                  )}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           {/* กลุ่มตัวเลือกแพ็กเกจ = radiogroup จริง ๆ ไม่ใช่กอง div ที่บังเอิญกดได้
               เดิมเป็น <div onClick> ซึ่งคนที่ใช้คีย์บอร์ดหรือโปรแกรมอ่านหน้าจอ
               เลือกแพ็กเกจไม่ได้เลย ทั้งที่เป็นขั้นตอนจ่ายเงิน */}
@@ -109,6 +127,8 @@ export default function BillingClient({
               const current = p.code === currentPlan;
               const paid = Number(p.price_monthly) > 0;
               const picked = selected === p.code;
+              // ยอดที่ต้องจ่ายตามงวด — พรีวิวเท่านั้น ยอดจริงมาจาก server (purchasePlan)
+              const payPrice = Number(p.price_monthly) * (period === "yearly" ? 10 : 1);
               return (
                 // กดได้ทั้งใบ = "เลือก" เท่านั้น ยังไม่จ่าย — ต้องกดปุ่มยืนยันอีกที กันกดโดนแล้วเสียเงิน
                 // ใช้ div + role=radio ไม่ใช่ <button> เพราะข้างในการ์ดมีปุ่ม "สมัคร — จ่าย" อยู่แล้ว
@@ -116,7 +136,7 @@ export default function BillingClient({
                 // จึงต้องเติม tabIndex + onKeyDown เองเพื่อให้ Tab ถึงและกด Enter/Space เลือกได้
                 <div key={p.code} role="radio" aria-checked={picked}
                   tabIndex={picked || (!selected && p.code === plans[0]?.code) ? 0 : -1}
-                  aria-label={`แพ็กเกจ ${p.name} ${paid ? baht(p.price_monthly) + " ต่อเดือน" : "ฟรี"}${current ? " (แพ็กเกจปัจจุบัน)" : ""}`}
+                  aria-label={`แพ็กเกจ ${p.name} ${paid ? baht(payPrice) + (period === "yearly" ? " ต่อปี" : " ต่อเดือน") : "ฟรี"}${current ? " (แพ็กเกจปัจจุบัน)" : ""}`}
                   onClick={() => setSelected(p.code)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(p.code); return; }
@@ -144,7 +164,10 @@ export default function BillingClient({
                     {picked && !current && <Badge tone="blue">กำลังเลือก</Badge>}
                   </div>
                   <p className="font-bold">{p.name}</p>
-                  <p className="mt-1"><span className="text-xl font-bold tabular-nums">{paid ? baht(p.price_monthly) : "ฟรี"}</span>{paid ? <span className="text-xs text-neutral-400">/เดือน</span> : ""}</p>
+                  <p className="mt-1"><span className="text-xl font-bold tabular-nums">{paid ? baht(payPrice) : "ฟรี"}</span>{paid ? <span className="text-xs text-neutral-400">{period === "yearly" ? "/ปี" : "/เดือน"}</span> : ""}</p>
+                  {paid && period === "yearly" && (
+                    <p className="mt-0.5 text-[11px] font-medium text-emerald-700">จ่ายครั้งเดียว ใช้ 12 เดือน — ประหยัด {baht(Number(p.price_monthly) * 2)}</p>
+                  )}
                   <dl className="mt-2 space-y-1 text-[11px] text-neutral-500">
                     <div className="flex justify-between gap-2"><dt>กิจการ</dt><dd className="font-medium text-neutral-700">{p.max_companies ? `${p.max_companies} กิจการ` : "ไม่จำกัด"}</dd></div>
                     <div className="flex justify-between gap-2"><dt>พนักงาน</dt><dd className="font-medium text-neutral-700">ไม่จำกัด</dd></div>
@@ -161,7 +184,7 @@ export default function BillingClient({
                       disabled={pending} onClick={(e) => { e.stopPropagation(); setSelected(p.code); buyPlan(p.code, p.name); }}>
                       {buying === p.code
                         ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังสร้าง QR…</>
-                        : current ? `ต่ออายุ ${baht(p.price_monthly)}` : `สมัคร — จ่าย ${baht(p.price_monthly)}`}
+                        : current ? `ต่ออายุ ${baht(payPrice)}` : `สมัคร — จ่าย ${baht(payPrice)}`}
                     </Button>
                   )}
                   {isOwner && !paid && !current && (
