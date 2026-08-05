@@ -127,8 +127,23 @@ export async function reverseJournalOf(
     .select("id, entry_number, entry_date, journal_lines(account_id, debit, credit)")
     .eq("shop_id", shopId).eq("source_id", sourceId).neq("source_type", "reversal");
   if (readErr) throw new Error(`อ่านรายการบัญชีเดิมไม่สำเร็จ: ${readErr.message}`);
+
+  // ⚠️ ต้องรู้ว่าใบไหน "กลับไปแล้ว" ก่อนกลับซ้ำ
+  // เอกสารหนึ่งใบมีใบสำคัญได้หลายใบ (ของจริง 13 จาก 72 ใบมี 2-3 ใบสำคัญ)
+  // ถ้าใบที่ 1 กลับสำเร็จแล้วใบที่ 2 พัง ผู้ใช้จะกดใหม่ -> เดิมจะกลับใบที่ 1 ซ้ำอีกรอบ
+  // ผลคือต้นฉบับ 2 ใบ แต่รายการกลับ 3 ใบ = รายได้/ภาษีขายหายไปหนึ่งชุดถาวร
+  // และงบยังสมดุลอยู่ (รายการกลับสมดุลในตัวเอง) จึงไม่มีตัวตรวจไหนจับได้
+  const { data: doneRows, error: doneErr } = await svc.from("journal_entries")
+    .select("memo").eq("shop_id", shopId).eq("source_id", sourceId).eq("source_type", "reversal");
+  if (doneErr) throw new Error(`ตรวจรายการกลับเดิมไม่สำเร็จ: ${doneErr.message}`);
+  // memo ของรายการกลับขึ้นต้นด้วย "กลับรายการ <เลขใบสำคัญต้นฉบับ>:" จึงใช้เป็นลายเซ็นได้
+  const alreadyReversed = new Set(
+    (doneRows ?? []).map((d) => String(d.memo ?? "").match(/^กลับรายการ\s+(\S+?):/)?.[1]).filter(Boolean) as string[],
+  );
+
   const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
   for (const e of entries ?? []) {
+    if (alreadyReversed.has(String(e.entry_number))) continue;   // กลับไปแล้ว ห้ามกลับซ้ำ
     const lines = (e.journal_lines ?? []) as { account_id: string; debit: number; credit: number }[];
     if (!lines.length) continue;
 

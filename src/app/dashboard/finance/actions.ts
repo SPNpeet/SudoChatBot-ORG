@@ -501,7 +501,7 @@ export async function voidDoc(shopId: string, docId: string, reason: string): Pr
   try {
     const { user } = await assertMember(shopId, ["owner", "admin"]);
     const svc = createServiceClient();
-    const { data: doc } = await svc.from("fin_docs").select("id,doc_number,doc_type,status").eq("id", docId).eq("shop_id", shopId).maybeSingle();
+    const { data: doc } = await svc.from("fin_docs").select("id,doc_number,doc_type,status,notes").eq("id", docId).eq("shop_id", shopId).maybeSingle();
     if (!doc) return { ok: false, error: "ไม่พบเอกสาร" };
     if (doc.status === "void") return { ok: false, error: "เอกสารนี้ถูกยกเลิกไปแล้ว" };
 
@@ -525,7 +525,15 @@ export async function voidDoc(shopId: string, docId: string, reason: string): Pr
     } catch (revErr) {
       // กลับรายการไม่สำเร็จ = คืนสถานะเอกสาร ไม่งั้นเหลือ "ใบที่ยกเลิกแต่ไม่มีรายการกลับ"
       // ซึ่งเป็นธงแดงจริงในตัวตรวจความถูกต้อง และแก้ทางหน้าเว็บไม่ได้
-      await svc.from("fin_docs").update({ status: doc.status, updated_at: new Date().toISOString() }).eq("id", docId);
+      // คืนทั้งสถานะและโน้ต — ไม่งั้นเอกสารที่ไม่ได้ถูกยกเลิกจะติดข้อความ "ยกเลิก: ..." ค้างไว้
+      const { error: undoErr } = await svc.from("fin_docs")
+        .update({ status: doc.status, notes: doc.notes ?? null, updated_at: new Date().toISOString() })
+        .eq("id", docId);
+      // ⚠️ ถ้าคืนสถานะไม่สำเร็จ ห้ามบอกผู้ใช้ว่า "เอกสารยังอยู่เหมือนเดิม" (เป็นเท็จ)
+      // สภาพจริงตอนนั้นคือ void โดยไม่มีรายการกลับ = ธงแดงในตัวตรวจ ต้องบอกให้ไปแก้ให้ถูก
+      if (undoErr) {
+        return { ok: false, error: "ยกเลิกไม่สำเร็จและคืนสถานะเอกสารไม่ได้ — เอกสารค้างสถานะยกเลิกโดยยังไม่มีรายการกลับบัญชี กรุณาแจ้งผู้ดูแลระบบทันที" };
+      }
       return { ok: false, error: `ยกเลิกไม่สำเร็จ — ระบบกลับรายการบัญชีไม่ได้ (${(revErr as Error).message.slice(0, 120)}) เอกสารยังอยู่เหมือนเดิม` };
     }
     if (doc.doc_type === "invoice" || doc.doc_type === "receipt") await restoreStock(svc, shopId, docId);
