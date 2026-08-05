@@ -38,6 +38,12 @@ if ! npm run check:ui; then
   exit 1
 fi
 
+if ! npm run check:migrations; then
+  echo ""
+  echo "  หยุด: ลำดับ migration ไม่ผ่าน — clone ใหม่จะสร้างระบบขึ้นมาไม่ได้ ห้าม push"
+  exit 1
+fi
+
 echo ""
-echo "  ผ่าน 3 ด่าน (typecheck · บัญชี · UI) — build จะถูกตรวจอีกรอบที่ Vercel"
+echo "  ผ่าน 4 ด่าน (typecheck · บัญชี · UI · ลำดับ migration) — build จะถูกตรวจอีกรอบที่ Vercel"
 echo ""

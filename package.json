@@ -11,7 +11,8 @@
     "check:ui": "tsx scripts/check-ui-hazards.mjs",
     "backup": "tsx scripts/backup-data.mjs",
     "backup:verify": "tsx scripts/verify-backup.mjs",
-    "verify": "npm run typecheck && npm run check && npm run check:ui && npm run build"
+    "verify": "npm run typecheck && npm run check && npm run check:ui && npm run check:migrations && npm run build",
+    "check:migrations": "tsx scripts/check-migrations.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
