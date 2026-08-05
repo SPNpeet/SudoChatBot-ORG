@@ -128,6 +128,13 @@ export async function POST(request: Request) {
       reply = ((j.candidates?.[0]?.content?.parts ?? []) as { text?: string }[]).map((p) => p.text ?? "").join("").trim();
       if (reply) break;
     }
+
+    // นับค่าใช้จ่ายเข้าเพดานรายวันของแพลตฟอร์ม — ต้องนับ "ทุกครั้งที่ยิงจริง" ไม่ใช่เฉพาะครั้งที่ได้คำตอบ
+    // เดิมเส้น guest ไม่เคยนับเลย (ai_usage_logs.shop_id เป็น NOT NULL แต่ guest ไม่มีกิจการ)
+    // ทำให้เพดาน ai_daily_cap_usd และ kill switch มองไม่เห็นค่าใช้จ่ายก้อนนี้ทั้งก้อน
+    // ค่าเฉลี่ยที่วัดได้ของแชทหนึ่งครั้ง = $0.0025 (ตัวเลขเดียวกับที่ใช้คิดต้นทุนแพ็ก)
+    void svc.rpc("bump_platform_ai_cost", { p_cost: 0.0025 })
+      .then(() => {}, () => {});   // ล้มเหลวห้ามทำให้คำตอบของผู้ใช้หาย
     if (!reply) {
       return json({ ok: false, error: "ขัดข้องชั่วคราว ลองใหม่อีกครั้งนะคะ", code: lastStatus ? `upstream_${lastStatus}` : "empty_reply" }, guestId, needsCookie, 502);
     }

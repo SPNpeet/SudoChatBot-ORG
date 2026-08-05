@@ -31,6 +31,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "รายการนี้ถูกยกเลิก/หมดอายุแล้ว — สร้างรายการชำระเงินใหม่ได้เลย" });
   }
 
+  // จำกัดอัตราต่อผู้ใช้ — สถานะ verifying ไม่ถูกกันด้านบน (โดยเจตนา: ส่งสลิปใหม่ทับของเดิมได้)
+  // แต่ถ้าไม่มีเพดาน ผู้ใช้คนเดียววนอัปรูปเดิม 100 ครั้งก็เผาเพดานตรวจสลิปกลางของทั้งแพลตฟอร์มหมดเดือน
+  // 10 ครั้ง/ชม./คน พอสำหรับคนที่ถ่ายสลิปใหม่หลายรอบเพราะรูปไม่ชัด
+  const { data: upRate, error: upRateErr } = await svc.rpc("consume_public_rate", {
+    p_bucket: "topup_slip", p_ip_hash: `user:${user.id}`, p_limit: 10, p_window_secs: 3600,
+  });
+  if (upRateErr || (upRate as { allowed?: boolean } | null)?.allowed !== true) {
+    return NextResponse.json({ ok: false, error: "ส่งสลิปถี่เกินไป — รอสักครู่แล้วลองใหม่ หรือติดต่อผู้ดูแลระบบให้ยืนยันให้" });
+  }
+
   const bytes = new Uint8Array(await file.arrayBuffer());
 
   // QR ชั้นฟรี: อ่าน transRef จาก mini-QR บนสลิป (ไม่เสียเงิน API) เพื่อกันสลิปซ้ำทั้งแพลตฟอร์ม
