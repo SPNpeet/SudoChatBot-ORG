@@ -80,15 +80,8 @@ export async function savePlatformBilling(formData: FormData): Promise<ActionRes
     await assertPlatformAdmin();
     const svc = createServiceClient();
     const { error } = await svc.from("platform_billing_settings").update({
-      promptpay_id: String(formData.get("promptpay_id") ?? "").trim() || null,
       account_name: String(formData.get("account_name") ?? "").trim() || null,
       slip_provider: String(formData.get("slip_provider") ?? "manual"),
-      // allowlist ชัด ๆ — คอลัมน์นี้มี CHECK อยู่ ถ้าปล่อยค่าดิบเข้าไปจะ error ทั้งฟอร์ม
-      payment_gateway: (() => {
-        const g = String(formData.get("payment_gateway") ?? "");
-        return g === "omise" || g === "stripe" ? g : "promptpay_slip";
-      })(),
-      omise_public_key: String(formData.get("omise_public_key") ?? "").trim() || null,
       company_name: String(formData.get("company_name") ?? "").trim() || null,
       company_address: String(formData.get("company_address") ?? "").trim() || null,
       tax_id: String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null,
@@ -111,11 +104,6 @@ export async function savePlatformBilling(formData: FormData): Promise<ActionRes
     if (slipKey) {
       const { error: e1 } = await supabase.rpc("store_platform_slip_key", { p_key: slipKey });
       if (e1) return { ok: false, error: `บันทึก slip API key ไม่สำเร็จ: ${e1.message}` };
-    }
-    const omiseKey = String(formData.get("omise_secret_key") ?? "").trim();
-    if (omiseKey) {
-      const { error: e2 } = await supabase.rpc("store_platform_omise_key", { p_key: omiseKey });
-      if (e2) return { ok: false, error: `บันทึก Omise secret key ไม่สำเร็จ: ${e2.message}` };
     }
     const stripeKey = String(formData.get("stripe_secret_key") ?? "").trim();
     if (stripeKey) {

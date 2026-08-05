@@ -4,7 +4,7 @@
 //  ทำไมไม่ลง `stripe` npm: เราต้องการแค่ 3 อย่าง (สร้าง session · ดึง session ·
 //  ตรวจลายเซ็น webhook) ซึ่งเป็น REST + HMAC ธรรมดา การลง SDK เพิ่ม ~1MB
 //  ลง bundle ของ serverless function ทุกตัว แลกกับสิ่งที่เขียนเองได้ใน 60 บรรทัด
-//  และรูปแบบนี้เหมือน src/lib/omise.ts อยู่แล้ว คนอ่านโค้ดต่อไม่ต้องเรียนของใหม่
+//  (เดิมไฟล์ lib/omise.ts ก็เขียนแบบเดียวกันนี้ ก่อนถูกตัดทิ้งเมื่อ 5 ส.ค. 2569)
 //
 //  secret key อยู่ Vault (RPC get_platform_stripe_key) · env STRIPE_SECRET_KEY เป็น fallback
 // ============================================================

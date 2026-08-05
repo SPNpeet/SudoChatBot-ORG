@@ -1,98 +1,24 @@
 "use server";
 // ============================================================
-//  Billing — เติมเงิน (PromptPay QR + สลิป), เปลี่ยนแพ็กเกจ
+//  Billing — ซื้อ/ต่ออายุแพ็กเกจ, เติมเครดิต (ผ่าน Stripe เท่านั้น)
+//
+//  5 ส.ค. 2569 ตัดช่องทางเดิมทิ้งทั้งหมด (PromptPay+อัปสลิป และ Omise)
+//  เหตุผล: สองเส้นนั้นต้องมีคนตรวจสลิป ซึ่งแปลว่าลูกค้าจ่ายเงินแล้วยังต้อง "รอ"
+//  และเปิดช่องให้สลิปปลอมเข้ามาได้ · ตอนตัดมีรายการทั้งหมด 7 ใบ เป็น rejected/expired
+//  ทั้งหมด ไม่มีใครค้างจ่ายอยู่และไม่เคยมีใครจ่ายผ่านเส้นนั้นสำเร็จเลย จึงไม่มีเงินใครค้าง
+//
 //  ทุก action คืน { ok } เสมอ — ห้าม throw ให้หลุดถึง client
 //  (Next.js production ซ่อนข้อความ throw จาก Server Action เป็น
 //  "Server Components render error" ที่ผู้ใช้อ่านไม่รู้เรื่อง)
 // ============================================================
-import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { assertMember } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
 
 export type TopupResult =
-  | { ok: true; topupId: string; qrUrl: string; promptpayId?: string; accountName?: string; amount: number; gateway?: "omise" | "stripe"; checkoutUrl?: string }
+  | { ok: true; topupId: string; amount: number; checkoutUrl: string }
   | { ok: false; error: string };
 export type PlanResult = { ok: true } | { ok: false; error: string };
-
-// ==== PromptPay QR (มาตรฐาน EMVCo) ====
-function tlv(id: string, v: string) { return id + v.length.toString().padStart(2, "0") + v; }
-function crc16(p: string) {
-  let c = 0xffff;
-  for (let i = 0; i < p.length; i++) { c ^= p.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) c = (c & 0x8000 ? (c << 1) ^ 0x1021 : c << 1) & 0xffff; }
-  return c.toString(16).toUpperCase().padStart(4, "0");
-}
-function promptPayPayload(target: string, amount: number) {
-  const d = target.replace(/[^0-9]/g, "");
-  const acct = d.length === 13 ? tlv("02", d) : d.length === 15 ? tlv("03", d) : tlv("01", "0066" + d.replace(/^0/, ""));
-  let p = tlv("00", "01") + tlv("01", "12") + tlv("29", tlv("00", "A000000677010111") + acct) + tlv("53", "764") + tlv("54", amount.toFixed(2)) + tlv("58", "TH") + "6304";
-  return p + crc16(p);
-}
-
-/** สร้างรายการเติมเงิน + QR พร้อมเพย์ของแพลตฟอร์ม */
-export async function createTopup(shopId: string, amount: number): Promise<TopupResult> {
-  try {
-    await assertMember(shopId, ["owner", "admin"]);
-    if (amount < 20) return { ok: false, error: "ขั้นต่ำ 20 บาท" };
-    const svc = createServiceClient();
-    const { data: pf } = await svc.from("platform_billing_settings").select("promptpay_id,account_name").eq("id", true).single();
-    if (!pf?.promptpay_id) return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่าบัญชีรับเงิน — ติดต่อผู้ดูแลระบบ" };
-
-    const { data: topup, error } = await svc.from("topups").insert({
-      shop_id: shopId, amount, method: "promptpay", status: "pending",
-    }).select("id").single();
-    if (error) return { ok: false, error: error.message };
-
-    const payload = promptPayPayload(pf.promptpay_id, amount);
-    let qrUrl = "";
-    try {
-      const QRCode = (await import("qrcode")).default;
-      const dataUrl = await QRCode.toDataURL(payload, { width: 512, margin: 2 });
-      const bytes = Buffer.from(dataUrl.split(",")[1], "base64");
-      const path = `${shopId}/topup/${topup.id}.png`;
-      await svc.storage.from("shop-assets").upload(path, bytes, { contentType: "image/png", upsert: true });
-      const { data: pub } = svc.storage.from("shop-assets").getPublicUrl(path);
-      qrUrl = pub.publicUrl;
-      await svc.from("topups").update({ qr_path: path }).eq("id", topup.id);
-    } catch { /* ยังแสดงเลขพร้อมเพย์ได้ */ }
-
-    revalidatePath("/dashboard/billing");
-    return { ok: true, topupId: topup.id, qrUrl, promptpayId: pf.promptpay_id, accountName: pf.account_name, amount };
-  } catch (e) {
-    const m = (e as Error).message;
-    return { ok: false, error: m.includes("forbidden") ? "เฉพาะเจ้าของ/ผู้ดูแลร้านเติมเงินได้" : `เติมเงินไม่สำเร็จ: ${m.slice(0, 150)}` };
-  }
-}
-
-/** สร้างรายการเติมเงินผ่าน Omise (PromptPay source — เครดิตอัตโนมัติเมื่อจ่ายสำเร็จ) */
-export async function createOmiseTopup(shopId: string, amount: number): Promise<TopupResult> {
-  try {
-    await assertMember(shopId, ["owner", "admin"]);
-    if (amount < 20) return { ok: false, error: "ขั้นต่ำ 20 บาท" };
-    const svc = createServiceClient();
-    const { getOmiseSecretKey, createPromptPayCharge } = await import("@/lib/omise");
-    const secretKey = await getOmiseSecretKey(svc);
-    if (!secretKey) return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่า Omise — ติดต่อผู้ดูแลระบบ" };
-
-    const { data: topup, error } = await svc.from("topups").insert({
-      shop_id: shopId, amount, method: "promptpay", gateway: "omise", status: "pending",
-    }).select("id").single();
-    if (error) return { ok: false, error: error.message };
-
-    try {
-      const charge = await createPromptPayCharge(secretKey, amount, topup.id, shopId);
-      await svc.from("topups").update({ charge_id: charge.id }).eq("id", topup.id);
-      const qrUrl = charge.source?.scannable_code?.image?.download_uri ?? "";
-      revalidatePath("/dashboard/billing");
-      return { ok: true, topupId: topup.id, qrUrl, amount, gateway: "omise" };
-    } catch (e) {
-      await svc.from("topups").update({ status: "expired" }).eq("id", topup.id);
-      return { ok: false, error: `สร้างรายการชำระเงินไม่สำเร็จ: ${(e as Error).message.slice(0, 150)}` };
-    }
-  } catch (e) {
-    const m = (e as Error).message;
-    return { ok: false, error: m.includes("forbidden") ? "เฉพาะเจ้าของ/ผู้ดูแลร้านเติมเงินได้" : `เติมเงินไม่สำเร็จ: ${m.slice(0, 150)}` };
-  }
-}
 
 /**
  * สร้างรายการชำระเงินผ่าน Stripe Checkout — คืน URL ให้เบราว์เซอร์พาไปหน้าจ่ายของ Stripe
@@ -107,7 +33,7 @@ async function createStripeCheckout(
   const svc = createServiceClient();
   const { getStripeSecretKey, createCheckoutSession } = await import("@/lib/stripe");
   const secretKey = await getStripeSecretKey(svc);
-  if (!secretKey) return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่า Stripe — ติดต่อผู้ดูแลระบบ" };
+  if (!secretKey) return { ok: false, error: "ระบบรับชำระเงินยังไม่เปิด — ติดต่อผู้ดูแลระบบ" };
 
   const { data: topup, error } = await svc.from("topups").insert({
     shop_id: shopId, amount, method: "stripe", gateway: "stripe", status: "pending",
@@ -133,15 +59,15 @@ async function createStripeCheckout(
       return { ok: false, error: "สร้างรายการชำระเงินไม่สำเร็จ — ลองใหม่อีกครั้ง" };
     }
     revalidatePath("/dashboard/billing");
-    return { ok: true, topupId: topup.id, qrUrl: "", amount, gateway: "stripe", checkoutUrl: session.url };
+    return { ok: true, topupId: topup.id, amount, checkoutUrl: session.url };
   } catch (e) {
     await svc.from("topups").update({ status: "expired" }).eq("id", topup.id);
     return { ok: false, error: `สร้างรายการชำระเงินไม่สำเร็จ: ${(e as Error).message.slice(0, 150)}` };
   }
 }
 
-/** สร้างรายการเติมเงินผ่าน Stripe */
-export async function createStripeTopup(shopId: string, amount: number): Promise<TopupResult> {
+/** เติมเครดิตล่วงหน้า (ไม่บังคับ — ไว้ให้ระบบต่ออายุแพ็กอัตโนมัติ) */
+export async function createTopup(shopId: string, amount: number): Promise<TopupResult> {
   try {
     await assertMember(shopId, ["owner", "admin"]);
     if (amount < 20) return { ok: false, error: "ขั้นต่ำ 20 บาท" };
@@ -152,7 +78,7 @@ export async function createStripeTopup(shopId: string, amount: number): Promise
   }
 }
 
-/** เช็กสถานะรายการเติมเงิน (ใช้ poll ฝั่ง client หลังสแกน QR) */
+/** เช็กสถานะรายการ (ใช้ poll ฝั่ง client หลังกลับมาจากหน้าจ่ายของ Stripe) */
 export async function getTopupStatus(shopId: string, topupId: string) {
   await assertMember(shopId, ["owner", "admin", "agent", "viewer"]);
   const svc = createServiceClient();
@@ -160,8 +86,7 @@ export async function getTopupStatus(shopId: string, topupId: string) {
   return data?.status ?? "unknown";
 }
 
-/** ซื้อ/ต่ออายุแพ็กเกจแบบจ่ายตรง — สร้างรายการยอดเท่าราคาแพ็กพอดี พร้อม QR
- *  เมื่อสลิปผ่าน (อัตโนมัติ/แอดมินยืนยัน) ระบบเปิดแพ็ก + ตั้งรอบบิลถัดไปให้ทันที
+/** ซื้อ/ต่ออายุแพ็กเกจแบบจ่ายตรง — จ่ายเสร็จระบบเปิดแพ็ก + ตั้งรอบบิลถัดไปให้ทันที
  *  period "yearly" = จ่าย 10 เดือน ใช้ 12 เดือน — ยอดคำนวณฝั่ง server เท่านั้น ห้ามรับจาก client */
 export async function purchasePlan(shopId: string, planCode: string, period: "monthly" | "yearly" = "monthly"): Promise<TopupResult> {
   try {
@@ -171,37 +96,8 @@ export async function purchasePlan(shopId: string, planCode: string, period: "mo
     const { data: plan } = await svc.from("plans").select("code,name,price_monthly").eq("code", planCode).eq("active", true).maybeSingle();
     if (!plan || Number(plan.price_monthly) <= 0) return { ok: false, error: "แพ็กเกจนี้ไม่เปิดให้ชำระตรง" };
     const amount = Number(plan.price_monthly) * (period === "yearly" ? 10 : 1);
-
-    // ช่องทาง Stripe: ไปหน้าจ่ายของ Stripe เลย ไม่ต้องอัปสลิป ไม่ต้องรอแอดมิน
-    const { data: gw } = await svc.from("platform_billing_settings").select("payment_gateway").eq("id", true).maybeSingle();
-    if (gw?.payment_gateway === "stripe") {
-      const label = period === "yearly" ? `แพ็กเกจ ${plan.name} รายปี (ใช้ได้ 12 เดือน)` : `แพ็กเกจ ${plan.name} รายเดือน`;
-      return await createStripeCheckout(shopId, amount, label, { code: plan.code, period });
-    }
-
-    const { data: pf } = await svc.from("platform_billing_settings").select("promptpay_id,account_name").eq("id", true).single();
-    if (!pf?.promptpay_id) return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่าบัญชีรับเงิน — ติดต่อผู้ดูแลระบบ" };
-
-    const { data: topup, error } = await svc.from("topups").insert({
-      shop_id: shopId, amount, method: "promptpay", status: "pending", plan_code: plan.code, plan_period: period,
-    }).select("id").single();
-    if (error) return { ok: false, error: error.message };
-
-    const payload = promptPayPayload(pf.promptpay_id, amount);
-    let qrUrl = "";
-    try {
-      const QRCode = (await import("qrcode")).default;
-      const dataUrl = await QRCode.toDataURL(payload, { width: 512, margin: 2 });
-      const bytes = Buffer.from(dataUrl.split(",")[1], "base64");
-      const path = `${shopId}/topup/${topup.id}.png`;
-      await svc.storage.from("shop-assets").upload(path, bytes, { contentType: "image/png", upsert: true });
-      const { data: pub } = svc.storage.from("shop-assets").getPublicUrl(path);
-      qrUrl = pub.publicUrl;
-      await svc.from("topups").update({ qr_path: path }).eq("id", topup.id);
-    } catch { /* ยังแสดงเลขพร้อมเพย์ได้ */ }
-
-    revalidatePath("/dashboard/billing");
-    return { ok: true, topupId: topup.id, qrUrl, promptpayId: pf.promptpay_id, accountName: pf.account_name, amount };
+    const label = period === "yearly" ? `แพ็กเกจ ${plan.name} รายปี (ใช้ได้ 12 เดือน)` : `แพ็กเกจ ${plan.name} รายเดือน`;
+    return await createStripeCheckout(shopId, amount, label, { code: plan.code, period });
   } catch (e) {
     const m = (e as Error).message;
     return { ok: false, error: m.includes("forbidden") ? "เฉพาะเจ้าของกิจการสมัครแพ็กเกจได้" : `สมัครแพ็กเกจไม่สำเร็จ: ${m.slice(0, 150)}` };
@@ -216,7 +112,7 @@ export async function purchasePlan(shopId: string, planCode: string, period: "mo
  * แต่ Server Action คือ endpoint สาธารณะ — เจ้าของกิจการยิง changePlan(shopId,"agency") เองได้
  * ได้แพ็ก 999฿ ฟรีจนกว่ารอบบิลจะไล่ลง (~37 วัน) แล้ววนซ้ำได้ไม่จำกัด
  *
- * กติกาข้อ 3 ของโปรเจกต์: "ถ้าต้องการให้ห้าม ให้ throw อย่าเขียน prompt ขอ" —
+ * กติกาข้อ 3 ของโปรเจกต์: "ถ้าต้องการให้หยุด ให้เขียน break อย่าเขียน prompt ขอ" —
  * ข้อห้ามต้องอยู่ที่ server ไม่ใช่ที่เงื่อนไข JSX
  * การอัปเกรดแพ็กเสียเงินมีทางเดียวคือ purchasePlan (จ่ายจริง) -> apply_plan_purchase
  */
@@ -229,7 +125,7 @@ export async function changePlan(shopId: string, planCode: string): Promise<Plan
     // fail-closed: อ่านราคาไม่ได้ = ไม่ให้เปลี่ยน (ห้ามเดาว่าเป็นแพ็กฟรี)
     if (planErr || !target || target.active !== true) return { ok: false, error: "ไม่พบแพ็กเกจนี้" };
     if (Number(target.price_monthly) > 0) {
-      return { ok: false, error: "แพ็กเกจนี้ต้องชำระเงินก่อน — กดปุ่มสมัครเพื่อสร้าง QR ชำระเงิน" };
+      return { ok: false, error: "แพ็กเกจนี้ต้องชำระเงินก่อน — กดปุ่มสมัครเพื่อไปหน้าชำระเงิน" };
     }
     // ต้องใช้ service client: role `authenticated` ไม่มีสิทธิ์ UPDATE คอลัมน์ `plan` ที่ระดับ Postgres
     // (วัดจริง 5 ส.ค. 2569: has_column_privilege(authenticated, shops.plan, UPDATE) = false)

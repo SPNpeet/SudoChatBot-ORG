@@ -7,8 +7,7 @@ import { savePlatformBilling } from "./actions";
 import { CheckCircle2 } from "lucide-react";
 
 interface Settings {
-  promptpay_id: string | null; account_name: string | null; slip_provider: string | null;
-  payment_gateway: string | null; omise_public_key: string | null; company_name: string | null;
+  account_name: string | null; slip_provider: string | null; company_name: string | null;
   company_address: string | null; tax_id: string | null; tax_branch: string | null;
   vat_registered: boolean | null; email_from: string | null; low_credit_threshold: number | null;
   slip_monthly_cap: number | null;
@@ -30,20 +29,12 @@ export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings
 
   return (
     <form ref={formRef} action={submit} className="space-y-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div><Label>พร้อมเพย์ (รับเงินเติม)</Label><Input name="promptpay_id" defaultValue={pf?.promptpay_id ?? ""} placeholder="เบอร์/เลขบัตร ปชช." /></div>
-        <div><Label>ชื่อบัญชี</Label><Input name="account_name" defaultValue={pf?.account_name ?? ""} /></div>
+      <div>
+        <Label>ชื่อผู้รับเงิน (ขึ้นบนใบเสร็จค่าแพ็กเกจ)</Label>
+        <Input name="account_name" defaultValue={pf?.account_name ?? ""} />
       </div>
       <div>
-        <Label>ช่องทางรับเงินเติมเครดิต</Label>
-        <Select name="payment_gateway" defaultValue={pf?.payment_gateway ?? "promptpay_slip"}>
-          <option value="stripe">Stripe — พร้อมเพย์/บัตร ยืนยันอัตโนมัติ (แนะนำ)</option>
-          <option value="promptpay_slip">PromptPay + ตรวจสลิป (trust-based)</option>
-          <option value="omise">Omise — PromptPay ผ่าน gateway (auto settle)</option>
-        </Select>
-      </div>
-      <div>
-        <Label>Stripe — ใช้เมื่อเลือก gateway Stripe</Label>
+        <Label>รับเงินค่าแพ็กเกจผ่าน Stripe</Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input name="stripe_secret_key" type="password" placeholder="Secret key (sk_live_... กรอกเมื่อเปลี่ยน)" />
           <Input name="stripe_webhook_secret" type="password" placeholder="Webhook signing secret (whsec_... กรอกเมื่อเปลี่ยน)" />
@@ -58,18 +49,10 @@ export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings
         </p>
       </div>
       <div>
-        <Label>Omise (opn.ooo) — ใช้เมื่อเลือก gateway Omise</Label>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input name="omise_public_key" defaultValue={pf?.omise_public_key ?? ""} placeholder="Public key (pkey_...)" />
-          <Input name="omise_secret_key" type="password" placeholder="Secret key (skey_... กรอกเมื่อเปลี่ยน)" />
-        </div>
-        <p className="mt-1 text-[11px] text-neutral-400">Secret key เก็บใน Vault · ตั้ง webhook ใน Omise dashboard ไปที่ <span className="font-mono">/api/billing/omise/webhook</span></p>
-      </div>
-      <div>
-        <Label>ตรวจสลิปเติมเงินอัตโนมัติ (โหมด PromptPay+สลิป)</Label>
+        <Label>ตรวจสลิปอัตโนมัติ — สำหรับลูกค้าของร้านที่จ่ายบิลให้ร้าน (ไม่เกี่ยวกับค่าแพ็กเกจ)</Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select name="slip_provider" defaultValue={pf?.slip_provider ?? "manual"}>
-            <option value="manual">ยืนยันเอง (กดปุ่มข้างบน)</option>
+            <option value="manual">ยืนยันเอง (ร้านกดจับคู่สลิปเอง)</option>
             <option value="easyslip">EasySlip — อัตโนมัติ</option>
             <option value="slipok">SlipOK — อัตโนมัติ</option>
           </Select>

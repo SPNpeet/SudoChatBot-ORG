@@ -32,11 +32,9 @@
 ## app/api/admin/test-ai/
 - route.ts (63L) → POST  ⇒ route: /api/admin/test-ai (API)
 
-## app/api/billing/omise/webhook/
-- route.ts (66L) → POST  ⇒ route: /api/billing/omise/webhook (API)
+## app/api/billing/stripe/webhook/
+- route.ts (137L) → POST  ⇒ route: /api/billing/stripe/webhook (API)
 
-## app/api/billing/topup-slip/
-- route.ts (58L) → POST  ⇒ route: /api/billing/topup-slip (API)
 
 ## app/api/finance/extract/
 - route.ts (227L) → maxDuration, ExtractedBill, POST  ⇒ route: /api/finance/extract (API)
@@ -105,7 +103,7 @@
 - page.tsx (57L) → dynamic, maxDuration, default  ⇒ route: /dashboard/assistant
 
 ## app/dashboard/billing/
-- actions.ts [use server] (120L) → TopupResult, PlanResult, createTopup, createOmiseTopup, getTopupStatus, changePlan
+- actions.ts [use server] (150L) → TopupResult, PlanResult, createTopup, getTopupStatus, purchasePlan, changePlan
 - billing-client.tsx [use client] (225L) → default
 - page.tsx (142L) → dynamic, default  ⇒ route: /dashboard/billing
 
@@ -208,7 +206,7 @@
 - channel-errors.ts (17L) → friendlyChannelError
 - finance-server.ts (154L) → ACC, JournalLineInput, PostJournalInput, postJournal, reverseJournalOf, bkkToday, PayableDoc, applyPaymentToDoc
 - finance.ts (132L) → DOC_TYPE_TH, DOC_STATUS_TH, QT_STATUS_TH, docStatusLabel, docStatusTone, WHT_RATES, DocTotals, calcDocTotals, agingBucket, AGING_LABEL_TH, …
-- omise.ts (63L) → OmiseCharge, getOmiseSecretKey, createPromptPayCharge, retrieveCharge
+- stripe.ts (144L) → StripeCheckoutSession, getStripeSecretKey, getStripeWebhookSecret, createCheckoutSession, retrieveCheckoutSession, verifyStripeSignature
 - promptpay.ts (15L) → promptPayPayload
 - shop.ts (60L) → requireUser, getMemberships, getCurrentShop, assertMember, isPlatformAdmin
 - slip-verify.ts (85L) → SlipResult, verifyWithEasySlip, verifyWithSlipOK, verifySlip

@@ -26,17 +26,8 @@ if (!existsSync(dir)) {
   process.exit(1);
 }
 
-/** แปลงค่า JS เป็นลิเทอรัล SQL — ต้องครอบคลุมทุกชนิดที่ Postgres คืนมาเป็น JSON */
-function lit(v) {
-  if (v === null || v === undefined) return "null";
-  if (typeof v === "number") return Number.isFinite(v) ? String(v) : "null";
-  if (typeof v === "boolean") return v ? "true" : "false";
-  if (Array.isArray(v) || typeof v === "object") {
-    // jsonb / อาร์เรย์ — ส่งเป็นสตริง JSON แล้วให้ Postgres cast เอง
-    return `'${JSON.stringify(v).replace(/'/g, "''")}'::jsonb`;
-  }
-  return `'${String(v).replace(/'/g, "''")}'`;
-}
+/** ครอบสตริงเป็นลิเทอรัล SQL */
+const q = (s) => `'${s.replace(/'/g, "''")}'`;
 
 const out = [];
 out.push("-- กู้ข้อมูลจากไฟล์สำรอง — ตรวจไฟล์นี้ก่อนรันเสมอ");
@@ -57,17 +48,48 @@ for (const table of BACKUP_TABLES) {
   try { rows = JSON.parse(readFileSync(file, "utf8")); } catch { summary.push(`${table}: อ่านไม่ได้`); continue; }
   if (!Array.isArray(rows) || rows.length === 0) { summary.push(`${table}: 0`); continue; }
 
-  const cols = Object.keys(rows[0]);
   out.push(`-- ${table} (${rows.length} แถว)`);
   // แบ่งเป็นก้อนละ 500 แถว — คำสั่งเดียวยาวเกินไปทำให้ SQL Editor ค้าง
   for (let i = 0; i < rows.length; i += 500) {
     const chunk = rows.slice(i, i + 500);
-    const values = chunk.map((r) => `(${cols.map((c) => lit(r[c])).join(",")})`).join(",\n  ");
-    // ⚠️ overriding system value ต้องมีเสมอ
-    // บางตาราง (vat_rates, rd_filing_extensions) ใช้ generated always as identity
-    // ซึ่งปฏิเสธการใส่ id เองแล้วทำให้การกู้ข้อมูลพังทั้งก้อน — จับได้ตอนทดสอบกู้จริง
-    // ทดสอบแล้วว่าใส่กับตารางที่ไม่มี identity ก็ไม่ error
-    out.push(`insert into public.${table} (${cols.join(",")}) overriding system value values\n  ${values}\non conflict do nothing;`);
+    const json = JSON.stringify(chunk);
+    // เลือกป้าย dollar-quote ที่ไม่ปรากฏในข้อมูล — ข้อมูลลูกค้ามีอะไรก็ได้
+    let tag = "$j$";
+    for (let n = 0; json.includes(tag); n++) tag = `$j${n}$`;
+
+    // ⚠️ ทำไมต้องเป็น DO block + dynamic SQL แทน INSERT ... VALUES ตรง ๆ
+    //
+    // แผนกู้ระบบต้องใช้กับ "ไฟล์สำรองของเมื่อวาน" บน "โครงสร้างของวันนี้" ได้
+    // ซึ่งแปลว่า schema สองฝั่งไม่ตรงกันเป็นเรื่องปกติ ไม่ใช่ข้อยกเว้น:
+    //  · คอลัมน์ที่ถูกลบไปแล้ว ยังอยู่ในไฟล์สำรองเก่า
+    //  · คอลัมน์ที่เพิ่งเพิ่ม ยังไม่มีในไฟล์สำรองเก่า
+    // ทั้งไฟล์อยู่ใน transaction เดียว error แถวเดียวล้มทั้งชุด
+    // (เจอจริง 5 ส.ค. 2569 ตอน drop คอลัมน์ omise_public_key — กู้ไม่ได้แม้แต่แถวเดียว)
+    //
+    // จึงคัดรายชื่อคอลัมน์ตอน "รันจริง" โดยเอาคีย์ใน JSON ∩ คอลัมน์ที่มีอยู่จริง
+    //  · คอลัมน์ที่หายไปแล้ว -> ตัดทิ้ง ไม่พัง
+    //  · คอลัมน์ที่ไม่มีในไฟล์ -> ไม่ถูกระบุ จึงได้ค่า default ของตาราง
+    //    (สำคัญมาก: ถ้าใช้ select * จะยัด NULL ทับ default แล้วชน NOT NULL ทันที)
+    //
+    // overriding system value ต้องมีเสมอ: vat_rates กับ rd_filing_extensions
+    // ใช้ generated always as identity ซึ่งปฏิเสธการใส่ id เองแล้วพังทั้งก้อน
+    out.push(`do $restore$
+declare v_cols text; v_data jsonb := ${tag}${json}${tag}::jsonb;
+begin
+  select string_agg(quote_ident(a.attname), ',')
+    into v_cols
+  from jsonb_object_keys(v_data -> 0) as k(name)
+  join pg_attribute a on a.attrelid = 'public.${table}'::regclass
+   and a.attname = k.name and a.attnum > 0 and not a.attisdropped;
+  if v_cols is null then
+    raise notice 'ข้าม ${table}: ไม่มีคอลัมน์ที่ตรงกันเลย';
+    return;
+  end if;
+  execute format(
+    'insert into public.${table} (%s) overriding system value select %s from jsonb_populate_recordset(null::public.${table}, $1) on conflict do nothing',
+    v_cols, v_cols)
+  using v_data;
+end $restore$;`);
   }
   out.push("");
   totalRows += rows.length;

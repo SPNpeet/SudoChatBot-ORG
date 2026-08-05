@@ -19,7 +19,7 @@ export default async function AdminBillingPage() {
   const [{ data: rev }, { data: pending }, { data: pf }] = await Promise.all([
     supabase.rpc("platform_revenue"),
     svc.from("topups").select("id,amount,status,created_at,slip_path,plan_code,plan_period,shops(name)").in("status", ["pending", "verifying"]).order("created_at", { ascending: false }).range(0, TOPUPS_PAGE_SIZE),
-    svc.from("platform_billing_settings").select("promptpay_id,account_name,slip_provider,payment_gateway,omise_public_key,company_name,company_address,tax_id,tax_branch,vat_registered,email_from,low_credit_threshold,slip_monthly_cap").eq("id", true).single(),
+    svc.from("platform_billing_settings").select("account_name,slip_provider,company_name,company_address,tax_id,tax_branch,vat_registered,email_from,low_credit_threshold,slip_monthly_cap").eq("id", true).single(),
   ]);
   // จำนวนครั้งที่ยิง API ตรวจสลิปเดือนนี้ (ทั้งแพลตฟอร์ม) — ให้เจ้าของเห็นก่อนโควตาหมด
   const monthStart = new Date(Date.now() + 7 * 3600_000);

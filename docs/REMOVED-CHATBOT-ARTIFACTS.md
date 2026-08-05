@@ -13,7 +13,7 @@
 | ผูกกับ trigger ไหม | 0 |
 | มี view อ้างถึงไหม | 0 |
 | ผู้ใช้ล็อกอิน / คนนอก เรียกได้ไหม | ไม่ได้ (service_role เท่านั้น) |
-| **ผู้ช่วยบัญชี AI ใช้ไหม** | **ไม่ใช้** — ใช้แค่ `consume_ai_quota` · `get_ai_key` · `get_purpose_ai_key` · `platform_ai_ok` · `is_platform_admin` · `next_fin_doc_number` · `get_platform_omise_key` |
+| **ผู้ช่วยบัญชี AI ใช้ไหม** | **ไม่ใช้** — ใช้แค่ `consume_ai_quota` · `get_ai_key` · `get_purpose_ai_key` · `platform_ai_ok` · `is_platform_admin` · `next_fin_doc_number` |
 
 ## ฟังก์ชันที่ลบ (6 ตัว)
 

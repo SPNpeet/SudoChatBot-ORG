@@ -30,7 +30,11 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
   const preVat = Math.round((total / (1 + rate)) * 100) / 100;
   const vat = Math.round((total - preVat) * 100) / 100;
   const docNo = t.invoice_number ?? String(t.id).slice(0, 8).toUpperCase();
-  const method = t.gateway === "omise" ? "PromptPay (Omise)" : "PromptPay";
+  // ใบเสร็จเก่ายังต้องอ่านได้หลังตัดช่องทางเดิมทิ้ง (5 ส.ค. 2569) — เก็บชื่อเดิมไว้ตามที่จ่ายจริง
+  // ห้ามเขียนทับเป็น "Stripe" ทั้งหมด นั่นคือการปลอมบันทึกว่าลูกค้าจ่ายผ่านอะไร
+  const method = t.gateway === "stripe" ? "ชำระออนไลน์ (Stripe)"
+    : t.gateway === "omise" ? "PromptPay (Omise)"
+      : "PromptPay (โอน + สลิป)";
 
   return (
     <div className="mx-auto max-w-lg">

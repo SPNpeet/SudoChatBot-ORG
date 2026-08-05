@@ -18,10 +18,12 @@ export default async function BillingPage() {
     svc.from("plans").select("*").eq("active", true).order("sort"),
     svc.from("wallet_transactions").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20),
     svc.from("topups").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(10),
-    svc.from("platform_billing_settings").select("payment_gateway,promptpay_id").eq("id", true).maybeSingle(),
+    // ตรวจว่าตั้งคีย์ Stripe แล้วหรือยัง — แปลงเป็น boolean ทันที
+    // ⚠️ ห้ามส่งค่าคีย์ลงไปที่ BillingClient เด็ดขาด (เป็น client component = หลุดถึงเบราว์เซอร์)
+    svc.rpc("get_platform_stripe_key"),
   ]);
 
-  const gw = (pf as { payment_gateway?: string } | null)?.payment_gateway;
+  const stripeReady = typeof pf === "string" ? pf.trim().length > 0 : Boolean(process.env.STRIPE_SECRET_KEY);
 
   const s = (summary ?? {}) as { balance: number; plan: Plan; usage: { replies_count: number; billed_replies: number; billed_amount: number } };
   const balance = Number(s.balance ?? 0);
@@ -90,12 +92,7 @@ export default async function BillingPage() {
         balance={balance}
         currentPlan={plan?.code ?? "free"}
         plans={(plans ?? []) as Plan[]}
-        gateway={gw === "omise" ? "omise" : gw === "stripe" ? "stripe" : "promptpay_slip"}
-        gatewayReady={
-          gw === "omise" || gw === "stripe"
-            ? true // gateway เช็ค key ตอนสร้างรายการ (error แสดง inline ตรงปุ่ม)
-            : Boolean((pf as { promptpay_id?: string | null } | null)?.promptpay_id)
-        }
+        gatewayReady={stripeReady}
       />
 
       {/* ประวัติเติมเงิน */}
