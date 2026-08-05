@@ -501,8 +501,11 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
               ? [{ label: "แปลงเป็นใบแจ้งหนี้", reply: `แปลง ${r.docNumber} เป็นใบแจ้งหนี้` }]
               : [
                 // ยังไม่มีพร้อมเพย์ = เรื่องด่วนกว่าทุกปุ่ม เพราะลิงก์ที่เพิ่งได้ยังรับเงินไม่ได้จริง
+                // ⚠️ ปุ่มตัวเลือกกดแล้ว "ส่งข้อความนั้นทันที" (chat.tsx) ไม่ได้วางลงช่องพิมพ์
+                // จึงต้องเป็นประโยคที่สมบูรณ์ในตัว ห้ามเป็นประโยคค้างให้ผู้ใช้พิมพ์ต่อ
+                // (เดิมใส่ "…เลขคือ " แล้วส่งไปทั้งอย่างนั้น = AI ได้ข้อความไม่มีเลข)
                 ...(promptpayHint && (ctx.role === "owner" || ctx.role === "admin")
-                  ? [{ label: "ตั้งพร้อมเพย์เดี๋ยวนี้", reply: "ตั้งพร้อมเพย์ให้หน่อย เลขคือ ", hint: "พิมพ์เบอร์ต่อท้ายได้เลย" }]
+                  ? [{ label: "ตั้งพร้อมเพย์เดี๋ยวนี้", reply: "ขอตั้งพร้อมเพย์ของกิจการนี้" }]
                   : []),
                 { label: "รับเงินแล้ว บันทึกเลย", reply: `บันทึกรับเงินเต็มยอดของ ${r.docNumber}` },
                 { label: "ออกอีกใบให้ลูกค้าเดิม", reply: `ออก${DOC_TYPE_TH[docType]}ใบใหม่ให้ลูกค้าเดิมของ ${r.docNumber}` },
@@ -764,10 +767,17 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         const patch: Record<string, unknown> = {};
         if (typeof input.promptpay_id === "string") {
           const digits = input.promptpay_id.replace(/[^0-9]/g, "");
-          if (digits && digits.length !== 10 && digits.length !== 13) {
+          // ⚠️ ค่าว่างต้องไม่ผ่านแล้วตอบว่า "บันทึกแล้ว"
+          // เดิม `if (digits && ...)` ทำให้สตริงว่างข้ามด่านตรวจ แล้ว set เป็น null
+          // ผู้ใช้เห็นข้อความ "บันทึกแล้ว — QR ขึ้นบนใบแจ้งหนี้ทันที" ทั้งที่ยังไม่มีเลขพร้อมเพย์
+          // (เกิดได้จริงเมื่อโมเดลเรียก tool ก่อนถามเลขจากผู้ใช้)
+          if (!digits) {
+            return JSON.stringify({ error: "ยังไม่ได้ระบุเลขพร้อมเพย์ — ถามผู้ใช้ก่อนว่าจะใช้เบอร์มือถือ 10 หลัก หรือเลขบัตรประชาชน 13 หลัก แล้วค่อยเรียกใหม่" });
+          }
+          if (digits.length !== 10 && digits.length !== 13) {
             return JSON.stringify({ error: "พร้อมเพย์ต้องเป็นเบอร์ 10 หลักหรือบัตรประชาชน 13 หลัก" });
           }
-          patch.promptpay_id = digits || null;
+          patch.promptpay_id = digits;
         }
         if (typeof input.account_name === "string") patch.account_name = input.account_name.trim().slice(0, 100) || null;
         if (typeof input.bank_name === "string") patch.bank_name = input.bank_name.trim().slice(0, 60) || null;
