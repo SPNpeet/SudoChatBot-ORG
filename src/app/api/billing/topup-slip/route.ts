@@ -92,9 +92,16 @@ export async function POST(request: Request) {
           //    เดิมเป็น check-then-act (อ่านสถานะบรรทัดบน แล้วเขียนทับแบบไม่มีเงื่อนไข)
           //    ทำให้แอดมินกดยืนยันระหว่างรอ API หรือยิงสองคำขอพร้อมกัน = เครดิตเข้าสองรอบ
           //    แม่แบบมาจาก omise/webhook ที่ทำถูกอยู่แล้ว
-          const { data: claimed } = await svc.from("topups")
+          const { data: claimed, error: claimErr } = await svc.from("topups")
             .update({ slip_trans_ref: ref ?? null, slip_data: j, status: "paid", verified_by: "auto", paid_at: new Date().toISOString() })
             .eq("id", topupId).neq("status", "paid").select("id");
+          // ⚠️ ต้องแยก "เขียนไม่สำเร็จ" ออกจาก "คนอื่นยืนยันไปก่อน" — postgrest คืน data:null ทั้งสองกรณี
+          // ถ้ากลืน error จะตอบลูกค้าว่า "เครดิตเข้าเรียบร้อย" ทั้งที่ไม่ได้เครดิต และเลขสลิปที่เพิ่งจองไว้
+          // จะค้างในทะเบียนกลางตลอดไป ทำให้เขาส่งใหม่ก็โดนตีกลับว่า "สลิปใบนี้ถูกใช้แล้ว" = ตันถาวร
+          if (claimErr) {
+            if (ref) await svc.from("slip_refs").delete().eq("trans_ref", String(ref));
+            return NextResponse.json({ ok: false, error: "บันทึกการชำระเงินไม่สำเร็จ — ลองส่งสลิปอีกครั้ง ถ้ายังไม่ได้ติดต่อผู้ดูแลระบบ" });
+          }
           if (!claimed || claimed.length === 0) {
             // มีคนอื่นยืนยันไปก่อนแล้ว (แอดมิน/คำขอคู่แข่ง) — ห้ามเครดิตซ้ำ
             return NextResponse.json({ ok: true, auto: true, message: "รายการนี้ยืนยันแล้ว — เครดิต/แพ็กเกจเข้าเรียบร้อย" });
@@ -108,7 +115,14 @@ export async function POST(request: Request) {
           });
           if (creditErr) {
             // เงินเข้าบัญชีจริงแล้วแต่เครดิตไม่เข้า = ต้องมีคนมาเก็บงาน ห้ามตอบว่าสำเร็จ
-            await svc.from("topups").update({ error: `credit_wallet: ${creditErr.message}`.slice(0, 300) }).eq("id", topupId);
+            // ⚠️ ต้องคืนสถานะเป็น verifying ด้วย ไม่งั้น admin_confirm_topup ปฏิเสธแถวที่เป็น paid แล้ว
+            //    (มันเช็ค `if status = 'paid' then return ok:false`) = ปุ่มที่เราบอกให้แอดมินไปกด กดไม่ได้
+            //    และเลขสลิปที่จองไว้ต้องปล่อยคืน ไม่งั้นเส้นอนุมัติมือก็เดินไม่ได้เหมือนกัน
+            await svc.from("topups").update({
+              status: "verifying", verified_by: null, paid_at: null,
+              error: `credit_wallet: ${creditErr.message}`.slice(0, 300),
+            }).eq("id", topupId);
+            if (ref) await svc.from("slip_refs").delete().eq("trans_ref", String(ref));
             await notifyPlatformAdmins(svc, {
               title: "ด่วน: ลูกค้าจ่ายเงินแล้วแต่เครดิตไม่เข้า",
               body: `รายการ ${topupId} — ตรวจสลิปผ่านและสถานะเป็นชำระแล้ว แต่ credit_wallet ล้มเหลว ต้องเข้าไปจัดการมือ`,

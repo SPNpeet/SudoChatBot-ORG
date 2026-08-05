@@ -27,7 +27,8 @@ const MAX_LEN = 2000;
 
 export async function assistantReply(shopId: string, history: AssistantTurn[]): Promise<AssistantReply> {
   try {
-    const { user } = await assertMember(shopId, ["owner", "admin", "agent"]);
+    // เก็บ role ไว้ส่งต่อให้ engine — เครื่องมือที่แก้ค่าตั้งค่าบังคับ owner/admin ในโค้ด (OWNER_ONLY_TOOLS)
+    const { user, role } = await assertMember(shopId, ["owner", "admin", "agent"]);
     const svc = createServiceClient();
 
     // ด่าน 0: เกราะแพลตฟอร์ม (kill switch + เพดานค่า AI/วัน) — เช็คก่อนกินโควตาผู้ใช้
@@ -52,7 +53,7 @@ export async function assistantReply(shopId: string, history: AssistantTurn[]): 
     }
 
     const ctx: AssistantCtx = {
-      svc, shopId, shopName: shop.name, userId: user.id, history: trimmed,
+      svc, shopId, shopName: shop.name, role, userId: user.id, history: trimmed,
       assistantName: String(((shop.settings ?? {}) as Record<string, unknown>).assistant_name ?? "").trim() || undefined,
     };
     const r = await runAssistant(ctx);

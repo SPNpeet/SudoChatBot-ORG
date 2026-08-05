@@ -166,10 +166,14 @@ export async function changePlan(shopId: string, planCode: string): Promise<Plan
     if (Number(target.price_monthly) > 0) {
       return { ok: false, error: "แพ็กเกจนี้ต้องชำระเงินก่อน — กดปุ่มสมัครเพื่อสร้าง QR ชำระเงิน" };
     }
-    const supabase = await createClient();
-    const { error } = await supabase.from("shops").update({ plan: planCode, plan_since: new Date().toISOString().slice(0, 10) }).eq("id", shopId);
-    if (error) return { ok: false, error: error.message };
+    // ต้องใช้ service client: role `authenticated` ไม่มีสิทธิ์ UPDATE คอลัมน์ `plan` ที่ระดับ Postgres
+    // (วัดจริง 5 ส.ค. 2569: has_column_privilege(authenticated, shops.plan, UPDATE) = false)
+    // เดิมใช้ client ของผู้ใช้ -> ปุ่ม "ใช้แพ็กฟรี" พังมาตลอดและโชว์ error อังกฤษดิบให้ผู้ใช้
+    // ปลอดภัยเพราะด่านอยู่ครบก่อนถึงบรรทัดนี้แล้ว: assertMember(owner) + ตรวจว่าแพ็กราคา 0 เท่านั้น
     const svc = createServiceClient();
+    const { error } = await svc.from("shops")
+      .update({ plan: planCode, plan_since: new Date().toISOString().slice(0, 10) }).eq("id", shopId);
+    if (error) return { ok: false, error: "เปลี่ยนแพ็กเกจไม่สำเร็จ — ลองใหม่อีกครั้ง" };
     await svc.from("audit_logs").insert({ shop_id: shopId, actor_type: "user", action: "plan_changed", resource_type: "shops", resource_id: shopId, details: { plan: planCode } });
     revalidatePath("/dashboard/billing");
     return { ok: true };

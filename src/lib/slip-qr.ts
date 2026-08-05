@@ -79,8 +79,17 @@ export async function decodeSlipQr(bytes: Uint8Array): Promise<SlipQr | null> {
   // ทั้งที่ขนาดที่สองมีไว้เพื่อกรณีแบบนั้นพอดี
   for (const width of [1280, 2048]) {
     try {
-      const { data, info } = await sharp(Buffer.from(bytes), { failOn: "none" })
+      const { data, info } = await sharp(Buffer.from(bytes), {
+        failOn: "none",
+        // เพดานขนาดภาพขาเข้า ~40MP — กันรูป "ระเบิดการคลายบีบอัด" (ไฟล์เล็กแต่กางแล้วเป็นกิกะไบต์)
+        // หน้าสาธารณะรับไฟล์ได้ถึง 8MB โดยไม่ต้องล็อกอิน ถ้าไม่มีเพดานนี้ ฟังก์ชันตายด้วย OOM ได้ด้วยรูปใบเดียว
+        limitInputPixels: 40_000_000,
+      })
         .rotate()               // เคารพ EXIF — รูปถ่ายจากมือถือหมุนมาบ่อย
+        // ⚠️ ห้ามลบ resize (เคยลบพลาดมาแล้ววันที่ 5 ส.ค. 2569 แล้วจับได้ตอนตรวจซ้ำ):
+        // ไม่มีบรรทัดนี้ = กาง raw ทั้งภาพต้นฉบับ วัดจริงได้ RAM 1,095MB / 6.5 วินาที ต่อรูปเดียว
+        // (มีบรรทัดนี้: 4.7MB / 0.25 วินาที) และทำให้ตัวแปร width ไม่มีความหมาย รอบสองเลยไม่ช่วยอะไร
+        .resize({ width, height: width, fit: "inside", withoutEnlargement: true })
         .toColourspace("srgb")  // สลิปที่สแกนเป็นขาวดำมี 1 ช่องสี + ensureAlpha = 2 ช่อง
         .ensureAlpha()          // แต่ jsQR ต้องการ RGBA 4 ช่องเป๊ะ ไม่งั้นโยน "Malformed data"
         .raw()

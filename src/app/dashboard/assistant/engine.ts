@@ -15,6 +15,8 @@ export interface AssistantCtx {
   svc: SupabaseClient;
   shopId: string;
   shopName: string;
+  /** บทบาทของผู้สั่งในกิจการนี้ — ใช้กันไม่ให้พนักงาน (agent) สั่งแก้ค่าตั้งค่าที่หน้าเว็บห้ามอยู่แล้ว */
+  role?: string;
   /** ชื่อที่ลูกค้าตั้งให้ผู้ช่วย (shops.settings.assistant_name) — ไม่ตั้ง = ชื่อมาตรฐาน */
   assistantName?: string;
   userId: string;
@@ -318,8 +320,24 @@ async function findDocByNumber(ctx: AssistantCtx, docNumber: string) {
   return data;
 }
 
+/**
+ * เครื่องมือที่ "เปลี่ยนค่าตั้งค่าของกิจการ" — หน้าเว็บจริงบังคับ owner/admin อยู่แล้ว
+ * ผู้ช่วย AI ต้องบังคับเท่ากัน ไม่งั้นกลายเป็นทางลัดข้ามสิทธิ์
+ *
+ * ⚠️ ช่องโหว่ที่ปิด (พบตอนตรวจซ้ำ 5 ส.ค. 2569): assistantReply ให้ role `agent` ผ่านเข้ามาได้
+ * แล้ว tool เขียน DB ด้วย service client ตรง ๆ โดยไม่เช็คบทบาทซ้ำ
+ * ผลคือพนักงานสั่ง "เปลี่ยนพร้อมเพย์เป็นเบอร์ฉัน" ได้ -> QR บนใบแจ้งหนี้และลิงก์จ่ายเงินทุกใบ
+ * ชี้ไปบัญชีเขา เจ้าของไม่รู้จนกว่าจะไล่ยอด
+ * และนี่คือปลายทางที่ prompt injection จากข้อความในบิลที่ OCR อ่านติดมาจะเดินไปถึงได้ด้วย
+ * (กติกาข้อ 3: ถ้าต้องการให้ห้าม ให้เขียนด่านในโค้ด อย่าเขียนขอในคำสั่งของโมเดล)
+ */
+const OWNER_ONLY_TOOLS = new Set(["update_shop_info", "update_payment_settings", "upsert_product"]);
+
 async function executeTool(ctx: AssistantCtx, name: string, input: Record<string, unknown>): Promise<string> {
   const s = ctx.svc;
+  if (OWNER_ONLY_TOOLS.has(name) && ctx.role !== "owner" && ctx.role !== "admin") {
+    return JSON.stringify({ error: "เฉพาะเจ้าของกิจการหรือผู้ดูแลเท่านั้นที่แก้ข้อมูลกิจการ บัญชีรับเงิน หรือสินค้าได้ — แจ้งเจ้าของให้แก้ที่หน้าตั้งค่าแทน" });
+  }
   try {
     switch (name) {
       case "ask_user": {

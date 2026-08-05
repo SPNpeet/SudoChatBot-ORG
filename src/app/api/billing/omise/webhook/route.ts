@@ -60,13 +60,22 @@ export async function POST(request: Request) {
       // เงินเข้าที่ Omise แล้วแต่เครดิตไม่เข้า = ต้องให้ Omise ยิงซ้ำ ห้ามตอบ processed
       // (เดิมทิ้ง error แล้วตอบ 200 -> Omise ไม่ retry -> ลูกค้าจ่ายแล้วไม่ได้อะไร ไม่มีใครรู้)
       if (creditErr) {
+        // คืนสถานะก่อน ไม่งั้นทั้งสองทางกู้ตัน:
+        //  · Omise ยิงซ้ำ -> .neq("status","paid") ไม่คืนแถว -> ข้ามการเครดิตตลอดไป
+        //  · แอดมินกดยืนยัน -> admin_confirm_topup ปฏิเสธแถวที่เป็น paid
+        await svc.from("topups").update({
+          status: "verifying", verified_by: null, paid_at: null,
+          error: `credit_wallet: ${creditErr.message}`.slice(0, 300),
+        }).eq("id", topup.id);
         const { notifyPlatformAdmins } = await import("@/lib/notify");
         await notifyPlatformAdmins(svc, {
           title: "ด่วน: จ่ายผ่าน Omise สำเร็จแต่เครดิตไม่เข้า",
-          body: `รายการ ${topup.id} — ${creditErr.message.slice(0, 120)}`,
+          body: `รายการ ${topup.id} — ${creditErr.message.slice(0, 120)} · คืนสถานะให้กดยืนยันมือได้แล้ว`,
           url: "/dashboard/admin/billing", tag: `credit-fail:${topup.id}`,
         });
-        return done("failed", `credit_wallet: ${creditErr.message}`);
+        await svc.from("webhook_events").update({ status: "failed", error: `credit_wallet: ${creditErr.message}`.slice(0, 300) }).eq("id", evt?.id ?? "");
+        // ตอบ 500 เพื่อให้ Omise ยิงซ้ำจริง ๆ (done() ตอบ 200 เสมอ ซึ่งแปลว่า "รับทราบแล้ว")
+        return NextResponse.json({ ok: false }, { status: 500 });
       }
       // ซื้อแพ็กเกจจ่ายตรง -> เปิดแพ็กทันที (idempotent — ข้ามเองถ้าไม่ใช่รายการซื้อแพ็ก)
       const { data: applied, error: applyErr } = await svc.rpc("apply_plan_purchase", { p_topup_id: topup.id });
