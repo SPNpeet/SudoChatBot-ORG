@@ -9,7 +9,7 @@ import { OPENAI_COMPAT_BASE, estimateAiCost } from "@/lib/ai-catalog";
 import { resolvePurposeKey, resolveDefaultAiConfig } from "@/lib/ai-config";
 import { docOutstanding, agingBucket, AGING_LABEL_TH, DOC_TYPE_TH } from "@/lib/finance";
 // กฎเลือกเอกสารสำหรับ VAT/หัก ณ ที่จ่าย ต้องมาจากที่เดียวกับหน้ารายงาน ห้ามเขียนใหม่ในนี้
-import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, sumVat } from "@/lib/vat-docs";
+import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, sumVat, recognitionsAsDocs } from "@/lib/vat-docs";
 import { saveDoc, recordPayment, convertDoc, voidDoc, type SaveDocInput } from "../finance/actions";
 import type { DocType, VatMode } from "@/lib/types/finance";
 
@@ -367,9 +367,9 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         const monthStart = bkkDayStart().slice(0, 7) + "-01";
         const [openDocs, pays, wallet, shopPlan, overdue] = await Promise.all([
           s.from("fin_docs").select("doc_type,total,wht_amount,paid_amount").eq("shop_id", ctx.shopId).in("status", ["awaiting", "partial"]),
-          // กันรายการของเอกสารที่ยกเลิกแล้ว — ไม่งั้น AI ตอบตัวเลขที่ไม่ตรงกับหน้าการเงินและสมุดรายวัน
-          s.from("fin_payments").select("direction,amount,fin_docs!inner(status)")
-            .eq("shop_id", ctx.shopId).neq("fin_docs.status", "void").gte("paid_at", monthStart),
+          // กันรายการของเอกสารที่ยกเลิกแล้ว (กรองในโค้ด) — ห้ามใช้ !inner เพราะจะตัดเงินที่ยังไม่ผูกเอกสารทิ้ง
+          s.from("fin_payments").select("direction,amount,fin_docs(status)")
+            .eq("shop_id", ctx.shopId).gte("paid_at", monthStart),
           s.from("wallets").select("balance").eq("shop_id", ctx.shopId).maybeSingle(),
           s.from("shops").select("plan").eq("id", ctx.shopId).single(),
           s.from("fin_docs").select("doc_number,doc_type,contact_name,due_date,total,wht_amount,paid_amount")
@@ -377,8 +377,11 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         ]);
         const ar = (openDocs.data ?? []).filter((d) => d.doc_type === "invoice").reduce((a, d) => a + docOutstanding(d), 0);
         const ap = (openDocs.data ?? []).filter((d) => d.doc_type === "expense").reduce((a, d) => a + docOutstanding(d), 0);
-        const cashIn = (pays.data ?? []).filter((p) => p.direction === "in").reduce((a, p) => a + Number(p.amount), 0);
-        const cashOut = (pays.data ?? []).filter((p) => p.direction === "out").reduce((a, p) => a + Number(p.amount), 0);
+        // ตัดเอกสารที่ยกเลิกแล้วออก (สมุดรายวันกลับรายการไปแล้ว) แต่เก็บเงินที่ยังไม่ผูกเอกสารไว้
+        const livePays = ((pays.data ?? []) as unknown as { direction: string; amount: number; fin_docs?: { status?: string } | null }[])
+          .filter((p) => (p.fin_docs?.status ?? "") !== "void");
+        const cashIn = livePays.filter((p) => p.direction === "in").reduce((a, p) => a + Number(p.amount), 0);
+        const cashOut = livePays.filter((p) => p.direction === "out").reduce((a, p) => a + Number(p.amount), 0);
 
         // เอกสารของเดือนนี้ พร้อมหมวด — ใช้ตอบว่า "จ่ายอะไรไปบ้าง / ขายอะไรไปบ้าง"
         const { data: monthDocs } = await s.from("fin_docs")
@@ -621,8 +624,19 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
           .select("doc_type,status,vat_mode,tax_point,vat_amount,wht_amount,total,contact_tax_id,ref_doc_id,id")
           .eq("shop_id", ctx.shopId)
           .gte("issue_date", monthStart).lt("issue_date", nextMonth);
+        // ⚠️ ต้องรวม vat_recognitions ด้วย เหมือนหน้ารายงานและชุดส่งสำนักงานบัญชี
+        // ใบแจ้งหนี้บริการ (ม.78/1) ถูกกันออกจาก selectVatSalesDocs โดยเจตนา
+        // เพราะภาษีขายเกิดตอนรับเงิน ไม่ใช่ตอนออกใบ -> ต้องไปเอาจากตารางนี้แทน
+        // ถ้าไม่รวม AI จะตอบภาษีขายต่ำกว่าความจริง ซึ่งเป็นทิศ "ลดยอดภาษี" ที่ทำให้ผู้ใช้โดนเบี้ยปรับ
+        const { data: recs } = await s.from("vat_recognitions")
+          .select("recognized_on,base_amount,vat_amount,fin_docs(doc_number,contact_name,contact_tax_id,contact_branch)")
+          .eq("shop_id", ctx.shopId)
+          .gte("recognized_on", monthStart).lt("recognized_on", nextMonth);
         const docs = (data ?? []) as never[];
-        const salesVat = sumVat(selectVatSalesDocs(docs));      // คิดเครื่องหมายใบลดหนี้ให้ด้วย
+        const salesVat = sumVat([
+          ...selectVatSalesDocs(docs),
+          ...(recognitionsAsDocs((recs ?? []) as never[]) as never[]),
+        ]);      // คิดเครื่องหมายใบลดหนี้ให้ด้วย
         const buyVat = sumVat(selectVatPurchaseDocs(docs));
         const whtOut = selectWhtPayableDocs(docs) as unknown as { wht_amount: number; contact_tax_id?: string }[];
         return JSON.stringify({

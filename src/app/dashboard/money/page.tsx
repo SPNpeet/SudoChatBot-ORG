@@ -32,25 +32,34 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
   // เมื่อยกเลิกเอกสาร ระบบกลับรายการในสมุดรายวันให้แล้ว (เงินสดถูกกลับออกไป)
   // แต่แถวใน fin_payments ยังอยู่ ถ้าหน้าจอนับต่อ = ตัวเลขบนจอไม่ตรงสมุดรายวัน
   // ของจริงที่เจอ 5 ส.ค. 2569: เอกสารที่ยกเลิกแล้ว 7 รายการ รวม 374,182 บาท ยังถูกนับอยู่
+  // ⚠️ ห้ามใช้ !inner ตรงนี้ (เคยพลาดมาแล้ว 5 ส.ค. 2569)
+  // fin_payments.doc_id เป็น null ได้ = เงินที่ยังไม่ผูกเอกสาร (นำเข้า statement แล้วยังไม่จับคู่)
+  // ซึ่งลงสมุดรายวันไปแล้วจริง · !inner จะตัดแถวพวกนี้ทิ้งทั้งหมด
+  // = เงินหายจากทุกหน้าจอ และการ์ด "สลิปรอจับคู่" บนแดชบอร์ดกลายเป็นทางตัน (กดแล้วไม่เจอ)
+  // จึงต้อง left join ตามเดิม แล้วกรองเอกสารที่ยกเลิกทิ้งในโค้ดแทน
   let q = supabase.from("fin_payments")
-    .select("*, fin_docs!inner(doc_number, doc_type, contact_name, status)")
-    .eq("shop_id", shop.id).neq("fin_docs.status", "void")
+    .select("*, fin_docs(doc_number, doc_type, contact_name, status)")
+    .eq("shop_id", shop.id)
     .order("paid_at", { ascending: false }).limit(150);
   if (t === "in" || t === "out") q = q.eq("direction", t);
 
   const monthStart = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7) + "-01";
   const [{ data: payments }, { data: monthRows }, { data: openInvoices }] = await Promise.all([
     q,
-    supabase.from("fin_payments").select("direction,amount,fin_docs!inner(status)")
-      .eq("shop_id", shop.id).neq("fin_docs.status", "void").gte("paid_at", monthStart),
+    supabase.from("fin_payments").select("direction,amount,fin_docs(status)")
+      .eq("shop_id", shop.id).gte("paid_at", monthStart),
     supabase.from("fin_docs").select("id,doc_number,contact_name,total,wht_amount,paid_amount,due_date")
       .eq("shop_id", shop.id).eq("doc_type", "invoice").in("status", ["awaiting", "partial"])
       .order("issue_date", { ascending: false }).limit(100),
   ]);
 
-  const rows = (payments ?? []) as unknown as FinPayment[];
-  const inMonth = (monthRows ?? []).filter((p) => p.direction === "in").reduce((a, p) => a + Number(p.amount), 0);
-  const outMonth = (monthRows ?? []).filter((p) => p.direction === "out").reduce((a, p) => a + Number(p.amount), 0);
+  // กรองเอกสารที่ยกเลิกแล้วออก (สมุดรายวันกลับรายการไปแล้ว) แต่เก็บแถวที่ยังไม่ผูกเอกสารไว้
+  const notVoided = (p: { fin_docs?: { status?: string } | null }) => (p.fin_docs?.status ?? "") !== "void";
+  const rows = ((payments ?? []) as unknown as (FinPayment & { fin_docs?: { status?: string } | null })[])
+    .filter(notVoided) as unknown as FinPayment[];
+  const monthKept = ((monthRows ?? []) as unknown as { direction: string; amount: number; fin_docs?: { status?: string } | null }[]).filter(notVoided);
+  const inMonth = monthKept.filter((p) => p.direction === "in").reduce((a, p) => a + Number(p.amount), 0);
+  const outMonth = monthKept.filter((p) => p.direction === "out").reduce((a, p) => a + Number(p.amount), 0);
 
   // signed URL รูปสลิป
   const svc = createServiceClient();

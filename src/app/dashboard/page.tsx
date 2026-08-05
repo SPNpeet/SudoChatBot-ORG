@@ -45,9 +45,9 @@ export default async function Overview() {
     { data: pays }, { data: openDocs }, { data: recentDocs }, { data: overdue },
     { count: sampleCount }, { count: docCount }, { count: pendingApproval }, { count: unmatchedSlips },
   ] = await Promise.all([
-    // กันรายการของเอกสารที่ยกเลิกแล้ว — สมุดรายวันกลับรายการไปแล้ว ตัวเลขบนแดชบอร์ดต้องตรงกัน
-    supabase.from("fin_payments").select("direction,amount,paid_at,fin_docs!inner(status)")
-      .eq("shop_id", shop.id).neq("fin_docs.status", "void").gte("paid_at", since60),
+    // กันรายการของเอกสารที่ยกเลิกแล้ว (กรองในโค้ดด้านล่าง) — ห้ามใช้ !inner เพราะจะตัดเงินที่ยังไม่ผูกเอกสารทิ้ง
+    supabase.from("fin_payments").select("direction,amount,paid_at,fin_docs(status)")
+      .eq("shop_id", shop.id).gte("paid_at", since60),
     supabase.from("fin_docs").select("doc_type,total,wht_amount,paid_amount").eq("shop_id", shop.id).in("status", ["awaiting", "partial"]),
     supabase.from("fin_docs").select("*").eq("shop_id", shop.id).neq("status", "draft").order("created_at", { ascending: false }).limit(6),
     supabase.from("fin_docs").select("id,doc_type,doc_number,contact_name,due_date,total,wht_amount,paid_amount")
@@ -58,7 +58,11 @@ export default async function Overview() {
     supabase.from("fin_payments").select("id", { count: "exact", head: true }).eq("shop_id", shop.id).is("doc_id", null),
   ]);
 
-  const sum = (dir: string, from: string, to?: string) => (pays ?? [])
+  // เอกสารที่ยกเลิกแล้ว = สมุดรายวันกลับรายการไปแล้ว ตัวเลขบนแดชบอร์ดต้องไม่นับต่อ
+  // แต่แถวที่ยังไม่ผูกเอกสาร (fin_docs เป็น null) คือเงินจริงที่ลงบัญชีแล้ว ต้องนับ
+  const livePays = ((pays ?? []) as unknown as { direction: string; amount: number; paid_at: string; fin_docs?: { status?: string } | null }[])
+    .filter((p) => (p.fin_docs?.status ?? "") !== "void");
+  const sum = (dir: string, from: string, to?: string) => livePays
     .filter((p) => p.direction === dir && p.paid_at >= from && (!to || p.paid_at < to))
     .reduce((a, p) => a + Number(p.amount), 0);
 
@@ -72,7 +76,7 @@ export default async function Overview() {
   // กราฟเงินเข้า-ออกรายวัน 30 วันล่าสุด
   const since30 = new Date(Date.now() - 30 * 864e5).toISOString();
   const byDay = new Map<string, { in: number; out: number }>();
-  for (const p of (pays ?? []).filter((x) => x.paid_at >= since30)) {
+  for (const p of livePays.filter((x) => x.paid_at >= since30)) {
     const d = new Date(new Date(p.paid_at).getTime() + 7 * 3600_000).toISOString().slice(0, 10);
     const cur = byDay.get(d) ?? { in: 0, out: 0 };
     cur[p.direction as "in" | "out"] += Number(p.amount);
