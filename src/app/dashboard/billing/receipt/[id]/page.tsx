@@ -20,8 +20,14 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
   const vatRegistered = Boolean(pf?.vat_registered && pf?.tax_id);
   const total = Number(t.amount);
-  // ราคารวม VAT แล้ว: ก่อน VAT = ยอด*100/107
-  const preVat = Math.round((total * 100 / 107) * 100) / 100;
+  // ⚠️ อัตราต้องมาจาก vat_rate_on(วันที่ชำระ) ไม่ใช่เลข 107 ฮาร์ดโค้ด
+  // (กติกาข้อ 7: กฎภาษีอยู่ที่เดียว · เอกสารนี้เป็น "ใบกำกับภาษี" ของแพลตฟอร์มเอง
+  //  ถ้าอัตราเปลี่ยน ใบเก่าต้องคงอัตราเดิม และใบใหม่ต้องใช้อัตราใหม่โดยไม่ต้องแก้โค้ด)
+  const { data: rateRow } = await svc.rpc("vat_rate_on", { p_date: String(t.paid_at ?? t.created_at).slice(0, 10) });
+  const rate = Number(rateRow ?? 0.07) || 0.07;   // อ่านไม่ได้ = ใช้อัตราปัจจุบัน ดีกว่าคิดเป็น 0
+  const ratePct = Math.round(rate * 1000) / 10;   // 7 (แสดงผลบนเอกสาร)
+  // ราคารวม VAT แล้ว: ก่อน VAT = ยอด / (1 + อัตรา)
+  const preVat = Math.round((total / (1 + rate)) * 100) / 100;
   const vat = Math.round((total - preVat) * 100) / 100;
   const docNo = t.invoice_number ?? String(t.id).slice(0, 8).toUpperCase();
   const method = t.gateway === "omise" ? "PromptPay (Omise)" : "PromptPay";
@@ -88,7 +94,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
                 <span>มูลค่าสินค้า/บริการ (ก่อน VAT)</span><span>{baht(preVat)}</span>
               </div>
               <div className="flex items-center justify-between text-neutral-500">
-                <span>ภาษีมูลค่าเพิ่ม (VAT 7%)</span><span>{baht(vat)}</span>
+                <span>ภาษีมูลค่าเพิ่ม (VAT {ratePct}%)</span><span>{baht(vat)}</span>
               </div>
             </>
           )}

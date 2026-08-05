@@ -469,9 +469,29 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         if (!r.ok) return JSON.stringify({ error: r.error });
         await audit(ctx, "doc_created", "fin_doc", r.docId, { doc_number: r.docNumber, doc_type: docType });
         const created = await findDocByNumber(ctx, r.docNumber);
+
+        // ลิงก์ให้ลูกค้าสแกนจ่ายจะไม่มี QR ถ้ากิจการยังไม่ได้ตั้งพร้อมเพย์
+        // ต้องบอกตรงนี้ ตอนที่เพิ่งออกเอกสารและกำลังจะส่งลิงก์ให้ลูกค้า — ไม่ใช่ให้เขาไปเจอเองทีหลัง
+        // ส่งเป็นข้อมูลใน tool result (ไม่ใช่ฝากไว้ใน system prompt) ตามกติกาข้อ 4
+        let promptpayHint: string | undefined;
+        if (docType !== "quotation") {
+          const { data: payCfg } = await s.from("shop_payment_settings")
+            .select("promptpay_id").eq("shop_id", ctx.shopId).maybeSingle();
+          if (!payCfg?.promptpay_id) {
+            promptpayHint = (ctx.role === "owner" || ctx.role === "admin")
+              // เจ้าของ/ผู้ดูแลตั้งได้ทันที — บอกให้พิมพ์เลขมาในแชทได้เลย แล้วเรียก update_payment_settings
+              ? "กิจการนี้ยังไม่ได้ตั้งพร้อมเพย์ ลิงก์ที่ส่งให้ลูกค้าจึงยังไม่มี QR ให้สแกนจ่าย "
+                + "ให้บอกผู้ใช้ว่าพิมพ์เบอร์พร้อมเพย์ (10 หลัก) หรือเลขบัตรประชาชน (13 หลัก) มาในแชทได้เลย "
+                + "แล้วเรียก update_payment_settings ตั้งให้ทันที ไม่ต้องให้เขาไปหน้าตั้งค่าเอง"
+              : "กิจการนี้ยังไม่ได้ตั้งพร้อมเพย์ ลิงก์ที่ส่งให้ลูกค้าจึงยังไม่มี QR ให้สแกนจ่าย "
+                + "ให้บอกผู้ใช้ว่าต้องแจ้งเจ้าของกิจการหรือผู้ดูแลตั้งให้ (พนักงานตั้งเองไม่ได้)";
+          }
+        }
+
         return JSON.stringify({
           ok: true, doc_number: r.docNumber,
           note: `ออก${DOC_TYPE_TH[docType]} ${r.docNumber} แล้ว ลงบัญชีเรียบร้อย`,
+          ...(promptpayHint ? { ต้องบอกผู้ใช้ด้วย: promptpayHint } : {}),
           view_link: `/dashboard/sales/${r.docId}`,
           share_link: created?.share_key && docType !== "quotation" ? `/doc/${created.share_key}` : undefined,
           print_link: `/dashboard/print/${r.docId}`,
@@ -480,6 +500,10 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
             docType === "quotation"
               ? [{ label: "แปลงเป็นใบแจ้งหนี้", reply: `แปลง ${r.docNumber} เป็นใบแจ้งหนี้` }]
               : [
+                // ยังไม่มีพร้อมเพย์ = เรื่องด่วนกว่าทุกปุ่ม เพราะลิงก์ที่เพิ่งได้ยังรับเงินไม่ได้จริง
+                ...(promptpayHint && (ctx.role === "owner" || ctx.role === "admin")
+                  ? [{ label: "ตั้งพร้อมเพย์เดี๋ยวนี้", reply: "ตั้งพร้อมเพย์ให้หน่อย เลขคือ ", hint: "พิมพ์เบอร์ต่อท้ายได้เลย" }]
+                  : []),
                 { label: "รับเงินแล้ว บันทึกเลย", reply: `บันทึกรับเงินเต็มยอดของ ${r.docNumber}` },
                 { label: "ออกอีกใบให้ลูกค้าเดิม", reply: `ออก${DOC_TYPE_TH[docType]}ใบใหม่ให้ลูกค้าเดิมของ ${r.docNumber}` },
               ],
@@ -644,8 +668,10 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
           ภพ30: { ภาษีขาย: salesVat, ภาษีซื้อ: buyVat, [salesVat - buyVat >= 0 ? "ต้องชำระ" : "ชำระเกิน"]: Math.abs(salesVat - buyVat) },
           หัก_ณ_ที่จ่ายต้องนำส่ง: {
             รวม: whtOut.reduce((a, d) => a + Number(d.wht_amount), 0),
-            ภงด53_นิติบุคคล: whtOut.filter((d) => d.contact_tax_id?.startsWith("0")).length,
-            ภงด3_บุคคลธรรมดา: whtOut.filter((d) => !d.contact_tax_id?.startsWith("0")).length,
+            // ใส่หน่วยในชื่อคีย์ — ค่าเป็น "จำนวนใบ" แต่วางข้าง "รวม" ที่เป็นบาท
+            // ถ้าไม่บอกหน่วย โมเดลอาจตอบว่า "ภ.ง.ด.53 = 3 บาท" ซึ่งผิดคนละเรื่อง
+            ภงด53_นิติบุคคล_จำนวนใบ: whtOut.filter((d) => d.contact_tax_id?.startsWith("0")).length,
+            ภงด3_บุคคลธรรมดา_จำนวนใบ: whtOut.filter((d) => !d.contact_tax_id?.startsWith("0")).length,
           },
           note: "ดาวน์โหลดรายงานแนบ + ไฟล์ยื่น .txt ได้ที่หน้า รายงาน+ภาษี",
         });
