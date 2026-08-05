@@ -97,6 +97,44 @@ const PRICE_TABLE: [string, [number, number]][] = [
  *  ประมาณเกินปลอดภัยกว่าประมาณขาด เพราะนี่คือเกราะกันเงินรั่ว ไม่ใช่ใบแจ้งหนี้ */
 export const OCR_EST_COST_USD = 0.02;
 
+/**
+ * ต้นทุน "จริง" โดยประมาณต่อการอ่านไฟล์ 1 ใบ แยกตามค่าย (USD)
+ *
+ * ⚠️ ตัวเลขชุดนี้มีไว้ให้ **เพดานเงินต่อวันวัดของจริง** ไม่ใช่ไว้ตั้งราคาขาย
+ * สองงานนี้ต้องการเลขคนละแบบ และเดิมใช้ค่าเดียวกัน ($0.02) ทำงานทั้งสองอย่าง
+ * ซึ่งทำอย่างหนึ่งผิด:
+ *   · ตั้งราคา  -> ประมาณเกินไว้ = ปลอดภัย (ยังคง OCR_EST_COST_USD ไว้ให้งานนี้)
+ *   · เพดาน/kill switch -> ประมาณเกิน = **ตัดระบบ AI ของทุกกิจการเร็วกว่าที่ควร**
+ *     เพดาน $5/วัน กับค่า $0.02 จะดับที่ ~250 ครั้ง/วัน ทั้งที่เงินจริงซื้อได้ ~1,100 ครั้ง
+ *     ลูกค้าที่จ่ายเงินจะโดนตัดกลางคันโดยที่เรายังไม่ได้ใช้เงินถึงเพดานเลย
+ *
+ * ที่มาของตัวเลข (ตรวจ 5 ส.ค. 2569):
+ *   mistral   = OCR $4/1,000 หน้า + จัดรูปด้วย mistral-small อีกนิด  ~$0.0045
+ *   google    = gemini flash อ่านภาพ + ตอบ JSON                        ~$0.004
+ *   openai    = โมเดล vision ราคาสูงกว่า                                ~$0.016
+ *   anthropic = แพงสุดในชุด                                            ~$0.022
+ * ค่ายที่ไม่รู้จัก -> ใช้ค่าเผื่อสูง (OCR_EST_COST_USD) เพราะเดาขาดอันตรายกว่าเดาเกิน
+ */
+export const OCR_COST_BY_PROVIDER: Record<string, number> = {
+  mistral: 0.005,
+  google: 0.004,
+  openai: 0.016,
+  anthropic: 0.022,
+};
+
+/** ชื่อเอนจินในหน้านำเข้าสินค้าใช้ชื่อโมเดล ไม่ใช่ชื่อค่าย — แปลงให้ตรงกันก่อนเทียบราคา
+ *  (ถ้าไม่แปลง จะตกไปใช้ค่าเผื่อสูงทุกครั้ง = เพดานยังดับเร็วเกินจริงอยู่ดี) */
+const OCR_ENGINE_ALIAS: Record<string, string> = {
+  "mistral-ocr": "mistral", gemini: "google", claude: "anthropic", gpt: "openai",
+};
+
+/** ป้ายเอนจินมาได้ 2 แบบ: "ocr:mistral" / "fallback-key:google" หรือชื่อสั้น "gemini" */
+export function ocrCostUsd(engineLabel: string): number {
+  const raw = (engineLabel.includes(":") ? engineLabel.split(":").pop()! : engineLabel).trim();
+  const provider = OCR_ENGINE_ALIAS[raw] ?? raw;
+  return OCR_COST_BY_PROVIDER[provider] ?? OCR_EST_COST_USD;
+}
+
 export function estimateAiCost(model: string, inTok: number, outTok: number): number {
   const m = model.includes("/") ? model.split("/").pop()! : model;
   let price: [number, number] = [3, 15];

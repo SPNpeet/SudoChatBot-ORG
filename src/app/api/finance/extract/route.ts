@@ -4,7 +4,7 @@ import { platformAiGuard, consumeAiQuota, assertShopActive, ocrMonthlyGuard } fr
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
 import { resolvePurposeKey } from "@/lib/ai-config";
-import { OCR_DEFAULT_MODEL, OCR_EST_COST_USD } from "@/lib/ai-catalog";
+import { OCR_DEFAULT_MODEL, OCR_EST_COST_USD, ocrCostUsd } from "@/lib/ai-catalog";
 
 // ============================================================
 //  AI อ่านเอกสารการเงิน (บิล/ใบเสร็จ/ใบกำกับภาษี/ใบแจ้งหนี้) -> JSON
@@ -286,10 +286,15 @@ export async function POST(request: Request) {
     }
 
     let lastErr = "";
+    // นับต้นทุนของเอนจินที่ "ยิงไปแล้ว" สะสมไว้ — เอนจินที่พังก็เสียเงินไปแล้วเหมือนกัน
+    let spentUsd = 0;
     for (const eng of engines) {
+      const engCost = ocrCostUsd(eng.name);
+      spentUsd += engCost;
       try {
         const data = await eng.run();
-        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `finance/${eng.name}`, cost_usd: OCR_EST_COST_USD });
+        // ลงต้นทุนรวมของทุกเอนจินที่ยิงไปในคำขอนี้ ไม่ใช่เฉพาะตัวที่สำเร็จ
+        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `finance/${eng.name}`, cost_usd: spentUsd });
         return NextResponse.json({ ok: true, data, engine: eng.name, file_path: path });
       } catch (e) {
         lastErr = (e as Error).message;
@@ -297,8 +302,9 @@ export async function POST(request: Request) {
       }
     }
     // พังทุกเอนจินก็บันทึก — เหตุผลเดียวกับหน้านำเข้าสินค้า (กันกดซ้ำเผา token ฟรี)
+    // ตรงนี้คือกรณีที่จ่ายแพงที่สุด: ยิงครบทุกค่ายแล้วไม่ได้อะไรเลย
     try {
-      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: "finance/failed", cost_usd: OCR_EST_COST_USD });
+      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: "finance/failed", cost_usd: spentUsd || OCR_EST_COST_USD });
     } catch { /* อย่าทับ error จริง */ }
     return NextResponse.json({ ok: false, error: friendlyAiError(lastErr), file_path: path });
   } catch (e) {

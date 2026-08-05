@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { platformAiGuard, consumeAiQuota, assertShopActive, ocrMonthlyGuard } from "@/lib/ai-guard";
-import { OCR_EST_COST_USD } from "@/lib/ai-catalog";
+import { OCR_EST_COST_USD, ocrCostUsd } from "@/lib/ai-catalog";
 import { assertMember } from "@/lib/shop";
 import { friendlyAiError } from "@/lib/ai-errors";
 
@@ -254,10 +254,13 @@ export async function POST(request: Request) {
     }
 
     let lastErr = "";
+    // สะสมต้นทุนของทุกเอนจินที่ยิงไปแล้ว — ตัวที่พังก็เสียเงินไปแล้วเหมือนกัน
+    let spentUsd = 0;
     for (const eng of engines) {
+      spentUsd += ocrCostUsd(eng.name);
       try {
         const rows = await eng.run();
-        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `import/${eng.name}`, cost_usd: OCR_EST_COST_USD });
+        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `import/${eng.name}`, cost_usd: spentUsd });
         return NextResponse.json({ ok: true, rows, engine: eng.name });
       } catch (e) {
         lastErr = (e as Error).message;
@@ -268,7 +271,7 @@ export async function POST(request: Request) {
     // เดิมบันทึกเฉพาะตอนสำเร็จ ไฟล์เสียใบเดียวจึงกดซ้ำเผา token ได้ไม่จำกัด
     // โดยตัวนับทุกชั้น (โควตาผู้ใช้/เพดานนำเข้า/เพดานแพลตฟอร์ม) มองไม่เห็นเลย
     try {
-      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: "import/failed", cost_usd: OCR_EST_COST_USD });
+      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: "import/failed", cost_usd: spentUsd || OCR_EST_COST_USD });
     } catch { /* บันทึกไม่สำเร็จอย่าไปทับ error จริงของผู้ใช้ */ }
     return NextResponse.json({ ok: false, error: friendlyAiError(lastErr) });
   } catch (e) {
