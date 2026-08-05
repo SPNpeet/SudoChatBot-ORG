@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { verifySlip } from "@/lib/slip-verify";
 import { decodeSlipQr } from "@/lib/slip-qr";
+import { consumePlatformSlip } from "@/lib/slip-guard";
 import { applyPaymentToDoc } from "@/lib/finance-server";
 import { docOutstanding } from "@/lib/finance";
 
@@ -65,6 +66,10 @@ export async function POST(request: Request) {
     if (quotaErr || (slipQuota as { allowed?: boolean } | null)?.allowed !== true) {
       return NextResponse.json({ ok: false, error: "ระบบตรวจสลิปอัตโนมัติของร้านไม่พร้อมชั่วคราว — ส่งสลิปให้ร้านยืนยันโดยตรงได้เลย" });
     }
+
+    // เพดานกลางต้องอยู่หลังด่านโควตาร้าน (ด่านที่ปฏิเสธเฉย ๆ มาก่อนด่านที่ตัดโควตา)
+    const pfSlip = await consumePlatformSlip(svc);
+    if (!pfSlip.ok) return NextResponse.json({ ok: false, error: pfSlip.error });
 
     const verify = await verifySlip(provider as string, slipKey as string, bytes);
 

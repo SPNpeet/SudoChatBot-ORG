@@ -9,6 +9,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { assertMember } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
 import { calcDocTotals, docOutstanding } from "@/lib/finance";
+import { consumePlatformSlip } from "@/lib/slip-guard";
 import { postJournalOrThrow, reverseJournalOf, applyPaymentToDoc, bkkToday, ACC } from "@/lib/finance-server";
 import { verifySlip, type SlipResult } from "@/lib/slip-verify";
 import { notifyShopLine } from "@/lib/line";
@@ -760,7 +761,7 @@ export async function recordPayment(shopId: string, input: RecordPaymentInput): 
         quotaNote = sq && sq.allowed === false
           ? `โควตาตรวจสลิปอัตโนมัติเดือนนี้ครบแล้ว (${sq.used}/${sq.cap}) — บันทึกแบบตรวจเอง หรืออัปเกรดแพ็กเกจเพื่อตรวจอัตโนมัติต่อ`
           : "ระบบตรวจสลิปอัตโนมัติไม่พร้อมชั่วคราว — บันทึกแบบตรวจเอง";
-      } else if (provider && slipKey) {
+      } else if (provider && slipKey && (await consumePlatformSlip(svc)).ok) {
         const { data: file } = await svc.storage.from("slips").download(input.slip_path);
         if (file) {
           verify = await verifySlip(provider as string, slipKey as string, new Uint8Array(await file.arrayBuffer()));
@@ -869,8 +870,14 @@ export async function uploadAndMatchSlip(shopId: string, formData: FormData): Pr
           : "ระบบตรวจสลิปอัตโนมัติไม่พร้อมชั่วคราว — เลือกเอกสารเองด้านล่าง",
       };
     } else if (provider && slipKey) {
-      const { data: file } = await svc.storage.from("slips").download(up.path);
-      if (file) verify = await verifySlip(provider as string, slipKey as string, new Uint8Array(await file.arrayBuffer()));
+      // เพดานกลางของแพลตฟอร์ม — เต็มแล้วยังบันทึกเงินได้ตามปกติ แค่จับคู่เอกสารเอง
+      const pfSlip = await consumePlatformSlip(svc);
+      if (!pfSlip.ok) {
+        verify = { ok: true, verified: false, error: pfSlip.error };
+      } else {
+        const { data: file } = await svc.storage.from("slips").download(up.path);
+        if (file) verify = await verifySlip(provider as string, slipKey as string, new Uint8Array(await file.arrayBuffer()));
+      }
     }
     const amount = verify?.verified ? (verify.amount ?? null) : null;
 

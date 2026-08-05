@@ -11,9 +11,10 @@ interface Settings {
   payment_gateway: string | null; omise_public_key: string | null; company_name: string | null;
   company_address: string | null; tax_id: string | null; tax_branch: string | null;
   vat_registered: boolean | null; email_from: string | null; low_credit_threshold: number | null;
+  slip_monthly_cap: number | null;
 }
 
-export default function BillingSettingsForm({ pf }: { pf: Settings | null }) {
+export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings | null; slipUsed?: number }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -57,7 +58,15 @@ export default function BillingSettingsForm({ pf }: { pf: Settings | null }) {
             <option value="slipok">SlipOK — อัตโนมัติ</option>
           </Select>
           <Input name="slip_api_key" type="password" placeholder="API Key (กรอกเมื่อเปลี่ยน)" />
+          {/* เพดานกลาง: คีย์ใบเดียวใช้ร่วมกันทุกร้าน ถ้าไม่คุมตรงนี้ ร้านฟรีกินโควตาร้านที่จ่ายเงินได้
+              ค่าเริ่มต้น 100 = แพ็กฟรีของ SlipOK · อัปแพ็กเมื่อไหร่ให้แก้เลขนี้ตาม */}
+          <Input name="slip_monthly_cap" type="number" min={0} defaultValue={pf?.slip_monthly_cap ?? 100}
+            placeholder="เพดานตรวจสลิป/เดือน ทั้งแพลตฟอร์ม" />
         </div>
+        <p className="mt-1 text-[11px] text-neutral-400">
+          เพดานคือจำนวนครั้งที่ยิง API ต่อเดือนของทั้งระบบ (เดือนนี้ใช้ไป {slipUsed}/{pf?.slip_monthly_cap ?? 100} ครั้ง) ·
+          เต็มแล้วระบบสลับเป็นยืนยันเองอัตโนมัติ ไม่มีใครจ่ายไม่ได้ · ใส่ 0 = ปิดตรวจอัตโนมัติทั้งระบบ
+        </p>
       </div>
       <div className="border-t border-neutral-100 pt-3">
         <Label>อีเมลแจ้งเตือน (Resend) — เครดิตใกล้หมด / บอทหยุดเพราะเครดิตหมด</Label>

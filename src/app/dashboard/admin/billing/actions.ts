@@ -81,6 +81,12 @@ export async function savePlatformBilling(formData: FormData): Promise<ActionRes
       vat_registered: formData.get("vat_registered") === "on",
       email_from: String(formData.get("email_from") ?? "").trim() || null,
       low_credit_threshold: Math.max(0, Number(formData.get("low_credit_threshold") ?? 50) || 50),
+      // 0 เป็นค่าที่ตั้งใจได้ (= ปิดตรวจอัตโนมัติทั้งระบบ) จึงห้ามใช้ || ที่กลืน 0
+      // และต้องกัน NaN ด้วย Number.isFinite ไม่งั้นพิมพ์มั่วแล้วเขียน NaN ลงคอลัมน์ int (บทเรียนเดิม)
+      slip_monthly_cap: (() => {
+        const n = Number(formData.get("slip_monthly_cap"));
+        return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 100;
+      })(),
       updated_at: new Date().toISOString(),
     }).eq("id", true);
     if (error) return { ok: false, error: `บันทึกไม่สำเร็จ: ${error.message}` };

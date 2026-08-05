@@ -48,7 +48,9 @@ export async function POST(request: Request) {
   const { data: pf } = await svc.from("platform_billing_settings").select("slip_provider").eq("id", true).single();
   if (pf?.slip_provider && pf.slip_provider !== "manual") {
     const { data: key } = await svc.rpc("get_platform_slip_key");
-    if (key) {
+    // เพดานกลาง: เต็มแล้วตกไปเส้นอนุมัติมือด้านล่าง (ซึ่งปลุกแอดมินให้อยู่แล้ว)
+    const { consumePlatformSlip } = await import("@/lib/slip-guard");
+    if (key && (await consumePlatformSlip(svc)).ok) {
       try {
         const { data: t } = await svc.from("topups").select("amount").eq("id", topupId).single();
         const fd = new FormData();
