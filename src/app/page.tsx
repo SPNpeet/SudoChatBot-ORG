@@ -128,11 +128,11 @@ export default function Landing() {
           </div>
 
           {/* ตัวอย่างสั่งงานผู้ช่วยบัญชี AI — ห่อด้วย HeroTilt: เอียง 3D ตามเมาส์ (CSS ล้วน)
-              ป้ายผลลัพธ์สองใบ translateZ คนละชั้น = เห็นความลึกจริงตอนการ์ดเอียง
-              จอสัมผัสเห็นป้ายลอยช้า ๆ แทน (keyframes hero-float ใน globals.css) */}
+              ป้ายผลลัพธ์เป็นแถว flex ใต้การ์ด translateZ คนละชั้น = เห็นความลึกตอนเอียง
+              ⚠️ ห้ามเปลี่ยนป้ายกลับเป็น absolute ลอยบนการ์ด — เคยทำแล้วทับข้อความแชทจริง
+              (วัดบน production 5 ส.ค. 2569: ทับทั้งบนมือถือและจอกว้าง) */}
           <div className="mx-auto w-full max-w-sm">
             <HeroTilt>
-            <div className="relative">
             <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-4 shadow-sm">
               <div className="mb-3 flex items-center gap-2 border-b border-neutral-200 pb-3">
                 <div className="grid h-8 w-8 place-items-center rounded-full bg-emerald-600 text-white"><Calculator className="h-4 w-4" /></div>
@@ -155,16 +155,13 @@ export default function Landing() {
               <p className="mt-3 text-center text-[10px] text-neutral-400">ตัวอย่างการใช้งานจริง — สมัครแล้วลองสั่งได้ทันที</p>
             </div>
             {/* ป้ายผลลัพธ์ 3D — aria-hidden เพราะเป็นการตกแต่ง เนื้อหาจริงอยู่ในบทสนทนาแล้ว */}
-            <div aria-hidden className="pointer-events-none absolute -left-2 top-24 [transform:translateZ(45px)] sm:-left-5">
-              <div className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-medium text-neutral-700 shadow-lg [animation:hero-float_5s_ease-in-out_infinite]">
+            <div aria-hidden className="pointer-events-none mt-3 flex flex-wrap justify-center gap-2">
+              <div className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-medium text-neutral-700 shadow-md [transform:translateZ(45px)] [animation:hero-float_5s_ease-in-out_infinite]">
                 <BookOpenText className="h-3.5 w-3.5 text-emerald-600" /> ลงสมุดรายวันแล้ว
               </div>
-            </div>
-            <div aria-hidden className="pointer-events-none absolute -right-2 bottom-28 [transform:translateZ(60px)] sm:-right-5">
-              <div className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-medium text-neutral-700 shadow-lg [animation:hero-float_6s_ease-in-out_infinite] [animation-delay:1.4s]">
+              <div className="flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[11px] font-medium text-neutral-700 shadow-md [transform:translateZ(60px)] [animation:hero-float_6s_ease-in-out_infinite] [animation-delay:1.4s]">
                 <Landmark className="h-3.5 w-3.5 text-emerald-600" /> ภ.พ.30 พร้อมยื่น
               </div>
-            </div>
             </div>
             </HeroTilt>
             <LandingSandboxChat />
