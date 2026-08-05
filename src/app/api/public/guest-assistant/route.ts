@@ -133,8 +133,12 @@ export async function POST(request: Request) {
     // เดิมเส้น guest ไม่เคยนับเลย (ai_usage_logs.shop_id เป็น NOT NULL แต่ guest ไม่มีกิจการ)
     // ทำให้เพดาน ai_daily_cap_usd และ kill switch มองไม่เห็นค่าใช้จ่ายก้อนนี้ทั้งก้อน
     // ค่าเฉลี่ยที่วัดได้ของแชทหนึ่งครั้ง = $0.0025 (ตัวเลขเดียวกับที่ใช้คิดต้นทุนแพ็ก)
-    void svc.rpc("bump_platform_ai_cost", { p_cost: 0.0025 })
-      .then(() => {}, () => {});   // ล้มเหลวห้ามทำให้คำตอบของผู้ใช้หาย
+    // ⚠️ ต้อง await จริง ห้าม fire-and-forget: บน Vercel งานที่ค้างหลังส่ง response แล้วถูกแช่แข็งได้
+    // (ไม่มี waitUntil ในโปรเจกต์นี้) = การนับจะกลายเป็นไม่เกิดขึ้นเลย ซึ่งคือบั๊กเดิมที่กำลังแก้อยู่
+    // เป็น upsert แถวเดียว เร็วมาก และเส้นนี้ await อย่างอื่นหลายรอบอยู่แล้ว
+    try {
+      await svc.rpc("bump_platform_ai_cost", { p_cost: 0.0025 });
+    } catch { /* นับไม่ได้ห้ามทำให้คำตอบของผู้ใช้หาย */ }
     if (!reply) {
       return json({ ok: false, error: "ขัดข้องชั่วคราว ลองใหม่อีกครั้งนะคะ", code: lastStatus ? `upstream_${lastStatus}` : "empty_reply" }, guestId, needsCookie, 502);
     }

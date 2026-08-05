@@ -33,12 +33,14 @@ export async function POST(request: Request) {
 
   // จำกัดอัตราต่อผู้ใช้ — สถานะ verifying ไม่ถูกกันด้านบน (โดยเจตนา: ส่งสลิปใหม่ทับของเดิมได้)
   // แต่ถ้าไม่มีเพดาน ผู้ใช้คนเดียววนอัปรูปเดิม 100 ครั้งก็เผาเพดานตรวจสลิปกลางของทั้งแพลตฟอร์มหมดเดือน
-  // 10 ครั้ง/ชม./คน พอสำหรับคนที่ถ่ายสลิปใหม่หลายรอบเพราะรูปไม่ชัด
+  // 20 ครั้ง/ชม./คน — เผื่อสำนักงานบัญชีที่อัปสลิปแทนลูกค้าหลายกิจการในรอบเดียว
+  // (ถ่ายสลิปใหม่เพราะรูปไม่ชัดก็ใช้ไม่ถึง) · ข้อความต้องไม่สัญญาว่าแอดมินจะมาช่วย
+  // เพราะด่านนี้คืนก่อนเก็บสลิปและก่อนแจ้งแอดมิน = แอดมินไม่มีอะไรให้ดู
   const { data: upRate, error: upRateErr } = await svc.rpc("consume_public_rate", {
-    p_bucket: "topup_slip", p_ip_hash: `user:${user.id}`, p_limit: 10, p_window_secs: 3600,
+    p_bucket: "topup_slip", p_ip_hash: `user:${user.id}`, p_limit: 20, p_window_secs: 3600,
   });
   if (upRateErr || (upRate as { allowed?: boolean } | null)?.allowed !== true) {
-    return NextResponse.json({ ok: false, error: "ส่งสลิปถี่เกินไป — รอสักครู่แล้วลองใหม่ หรือติดต่อผู้ดูแลระบบให้ยืนยันให้" });
+    return NextResponse.json({ ok: false, error: "ส่งสลิปถี่เกินไป — รอสักครู่แล้วส่งใหม่อีกครั้ง (สลิปยังไม่ถูกบันทึก)" });
   }
 
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -62,7 +64,10 @@ export async function POST(request: Request) {
   if (upErr) {
     return NextResponse.json({ ok: false, error: "อัปโหลดสลิปไม่สำเร็จ — ลองใหม่อีกครั้ง หรือถ่ายรูปใหม่ให้ไฟล์เล็กลง" });
   }
-  await svc.from("topups").update({ slip_path: path, status: "verifying" }).eq("id", topupId);
+  // .neq("status","paid") — กันเคสที่แอดมินกดยืนยันพอดีระหว่างที่คำขอนี้กำลังเดินอยู่
+  // ถ้าเขียนทับแบบไม่มีเงื่อนไข รายการที่เครดิตไปแล้วจะถูกดันกลับเข้าคิวรออนุมัติ แล้วเสี่ยงเครดิตซ้ำ
+  await svc.from("topups").update({ slip_path: path, status: "verifying" })
+    .eq("id", topupId).neq("status", "paid");
 
   // ตรวจสลิปอัตโนมัติถ้าแพลตฟอร์มตั้งค่าไว้
   const { data: pf } = await svc.from("platform_billing_settings").select("slip_provider").eq("id", true).single();
@@ -124,10 +129,19 @@ export async function POST(request: Request) {
             p_ref_type: "topup", p_ref_id: topupId, p_note: "เติมเงิน PromptPay (auto)", p_actor: user.id,
           });
           if (creditErr) {
+            // ⚠️ แยกให้ออกก่อนว่า "เครดิตไม่เข้า" หรือ "เครดิตเข้าไปแล้วจากอีกเส้น"
+            // ตาข่าย wallet_tx_topup_once จะคืน 23505 เมื่อรายการนี้ถูกเครดิตไปแล้ว
+            // กรณีนั้นเงินเข้าเรียบร้อยแล้วจริง ๆ ห้ามคืนสถานะกลับเป็น verifying
+            // (ถ้าคืน แถวจะเด้งกลับเข้าคิวแอดมิน กดยืนยันก็ชนกฎเดิมซ้ำ = ค้างในคิวตลอดไป)
+            if (creditErr.code === "23505") {
+              const { data: applied2 } = await svc.rpc("apply_plan_purchase", { p_topup_id: topupId });
+              const r2 = applied2 as { plan?: string } | null;
+              return NextResponse.json({ ok: true, auto: true, message: r2?.plan ? "ชำระสำเร็จ! เปิดแพ็กเกจให้แล้ว ใช้งานได้ทันที" : "เติมเงินสำเร็จ! เครดิตเข้าแล้ว" });
+            }
             // เงินเข้าบัญชีจริงแล้วแต่เครดิตไม่เข้า = ต้องมีคนมาเก็บงาน ห้ามตอบว่าสำเร็จ
-            // ⚠️ ต้องคืนสถานะเป็น verifying ด้วย ไม่งั้น admin_confirm_topup ปฏิเสธแถวที่เป็น paid แล้ว
-            //    (มันเช็ค `if status = 'paid' then return ok:false`) = ปุ่มที่เราบอกให้แอดมินไปกด กดไม่ได้
-            //    และเลขสลิปที่จองไว้ต้องปล่อยคืน ไม่งั้นเส้นอนุมัติมือก็เดินไม่ได้เหมือนกัน
+            // ต้องคืนสถานะเป็น verifying ด้วย ไม่งั้น admin_confirm_topup ปฏิเสธแถวที่เป็น paid แล้ว
+            // (มันเช็ค `if status = 'paid' then return ok:false`) = ปุ่มที่เราบอกให้แอดมินไปกด กดไม่ได้
+            // และเลขสลิปที่จองไว้ต้องปล่อยคืน ไม่งั้นเส้นอนุมัติมือก็เดินไม่ได้เหมือนกัน
             await svc.from("topups").update({
               status: "verifying", verified_by: null, paid_at: null,
               error: `credit_wallet: ${creditErr.message}`.slice(0, 300),

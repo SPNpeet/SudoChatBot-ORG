@@ -60,6 +60,12 @@ export async function POST(request: Request) {
       // เงินเข้าที่ Omise แล้วแต่เครดิตไม่เข้า = ต้องให้ Omise ยิงซ้ำ ห้ามตอบ processed
       // (เดิมทิ้ง error แล้วตอบ 200 -> Omise ไม่ retry -> ลูกค้าจ่ายแล้วไม่ได้อะไร ไม่มีใครรู้)
       if (creditErr) {
+        // เครดิตเข้าไปแล้วจากอีกเส้น (ชนตาข่าย wallet_tx_topup_once) = สำเร็จจริง ห้ามคืนสถานะ
+        // ไม่งั้นแถวเด้งกลับเข้าคิวแอดมิน แล้วกดยืนยันก็ชนกฎเดิมซ้ำจนค้างตลอดไป
+        if (creditErr.code === "23505") {
+          await svc.rpc("apply_plan_purchase", { p_topup_id: topup.id });
+          return done("processed", "already credited");
+        }
         // คืนสถานะก่อน ไม่งั้นทั้งสองทางกู้ตัน:
         //  · Omise ยิงซ้ำ -> .neq("status","paid") ไม่คืนแถว -> ข้ามการเครดิตตลอดไป
         //  · แอดมินกดยืนยัน -> admin_confirm_topup ปฏิเสธแถวที่เป็น paid
@@ -73,7 +79,10 @@ export async function POST(request: Request) {
           body: `รายการ ${topup.id} — ${creditErr.message.slice(0, 120)} · คืนสถานะให้กดยืนยันมือได้แล้ว`,
           url: "/dashboard/admin/billing", tag: `credit-fail:${topup.id}`,
         });
-        await svc.from("webhook_events").update({ status: "failed", error: `credit_wallet: ${creditErr.message}`.slice(0, 300) }).eq("id", evt?.id ?? "");
+        // เขียนเฉพาะเมื่อมีแถวจริง — `id=eq.` บนคอลัมน์ uuid ทำให้ PostgREST คืน 400 แล้วเงียบไปเฉย ๆ
+        if (evt?.id) {
+          await svc.from("webhook_events").update({ status: "failed", error: `credit_wallet: ${creditErr.message}`.slice(0, 300) }).eq("id", evt.id);
+        }
         // ตอบ 500 เพื่อให้ Omise ยิงซ้ำจริง ๆ (done() ตอบ 200 เสมอ ซึ่งแปลว่า "รับทราบแล้ว")
         return NextResponse.json({ ok: false }, { status: 500 });
       }
