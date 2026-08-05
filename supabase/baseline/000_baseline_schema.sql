@@ -663,6 +663,22 @@ alter table only webhook_events add constraint webhook_events_shop_id_fkey FOREI
 
 -- ============ Functions (56) ============
 
+-- ⚠️ current_period() ต้องถูกสร้าง 'ก่อน' ฟังก์ชันอื่นที่เรียกใช้มัน (5 ส.ค. 2569)
+-- ฟังก์ชัน LANGUAGE sql ถูก parse และตรวจชื่อตั้งแต่ตอน create (ต่างจาก plpgsql ที่ไม่ตรวจ)
+-- ไฟล์นี้เรียงฟังก์ชันตามตัวอักษร billing_summary จึงมาก่อน current_period ที่มันเรียกใช้
+-- ผลคือ apply baseline กับ DB เปล่าแล้วตายที่ billing_summary และฟังก์ชันที่เหลือทั้งหมดไม่ถูกสร้าง
+-- ทำให้ migration อีก 16 ไฟล์ล้มตาม (พิสูจน์ด้วยการรันจริงบน Postgres เปล่าใน Docker)
+
+CREATE OR REPLACE FUNCTION public.current_period()
+ RETURNS text
+ LANGUAGE sql
+ STABLE
+ SET search_path TO 'public'
+AS $function$
+  select to_char(now() at time zone 'Asia/Bangkok', 'YYYY-MM');
+$function$
+;
+
 CREATE OR REPLACE FUNCTION public.admin_confirm_topup(p_topup_id uuid, p_approve boolean)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -903,15 +919,6 @@ begin
 end $function$
 ;
 
-CREATE OR REPLACE FUNCTION public.current_period()
- RETURNS text
- LANGUAGE sql
- STABLE
- SET search_path TO 'public'
-AS $function$
-  select to_char(now() at time zone 'Asia/Bangkok', 'YYYY-MM');
-$function$
-;
 
 CREATE OR REPLACE FUNCTION public.decrement_stock(p_product_id uuid, p_variant_id uuid, p_qty integer)
  RETURNS boolean

@@ -20,3 +20,8 @@ select d.id, d.shop_id, d.file_path, null
 from fin_docs d
 where d.file_path is not null
   and not exists (select 1 from fin_doc_files f where f.doc_id = d.id and f.path = d.file_path);
+
+-- ⚠️ เพิ่ม 5 ส.ค. 2569 — index นี้มีบน production แต่ไม่เคยอยู่ในไฟล์ไหน
+-- (พบจากการเทียบ schema ที่สร้างจาก repo กับ production ทีละ index หลังรันจริงบน DB เปล่า)
+-- ถ้าไม่มี: การอ่านไฟล์แนบทั้งกิจการจะ scan ทั้งตาราง ช้าขึ้นเรื่อย ๆ ตามจำนวนเอกสาร
+create index if not exists fin_doc_files_shop_idx on public.fin_doc_files using btree (shop_id);

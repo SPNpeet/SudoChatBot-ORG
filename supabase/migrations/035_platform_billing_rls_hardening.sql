@@ -1,6 +1,7 @@
 -- 035: platform_billing_settings เดิมเปิดให้ authenticated ทุกคน SELECT ทั้งตาราง (รวม tax_id/company_address ที่ไม่ควรเห็นทั่วไป)
 -- ยืนยันแล้วว่าทุกจุดในโค้ดตอนนี้อ่านผ่าน service client (bypass RLS) อยู่แล้ว จึงไม่กระทบพฤติกรรมเดิมเลย — อุดช่องเผื่ออนาคต
 drop policy if exists pbs_read on platform_billing_settings;
+drop policy if exists pbs_read_admin on platform_billing_settings;
 create policy pbs_read_admin on platform_billing_settings for select to authenticated
   using (public.is_platform_admin());
 
