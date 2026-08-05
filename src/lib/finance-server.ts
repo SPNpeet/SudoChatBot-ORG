@@ -118,9 +118,15 @@ export async function reverseJournalOf(
   svc: SupabaseClient, shopId: string, userId: string | null,
   sourceId: string, memo: string,
 ): Promise<void> {
-  const { data: entries } = await svc.from("journal_entries")
+  // ⚠️ ทุก error ในฟังก์ชันนี้ต้องโยนออกไป ห้ามกลืน
+  // เดิมกลืนทุกจุด (อ่านใบสำคัญพัง -> entries เป็น null -> ลูปไม่ทำงาน แล้วคืนสำเร็จเฉย ๆ)
+  // ผลคือผู้ใช้กด "ยกเลิกเอกสาร" แล้วระบบตอบว่าสำเร็จ ทั้งที่ไม่มีรายการกลับบัญชีเกิดขึ้นเลย
+  // -> รายได้/ภาษีขายของใบที่ยกเลิกยังค้างในสมุดรายวัน งบทดลอง และ ภ.พ.30 ตลอดไป
+  // ซึ่งชนกฎ "รายงานต้องตรงสมุดรายวัน" ตรง ๆ และไม่มีตัวตรวจไหนจับได้
+  const { data: entries, error: readErr } = await svc.from("journal_entries")
     .select("id, entry_number, entry_date, journal_lines(account_id, debit, credit)")
     .eq("shop_id", shopId).eq("source_id", sourceId).neq("source_type", "reversal");
+  if (readErr) throw new Error(`อ่านรายการบัญชีเดิมไม่สำเร็จ: ${readErr.message}`);
   const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
   for (const e of entries ?? []) {
     const lines = (e.journal_lines ?? []) as { account_id: string; debit: number; credit: number }[];
@@ -141,17 +147,26 @@ export async function reverseJournalOf(
     const originDate = String((e as { entry_date?: string }).entry_date ?? today);
     const revDate = originDate > today ? originDate : today;
 
-    const { data: num } = await svc.rpc("next_fin_doc_number", { p_shop_id: shopId, p_doc_type: "journal" });
-    const { data: rev } = await svc.from("journal_entries").insert({
+    const { data: num, error: numErr } = await svc.rpc("next_fin_doc_number", { p_shop_id: shopId, p_doc_type: "journal" });
+    if (numErr || !num) throw new Error(`ออกเลขใบสำคัญกลับรายการไม่สำเร็จ: ${numErr?.message ?? "ไม่ได้เลขที่"}`);
+    const { data: rev, error: revErr } = await svc.from("journal_entries").insert({
       shop_id: shopId, entry_number: num as string, entry_date: revDate,
       memo: `กลับรายการ ${e.entry_number}: ${memo}`.slice(0, 500),
       source_type: "reversal", source_id: sourceId, created_by: userId,
     }).select("id").single();
-    if (!rev) continue;
-    await svc.from("journal_lines").insert(lines.map((l, i) => ({
+    // เดิม `if (!rev) continue;` = ข้ามเงียบ ๆ แล้วบอกผู้ใช้ว่าสำเร็จ
+    if (revErr || !rev) throw new Error(`สร้างใบสำคัญกลับรายการไม่สำเร็จ: ${revErr?.message ?? "ไม่ทราบสาเหตุ"}`);
+    const { error: lineErr } = await svc.from("journal_lines").insert(lines.map((l, i) => ({
       entry_id: rev.id, shop_id: shopId, account_id: l.account_id,
       debit: Number(l.credit), credit: Number(l.debit), sort: i,
     })));
+    // หัวใบสำเร็จแต่บรรทัดไม่เข้า = ใบสำคัญเปล่าที่ไม่มีตัวตรวจไหนเห็น
+    // (jv_balance มองไม่เห็นเพราะไม่มีบรรทัดให้ join · void_no_reversal นับได้ 2 = ดูเหมือนกลับครบ)
+    // ต้องเก็บกวาดหัวใบทิ้งแล้วโยน ไม่ใช่ปล่อยขยะไว้ในสมุดรายวัน
+    if (lineErr) {
+      await svc.from("journal_entries").delete().eq("id", rev.id);
+      throw new Error(`ลงบรรทัดกลับรายการไม่สำเร็จ: ${lineErr.message}`);
+    }
   }
 }
 

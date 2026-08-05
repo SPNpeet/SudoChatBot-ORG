@@ -505,9 +505,30 @@ export async function voidDoc(shopId: string, docId: string, reason: string): Pr
     if (!doc) return { ok: false, error: "ไม่พบเอกสาร" };
     if (doc.status === "void") return { ok: false, error: "เอกสารนี้ถูกยกเลิกไปแล้ว" };
 
-    await reverseJournalOf(svc, shopId, user.id, docId, reason || `ยกเลิก ${doc.doc_number}`);
+    // ⚠️ ลำดับสำคัญ: ต้องเปลี่ยนสถานะเอกสาร "ก่อน" ลงรายการกลับบัญชี
+    //
+    // เพราะ trigger assert_period_open ดักที่การ update fin_docs เป็น void
+    // ถ้าลงรายการกลับก่อน (ลำดับเดิม) แล้วงวดถูกปิดอยู่ จะได้สภาพที่แย่ที่สุด:
+    // สมุดรายวันกลับรายการไปแล้ว แต่เอกสารยังมีชีวิต -> ถูกนับใน ภ.พ.30 และลูกหนี้ต่อ
+    // และ error ของ update ก็ถูกกลืน (supabase-js ไม่ throw) ผู้ใช้เห็น "ยกเลิกสำเร็จ"
+    // ทั้งที่บัญชีเพี้ยนไปแล้ว — ไม่มีตัวตรวจไหนจับได้เพราะสถานะไม่ใช่ void
+    const { error: voidErr } = await svc.from("fin_docs")
+      .update({ status: "void", notes: reason ? `ยกเลิก: ${reason}`.slice(0, 500) : undefined, updated_at: new Date().toISOString() })
+      .eq("id", docId).eq("shop_id", shopId);
+    if (voidErr) {
+      return { ok: false, error: voidErr.message.includes("ปิดงวด") || voidErr.message.includes("period")
+        ? "งวดนี้ปิดบัญชีไปแล้ว ยกเลิกเอกสารย้อนหลังไม่ได้ — ออกใบลดหนี้ในงวดปัจจุบันแทน"
+        : `ยกเลิกเอกสารไม่สำเร็จ: ${voidErr.message.slice(0, 150)}` };
+    }
+    try {
+      await reverseJournalOf(svc, shopId, user.id, docId, reason || `ยกเลิก ${doc.doc_number}`);
+    } catch (revErr) {
+      // กลับรายการไม่สำเร็จ = คืนสถานะเอกสาร ไม่งั้นเหลือ "ใบที่ยกเลิกแต่ไม่มีรายการกลับ"
+      // ซึ่งเป็นธงแดงจริงในตัวตรวจความถูกต้อง และแก้ทางหน้าเว็บไม่ได้
+      await svc.from("fin_docs").update({ status: doc.status, updated_at: new Date().toISOString() }).eq("id", docId);
+      return { ok: false, error: `ยกเลิกไม่สำเร็จ — ระบบกลับรายการบัญชีไม่ได้ (${(revErr as Error).message.slice(0, 120)}) เอกสารยังอยู่เหมือนเดิม` };
+    }
     if (doc.doc_type === "invoice" || doc.doc_type === "receipt") await restoreStock(svc, shopId, docId);
-    await svc.from("fin_docs").update({ status: "void", notes: reason ? `ยกเลิก: ${reason}`.slice(0, 500) : undefined, updated_at: new Date().toISOString() }).eq("id", docId);
     await audit(svc, shopId, user.id, "fin_doc_voided", "fin_doc", docId, { doc_number: doc.doc_number, reason });
     revalidatePath("/dashboard/sales");
     revalidatePath("/dashboard/expenses");
@@ -633,7 +654,9 @@ export async function issueCreditDebitNote(shopId: string, input: NoteInput): Pr
     const settleAcc = input.settle === "cash" ? ACC.CASH : input.settle === "bank" ? ACC.BANK : ACC.AR;
 
     if (input.kind === "credit_note") {
-      // ไม่หักออกจากบัญชีขาย (4010) ตรง ๆ แต่ลงบัญชีหักรายได้แยก (4090)
+      // ไม่หักออกจากบัญชีขาย (4010) ตรง ๆ แต่ลงบัญชีหักรายได้แยก ACC.SALES_RETURN = 4190
+      // (คอมเมนต์เดิมเขียน 4090 ซึ่งคือ "รายได้อื่น" คนละบัญชี — เป็นความผิดพลาดที่หัวไฟล์
+      //  finance-server.ts เตือนไว้เองว่าเคยพลาดมาแล้ว คนถัดไปที่เชื่อคอมเมนต์จะแก้กลับเข้าหลุมเดิม)
       // เพื่อให้งบกำไรขาดทุนเห็นว่ามีการรับคืน/ลดราคาเท่าไหร่ ซึ่งเป็นข้อมูลที่ผู้บริหารต้องเห็น
       await postJournalOrThrow(svc, shopId, user.id, {
         date: issueDate, memo: `ใบลดหนี้ ${docNumber} อ้าง ${origin.doc_number} — ${reason}`,
