@@ -65,9 +65,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: true, week: weekKey, sent: 0, note: "ยังไม่มีกิจการที่เชื่อมช่องทางแจ้งเตือน" });
   }
 
-  // กันส่งซ้ำสัปดาห์เดิม
+  // กันส่งซ้ำ "สัปดาห์เดียวกัน" — ต้องเทียบด้วยกุญแจสัปดาห์ ไม่ใช่ช่วงเวลา
+  // (บั๊กที่เจอตอนตรวจซ้ำ: ใช้ created_at >= today-7d ซึ่งครอบการส่งของสัปดาห์ก่อนพอดี
+  //  ทำให้ทุกกิจการติด "ส่งไปแล้ว" ตลอดกาล = สรุปรายสัปดาห์ส่งได้ครั้งเดียวในชีวิต แล้วเงียบ)
   const { data: already } = await svc.from("audit_logs")
-    .select("shop_id").eq("action", "weekly_digest_sent").gte("created_at", `${weekAgo}T00:00:00Z`);
+    .select("shop_id").eq("action", "weekly_digest_sent").eq("details->>week", weekKey);
   const done = new Set((already ?? []).map((a) => a.shop_id as string));
 
   let sent = 0;

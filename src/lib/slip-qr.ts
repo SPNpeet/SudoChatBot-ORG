@@ -68,15 +68,24 @@ export function parseSlipMiniQr(text: string): SlipQr | null {
  * เผื่อสลิปที่เป็นภาพแคปทั้งจอแล้ว QR เหลือเล็ก
  */
 export async function decodeSlipQr(bytes: Uint8Array): Promise<SlipQr | null> {
+  let sharp: (typeof import("sharp"))["default"];
   try {
-    const sharp = (await import("sharp")).default;
-    for (const width of [1280, 2048]) {
+    sharp = (await import("sharp")).default;
+  } catch {
+    return null;
+  }
+  // ⚠️ try ต้องอยู่ "ในลูป" ไม่ใช่ครอบทั้งลูป
+  // บั๊กที่เจอตอนตรวจซ้ำ: รูปพังที่ขนาดแรกแล้ว throw -> ขนาดที่สองไม่ถูกลองเลย
+  // ทั้งที่ขนาดที่สองมีไว้เพื่อกรณีแบบนั้นพอดี
+  for (const width of [1280, 2048]) {
+    try {
       const { data, info } = await sharp(Buffer.from(bytes), { failOn: "none" })
-        .rotate() // เคารพ EXIF — รูปถ่ายจากมือถือหมุนมาบ่อย
-        .resize({ width, height: width, fit: "inside", withoutEnlargement: true })
-        .ensureAlpha()
+        .rotate()               // เคารพ EXIF — รูปถ่ายจากมือถือหมุนมาบ่อย
+        .toColourspace("srgb")  // สลิปที่สแกนเป็นขาวดำมี 1 ช่องสี + ensureAlpha = 2 ช่อง
+        .ensureAlpha()          // แต่ jsQR ต้องการ RGBA 4 ช่องเป๊ะ ไม่งั้นโยน "Malformed data"
         .raw()
         .toBuffer({ resolveWithObject: true });
+      if (data.length !== info.width * info.height * 4) continue;  // กันไว้อีกชั้น ไม่ให้ jsQR โยน
       const code = jsQR(
         new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
         info.width, info.height,
@@ -85,9 +94,9 @@ export async function decodeSlipQr(bytes: Uint8Array): Promise<SlipQr | null> {
         const parsed = parseSlipMiniQr(code.data);
         if (parsed) return parsed;
       }
+    } catch {
+      // ขนาดนี้อ่านไม่ได้ ลองขนาดถัดไป — ชั้นนี้เป็นตัวช่วย ไม่ใช่ด่านบังคับ
     }
-    return null;
-  } catch {
-    return null; // ชั้นนี้เป็นตัวช่วย ไม่ใช่ด่านบังคับ — พังเงียบดีกว่าทำให้การจ่ายเงินล้ม
   }
+  return null;
 }

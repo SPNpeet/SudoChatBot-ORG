@@ -34,6 +34,22 @@ export async function POST(request: Request) {
     const outstanding = docOutstanding(doc);
     if (outstanding <= 0) return NextResponse.json({ ok: true, paid: true, message: "เอกสารนี้ชำระครบแล้ว" });
 
+    // ---------- จำกัดอัตราต่อ IP ----------
+    // หน้านี้ไม่ต้องล็อกอิน ใครถือลิงก์ก็ยิงได้ และทุกครั้งที่ยิงมีต้นทุนจริง (โควตาสลิป + ค่า API + ถอดรูป)
+    // เดิมไม่มีด่านนี้ = คนที่ได้ลิงก์ต่อ ๆ กันมา เผาโควตาสลิปทั้งเดือนของร้านได้ด้วยสคริปต์สั้น ๆ
+    // เป็นด่าน "ปฏิเสธเฉย ๆ" จึงต้องอยู่ก่อนด่านที่ตัดโควตาทั้งหมด
+    const ipRaw = (request.headers.get("x-forwarded-for")?.split(",")[0] ?? request.headers.get("x-real-ip") ?? "unknown").trim().toLowerCase();
+    const ipNorm = ipRaw.includes(":") ? ipRaw.split("%")[0].split(":").slice(0, 4).join(":") + "::/64" : ipRaw;
+    const { createHmac } = await import("crypto");
+    const ipHash = createHmac("sha256", process.env.RATE_LIMIT_IP_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || "sc-fallback")
+      .update(ipNorm).digest("hex");   // ห้ามเก็บ IP ดิบ (PDPA)
+    const { data: rate, error: rateErr } = await svc.rpc("consume_public_rate", {
+      p_bucket: "public_slip", p_ip_hash: ipHash, p_limit: 12, p_window_secs: 3600,
+    });
+    if (rateErr || (rate as { allowed?: boolean } | null)?.allowed !== true) {
+      return NextResponse.json({ ok: false, error: "ส่งสลิปถี่เกินไป — รอสักครู่แล้วลองใหม่ หรือส่งสลิปให้ร้านโดยตรง" });
+    }
+
     // ---------- QR ชั้นฟรี (5 ส.ค. 2569): กันสลิปซ้ำทั้งแพลตฟอร์มก่อนเสียโควตา/ค่า API ----------
     // ด่านปฏิเสธเฉย ๆ ต้องมาก่อนด่านที่ตัดโควตา (หลักเดียวกับด่าน AI)
     // อ่าน QR ไม่ออก = ข้ามเฉย ๆ ห้าม reject — ชั้นนี้ปฏิเสธได้ อนุมัติไม่ได้
@@ -68,8 +84,12 @@ export async function POST(request: Request) {
     }
 
     // เพดานกลางต้องอยู่หลังด่านโควตาร้าน (ด่านที่ปฏิเสธเฉย ๆ มาก่อนด่านที่ตัดโควตา)
-    const pfSlip = await consumePlatformSlip(svc);
-    if (!pfSlip.ok) return NextResponse.json({ ok: false, error: pfSlip.error });
+    // และตัดเฉพาะเมื่อใช้ "คีย์กลางของแพลตฟอร์ม" เท่านั้น — ร้านที่ซื้อแพ็กและตั้งคีย์เอง
+    // ต้องไม่มากินเพดานของคีย์กลาง (บั๊กที่เจอตอนตรวจซ้ำ: เดิมตัดทุกกรณี)
+    if (!shopReady) {
+      const pfSlip = await consumePlatformSlip(svc);
+      if (!pfSlip.ok) return NextResponse.json({ ok: false, error: pfSlip.error });
+    }
 
     const verify = await verifySlip(provider as string, slipKey as string, bytes);
 
@@ -114,8 +134,13 @@ export async function POST(request: Request) {
     }
 
     // เก็บสลิป + บันทึกรับเงิน (กันสลิปซ้ำด้วย unique trans_ref)
+    // อัปโหลดล้ม = ไม่มีหลักฐานการรับเงิน ห้ามบันทึกเงินโดยชี้ไปไฟล์ที่ไม่มีอยู่จริง
     const path = `${doc.shop_id}/finance/public-${crypto.randomUUID()}.jpg`;
-    await svc.storage.from("slips").upload(path, bytes, { contentType: file.type });
+    const { error: upErr } = await svc.storage.from("slips").upload(path, bytes, { contentType: file.type });
+    if (upErr) {
+      if (refReserved && transRef) await svc.from("slip_refs").delete().eq("trans_ref", transRef);
+      return NextResponse.json({ ok: false, error: "เก็บสลิปไม่สำเร็จ — ลองใหม่อีกครั้ง หรือส่งสลิปให้ร้านโดยตรง" });
+    }
 
     const { data: payment, error } = await svc.from("fin_payments").insert({
       shop_id: doc.shop_id, doc_id: doc.id, direction: "in", method: "promptpay",
@@ -132,7 +157,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: "บันทึกไม่สำเร็จ ลองใหม่อีกครั้ง" });
     }
 
-    const status = await applyPaymentToDoc(svc, doc.shop_id, null, doc, amount, "promptpay", new Date().toISOString());
+    // ลงบัญชี/ตัดยอด — ถ้าโยน (เช่นผังบัญชีของร้านขาดรหัสที่ต้องใช้) ต้องเก็บกวาดให้จบ
+    // ไม่งั้นค้างครึ่งทาง: มีแถวรับเงิน+จองเลขไว้ แต่เอกสารยังค้างชำระ แล้วลูกค้าส่งใหม่ก็โดนหาว่าสลิปซ้ำ = ตันถาวร
+    let status: string;
+    try {
+      status = await applyPaymentToDoc(svc, doc.shop_id, null, doc, amount, "promptpay", new Date().toISOString());
+    } catch (postErr) {
+      await svc.from("fin_payments").delete().eq("id", payment.id);
+      if (refReserved && transRef) await svc.from("slip_refs").delete().eq("trans_ref", transRef);
+      const { notifyShop } = await import("@/lib/notify");
+      await notifyShop(svc, doc.shop_id, {
+        title: "ลูกค้าจ่ายเงินแล้วแต่ระบบลงบัญชีไม่ได้",
+        body: `เอกสาร ${doc.doc_number} — ${(postErr as Error).message.slice(0, 120)} · ตรวจผังบัญชีแล้วบันทึกรับเงินเองที่หน้าการเงิน`,
+        url: "/dashboard/finance", tag: `post-fail:${doc.id}`,
+      });
+      return NextResponse.json({ ok: false, error: "ตรวจสลิปผ่านแล้ว แต่ระบบบันทึกบัญชีของร้านไม่สำเร็จ — แจ้งร้านให้แล้ว ร้านจะยืนยันให้เอง" });
+    }
     await svc.from("audit_logs").insert({
       shop_id: doc.shop_id, actor_type: "system", action: "public_slip_payment",
       resource_type: "fin_payment", resource_id: payment.id,
@@ -146,6 +186,9 @@ export async function POST(request: Request) {
         : `ตรวจสลิปผ่าน — รับยอด ${amount.toLocaleString()} บาท (ยังค้างบางส่วน)`,
     });
   } catch (e) {
-    return NextResponse.json({ ok: false, error: `เกิดข้อผิดพลาด: ${(e as Error).message.slice(0, 150)}` }, { status: 500 });
+    // หน้านี้เปิดสาธารณะ — ห้ามส่งข้อความ error ดิบของฐานข้อมูล/ชื่อ constraint ออกไป
+    // (บอกโครงสร้างภายในให้คนนอกโดยไม่จำเป็น) เก็บรายละเอียดไว้ที่ log ฝั่งเซิร์ฟเวอร์แทน
+    console.error("public slip error", (e as Error).message);
+    return NextResponse.json({ ok: false, error: "ระบบขัดข้องชั่วคราว — ลองใหม่อีกครั้ง หรือส่งสลิปให้ร้านโดยตรง" }, { status: 500 });
   }
 }

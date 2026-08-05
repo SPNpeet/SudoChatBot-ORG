@@ -37,7 +37,9 @@ export async function signUpDirect(name: string, email: string, password: string
     p_bucket: "signup", p_ip_hash: await ipHash(), p_limit: 10, p_window_secs: 3600,
   });
   if (rateErr) return { ok: false, error: "ระบบไม่พร้อมชั่วคราว ลองใหม่อีกครั้ง" };
-  if ((rate as { allowed?: boolean } | null)?.allowed === false) {
+  // fail-closed แบบเต็มรูป: ต้องได้ allowed === true เท่านั้น
+  // (คืน null/JSON ที่ไม่มีคีย์ allowed โดยไม่มี error = ตัวนับใช้ไม่ได้ ห้ามปล่อยผ่าน)
+  if ((rate as { allowed?: boolean } | null)?.allowed !== true) {
     return { ok: false, error: "สมัครถี่เกินไปจากเครือข่ายนี้ — รอสักครู่แล้วลองใหม่ หรือถ้ามีบัญชีแล้วให้กดเข้าสู่ระบบ" };
   }
   const { error } = await svc.auth.admin.createUser({

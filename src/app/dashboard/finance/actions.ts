@@ -761,7 +761,8 @@ export async function recordPayment(shopId: string, input: RecordPaymentInput): 
         quotaNote = sq && sq.allowed === false
           ? `โควตาตรวจสลิปอัตโนมัติเดือนนี้ครบแล้ว (${sq.used}/${sq.cap}) — บันทึกแบบตรวจเอง หรืออัปเกรดแพ็กเกจเพื่อตรวจอัตโนมัติต่อ`
           : "ระบบตรวจสลิปอัตโนมัติไม่พร้อมชั่วคราว — บันทึกแบบตรวจเอง";
-      } else if (provider && slipKey && (await consumePlatformSlip(svc)).ok) {
+      // ตัดเพดานกลางเฉพาะเมื่อใช้คีย์กลาง — ร้านที่ตั้งคีย์เองต้องไม่กินโควตาของคีย์กลาง
+      } else if (provider && slipKey && (shopReady || (await consumePlatformSlip(svc)).ok)) {
         const { data: file } = await svc.storage.from("slips").download(input.slip_path);
         if (file) {
           verify = await verifySlip(provider as string, slipKey as string, new Uint8Array(await file.arrayBuffer()));
@@ -870,8 +871,9 @@ export async function uploadAndMatchSlip(shopId: string, formData: FormData): Pr
           : "ระบบตรวจสลิปอัตโนมัติไม่พร้อมชั่วคราว — เลือกเอกสารเองด้านล่าง",
       };
     } else if (provider && slipKey) {
-      // เพดานกลางของแพลตฟอร์ม — เต็มแล้วยังบันทึกเงินได้ตามปกติ แค่จับคู่เอกสารเอง
-      const pfSlip = await consumePlatformSlip(svc);
+      // เพดานกลางของแพลตฟอร์ม — ตัดเฉพาะเมื่อใช้คีย์กลาง (ร้านที่ตั้งคีย์เองไม่กินโควตากลาง)
+      // เต็มแล้วยังบันทึกเงินได้ตามปกติ แค่จับคู่เอกสารเอง
+      const pfSlip = shopReady ? { ok: true as const } : await consumePlatformSlip(svc);
       if (!pfSlip.ok) {
         verify = { ok: true, verified: false, error: pfSlip.error };
       } else {

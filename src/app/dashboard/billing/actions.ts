@@ -143,9 +143,29 @@ export async function purchasePlan(shopId: string, planCode: string, period: "mo
   }
 }
 
+/**
+ * เปลี่ยนแพ็กเกจ — **ใช้ได้เฉพาะการย้ายไปแพ็กที่ราคา 0 เท่านั้น**
+ *
+ * ⚠️ ช่องโหว่ที่ปิด (พบจากการตรวจซ้ำ 5 ส.ค. 2569): เดิม action นี้รับ planCode จาก client
+ * แล้ว update shops.plan ตรง ๆ โดยไม่ตรวจราคาเลย หน้าเว็บเรียกเฉพาะปุ่ม "ใช้แพ็กฟรี" ก็จริง
+ * แต่ Server Action คือ endpoint สาธารณะ — เจ้าของกิจการยิง changePlan(shopId,"agency") เองได้
+ * ได้แพ็ก 999฿ ฟรีจนกว่ารอบบิลจะไล่ลง (~37 วัน) แล้ววนซ้ำได้ไม่จำกัด
+ *
+ * กติกาข้อ 3 ของโปรเจกต์: "ถ้าต้องการให้ห้าม ให้ throw อย่าเขียน prompt ขอ" —
+ * ข้อห้ามต้องอยู่ที่ server ไม่ใช่ที่เงื่อนไข JSX
+ * การอัปเกรดแพ็กเสียเงินมีทางเดียวคือ purchasePlan (จ่ายจริง) -> apply_plan_purchase
+ */
 export async function changePlan(shopId: string, planCode: string): Promise<PlanResult> {
   try {
     await assertMember(shopId, ["owner"]);
+    const svcCheck = createServiceClient();
+    const { data: target, error: planErr } = await svcCheck.from("plans")
+      .select("code,price_monthly,active").eq("code", planCode).maybeSingle();
+    // fail-closed: อ่านราคาไม่ได้ = ไม่ให้เปลี่ยน (ห้ามเดาว่าเป็นแพ็กฟรี)
+    if (planErr || !target || target.active !== true) return { ok: false, error: "ไม่พบแพ็กเกจนี้" };
+    if (Number(target.price_monthly) > 0) {
+      return { ok: false, error: "แพ็กเกจนี้ต้องชำระเงินก่อน — กดปุ่มสมัครเพื่อสร้าง QR ชำระเงิน" };
+    }
     const supabase = await createClient();
     const { error } = await supabase.from("shops").update({ plan: planCode, plan_since: new Date().toISOString().slice(0, 10) }).eq("id", shopId);
     if (error) return { ok: false, error: error.message };

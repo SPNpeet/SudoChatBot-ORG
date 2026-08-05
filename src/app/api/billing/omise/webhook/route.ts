@@ -53,12 +53,32 @@ export async function POST(request: Request) {
       .update({ status: "paid", verified_by: "omise", paid_at: new Date().toISOString(), slip_data: charge as unknown as Record<string, unknown> })
       .eq("id", topup.id).neq("status", "paid").select("id");
     if (updated && updated.length > 0) {
-      await svc.rpc("credit_wallet", {
+      const { error: creditErr } = await svc.rpc("credit_wallet", {
         p_shop_id: topup.shop_id, p_amount: Number(topup.amount), p_type: "topup",
         p_ref_type: "topup", p_ref_id: topup.id, p_note: "เติมเงินผ่าน Omise (PromptPay)", p_actor: null,
       });
+      // เงินเข้าที่ Omise แล้วแต่เครดิตไม่เข้า = ต้องให้ Omise ยิงซ้ำ ห้ามตอบ processed
+      // (เดิมทิ้ง error แล้วตอบ 200 -> Omise ไม่ retry -> ลูกค้าจ่ายแล้วไม่ได้อะไร ไม่มีใครรู้)
+      if (creditErr) {
+        const { notifyPlatformAdmins } = await import("@/lib/notify");
+        await notifyPlatformAdmins(svc, {
+          title: "ด่วน: จ่ายผ่าน Omise สำเร็จแต่เครดิตไม่เข้า",
+          body: `รายการ ${topup.id} — ${creditErr.message.slice(0, 120)}`,
+          url: "/dashboard/admin/billing", tag: `credit-fail:${topup.id}`,
+        });
+        return done("failed", `credit_wallet: ${creditErr.message}`);
+      }
       // ซื้อแพ็กเกจจ่ายตรง -> เปิดแพ็กทันที (idempotent — ข้ามเองถ้าไม่ใช่รายการซื้อแพ็ก)
-      await svc.rpc("apply_plan_purchase", { p_topup_id: topup.id });
+      const { data: applied, error: applyErr } = await svc.rpc("apply_plan_purchase", { p_topup_id: topup.id });
+      const res = applied as { ok?: boolean; error?: string } | null;
+      if (applyErr || res?.ok === false) {
+        const { notifyPlatformAdmins } = await import("@/lib/notify");
+        await notifyPlatformAdmins(svc, {
+          title: "ด่วน: จ่ายค่าแพ็กผ่าน Omise แล้วแต่เปิดแพ็กไม่สำเร็จ",
+          body: `รายการ ${topup.id} — ${applyErr?.message ?? res?.error ?? "ไม่ทราบสาเหตุ"} · เครดิตเข้าแล้ว ต้องเปิดแพ็กให้มือ`,
+          url: "/dashboard/admin/billing", tag: `plan-fail:${topup.id}`,
+        });
+      }
     }
     return done("processed");
   } catch (e) {

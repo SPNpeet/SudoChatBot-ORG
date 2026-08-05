@@ -380,10 +380,16 @@ export async function createShop(formData: FormData): Promise<ActionResult> {
 
     const svc = createServiceClient();
     // ลิมิตจำนวนกิจการตามแพ็ก (Starter 1 · Professional 3 · Executive 5 · Agency ไม่จำกัด)
-    const { data: canCreate } = await svc.rpc("can_create_company", { p_owner: user.id });
+    // fail-closed: ตรวจไม่ได้ = ไม่ให้สร้าง
+    // (เดิม `if (cc && cc.allowed === false)` เป็น fail-open — RPC พัง/คืน null แล้วสร้างทะลุเพดานได้
+    //  และเป็นการเขียนที่ย้อนกลับไม่ได้ เพราะบรรทัดถัดไป insert กิจการ + สมาชิกทันที)
+    const { data: canCreate, error: ccErr } = await svc.rpc("can_create_company", { p_owner: user.id });
     const cc = canCreate as { allowed?: boolean; used?: number; cap?: number; plan?: string } | null;
-    if (cc && cc.allowed === false) {
-      return { ok: false, error: `แพ็กเกจ ${cc.plan ?? "ปัจจุบัน"} รองรับ ${cc.cap} กิจการ (ใช้ครบแล้ว) — อัปเกรดที่หน้า แพ็กเกจ/เครดิต เพื่อเพิ่มกิจการ (Professional = 3 · AI Executive = 5 · Agency = ไม่จำกัด)` };
+    if (ccErr || cc?.allowed !== true) {
+      if (cc?.allowed === false) {
+        return { ok: false, error: `แพ็กเกจ ${cc.plan ?? "ปัจจุบัน"} รองรับ ${cc.cap} กิจการ (ใช้ครบแล้ว) — อัปเกรดที่หน้า แพ็กเกจ/เครดิต เพื่อเพิ่มกิจการ (ธุรกิจ = 3 · สำนักงานบัญชี = 10 · สำนักงานบัญชีใหญ่ = ไม่จำกัด)` };
+      }
+      return { ok: false, error: "ระบบตรวจสิทธิ์สร้างกิจการไม่พร้อมชั่วคราว — ลองใหม่อีกครั้ง" };
     }
 
     const { data: shop, error } = await svc.from("shops").insert({ owner_id: user.id, name, plan: "free", status: "active" }).select("id").single();
