@@ -83,7 +83,11 @@ export async function savePlatformBilling(formData: FormData): Promise<ActionRes
       promptpay_id: String(formData.get("promptpay_id") ?? "").trim() || null,
       account_name: String(formData.get("account_name") ?? "").trim() || null,
       slip_provider: String(formData.get("slip_provider") ?? "manual"),
-      payment_gateway: formData.get("payment_gateway") === "omise" ? "omise" : "promptpay_slip",
+      // allowlist ชัด ๆ — คอลัมน์นี้มี CHECK อยู่ ถ้าปล่อยค่าดิบเข้าไปจะ error ทั้งฟอร์ม
+      payment_gateway: (() => {
+        const g = String(formData.get("payment_gateway") ?? "");
+        return g === "omise" || g === "stripe" ? g : "promptpay_slip";
+      })(),
       omise_public_key: String(formData.get("omise_public_key") ?? "").trim() || null,
       company_name: String(formData.get("company_name") ?? "").trim() || null,
       company_address: String(formData.get("company_address") ?? "").trim() || null,
@@ -112,6 +116,16 @@ export async function savePlatformBilling(formData: FormData): Promise<ActionRes
     if (omiseKey) {
       const { error: e2 } = await supabase.rpc("store_platform_omise_key", { p_key: omiseKey });
       if (e2) return { ok: false, error: `บันทึก Omise secret key ไม่สำเร็จ: ${e2.message}` };
+    }
+    const stripeKey = String(formData.get("stripe_secret_key") ?? "").trim();
+    if (stripeKey) {
+      const { error: e4 } = await supabase.rpc("store_platform_stripe_key", { p_key: stripeKey });
+      if (e4) return { ok: false, error: `บันทึก Stripe secret key ไม่สำเร็จ: ${e4.message}` };
+    }
+    const stripeWh = String(formData.get("stripe_webhook_secret") ?? "").trim();
+    if (stripeWh) {
+      const { error: e5 } = await supabase.rpc("store_platform_stripe_webhook_secret", { p_key: stripeWh });
+      if (e5) return { ok: false, error: `บันทึก Stripe webhook secret ไม่สำเร็จ: ${e5.message}` };
     }
     const resendKey = String(formData.get("resend_api_key") ?? "").trim();
     if (resendKey) {

@@ -12,6 +12,8 @@
 // ============================================================
 import { calcDocTotals } from "../src/lib/finance.ts";
 import { quotaNotice } from "../src/lib/notice-rules.ts";
+import { verifyStripeSignature } from "../src/lib/stripe.ts";
+import { createHmac } from "node:crypto";
 
 let failures = 0;
 const ok = (cond, name, detail = "") => {
@@ -248,6 +250,37 @@ section("เกณฑ์เตือนโควตา AI");
   ok(at(0.85).href === "/dashboard/billing" && !!at(0.85).cta, "มีลิงก์ + ปุ่มไปหน้าแพ็กเกจ");
   ok(at(0.85).body.includes("80/100") || at(0.85).body.includes("85/100"),
     "บอกตัวเลขที่ใช้จริงในเนื้อความ ไม่ใช่แค่เปอร์เซ็นต์");
+}
+
+// ============================================================
+//  ลายเซ็น webhook ของ Stripe — ด่านเดียวที่กั้นระหว่าง "คนแปลกหน้า" กับ "เครดิตเงินเข้ากระเป๋า"
+//
+//  ทำไมต้องอยู่ในชุดตรวจ: ถ้าฟังก์ชันนี้คืน true ผิดแม้ครั้งเดียว
+//  ใครก็ยิง JSON เข้ามาเองแล้วได้แพ็กเกจฟรีไม่จำกัด โดยไม่มีร่องรอยว่าผิดปกติ
+//  และมันพังแบบ "เงียบ" — ระบบยังทำงานปกติทุกอย่าง จับได้ตอนดูยอดเงินไม่ตรงเท่านั้น
+//  จึงเป็นโค้ดประเภทที่ห้ามพึ่ง "อ่านแล้วดูถูก" เด็ดขาด ต้องมีเคสโจมตีจริงให้รันทุกครั้ง
+// ============================================================
+section("ลายเซ็น webhook Stripe (กันคนปลอม event มาเครดิตเงินให้ตัวเอง)");
+{
+  const secret = "whsec_testsecret";
+  const body = JSON.stringify({ id: "evt_1", type: "checkout.session.completed" });
+  const sign = (ts, b = body, key = secret) => createHmac("sha256", key).update(`${ts}.${b}`).digest("hex");
+  const now = Math.floor(Date.now() / 1000);
+  const old = now - 400; // เกิน tolerance 5 นาทีของ Stripe
+
+  ok(verifyStripeSignature(body, `t=${now},v1=${sign(now)}`, secret) === true, "ลายเซ็นถูกต้อง = ผ่าน");
+  ok(verifyStripeSignature(body, `t=${now},v1=deadbeef,v1=${sign(now)}`, secret) === true,
+    "มี v1 หลายตัวตอนหมุนคีย์ = ผ่านถ้ามีตัวใดตัวหนึ่งถูก");
+  ok(verifyStripeSignature(body, `t=${now},v0=${sign(now)},v1=${sign(now)}`, secret) === true, "มี v0 ปนมาไม่รบกวนการตรวจ");
+  // v0 คือลายเซ็นปลอมที่ Stripe แถมมากับ test event — รับเมื่อไหร่คือเปิดทาง downgrade attack
+  ok(verifyStripeSignature(body, `t=${now},v0=${sign(now)}`, secret) === false, "มีแต่ v0 = ปฏิเสธ (กัน downgrade attack)");
+  ok(verifyStripeSignature(body + " ", `t=${now},v1=${sign(now)}`, secret) === false, "body ถูกแก้แม้ 1 ตัวอักษร = ปฏิเสธ");
+  ok(verifyStripeSignature(body, `t=${now},v1=${sign(now)}`, "whsec_wrong") === false, "คีย์ผิด = ปฏิเสธ");
+  ok(verifyStripeSignature(body, `t=${old},v1=${sign(old)}`, secret) === false, "ลายเซ็นถูกแต่เก่าเกิน 5 นาที = ปฏิเสธ (กัน replay)");
+  ok(verifyStripeSignature(body, null, secret) === false, "ไม่มี header = ปฏิเสธ");
+  ok(verifyStripeSignature(body, "garbage", secret) === false, "header เพี้ยน = ปฏิเสธ");
+  ok(verifyStripeSignature(body, `t=${now},v1=ab`, secret) === false, "ลายเซ็นสั้นกว่าจริง = ปฏิเสธ (ห้าม throw)");
+  ok(verifyStripeSignature(body, `t=${now},v1=${sign(now)}`, "") === false, "ยังไม่ได้ตั้ง webhook secret = ปฏิเสธทุกกรณี (fail-closed)");
 }
 
 console.log(failures === 0

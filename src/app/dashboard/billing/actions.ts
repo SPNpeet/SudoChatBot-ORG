@@ -10,7 +10,7 @@ import { assertMember } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
 
 export type TopupResult =
-  | { ok: true; topupId: string; qrUrl: string; promptpayId?: string; accountName?: string; amount: number; gateway?: "omise" }
+  | { ok: true; topupId: string; qrUrl: string; promptpayId?: string; accountName?: string; amount: number; gateway?: "omise" | "stripe"; checkoutUrl?: string }
   | { ok: false; error: string };
 export type PlanResult = { ok: true } | { ok: false; error: string };
 
@@ -94,6 +94,64 @@ export async function createOmiseTopup(shopId: string, amount: number): Promise<
   }
 }
 
+/**
+ * สร้างรายการชำระเงินผ่าน Stripe Checkout — คืน URL ให้เบราว์เซอร์พาไปหน้าจ่ายของ Stripe
+ *
+ * ⚠️ ไม่มีที่ไหนในเส้นนี้ที่เครดิตเงิน — การกลับมาที่ success_url ไม่ใช่หลักฐานว่าจ่ายแล้ว
+ * (ผู้ใช้พิมพ์ URL นั้นเองก็ได้) เงินเข้าเมื่อ webhook ที่ตรวจลายเซ็นแล้วเท่านั้น
+ */
+async function createStripeCheckout(
+  shopId: string, amount: number, productName: string,
+  plan?: { code: string; period: "monthly" | "yearly" },
+): Promise<TopupResult> {
+  const svc = createServiceClient();
+  const { getStripeSecretKey, createCheckoutSession } = await import("@/lib/stripe");
+  const secretKey = await getStripeSecretKey(svc);
+  if (!secretKey) return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่า Stripe — ติดต่อผู้ดูแลระบบ" };
+
+  const { data: topup, error } = await svc.from("topups").insert({
+    shop_id: shopId, amount, method: "stripe", gateway: "stripe", status: "pending",
+    ...(plan ? { plan_code: plan.code, plan_period: plan.period } : {}),
+  }).select("id").single();
+  if (error) return { ok: false, error: error.message };
+
+  try {
+    const { APP_ORIGIN } = await import("@/lib/app-origin");
+    const session = await createCheckoutSession(secretKey, {
+      amountBaht: amount, productName, topupId: topup.id, shopId,
+      // กลับมาที่หน้าเดิมพร้อมรหัสรายการ — หน้าเว็บจะ poll สถานะจริงจากฐานข้อมูลต่อ
+      successUrl: `${APP_ORIGIN}/dashboard/billing?paid=${topup.id}`,
+      cancelUrl: `${APP_ORIGIN}/dashboard/billing?canceled=${topup.id}`,
+      expiresAt: Math.floor(Date.now() / 1000) + 3600, // 1 ชม. (Stripe บังคับอย่างน้อย 30 นาที)
+    });
+    if (!session.url) throw new Error("stripe ไม่ได้คืนลิงก์ชำระเงิน");
+    // charge_id มี unique index อยู่แล้ว — ใช้ผูก session กับรายการ ห้ามมีสองรายการต่อ session เดียว
+    const { error: linkErr } = await svc.from("topups").update({ charge_id: session.id }).eq("id", topup.id);
+    // ผูกไม่ติด = webhook หา topup ไม่เจอ = ลูกค้าจ่ายแล้วเงินค้าง ต้องหยุดตั้งแต่ตรงนี้
+    if (linkErr) {
+      await svc.from("topups").update({ status: "expired", error: `link session: ${linkErr.message}`.slice(0, 300) }).eq("id", topup.id);
+      return { ok: false, error: "สร้างรายการชำระเงินไม่สำเร็จ — ลองใหม่อีกครั้ง" };
+    }
+    revalidatePath("/dashboard/billing");
+    return { ok: true, topupId: topup.id, qrUrl: "", amount, gateway: "stripe", checkoutUrl: session.url };
+  } catch (e) {
+    await svc.from("topups").update({ status: "expired" }).eq("id", topup.id);
+    return { ok: false, error: `สร้างรายการชำระเงินไม่สำเร็จ: ${(e as Error).message.slice(0, 150)}` };
+  }
+}
+
+/** สร้างรายการเติมเงินผ่าน Stripe */
+export async function createStripeTopup(shopId: string, amount: number): Promise<TopupResult> {
+  try {
+    await assertMember(shopId, ["owner", "admin"]);
+    if (amount < 20) return { ok: false, error: "ขั้นต่ำ 20 บาท" };
+    return await createStripeCheckout(shopId, amount, `เติมเครดิต ${amount.toLocaleString("th-TH")} บาท`);
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, error: m.includes("forbidden") ? "เฉพาะเจ้าของ/ผู้ดูแลร้านเติมเงินได้" : `เติมเงินไม่สำเร็จ: ${m.slice(0, 150)}` };
+  }
+}
+
 /** เช็กสถานะรายการเติมเงิน (ใช้ poll ฝั่ง client หลังสแกน QR) */
 export async function getTopupStatus(shopId: string, topupId: string) {
   await assertMember(shopId, ["owner", "admin", "agent", "viewer"]);
@@ -113,6 +171,13 @@ export async function purchasePlan(shopId: string, planCode: string, period: "mo
     const { data: plan } = await svc.from("plans").select("code,name,price_monthly").eq("code", planCode).eq("active", true).maybeSingle();
     if (!plan || Number(plan.price_monthly) <= 0) return { ok: false, error: "แพ็กเกจนี้ไม่เปิดให้ชำระตรง" };
     const amount = Number(plan.price_monthly) * (period === "yearly" ? 10 : 1);
+
+    // ช่องทาง Stripe: ไปหน้าจ่ายของ Stripe เลย ไม่ต้องอัปสลิป ไม่ต้องรอแอดมิน
+    const { data: gw } = await svc.from("platform_billing_settings").select("payment_gateway").eq("id", true).maybeSingle();
+    if (gw?.payment_gateway === "stripe") {
+      const label = period === "yearly" ? `แพ็กเกจ ${plan.name} รายปี (ใช้ได้ 12 เดือน)` : `แพ็กเกจ ${plan.name} รายเดือน`;
+      return await createStripeCheckout(shopId, amount, label, { code: plan.code, period });
+    }
 
     const { data: pf } = await svc.from("platform_billing_settings").select("promptpay_id,account_name").eq("id", true).single();
     if (!pf?.promptpay_id) return { ok: false, error: "แพลตฟอร์มยังไม่ได้ตั้งค่าบัญชีรับเงิน — ติดต่อผู้ดูแลระบบ" };

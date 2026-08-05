@@ -8,7 +8,7 @@ import { compressImage } from "@/lib/compress-image";
 import { useEffect, useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge } from "@/components/ui";
 import { baht, cn } from "@/lib/utils";
-import { createTopup, createOmiseTopup, getTopupStatus, changePlan, purchasePlan } from "./actions";
+import { createTopup, createOmiseTopup, createStripeTopup, getTopupStatus, changePlan, purchasePlan } from "./actions";
 import { Check, Wallet, Upload, X, Loader2 } from "lucide-react";
 import { useDismiss } from "@/components/use-dismiss";
 
@@ -17,11 +17,11 @@ interface Plan {
   price_per_extra_reply: number; features: string[]; daily_reply_cap?: number | null;
   max_companies?: number | null; slip_quota?: number | null;
 }
-interface TopupState { topupId: string; qrUrl: string; promptpayId?: string; accountName?: string; amount: number; gateway?: "omise"; planName?: string }
+interface TopupState { topupId: string; qrUrl: string; promptpayId?: string; accountName?: string; amount: number; gateway?: "omise" | "stripe"; planName?: string }
 
 export default function BillingClient({
   shopId, role, balance, currentPlan, plans, gateway = "promptpay_slip", gatewayReady = true,
-}: { shopId: string; role: string; balance: number; currentPlan: string; plans: Plan[]; gateway?: "promptpay_slip" | "omise"; gatewayReady?: boolean }) {
+}: { shopId: string; role: string; balance: number; currentPlan: string; plans: Plan[]; gateway?: "promptpay_slip" | "omise" | "stripe"; gatewayReady?: boolean }) {
   const isOwnerAdmin = role === "owner" || role === "admin";
   const isOwner = role === "owner";
   const [amount, setAmount] = useState(300);
@@ -52,17 +52,55 @@ export default function BillingClient({
     return () => clearInterval(iv);
   }, [topup, omisePaid, shopId]);
 
+  // ---- กลับมาจากหน้าจ่ายของ Stripe ----
+  // ⚠️ การกลับมาที่ ?paid= ไม่ใช่หลักฐานว่าจ่ายแล้ว (พิมพ์เองก็ได้) — เป็นแค่สัญญาณให้เริ่มถามสถานะจริง
+  // ตัวตัดสินคือ webhook ที่ตรวจลายเซ็นแล้วเท่านั้น หน้านี้จึงได้แค่ "รอ" ไม่ได้ "ยืนยัน"
+  // อ่านจาก window.location แทน useSearchParams เพื่อไม่ต้องพึ่ง Suspense boundary
+  const [stripeWait, setStripeWait] = useState<{ id: string; state: "waiting" | "paid" | "slow" } | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const paid = q.get("paid");
+    if (paid) setStripeWait({ id: paid, state: "waiting" });
+    if (paid || q.get("canceled")) {
+      // ล้าง query ทิ้งทันที — ไม่งั้นรีเฟรชหน้าทีไรก็ขึ้นกล่อง "กำลังยืนยัน" ซ้ำตลอด
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+  useEffect(() => {
+    if (!stripeWait || stripeWait.state !== "waiting") return;
+    let tries = 0;
+    const iv = setInterval(async () => {
+      tries++;
+      try {
+        const status = await getTopupStatus(shopId, stripeWait.id);
+        if (status === "paid") {
+          setStripeWait({ id: stripeWait.id, state: "paid" });
+          setTimeout(() => location.reload(), 1200);
+          return;
+        }
+      } catch { /* ลองใหม่รอบถัดไป */ }
+      // ~1 นาทีแล้วยังไม่เข้า: บอกตรง ๆ ว่ายังไม่ได้รับการยืนยัน ห้ามหลอกว่าสำเร็จ
+      if (tries >= 20) setStripeWait({ id: stripeWait.id, state: "slow" });
+    }, 3000);
+    return () => clearInterval(iv);
+  }, [stripeWait, shopId]);
+
   function buyPlan(planCode: string, planName: string) {
     setTopupErr(null);
     setBuying(planCode);            // จำว่ากดแพ็กไหน — ไม่งั้นปุ่มขึ้น "กำลังสร้าง QR" พร้อมกันทุกใบ ผู้ใช้ไม่รู้ว่ากดอันไหนไป
     start(async () => {
       setOmisePaid(false);
+      let leaving = false;
       try {
         const r = await purchasePlan(shopId, planCode, period);
         if (!r.ok) { setTopupErr(r.error); return; }
+        // Stripe: ออกจากเว็บเราไปหน้าจ่ายของ Stripe
+        // ปุ่มต้องค้างเป็น "กำลังสร้าง…" จนกว่าเบราว์เซอร์จะเปลี่ยนหน้าจริง
+        // ถ้าปล่อยให้กลับเป็นปกติ ผู้ใช้จะกดซ้ำแล้วได้รายการค้างเพิ่มอีกใบ
+        if (r.checkoutUrl) { leaving = true; window.location.href = r.checkoutUrl; return; }
         setTopup({ ...r, planName: period === "yearly" ? `${planName} รายปี (ใช้ได้ 12 เดือน)` : planName });
         setSlipMsg(null);
-      } finally { setBuying(null); }
+      } finally { if (!leaving) setBuying(null); }
     });
   }
 
@@ -70,8 +108,11 @@ export default function BillingClient({
     start(async () => {
       setOmisePaid(false);
       setTopupErr(null);
-      const r = gateway === "omise" ? await createOmiseTopup(shopId, amount) : await createTopup(shopId, amount);
+      const r = gateway === "stripe" ? await createStripeTopup(shopId, amount)
+        : gateway === "omise" ? await createOmiseTopup(shopId, amount)
+          : await createTopup(shopId, amount);
       if (!r.ok) { setTopupErr(r.error); return; }
+      if (r.checkoutUrl) { window.location.href = r.checkoutUrl; return; }
       setTopup(r);
       setSlipMsg(null);
     });
@@ -95,9 +136,28 @@ export default function BillingClient({
 
   return (
     <>
+      {/* ===== กลับมาจากหน้าจ่ายของ Stripe ===== */}
+      {stripeWait && (
+        <div className={cn(
+          "flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm",
+          stripeWait.state === "paid" ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+            : stripeWait.state === "slow" ? "border-amber-200 bg-amber-50 text-amber-800"
+              : "border-neutral-200 bg-neutral-50 text-neutral-700",
+        )}>
+          {stripeWait.state === "paid"
+            ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            : <Loader2 className={cn("mt-0.5 h-4 w-4 shrink-0", stripeWait.state === "slow" ? "text-amber-600" : "animate-spin text-neutral-400")} />}
+          <span>
+            {stripeWait.state === "paid" ? "ชำระเงินสำเร็จ — กำลังรีเฟรชหน้า"
+              : stripeWait.state === "slow" ? "ยังไม่ได้รับการยืนยันจากธนาคาร — ถ้าเงินออกจากบัญชีแล้วระบบจะเปิดให้อัตโนมัติภายในไม่กี่นาที ไม่ต้องจ่ายซ้ำ"
+                : "กำลังยืนยันการชำระเงินกับ Stripe…"}
+          </span>
+        </div>
+      )}
+
       {/* ===== แพ็กเกจ (โหมดหลัก: จ่ายตรง) ===== */}
       <Card>
-        <CardHeader><CardTitle>แพ็กเกจสมาชิก — จ่ายตรงผ่าน QR เปิดใช้ทันที</CardTitle></CardHeader>
+        <CardHeader><CardTitle>แพ็กเกจสมาชิก — {gateway === "stripe" ? "จ่ายออนไลน์ เปิดใช้ทันที" : "จ่ายตรงผ่าน QR เปิดใช้ทันที"}</CardTitle></CardHeader>
         <CardContent>
           {!gatewayReady && (
             <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -183,7 +243,7 @@ export default function BillingClient({
                     <Button size="lg" variant={picked ? "brand" : "outline"} className="mt-3 w-full"
                       disabled={pending} onClick={(e) => { e.stopPropagation(); setSelected(p.code); buyPlan(p.code, p.name); }}>
                       {buying === p.code
-                        ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังสร้าง QR…</>
+                        ? <><Loader2 className="h-4 w-4 animate-spin" />{gateway === "stripe" ? "กำลังพาไปหน้าชำระเงิน…" : "กำลังสร้าง QR…"}</>
                         : current ? `ต่ออายุ ${baht(payPrice)}` : `สมัคร — จ่าย ${baht(payPrice)}`}
                     </Button>
                   )}
@@ -198,7 +258,9 @@ export default function BillingClient({
           </div>
           {topupErr && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{topupErr}</p>}
           <p className="mt-3 text-[11px] text-neutral-400">
-            สแกนจ่ายยอดเท่าราคาแพ็กพอดี — สลิปผ่านปุ๊บแพ็กเปิดทันที ต่ออายุอัตโนมัติจากเครดิต (ถ้ามี) หรือกลับมาจ่ายตรงรอบถัดไปก็ได้
+            {gateway === "stripe"
+              ? "จ่ายด้วยพร้อมเพย์หรือบัตรบนหน้าชำระเงินที่ปลอดภัยของ Stripe — จ่ายเสร็จแพ็กเปิดทันที ไม่ต้องอัปโหลดสลิป ไม่ต้องรอใครอนุมัติ"
+              : "สแกนจ่ายยอดเท่าราคาแพ็กพอดี — สลิปผ่านปุ๊บแพ็กเปิดทันที ต่ออายุอัตโนมัติจากเครดิต (ถ้ามี) หรือกลับมาจ่ายตรงรอบถัดไปก็ได้"}
           </p>
         </CardContent>
       </Card>
@@ -225,7 +287,7 @@ export default function BillingClient({
                   <Input type="number" min={20} value={amount} onChange={(e) => setAmount(Number(e.target.value))} className="w-32" />
                   <span className="text-sm text-neutral-400">บาท</span>
                 </div>
-                <Button variant="outline" onClick={makeTopupQr} disabled={pending || amount < 20}>{pending ? "กำลังสร้าง QR..." : `สร้าง QR เติม ${baht(amount)}`}</Button>
+                <Button variant="outline" onClick={makeTopupQr} disabled={pending || amount < 20}>{pending ? (gateway === "stripe" ? "กำลังพาไปหน้าชำระเงิน..." : "กำลังสร้าง QR...") : gateway === "stripe" ? `ชำระเงินเติม ${baht(amount)}` : `สร้าง QR เติม ${baht(amount)}`}</Button>
               </div>
             </details>
           </CardContent>

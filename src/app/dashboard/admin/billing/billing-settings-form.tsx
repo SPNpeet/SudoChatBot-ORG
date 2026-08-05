@@ -37,9 +37,25 @@ export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings
       <div>
         <Label>ช่องทางรับเงินเติมเครดิต</Label>
         <Select name="payment_gateway" defaultValue={pf?.payment_gateway ?? "promptpay_slip"}>
+          <option value="stripe">Stripe — พร้อมเพย์/บัตร ยืนยันอัตโนมัติ (แนะนำ)</option>
           <option value="promptpay_slip">PromptPay + ตรวจสลิป (trust-based)</option>
-          <option value="omise">Omise — PromptPay ผ่าน gateway (auto settle, แนะนำ)</option>
+          <option value="omise">Omise — PromptPay ผ่าน gateway (auto settle)</option>
         </Select>
+      </div>
+      <div>
+        <Label>Stripe — ใช้เมื่อเลือก gateway Stripe</Label>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input name="stripe_secret_key" type="password" placeholder="Secret key (sk_live_... กรอกเมื่อเปลี่ยน)" />
+          <Input name="stripe_webhook_secret" type="password" placeholder="Webhook signing secret (whsec_... กรอกเมื่อเปลี่ยน)" />
+        </div>
+        <p className="mt-1 text-[11px] text-neutral-400">
+          ทั้งสองคีย์เก็บใน Vault · ตั้ง webhook ใน Stripe Dashboard ไปที่ <span className="font-mono">/api/billing/stripe/webhook</span>
+          {" "}แล้วติ๊ก event: <span className="font-mono">checkout.session.completed</span>, <span className="font-mono">async_payment_succeeded</span>, <span className="font-mono">async_payment_failed</span>, <span className="font-mono">expired</span>
+        </p>
+        <p className="mt-1 text-[11px] text-neutral-400">
+          ต้องเปิด <span className="font-medium">PromptPay</span> ในหน้า Payment methods ของ Stripe ก่อน ไม่งั้นลูกค้าจะเห็นเฉพาะบัตร ·
+          บัญชี Stripe ต้องจดทะเบียนในไทยและรับเงินสกุล THB · ไม่มี webhook secret = ระบบไม่รับ event ใด ๆ (กันคนปลอมยิงเข้ามาเครดิตเงินให้ตัวเอง)
+        </p>
       </div>
       <div>
         <Label>Omise (opn.ooo) — ใช้เมื่อเลือก gateway Omise</Label>

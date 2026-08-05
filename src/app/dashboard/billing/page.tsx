@@ -21,6 +21,8 @@ export default async function BillingPage() {
     svc.from("platform_billing_settings").select("payment_gateway,promptpay_id").eq("id", true).maybeSingle(),
   ]);
 
+  const gw = (pf as { payment_gateway?: string } | null)?.payment_gateway;
+
   const s = (summary ?? {}) as { balance: number; plan: Plan; usage: { replies_count: number; billed_replies: number; billed_amount: number } };
   const balance = Number(s.balance ?? 0);
   const plan = s.plan;
@@ -88,10 +90,10 @@ export default async function BillingPage() {
         balance={balance}
         currentPlan={plan?.code ?? "free"}
         plans={(plans ?? []) as Plan[]}
-        gateway={(pf as { payment_gateway?: string } | null)?.payment_gateway === "omise" ? "omise" : "promptpay_slip"}
+        gateway={gw === "omise" ? "omise" : gw === "stripe" ? "stripe" : "promptpay_slip"}
         gatewayReady={
-          (pf as { payment_gateway?: string } | null)?.payment_gateway === "omise"
-            ? true // omise เช็ค key ตอนสร้างรายการ (error แสดง inline)
+          gw === "omise" || gw === "stripe"
+            ? true // gateway เช็ค key ตอนสร้างรายการ (error แสดง inline ตรงปุ่ม)
             : Boolean((pf as { promptpay_id?: string | null } | null)?.promptpay_id)
         }
       />
