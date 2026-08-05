@@ -34,3 +34,31 @@ update public.fin_docs d
    set contact_branch = c.branch
   from public.contacts c
  where d.contact_id = c.id and d.contact_branch is null and c.branch is not null;
+
+-- 3) recipient_kind — บุคคลธรรมดา / นิติบุคคล / คณะบุคคล
+--    ใช้แยกว่าไปแบบ ภ.ง.ด.3 (บุคคล) หรือ ภ.ง.ด.53 (นิติบุคคล) และพิมพ์บน 50 ทวิ
+--    ⚠️ เติมคำสั่งจริงเมื่อ 5 ส.ค. 2569 — สองคอลัมน์นี้อยู่แต่บน production ไม่เคยอยู่ในไฟล์ไหน
+--    พบตอนทดสอบกู้ข้อมูลจริงว่า insert ตาราง contacts และ fin_docs พังทั้งก้อน
+alter table public.contacts
+  add column if not exists recipient_kind text;
+alter table public.fin_docs
+  add column if not exists recipient_kind text,
+  -- เหตุผลที่ออกใบลดหนี้/ใบเพิ่มหนี้ — กฎหมายบังคับให้ระบุบนเอกสาร (ม.86/10, 86/9)
+  add column if not exists note_reason    text,
+  -- จุดความรับผิด VAT: delivery = ตอนส่งของ/ออกใบ · payment = ตอนรับเงิน (ม.78/1 งานบริการ)
+  -- ตัวนี้เป็นแกนของการแยกภาษีขายเข้า ภ.พ.30 ให้ถูกงวด ถ้าไม่มี = ระบบ VAT ทั้งเส้นพัง
+  add column if not exists tax_point      text;
+
+do $$
+begin
+  alter table public.contacts add constraint contacts_recipient_kind_check
+    check (recipient_kind = any (array['individual','juristic','group']));
+exception when duplicate_object then null;
+end $$;
+
+-- 4) ใบลดหนี้ / ใบเพิ่มหนี้ ต้องเป็นชนิดเอกสารที่ถูกต้อง (ม.86/10, 86/9)
+--    ⚠️ เติม 5 ส.ค. 2569 — CHECK เดิมรับแค่ 4 ชนิด ของจริงบน production รับ 6 มานานแล้ว
+--    พบตอนทดสอบกู้ข้อมูล: ใบลดหนี้ทุกใบถูกปฏิเสธ = ภาษีขายที่หักออกหายไปจากระบบที่กู้มา
+alter table public.fin_docs drop constraint if exists fin_docs_doc_type_check;
+alter table public.fin_docs add constraint fin_docs_doc_type_check
+  check (doc_type = any (array['quotation','invoice','receipt','expense','credit_note','debit_note']));

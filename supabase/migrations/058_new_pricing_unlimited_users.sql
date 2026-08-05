@@ -13,3 +13,10 @@ alter table public.plans
 
 comment on column public.plans.max_companies is 'จำนวนกิจการสูงสุดของบัญชีเจ้าของ (null = ไม่จำกัด) — ใช้โดย can_create_company';
 comment on column public.plans.slip_quota    is 'โควตาตรวจสลิปอัตโนมัติต่อเดือน นับรวมทุกกิจการของเจ้าของ (null = ไม่จำกัด) — ใช้โดย check_slip_quota';
+
+-- CHECK ของ shops.plan ต้องรับรหัสแพ็กใหม่ด้วย (เติม 5 ส.ค. 2569 — เดิมอยู่แต่บน production)
+-- พบตอนทดสอบกู้ข้อมูลจริง: insert ตาราง shops พังทั้งก้อนเพราะค่า 'professional' ไม่ผ่าน CHECK เดิม
+-- เก็บรหัสเก่า (pro/mini/enterprise) ไว้ด้วย เพราะกิจการที่ยังไม่ได้ย้ายแพ็กต้องไม่ถูกล็อกออก
+alter table public.shops drop constraint if exists shops_plan_check;
+alter table public.shops add constraint shops_plan_check
+  check (plan = any (array['free','starter','professional','executive','agency','pro','mini','enterprise']));
