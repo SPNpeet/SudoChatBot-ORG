@@ -534,7 +534,10 @@ export async function voidDoc(shopId: string, docId: string, reason: string): Pr
       if (undoErr) {
         return { ok: false, error: "ยกเลิกไม่สำเร็จและคืนสถานะเอกสารไม่ได้ — เอกสารค้างสถานะยกเลิกโดยยังไม่มีรายการกลับบัญชี กรุณาแจ้งผู้ดูแลระบบทันที" };
       }
-      return { ok: false, error: `ยกเลิกไม่สำเร็จ — ระบบกลับรายการบัญชีไม่ได้ (${(revErr as Error).message.slice(0, 120)}) เอกสารยังอยู่เหมือนเดิม` };
+      // ห้ามพูดว่า "เอกสารยังอยู่เหมือนเดิม" เพราะถ้าเอกสารมีหลายใบสำคัญ อาจกลับไปแล้วบางใบ
+      // (ลูปกลับรายการยิงทีละใบ ไม่มีทรานแซกชันครอบ) สถานะนี้ตัวตรวจ live_doc_reversed จับได้
+      // และกดยกเลิกใหม่จะเดินต่อจากใบที่ค้าง ไม่กลับซ้ำ
+      return { ok: false, error: `ยกเลิกไม่สำเร็จ — ระบบกลับรายการบัญชีไม่ได้ (${(revErr as Error).message.slice(0, 120)}) เอกสารถูกคืนสถานะเดิมแล้ว กดยกเลิกใหม่อีกครั้งได้` };
     }
     if (doc.doc_type === "invoice" || doc.doc_type === "receipt") await restoreStock(svc, shopId, docId);
     await audit(svc, shopId, user.id, "fin_doc_voided", "fin_doc", docId, { doc_number: doc.doc_number, reason });

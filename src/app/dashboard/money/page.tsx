@@ -28,15 +28,21 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
   const { t = "all" } = await searchParams;
   const canEdit = ["owner", "admin", "agent"].includes(role);
 
+  // ⚠️ ต้องดึงสถานะเอกสารมาด้วย เพื่อกันรายการของเอกสารที่ยกเลิกแล้ว
+  // เมื่อยกเลิกเอกสาร ระบบกลับรายการในสมุดรายวันให้แล้ว (เงินสดถูกกลับออกไป)
+  // แต่แถวใน fin_payments ยังอยู่ ถ้าหน้าจอนับต่อ = ตัวเลขบนจอไม่ตรงสมุดรายวัน
+  // ของจริงที่เจอ 5 ส.ค. 2569: เอกสารที่ยกเลิกแล้ว 7 รายการ รวม 374,182 บาท ยังถูกนับอยู่
   let q = supabase.from("fin_payments")
-    .select("*, fin_docs(doc_number, doc_type, contact_name)")
-    .eq("shop_id", shop.id).order("paid_at", { ascending: false }).limit(150);
+    .select("*, fin_docs!inner(doc_number, doc_type, contact_name, status)")
+    .eq("shop_id", shop.id).neq("fin_docs.status", "void")
+    .order("paid_at", { ascending: false }).limit(150);
   if (t === "in" || t === "out") q = q.eq("direction", t);
 
   const monthStart = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7) + "-01";
   const [{ data: payments }, { data: monthRows }, { data: openInvoices }] = await Promise.all([
     q,
-    supabase.from("fin_payments").select("direction,amount").eq("shop_id", shop.id).gte("paid_at", monthStart),
+    supabase.from("fin_payments").select("direction,amount,fin_docs!inner(status)")
+      .eq("shop_id", shop.id).neq("fin_docs.status", "void").gte("paid_at", monthStart),
     supabase.from("fin_docs").select("id,doc_number,contact_name,total,wht_amount,paid_amount,due_date")
       .eq("shop_id", shop.id).eq("doc_type", "invoice").in("status", ["awaiting", "partial"])
       .order("issue_date", { ascending: false }).limit(100),

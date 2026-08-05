@@ -45,7 +45,9 @@ export default async function Overview() {
     { data: pays }, { data: openDocs }, { data: recentDocs }, { data: overdue },
     { count: sampleCount }, { count: docCount }, { count: pendingApproval }, { count: unmatchedSlips },
   ] = await Promise.all([
-    supabase.from("fin_payments").select("direction,amount,paid_at").eq("shop_id", shop.id).gte("paid_at", since60),
+    // กันรายการของเอกสารที่ยกเลิกแล้ว — สมุดรายวันกลับรายการไปแล้ว ตัวเลขบนแดชบอร์ดต้องตรงกัน
+    supabase.from("fin_payments").select("direction,amount,paid_at,fin_docs!inner(status)")
+      .eq("shop_id", shop.id).neq("fin_docs.status", "void").gte("paid_at", since60),
     supabase.from("fin_docs").select("doc_type,total,wht_amount,paid_amount").eq("shop_id", shop.id).in("status", ["awaiting", "partial"]),
     supabase.from("fin_docs").select("*").eq("shop_id", shop.id).neq("status", "draft").order("created_at", { ascending: false }).limit(6),
     supabase.from("fin_docs").select("id,doc_type,doc_number,contact_name,due_date,total,wht_amount,paid_amount")

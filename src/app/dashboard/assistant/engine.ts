@@ -8,6 +8,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { OPENAI_COMPAT_BASE, estimateAiCost } from "@/lib/ai-catalog";
 import { resolvePurposeKey, resolveDefaultAiConfig } from "@/lib/ai-config";
 import { docOutstanding, agingBucket, AGING_LABEL_TH, DOC_TYPE_TH } from "@/lib/finance";
+// กฎเลือกเอกสารสำหรับ VAT/หัก ณ ที่จ่าย ต้องมาจากที่เดียวกับหน้ารายงาน ห้ามเขียนใหม่ในนี้
+import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, sumVat } from "@/lib/vat-docs";
 import { saveDoc, recordPayment, convertDoc, voidDoc, type SaveDocInput } from "../finance/actions";
 import type { DocType, VatMode } from "@/lib/types/finance";
 
@@ -365,7 +367,9 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         const monthStart = bkkDayStart().slice(0, 7) + "-01";
         const [openDocs, pays, wallet, shopPlan, overdue] = await Promise.all([
           s.from("fin_docs").select("doc_type,total,wht_amount,paid_amount").eq("shop_id", ctx.shopId).in("status", ["awaiting", "partial"]),
-          s.from("fin_payments").select("direction,amount").eq("shop_id", ctx.shopId).gte("paid_at", monthStart),
+          // กันรายการของเอกสารที่ยกเลิกแล้ว — ไม่งั้น AI ตอบตัวเลขที่ไม่ตรงกับหน้าการเงินและสมุดรายวัน
+          s.from("fin_payments").select("direction,amount,fin_docs!inner(status)")
+            .eq("shop_id", ctx.shopId).neq("fin_docs.status", "void").gte("paid_at", monthStart),
           s.from("wallets").select("balance").eq("shop_id", ctx.shopId).maybeSingle(),
           s.from("shops").select("plan").eq("id", ctx.shopId).single(),
           s.from("fin_docs").select("doc_number,doc_type,contact_name,due_date,total,wht_amount,paid_amount")
@@ -606,17 +610,21 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
         const month = typeof input.month === "string" && /^\d{4}-\d{2}$/.test(input.month) ? input.month : bkkDayStart().slice(0, 7);
         const monthStart = `${month}-01`;
         const nextMonth = new Date(new Date(monthStart).getTime() + 40 * 864e5).toISOString().slice(0, 7) + "-01";
+        // ⚠️ กฎเลือกเอกสารสำหรับ VAT ต้องมาจาก vat-docs.ts ที่เดียว (กติกาข้อ 7 ของโปรเจกต์)
+        // เดิมตรงนี้เขียนกฎขึ้นมาใหม่เอง แล้วเพี้ยนจากหน้ารายงาน 3 อย่าง:
+        //   1) ไม่กันเอกสารร่าง (นับ draft เข้าภาษีซื้อ)
+        //   2) ไม่นับใบลดหนี้/ใบเพิ่มหนี้เลย -> ภาษีขายสูงเกินจริง
+        //   3) ภาษีซื้อรวมทุกใบไม่ผ่านกฎกลาง
+        // ผลจริงที่วัดได้เดือน ส.ค. 2569: AI ตอบยอด "ต้องชำระ" ต่างจากหน้ารายงาน 85.70 บาท
+        // ผู้ใช้เห็นสองตัวเลขจากระบบเดียวกันไม่ตรงกัน = เชื่อระบบไม่ได้ทั้งคู่
         const { data } = await s.from("fin_docs")
-          .select("doc_type,vat_amount,wht_amount,total,contact_tax_id,ref_doc_id,id")
-          .eq("shop_id", ctx.shopId).neq("status", "void")
+          .select("doc_type,status,vat_mode,tax_point,vat_amount,wht_amount,total,contact_tax_id,ref_doc_id,id")
+          .eq("shop_id", ctx.shopId)
           .gte("issue_date", monthStart).lt("issue_date", nextMonth);
-        const docs = data ?? [];
-        const receipts = docs.filter((d) => d.doc_type === "receipt" && Number(d.vat_amount) > 0);
-        const refIds = new Set(receipts.map((r) => r.ref_doc_id).filter(Boolean));
-        const salesVat = [...receipts, ...docs.filter((d) => d.doc_type === "invoice" && Number(d.vat_amount) > 0 && !refIds.has(d.id))]
-          .reduce((a, d) => a + Number(d.vat_amount), 0);
-        const buyVat = docs.filter((d) => d.doc_type === "expense").reduce((a, d) => a + Number(d.vat_amount), 0);
-        const whtOut = docs.filter((d) => d.doc_type === "expense" && Number(d.wht_amount) > 0);
+        const docs = (data ?? []) as never[];
+        const salesVat = sumVat(selectVatSalesDocs(docs));      // คิดเครื่องหมายใบลดหนี้ให้ด้วย
+        const buyVat = sumVat(selectVatPurchaseDocs(docs));
+        const whtOut = selectWhtPayableDocs(docs) as unknown as { wht_amount: number; contact_tax_id?: string }[];
         return JSON.stringify({
           เดือน: month,
           ภพ30: { ภาษีขาย: salesVat, ภาษีซื้อ: buyVat, [salesVat - buyVat >= 0 ? "ต้องชำระ" : "ชำระเกิน"]: Math.abs(salesVat - buyVat) },
