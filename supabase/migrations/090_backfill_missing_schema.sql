@@ -18,7 +18,10 @@
 --  ส่วนที่ 1 — ตาราง
 -- ============================================================
 create table if not exists public.vat_rates (
-  id smallint not null,
+  -- identity always (ไม่ใช่ smallint ธรรมดา) — ตรงกับ production
+  -- จับได้ตอนรันทดสอบจริง: เขียนเป็น smallint เฉย ๆ จะได้ตารางที่ต่างจากของจริง
+  -- และคำสั่ง insert ข้อมูลตั้งต้นด้านล่างจะพังคนละแบบระหว่าง DB ใหม่กับ production
+  id smallint generated always as identity not null,
   rate numeric not null,
   effective_from date not null,
   effective_to date,
@@ -34,7 +37,7 @@ create table if not exists public.th_public_holidays (
 );
 
 create table if not exists public.rd_filing_extensions (
-  id smallint not null,
+  id smallint generated always as identity not null,
   form_group text default 'wht'::text not null,
   extra_days smallint not null,
   effective_from date not null,
@@ -189,11 +192,32 @@ alter table public.depreciation_runs enable row level security;
 alter table public.notice_dismissals enable row level security;
 alter table public.guest_ai_usage enable row level security;
 
--- อัตรา VAT เป็นข้อมูลสาธารณะ (ไม่มี PII) หน้าเว็บที่ยังไม่ล็อกอินต้องอ่านได้
+-- ⚠️ เปิด RLS แล้วไม่มี policy = ปฏิเสธทุกอย่าง
+-- ซึ่งจะทำให้ผู้ใช้มองไม่เห็นข้อมูลของตัวเอง (ทรัพย์สิน · ค่าเสื่อม · การปิดงวด · ภาษีขาย ม.78/1)
+-- โดยไม่มี error ขึ้นที่ไหนเลย — เป็นการพังเงียบแบบเดียวกับที่ไฟล์นี้ตั้งใจปิด
+-- จึงต้องมี policy ครบทุกตารางในไฟล์เดียวกัน ไม่ใช่แค่เปิด RLS
 do $$
 begin
-  create policy vat_rates_read on public.vat_rates for select using (true);
-exception when duplicate_object then null;
+  -- ข้อมูลกฎหมายสาธารณะ (ไม่มี PII) — หน้าเว็บที่ยังไม่ล็อกอินต้องอ่านได้
+  begin create policy vat_rates_read on public.vat_rates for select using (true); exception when duplicate_object then null; end;
+  begin create policy th_public_holidays_read on public.th_public_holidays for select using (true); exception when duplicate_object then null; end;
+  begin create policy rd_filing_extensions_read on public.rd_filing_extensions for select using (true); exception when duplicate_object then null; end;
+
+  -- ข้อมูลรายกิจการ — เห็นได้เฉพาะสมาชิกของกิจการนั้น (เขียนผ่าน service role เท่านั้น)
+  begin create policy vat_recognitions_read on public.vat_recognitions for select using (is_shop_member(shop_id)); exception when duplicate_object then null; end;
+  begin create policy fin_period_locks_read on public.fin_period_locks for select using (is_shop_member(shop_id)); exception when duplicate_object then null; end;
+  begin create policy fiscal_closes_read on public.fiscal_closes for select using (is_shop_member(shop_id)); exception when duplicate_object then null; end;
+  begin create policy fixed_assets_read on public.fixed_assets for select using (is_shop_member(shop_id)); exception when duplicate_object then null; end;
+  begin create policy depreciation_runs_read on public.depreciation_runs for select using (is_shop_member(shop_id)); exception when duplicate_object then null; end;
+
+  -- กล่องจดหมาย "อ่านแล้ว" เป็นของแต่ละคน ไม่ใช่ของกิจการ — ต้องเป็นตัวเองและอยู่ในกิจการนั้นด้วย
+  begin
+    create policy notice_dismissals_own on public.notice_dismissals for all
+      using ((user_id = (select auth.uid())) and is_shop_member(shop_id))
+      with check ((user_id = (select auth.uid())) and is_shop_member(shop_id));
+  exception when duplicate_object then null; end;
+
+  -- guest_ai_usage ไม่มี policy โดยเจตนา = service role เท่านั้น (ตัวนับโควตาผู้เยี่ยมชม)
 end $$;
 
 -- ============================================================
@@ -574,6 +598,9 @@ revoke execute on function public.consume_guest_ai_quota(uuid, text, integer, in
 -- ============================================================
 --  ส่วนที่ 6 — ข้อมูลตั้งต้นขั้นต่ำ (อัตรา VAT ต้องมีอย่างน้อย 1 แถว ไม่งั้นทั้งระบบคิดภาษีไม่ได้)
 -- ============================================================
-insert into public.vat_rates (id, rate, effective_from, effective_to, note)
-values (1, 0.07, '2000-01-01', null, 'อัตราตั้งต้น — ตรวจประกาศ พ.ร.ฎ. ลดอัตราแล้วอัปเดตช่วงวันที่ให้ตรงจริง')
-on conflict (id) do nothing;
+-- ⚠️ ห้ามระบุ id เอง (เป็น generated always as identity) และห้ามใช้ on conflict (id)
+-- เพราะบน production ที่มีข้อมูลอยู่แล้ว id จะไม่ใช่ 1 เสมอไป
+-- เงื่อนไขที่ถูกคือ "ถ้ายังไม่มีอัตราไหนเลย ให้ใส่ตั้งต้นหนึ่งแถว"
+insert into public.vat_rates (rate, effective_from, effective_to, note)
+select 0.07, '2000-01-01', null, 'อัตราตั้งต้น — ตรวจประกาศ พ.ร.ฎ. ลดอัตราแล้วอัปเดตช่วงวันที่ให้ตรงจริง'
+where not exists (select 1 from public.vat_rates);
