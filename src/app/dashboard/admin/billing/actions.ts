@@ -54,7 +54,18 @@ export async function confirmTopup(topupId: string, approve: boolean): Promise<A
     if (approve) {
       // ซื้อแพ็กเกจจ่ายตรง -> เปิดแพ็กให้ทันที (idempotent — ข้ามเองถ้าเป็นเติมเครดิตปกติ)
       const svc = createServiceClient();
-      await svc.rpc("apply_plan_purchase", { p_topup_id: topupId });
+      const { data: applied, error: applyErr } = await svc.rpc("apply_plan_purchase", { p_topup_id: topupId });
+      const res = applied as { ok?: boolean; plan?: string; error?: string } | null;
+      // ⚠️ ห้ามทิ้งผลลัพธ์: ถ้าเปิดแพ็กไม่สำเร็จ (เช่นแพ็กถูกปิด/เปลี่ยนรหัสระหว่างรออนุมัติ)
+      // เครดิตเข้าไปแล้วแต่แพ็กไม่เปิด และรายการกลายเป็น paid จึงหลุดจากคิวรออนุมัติ
+      // = ลูกค้าจ่ายค่าแพ็กแล้วไม่ได้แพ็ก โดยไม่มีใครรู้เลย ต้องบอกแอดมินตรงนั้นทันที
+      if (applyErr || res?.ok === false) {
+        revalidatePath("/dashboard/admin/billing");
+        return {
+          ok: false,
+          error: `ยืนยันเงินเข้าแล้ว แต่เปิดแพ็กเกจไม่สำเร็จ (${applyErr?.message ?? res?.error ?? "ไม่ทราบสาเหตุ"}) — ตั้งแพ็กให้กิจการนี้เองที่หน้า จัดการผู้ใช้ระบบ`,
+        };
+      }
     }
     revalidatePath("/dashboard/admin/billing");
     return { ok: true };
