@@ -14,7 +14,7 @@ import { calcDocTotals, DOC_TYPE_TH, WHT_RATES } from "@/lib/finance";
 import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME, WHT_MIN_PAYMENT, belowWhtThreshold, whtRateMismatch } from "@/lib/tax-th";
 import type { DocType, VatMode, ExpenseCategory, Contact, FinDoc } from "@/lib/types/finance";
 import { saveDoc, uploadFinFile, type SaveDocInput } from "./actions";
-import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
+import { VAT_LABEL, vatPercentLabelOf } from "@/lib/tax-th";
 import DateField from "@/components/date-field";
 import { useToast } from "@/components/toast";
 
@@ -580,7 +580,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
             {vatMode !== "none" && (
               <>
                 <div className="flex justify-between"><span className="text-neutral-400">มูลค่าก่อน VAT</span><span>{baht(totals.exVat)}</span></div>
-                <div className="flex justify-between"><span className="text-neutral-400">VAT {VAT_PERCENT_LABEL}</span><span>{baht(totals.vat)}</span></div>
+                <div className="flex justify-between"><span className="text-neutral-400">VAT {vatPercentLabelOf({ total: totals.total, vat_amount: totals.vat })}</span><span>{baht(totals.vat)}</span></div>
               </>
             )}
             <div className="flex justify-between border-t border-neutral-200 pt-1 font-semibold"><span>ยอดเอกสาร</span><span>{baht(totals.total)}</span></div>

@@ -11,7 +11,7 @@ import { promptPayPayload } from "@/lib/promptpay";
 import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
 import { Logo } from "@/components/logo";
 import PublicSlipUpload from "./slip-upload";
-import { VAT_LABEL, VAT_PERCENT_LABEL } from "@/lib/tax-th";
+import { vatPercentLabelOf } from "@/lib/tax-th";
 import { CheckCircle2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -89,7 +89,7 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
                 <tr className="border-t border-neutral-100 text-neutral-500"><td className="py-1.5">ส่วนลด</td><td className="py-1.5 text-right">-{bahtDoc(doc.discount)}</td></tr>
               )}
               {doc.vat_mode !== "none" && (
-                <tr className="text-neutral-500"><td className="py-1">VAT {VAT_PERCENT_LABEL}</td><td className="py-1 text-right">{bahtDoc(doc.vat_amount)}</td></tr>
+                <tr className="text-neutral-500"><td className="py-1">VAT {vatPercentLabelOf(doc)}</td><td className="py-1 text-right">{bahtDoc(doc.vat_amount)}</td></tr>
               )}
               <tr className="border-t-2 border-neutral-900 text-base font-bold">
                 <td className="py-2">ยอดรวมสุทธิ</td><td className="py-2 text-right">{bahtDoc(doc.total)}</td>

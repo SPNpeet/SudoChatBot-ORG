@@ -45,7 +45,13 @@ begin
   where n.nspname = 'public' and p.proname = 'accounting_integrity';
 
   if src is null then
-    raise exception 'ไม่พบฟังก์ชัน accounting_integrity';
+    -- ⚠️ ห้าม raise exception ตรงนี้ (แก้ 5 ส.ค. 2569)
+    -- ไฟล์นี้เป็น "แพตช์" ที่แก้ข้อความในฟังก์ชันที่มีอยู่แล้ว ไม่ใช่ไฟล์ที่สร้างฟังก์ชัน
+    -- บน clone ใหม่ที่ยังไม่มีฟังก์ชัน การโยนจะทำให้ migration ตายกลางทาง
+    -- แล้วไฟล์ที่เหลือ (รวม 086/089 ที่ create or replace ฟังก์ชันฉบับเต็ม) ไม่ถูกรันเลย
+    -- = สร้างระบบขึ้นมาใหม่จาก repo ไม่ได้ ซึ่งเป็นเรื่องคอขาดบาดตายตอนต้องกู้ระบบ
+    raise notice 'ข้ามแพตช์ vat_report_vs_gl: ยังไม่มีฟังก์ชัน accounting_integrity (จะถูกสร้างโดย migration รุ่นหลัง)';
+    return;
   end if;
   if position(old_block in src) = 0 then
     -- แก้ไปแล้ว (rerun) หรือฟังก์ชันเปลี่ยนไป — ไม่ทำอะไร ดีกว่าแก้มั่ว

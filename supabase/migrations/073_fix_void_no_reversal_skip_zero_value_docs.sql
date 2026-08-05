@@ -31,7 +31,10 @@ begin
   where n.nspname = 'public' and p.proname = 'accounting_integrity';
 
   if src is null then
-    raise exception 'ไม่พบฟังก์ชัน accounting_integrity';
+    -- เหตุผลเดียวกับ 072: แพตช์ต้องข้ามได้ ไม่ใช่ทำให้ migration ทั้งชุดตายบน clone ใหม่
+    -- ฟังก์ชันฉบับเต็มถูกสร้างโดย 086/089 ซึ่งอยู่หลังไฟล์นี้
+    raise notice 'ข้ามแพตช์ void_no_reversal: ยังไม่มีฟังก์ชัน accounting_integrity (จะถูกสร้างโดย migration รุ่นหลัง)';
+    return;
   end if;
   if position(old_block in src) = 0 then
     raise notice 'ข้ามการแก้ void_no_reversal: หาบล็อกเดิมไม่เจอ';
