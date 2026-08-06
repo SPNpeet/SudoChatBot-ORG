@@ -30,33 +30,46 @@ export default async function BillingPage() {
   const plan = s.plan;
   const usage = s.usage ?? { replies_count: 0, billed_replies: 0, billed_amount: 0 };
 
-  // แพ็กฟรีคิดโควตาแบบรายวัน (30/วัน รีเซ็ตทุกวัน) — แพ็กจ่ายเงินคิดรายเดือน
+  // ⚠️ โควตาที่แสดงต้องตรงกับที่ระบบตัดจริง (แก้ 6 ส.ค. 2569)
+  //
+  // ของเดิมเขียนว่า `plan.code === "free" ? (daily_reply_cap ?? 30) : null`
+  // แต่ในฐานข้อมูลแพ็กฟรีมี daily_reply_cap = NULL และ included_replies = 15
+  // ตัวที่ตัดจริงคือ get_ai_quota_status ซึ่งใช้ "รายเดือน 15 ครั้ง"
+  // ผลคือหน้านี้ขึ้นว่า "โควตาฟรีวันนี้ 0/30 · รีเซ็ตทุกวัน" และพอเต็มก็บอกว่า
+  // "พรุ่งนี้ใช้ต่อได้" ทั้งที่ผู้ใช้ถูกตัดตั้งแต่ครั้งที่ 15 และพรุ่งนี้ก็ยังใช้ไม่ได้
+  // = บอกตัวเลขผิดและให้คำแนะนำที่ทำตามแล้วไม่ได้ผล
+  //
+  // กติกาที่ต้องคงไว้: เพดานรายวันมีจริงเฉพาะแพ็กที่ตั้ง daily_reply_cap ไว้เท่านั้น
+  // ห้ามใส่ค่าสำรองเป็นตัวเลข — ไม่รู้ ต้องไม่เดา
   const planRow = (plans ?? []).find((p) => p.code === (plan?.code ?? "free")) as Plan | undefined;
-  const dailyCap = plan?.code === "free" ? (planRow?.daily_reply_cap ?? 30) : null;
+  const dailyCap = planRow?.daily_reply_cap ?? null;
+  const monthlyCap = plan?.included_replies ?? planRow?.included_replies ?? 0;
   const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10); // วันแบบเวลาไทย
   const { data: dailyRow } = await svc.from("usage_daily").select("replies_count").eq("shop_id", shop.id).eq("day", today).maybeSingle();
   const dailyUsed = Math.min(dailyRow?.replies_count ?? 0, dailyCap ?? Infinity);
-  const freeUsed = Math.min(usage.replies_count, plan?.included_replies ?? 0);
-  const quotaUsed = dailyCap ? dailyUsed : freeUsed;
-  const quotaMax = dailyCap ?? (plan?.included_replies ?? 0);
+  const monthlyUsed = Math.min(usage.replies_count, monthlyCap);
+  const quotaUsed = dailyCap ? dailyUsed : monthlyUsed;
+  const quotaMax = dailyCap ?? monthlyCap;
   const quotaPct = quotaMax ? Math.round((quotaUsed / quotaMax) * 100) : 0;
+  const monthlyFull = monthlyCap > 0 && usage.replies_count >= monthlyCap;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <PageHeader
         title="แพ็กเกจและเครดิต"
         lead={<>จัดการแพ็กเกจของ {shop.name}</>}
         help="ค่าบริการคิดตามแพ็กเกจที่เลือก ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด · ที่จำกัดคือ “งาน AI” (ผู้ช่วย + อ่านบิล) เท่านั้น — การออกเอกสาร ลงบัญชี และดูรายงานเองใช้ได้ไม่จำกัดทุกแพ็ก แม้โควตา AI หมด"
       />
 
-      {dailyCap && quotaUsed >= quotaMax && (
+      {dailyCap !== null && dailyUsed >= dailyCap && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <span>ใช้ครบโควตา AI ฟรีวันนี้แล้ว ({quotaMax} ครั้ง/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา (คีย์เอกสารเองได้ไม่จำกัด)</span>
+          <span>ใช้ครบโควตา AI วันนี้แล้ว ({dailyCap.toLocaleString()} ครั้ง/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา (คีย์เอกสารเองได้ไม่จำกัด)</span>
         </div>
       )}
-      {!dailyCap && balance <= 0 && usage.replies_count >= (plan?.included_replies ?? 0) && (
+      {monthlyFull && balance <= 0 && (
         <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <span>เครดิตหมดและใช้เกินโควตาแพ็กเกจแล้ว — งาน AI (อ่านบิล/ผู้ช่วย) จะหยุดจนกว่าจะเติมเงินหรืออัปเกรด (คีย์เอกสารเองยังใช้ได้ปกติ)</span>
+          {/* ห้ามบอกว่า "พรุ่งนี้ใช้ต่อได้" ในกรณีนี้ — โควตารายเดือนรีเซ็ตต้นเดือนถัดไปเท่านั้น */}
+          <span>ใช้ครบโควตา AI ของแพ็กเกจเดือนนี้แล้ว ({monthlyCap.toLocaleString()} ครั้ง/เดือน) และไม่มีเครดิตคงเหลือ — งาน AI (อ่านบิล/ผู้ช่วย) จะหยุดจนกว่าจะเติมเครดิตหรืออัปเกรด · โควตารีเซ็ตต้นเดือนหน้า · คีย์เอกสารเองยังใช้ได้ปกติ</span>
         </div>
       )}
 
@@ -72,12 +85,12 @@ export default async function BillingPage() {
           <CardContent className="pt-5">
             <p className="text-xs text-neutral-400">แพ็กเกจปัจจุบัน</p>
             <p className="mt-1 text-2xl font-bold tracking-tight">{plan?.name ?? "-"}</p>
-            <p className="text-[11px] text-neutral-400">{plan?.price_monthly ? `${baht(plan.price_monthly)}/เดือน` : "ฟรี"}</p>
+            <p className="text-[11px] text-neutral-400">{plan?.price_monthly ? `${Number(plan.price_monthly).toLocaleString("th-TH")} บาท/เดือน` : "ฟรี"}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-5">
-            <p className="text-xs text-neutral-400">{dailyCap ? "โควตาฟรีวันนี้ (รีเซ็ตทุกวัน)" : "โควตาฟรีเดือนนี้"}</p>
+            <p className="text-xs text-neutral-400">{dailyCap ? "โควตา AI วันนี้ (รีเซ็ตทุกวัน)" : "โควตา AI เดือนนี้ (รีเซ็ตต้นเดือน)"}</p>
             <p className="mt-1 text-2xl font-bold tracking-tight">{quotaUsed.toLocaleString()}<span className="text-sm font-normal text-neutral-400">/{quotaMax.toLocaleString()}</span></p>
             <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
               <div className={`h-full rounded-full ${quotaPct >= 100 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(quotaPct, 100)}%` }} />

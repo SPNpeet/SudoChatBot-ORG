@@ -11,7 +11,7 @@
 // ============================================================
 import { useEffect, useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge } from "@/components/ui";
-import { baht, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { createTopup, getTopupStatus, changePlan, purchasePlan } from "./actions";
 import { Check, Wallet, Loader2 } from "lucide-react";
 import { useDismiss } from "@/components/use-dismiss";
@@ -36,6 +36,12 @@ export default function BillingClient({
   const [buying, setBuying] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [topupErr, setTopupErr] = useState<string | null>(null);
+
+  // ⚠️ แพ็กที่เปิดขายมี 5 แพ็ก แต่กริดกว้าง 4 คอลัมน์ — ใส่ครบ 5 ใบแล้วเหลือใบเดี่ยว
+  // ขึ้นบรรทัดใหม่ ดูเหมือนหน้าพัง · แพ็กฟรีไม่ได้อยู่ในสเกลเดียวกับแพ็กจ่ายเงินอยู่แล้ว
+  // (ไม่มีราคา ไม่มีรายปี ไม่ใช่ตัวเลือกที่เอามาเทียบราคากัน) จึงแยกเป็นแถบต่างหาก
+  const paidPlans = plans.filter((p) => Number(p.price_monthly) > 0);
+  const freePlan = plans.find((p) => Number(p.price_monthly) <= 0);
 
   // ---- กลับมาจากหน้าจ่ายของ Stripe ----
   // ⚠️ การกลับมาที่ ?paid= ไม่ใช่หลักฐานว่าจ่ายแล้ว (พิมพ์เองก็ได้) — เป็นแค่สัญญาณให้เริ่มถามสถานะจริง
@@ -143,7 +149,7 @@ export default function BillingClient({
               เดิมเป็น <div onClick> ซึ่งคนที่ใช้คีย์บอร์ดหรือโปรแกรมอ่านหน้าจอ
               เลือกแพ็กเกจไม่ได้เลย ทั้งที่เป็นขั้นตอนจ่ายเงิน */}
           <div role="radiogroup" aria-label="เลือกแพ็กเกจ" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {plans.map((p) => {
+            {paidPlans.map((p) => {
               const current = p.code === currentPlan;
               const paid = Number(p.price_monthly) > 0;
               const picked = selected === p.code;
@@ -155,20 +161,20 @@ export default function BillingClient({
                 // และ <button> ซ้อน <button> เป็น HTML ที่ไม่ถูกต้อง
                 // จึงต้องเติม tabIndex + onKeyDown เองเพื่อให้ Tab ถึงและกด Enter/Space เลือกได้
                 <div key={p.code} role="radio" aria-checked={picked}
-                  tabIndex={picked || (!selected && p.code === plans[0]?.code) ? 0 : -1}
-                  aria-label={`แพ็กเกจ ${p.name} ${paid ? baht(payPrice) + (period === "yearly" ? " ต่อปี" : " ต่อเดือน") : "ฟรี"}${current ? " (แพ็กเกจปัจจุบัน)" : ""}`}
+                  tabIndex={picked || (!selected && p.code === paidPlans[0]?.code) ? 0 : -1}
+                  aria-label={`แพ็กเกจ ${p.name} ${payPrice.toLocaleString("th-TH")} บาท${period === "yearly" ? "ต่อปี" : "ต่อเดือน"}${current ? " (แพ็กเกจปัจจุบัน)" : ""}`}
                   onClick={() => setSelected(p.code)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(p.code); return; }
                     // ลูกศรเลื่อนระหว่างตัวเลือก ตามพฤติกรรมมาตรฐานของ radiogroup
                     if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) {
                       e.preventDefault();
-                      const i = plans.findIndex((x) => x.code === p.code);
+                      const i = paidPlans.findIndex((x) => x.code === p.code);
                       const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
-                      const next = plans[(i + step + plans.length) % plans.length];
+                      const next = paidPlans[(i + step + paidPlans.length) % paidPlans.length];
                       if (next) {
                         setSelected(next.code);
-                        (e.currentTarget.parentElement?.children[plans.indexOf(next)] as HTMLElement | undefined)?.focus();
+                        (e.currentTarget.parentElement?.children[paidPlans.indexOf(next)] as HTMLElement | undefined)?.focus();
                       }
                     }
                   }}
@@ -184,14 +190,20 @@ export default function BillingClient({
                     {picked && !current && <Badge tone="blue">กำลังเลือก</Badge>}
                   </div>
                   <p className="font-bold">{p.name}</p>
-                  <p className="mt-1"><span className="text-xl font-bold tabular-nums">{paid ? baht(payPrice) : "ฟรี"}</span>{paid ? <span className="text-xs text-neutral-400">{period === "yearly" ? "/ปี" : "/เดือน"}</span> : ""}</p>
+                  <p className="mt-1 flex items-baseline gap-1">
+                    <span className="text-2xl font-bold leading-none tracking-tight tabular-nums">{Number(p.price_monthly).toLocaleString("th-TH")}</span>
+                    <span className="text-xs font-medium text-neutral-500">บาท{period === "yearly" ? "/ปี" : "/เดือน"}</span>
+                  </p>
                   {paid && period === "yearly" && (
-                    <p className="mt-0.5 text-[11px] font-medium text-emerald-700">จ่ายครั้งเดียว ใช้ 12 เดือน — ประหยัด {baht(Number(p.price_monthly) * 2)}</p>
+                    <p className="mt-0.5 text-[11px] font-medium text-emerald-700">จ่ายครั้งเดียว ใช้ 12 เดือน — ประหยัด {(Number(p.price_monthly) * 2).toLocaleString("th-TH")} บาท</p>
                   )}
                   <dl className="mt-2 space-y-1 text-[11px] text-neutral-500">
                     <div className="flex justify-between gap-2"><dt>กิจการ</dt><dd className="font-medium text-neutral-700">{p.max_companies ? `${p.max_companies} กิจการ` : "ไม่จำกัด"}</dd></div>
                     <div className="flex justify-between gap-2"><dt>พนักงาน</dt><dd className="font-medium text-neutral-700">ไม่จำกัด</dd></div>
-                    <div className="flex justify-between gap-2"><dt>งาน AI</dt><dd className="font-medium text-neutral-700">{p.code === "free" ? `${(p.daily_reply_cap ?? 30).toLocaleString()}/วัน` : `${p.included_replies.toLocaleString()}/เดือน`}</dd></div>
+                    {/* ⚠️ เดิมฮาร์ดโค้ดว่าแพ็กฟรี = daily_reply_cap ?? 30 ต่อวัน ทั้งที่ฐานข้อมูลตั้ง
+                        daily_reply_cap = NULL และตัดจริงที่ included_replies รายเดือน
+                        เพดานรายวันมีจริงเฉพาะแพ็กที่ตั้งค่าไว้เท่านั้น ห้ามเดาแทน */}
+                    <div className="flex justify-between gap-2"><dt>งาน AI</dt><dd className="font-medium text-neutral-700">{p.daily_reply_cap ? `${p.daily_reply_cap.toLocaleString()}/วัน` : `${p.included_replies.toLocaleString()}/เดือน`}</dd></div>
                     <div className="flex justify-between gap-2"><dt>ตรวจสลิป</dt><dd className="font-medium text-neutral-700">{p.slip_quota ? `${p.slip_quota.toLocaleString()}/เดือน` : "ไม่จำกัด"}</dd></div>
                   </dl>
                   <ul className="mt-3 flex-1 space-y-1.5">
@@ -204,18 +216,32 @@ export default function BillingClient({
                       disabled={pending} onClick={(e) => { e.stopPropagation(); setSelected(p.code); buyPlan(p.code); }}>
                       {buying === p.code
                         ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังพาไปหน้าชำระเงิน…</>
-                        : current ? `ต่ออายุ ${baht(payPrice)}` : `สมัคร — จ่าย ${baht(payPrice)}`}
+                        : current ? `ต่ออายุ — จ่าย ${payPrice.toLocaleString("th-TH")} บาท` : `สมัคร — จ่าย ${payPrice.toLocaleString("th-TH")} บาท`}
                     </Button>
-                  )}
-                  {isOwner && !paid && !current && (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <DowngradeFreeButton shopId={shopId} planCode={p.code} planName={p.name} />
-                    </div>
                   )}
                 </div>
               );
             })}
           </div>
+          {/* แพ็กฟรี: ทางลดแพ็ก ไม่ใช่ตัวเลือกที่เอามาเทียบราคา — ถ้าใช้อยู่แล้วก็แค่บอกสถานะ */}
+          {freePlan && (
+            <div className="mt-3 flex flex-col gap-2 rounded-xl border border-neutral-200 bg-neutral-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[13px] font-medium">
+                  {freePlan.name} <span className="text-neutral-400">· ฟรี</span>
+                  {currentPlan === freePlan.code && <Badge tone="green">แพ็กเกจปัจจุบัน</Badge>}
+                </p>
+                <p className="mt-0.5 text-[11px] text-neutral-500">
+                  {freePlan.max_companies ? `${freePlan.max_companies} กิจการ` : "ไม่จำกัดกิจการ"} ·
+                  {" "}งาน AI {freePlan.included_replies.toLocaleString()}/เดือน ·
+                  {" "}ตรวจสลิป {freePlan.slip_quota ? `${freePlan.slip_quota.toLocaleString()}/เดือน` : "ไม่จำกัด"} · พนักงานไม่จำกัด
+                </p>
+              </div>
+              {isOwner && currentPlan !== freePlan.code && (
+                <DowngradeFreeButton shopId={shopId} planCode={freePlan.code} planName={freePlan.name} />
+              )}
+            </div>
+          )}
           {topupErr && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{topupErr}</p>}
           <p className="mt-3 text-[11px] text-neutral-400">
             จ่ายด้วยพร้อมเพย์หรือบัตรบนหน้าชำระเงินที่ปลอดภัย — จ่ายเสร็จแพ็กเปิดทันที ไม่ต้องอัปโหลดสลิป ไม่ต้องรอใครอนุมัติ · ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด
@@ -236,7 +262,7 @@ export default function BillingClient({
                   {[100, 300, 500, 1000, 2000].map((a) => (
                     <button key={a} onClick={() => setAmount(a)}
                       className={cn("min-h-[44px] rounded-xl border px-4 py-2 text-sm", amount === a ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-neutral-300 hover:bg-neutral-50")}>
-                      {baht(a)}
+                      {a.toLocaleString("th-TH")} บาท
                     </button>
                   ))}
                 </div>
@@ -246,7 +272,7 @@ export default function BillingClient({
                   <span className="text-sm text-neutral-400">บาท</span>
                 </div>
                 <Button variant="outline" onClick={topUp} disabled={pending || amount < 20}>
-                  {pending ? "กำลังพาไปหน้าชำระเงิน..." : `ชำระเงินเติม ${baht(amount)}`}
+                  {pending ? "กำลังพาไปหน้าชำระเงิน..." : `ชำระเงินเติม ${amount.toLocaleString("th-TH")} บาท`}
                 </Button>
               </div>
             </details>
