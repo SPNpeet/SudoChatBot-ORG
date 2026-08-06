@@ -103,7 +103,9 @@ const DOC_ITEM_SCHEMA = {
   },
 };
 
-const TOOLS = [
+// export เพื่อให้ scripts/assistant-dryrun.mjs ทดสอบได้ว่าโมเดลเลือก tool ถูกไหม
+// โดยไม่ต้องรัน executeTool จริง (ทดสอบคุณภาพ AI ต้องไม่เขียนข้อมูลลูกค้า)
+export const TOOLS = [
   {
     name: "ask_user",
     description: "ถามเจ้าของเมื่อไม่แน่ใจ พร้อมตัวเลือกให้กดตอบ (2-4 ตัวเลือก) — ใช้แทนการเดาเสมอ เช่น บิลนี้เป็นค่าใช้จ่ายที่จ่ายแล้ว/ตั้งหนี้/เบิกคืนพนักงาน/ใบขายให้ลูกค้า · ยอดไหนถูก · ลูกค้าคนไหน · เรียกใช้แล้วให้ตอบเป็นคำถามสั้นๆ แล้วหยุดรอคำตอบ ห้ามเรียก tool บันทึกต่อในเทิร์นเดียวกัน",
@@ -808,7 +810,7 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
 }
 
 // ---------- system prompt ----------
-function buildSystemPrompt(ctx: AssistantCtx): string {
+export function buildSystemPrompt(ctx: AssistantCtx): string {
   // ชื่อที่ลูกค้าตั้ง — ผ่านการกรองอักขระคุม/ความยาวที่ saveAssistantName แล้วเท่านั้น
   // ห้ามฉีดสตริงดิบจากผู้ใช้เข้า system prompt ตรง ๆ (กันยัดคำสั่งเพิ่มให้โมเดล)
   const callName = ctx.assistantName || "ผู้ช่วยบัญชี AI";
@@ -997,7 +999,18 @@ const DENY_RE = /ไม่สำเร็จ|ไม่ได้|ล้มเห�
 
 export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> {
   // คีย์เฉพาะ 'assistant' (แอดมินตั้งในศูนย์ AI) — ไม่ตั้งใช้ routing กลาง
-  const cfg = (await resolvePurposeKey(ctx.svc, "assistant")) ?? (await resolveDefaultAiConfig(ctx.svc, "standard"));
+  // ⚠️ ต้องเป็น "premium" ไม่ใช่ "standard" (แก้ 6 ส.ค. 2569)
+  //
+  // วัดจริงด้วย scripts/assistant-dryrun.mjs: ชั้น standard ของแพลตฟอร์มนี้คือ
+  // gemini-2.5-flash ซึ่งกับคำถามธรรมดาอย่าง "ตอนนี้ใครค้างจ่ายเราอยู่บ้าง"
+  // มันคืน candidate ว่างเปล่า — 0 output token ไม่เรียก tool ไม่มีข้อความ
+  // แล้วผู้ใช้ก็ได้ข้อความสำรองว่า "ลองบอกใหม่ให้ละเอียดขึ้น" ซึ่งโทษผู้ใช้
+  // ทั้งที่คำถามชัดเจนสมบูรณ์ · ชั้น premium (gemini-2.5-pro) ตอบเคสเดียวกันได้
+  //
+  // นี่คืองาน agent จริง: system prompt ~4,600 token + tool 20 ตัว + หลายเทิร์น
+  // แล้วผลลัพธ์คือ "เอกสารบัญชีของลูกค้า" ไม่ใช่แชทเล่น ๆ — ประหยัดตรงนี้ไม่คุ้ม
+  // ค่าโมเดลแพงกว่าก็จริง แต่มีเพดานค่า AI ต่อวันทั้งแพลตฟอร์ม + kill switch คุมอยู่แล้ว
+  const cfg = (await resolvePurposeKey(ctx.svc, "assistant")) ?? (await resolveDefaultAiConfig(ctx.svc, "premium"));
   const system = buildSystemPrompt(ctx);
 
   const dispatch = (c: AssistantCtx): Promise<LoopResult> => {
@@ -1032,11 +1045,47 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
     };
   }
 
+  // ⚠️ คำตอบว่างเปล่า = ความผิดของเรา ไม่ใช่ของผู้ใช้ (วัดเจอ 6 ส.ค. 2569)
+  // โมเดลคืน candidate ว่างได้เป็นครั้งคราวโดยที่คำถามไม่มีอะไรผิดเลย
+  // เดิมเราตกไปที่ข้อความ "ลองบอกใหม่ให้ละเอียดขึ้น" ซึ่งอ่านแล้วเหมือนโทษคนถาม
+  // และเขาจะพิมพ์ใหม่ให้ยาวขึ้นทั้งที่ไม่ได้ช่วยอะไร — ลองซ้ำเองหนึ่งครั้งก่อนดีกว่า
+  if (!r.text && !r.toolCalls.length && !r.choices.length && !r.question) {
+    const retry = await dispatch(ctx);
+    r = {
+      text: retry.text, inTok: r.inTok + retry.inTok, outTok: r.outTok + retry.outTok,
+      toolCalls: retry.toolCalls, artifacts: retry.artifacts, choices: retry.choices, question: retry.question,
+    };
+  }
+
   await ctx.svc.from("ai_usage_logs").insert({
     shop_id: ctx.shopId, purpose: "assistant", model: `${cfg.provider}/${cfg.model}`,
     input_tokens: r.inTok, output_tokens: r.outTok,
     cost_usd: estimateAiCost(cfg.model, r.inTok, r.outTok),
   });
+
+  // ⚠️ เก็บบทสนทนาไว้ฝั่ง server (migration 094)
+  // ก่อนหน้านี้แชทอยู่ใน localStorage ของเบราว์เซอร์ลูกค้าที่เดียว
+  // เวลาลูกค้าบอกว่า "AI ตอบไม่ได้เรื่อง" เราจึงไม่มีอะไรให้ดูเลยแม้แต่ข้อความเดียว
+  // ได้แต่เดาแล้วแก้แบบเดา — ฟีเจอร์ที่เป็นหัวใจของสินค้าต้องวัดได้
+  // ห้ามให้การเก็บ log ทำให้คำตอบพัง: ล้มเหลวก็แค่ข้าม ไม่ throw
+  try {
+    const lastUser = [...ctx.history].reverse().find((h) => h.role === "user");
+    const turnId = crypto.randomUUID();
+    const rows = [
+      ...(lastUser ? [{
+        shop_id: ctx.shopId, user_id: ctx.userId, turn_id: turnId, role: "user",
+        content: lastUser.content.slice(0, 4000), tool_calls: [], model: null,
+        input_tokens: null, output_tokens: null,
+      }] : []),
+      {
+        shop_id: ctx.shopId, user_id: ctx.userId, turn_id: turnId, role: "assistant",
+        content: (r.text || r.question || "").slice(0, 4000),
+        tool_calls: r.toolCalls.map((c) => c.name),
+        model: `${cfg.provider}/${cfg.model}`, input_tokens: r.inTok, output_tokens: r.outTok,
+      },
+    ];
+    await ctx.svc.from("assistant_logs").insert(rows);
+  } catch { /* เก็บ log ไม่ได้ ไม่ใช่เหตุให้ผู้ใช้ไม่ได้คำตอบ */ }
 
   return {
     // ลำดับข้อความสำรอง: ข้อความจริง -> คำถามจาก ask_user -> ยอมรับตรง ๆ ว่าทำอะไรไปแล้ว
@@ -1046,7 +1095,8 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
       || r.question
       || (r.toolCalls.some((c) => WRITE_TOOLS.has(c.name))
         ? "บันทึกให้แล้วค่ะ — ตรวจรายการได้ที่สมุดรายวัน"
-        : "ยังไม่ได้ข้อมูลที่ต้องใช้ค่ะ ลองบอกใหม่อีกครั้งให้ละเอียดขึ้นหน่อยนะคะ"),
+        // ถึงตรงนี้แปลว่าลองซ้ำแล้วยังว่าง = ระบบเรามีปัญหา ต้องรับเอง ห้ามบอกให้ผู้ใช้พิมพ์ใหม่ให้ละเอียดขึ้น
+        : "ขออภัยค่ะ ระบบตอบคำถามนี้ไม่สำเร็จ (ไม่ใช่เพราะคำถามของคุณ) — ลองส่งอีกครั้งได้เลยค่ะ หรือถ้ายังไม่ได้ ระหว่างนี้คีย์เอกสารเองที่หน้าขาย/ค่าใช้จ่ายได้ตามปกติ"),
     toolCalls: r.toolCalls,
     artifacts: r.artifacts.slice(0, 6),
     choices: r.choices.slice(0, 4),
