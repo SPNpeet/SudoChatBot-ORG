@@ -98,7 +98,7 @@ export default function LandingSandboxChat() {
           <div className="flex flex-wrap gap-1.5 pb-1">
             {STARTERS.map((s) => (
               <button key={s} onClick={() => send(s)}
-                className="inline-flex min-h-[38px] items-center rounded-full border border-neutral-200 bg-white px-3.5 text-xs text-neutral-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-700">
+                className="inline-flex min-h-[44px] items-center rounded-full border border-neutral-200 bg-white px-3.5 text-xs text-neutral-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50/50 hover:text-emerald-700">
                 {s}
               </button>
             ))}
@@ -126,12 +126,12 @@ export default function LandingSandboxChat() {
           <div className="relative flex-1">
             <input value={input} maxLength={MAX_LEN} onChange={(e) => setInput(e.target.value)}
               placeholder="พิมพ์คำถามสั้นๆ..." disabled={busy}
-              className="h-10 w-full rounded-xl border border-neutral-300 bg-white px-3 pr-11 text-base outline-none focus:border-emerald-500 sm:text-sm" />
+              className="h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 pr-11 text-base outline-none focus:border-emerald-500 sm:text-sm" />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-neutral-300">{input.length}/{MAX_LEN}</span>
           </div>
           {/* ปุ่มไอคอนล้วนต้องมีชื่อ ไม่งั้นโปรแกรมอ่านหน้าจอจะอ่านได้แค่คำว่า "ปุ่ม" */}
           <button aria-label="ส่งคำถาม" disabled={busy || !input.trim()}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
             <Send className="h-4 w-4" />
           </button>
         </form>

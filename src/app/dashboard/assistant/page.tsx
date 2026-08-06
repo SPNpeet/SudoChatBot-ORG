@@ -56,7 +56,7 @@ export default async function AssistantPage() {
           </div>
         </div>
         <details className="relative shrink-0">
-          <summary className="inline-flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
+          <summary className="inline-flex h-11 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
             <CircleHelp className="h-3.5 w-3.5" />ทำอะไรได้บ้าง
           </summary>
           {/* ⚠️ มือถือต้องยึดขอบจอ ไม่ใช่ขอบปุ่ม

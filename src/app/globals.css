@@ -164,3 +164,16 @@ html { scroll-behavior: smooth; }
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
 }
+
+/* ==== ลูกศรบอกสถานะกาง/พับ ของ <details> ทุกที่ในระบบ ====
+   ⚠️ ห้ามเปลี่ยนกลับไปใช้ "หมุนลูกศรตัวเดียว"
+   ลองมาแล้วสามแบบและวัดในเบราว์เซอร์จริงทุกแบบ (6 ส.ค. 2569):
+     · group-open:rotate-180            -> ตอนกางได้ rotate: 0deg
+     · group-open:[transform:rotate()]  -> ได้ matrix เอกลักษณ์ (ไม่หมุน)
+     · details[open] .x { transform }   -> ยังได้ matrix เอกลักษณ์ แม้ใส่ !important
+   ทั้งสามแบบ "ดูเหมือนถูก" ในโค้ด แต่ผลจริงคือลูกศรนิ่งสนิท
+   ซึ่งแย่กว่าไม่มีลูกศร เพราะมันบอกผิดว่าอันไหนกำลังกางอยู่
+   จึงใช้สลับไอคอนสองตัวด้วย display แทน — เป็นคุณสมบัติที่วัดผลได้ตรงไปตรงมา */
+.chev-open { display: none; }
+details[open] .chev-open { display: block; }
+details[open] .chev-closed { display: none; }

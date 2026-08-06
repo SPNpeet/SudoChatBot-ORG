@@ -87,7 +87,7 @@ export default function AdminAiCenter({
           </span>
           <span className="flex items-center gap-2">
             <span className="text-[11px] text-neutral-400">{keys.length ? `มี ${keys.length} ค่าย` : "ไม่บังคับ"}</span>
-            <span className="text-neutral-300 transition-transform group-open:rotate-180">▾</span>
+            <><span className="chev-closed text-neutral-300">▾</span><span className="chev-open text-neutral-400">▴</span></>
           </span>
         </summary>
         <div className="space-y-3 border-t border-neutral-100 px-5 py-4">

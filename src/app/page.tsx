@@ -3,7 +3,7 @@ import { Logo } from "@/components/logo";
 import HeroCommand from "./hero-command";
 import HeroTilt from "./hero-tilt";
 import PricingCards from "./pricing-cards";
-import { FileText, ScanLine, BookOpenText, Landmark, ShieldCheck, ArrowRight, Check, Calculator, Clock, X as XIcon, Lock, Users } from "lucide-react";
+import { FileText, ScanLine, BookOpenText, Landmark, ShieldCheck, ArrowRight, Check, Calculator, Clock, X as XIcon, Lock, Users, ChevronDown, ChevronUp } from "lucide-react";
 import LandingSandboxChat from "./landing-sandbox-chat";
 import { getPublicPlans } from "@/lib/plans";
 
@@ -71,7 +71,7 @@ export default async function Landing() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         <Logo />
         <div className="flex items-center gap-3">
-          <a href="#pricing" className="hidden text-sm text-neutral-500 hover:text-neutral-900 sm:block">ราคา</a>
+          <a href="#pricing" className="hidden min-h-[44px] items-center text-sm text-neutral-500 hover:text-neutral-900 sm:inline-flex">ราคา</a>
           <Link href="/login" className="inline-flex h-11 items-center rounded-xl bg-neutral-900 px-5 text-sm font-medium text-white transition-colors hover:bg-neutral-700">
             เข้าสู่ระบบ
           </Link>
@@ -238,11 +238,17 @@ export default async function Landing() {
           <h2 className="mb-8 text-center text-2xl font-bold tracking-tight">คำถามที่เจอบ่อย</h2>
           <div className="space-y-3">
             {faqs.map((f) => (
-              <details key={f.q} className="group rounded-2xl border border-neutral-200 bg-white p-5">
-                <summary className="cursor-pointer list-none text-sm font-semibold text-neutral-800 marker:content-none">
+              // ⚠️ วัดบนมือถือจริง 6 ส.ค. 2569: หัวข้อคำถามสูงแค่ 20px (เกณฑ์โปรเจกต์คือ 44px)
+              // และไม่มีสัญญาณอะไรบอกว่ากดกางได้เลย เพราะ marker ถูกซ่อนไว้
+              // คำถามที่กดยากและดูไม่เหมือนกดได้ = คนไม่กด แล้วคำตอบที่เขียนไว้ก็ไร้ค่า
+              <details key={f.q} className="group rounded-2xl border border-neutral-200 bg-white px-5 py-1.5">
+                <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-neutral-800 marker:content-none">
                   {f.q}
+                  {/* สลับไอคอนด้วย display ใน globals.css — อย่าเปลี่ยนเป็นหมุนไอคอนตัวเดียว เหตุผลอยู่ที่นั่น */}
+                  <ChevronDown className="chev-closed h-4 w-4 shrink-0 text-neutral-400" />
+                  <ChevronUp className="chev-open h-4 w-4 shrink-0 text-neutral-500" />
                 </summary>
-                <p className="mt-2 text-sm leading-relaxed text-neutral-500">{f.a}</p>
+                <p className="pb-3 text-sm leading-relaxed text-neutral-500">{f.a}</p>
               </details>
             ))}
           </div>
@@ -274,10 +280,10 @@ export default async function Landing() {
           {/* พื้นที่กดต้องสูงพอบนมือถือ — เดิมสูงแค่ 16px กดพลาดตลอด
               inline-flex + min-h ทำให้กดง่ายขึ้นโดยหน้าตายังเหมือนเดิม */}
           <div className="flex flex-wrap justify-center gap-x-4">
-            <Link href="/privacy" className="inline-flex min-h-[40px] items-center px-1 hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
-            <Link href="/terms" className="inline-flex min-h-[40px] items-center px-1 hover:text-neutral-600">เงื่อนไขการใช้งาน</Link>
-            <Link href="/data-deletion" className="inline-flex min-h-[40px] items-center px-1 hover:text-neutral-600">การลบข้อมูล</Link>
-            <a href="mailto:support@sudochatbot.online" className="inline-flex min-h-[40px] items-center px-1 hover:text-neutral-600">ติดต่อเรา</a>
+            <Link href="/privacy" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
+            <Link href="/terms" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">เงื่อนไขการใช้งาน</Link>
+            <Link href="/data-deletion" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">การลบข้อมูล</Link>
+            <a href="mailto:support@sudochatbot.online" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">ติดต่อเรา</a>
           </div>
           <p>© {new Date().getFullYear()} SudoChatBot — AI Accounting & Back-Office Platform</p>
         </div>

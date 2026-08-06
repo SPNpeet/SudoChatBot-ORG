@@ -110,10 +110,16 @@ console.log("\n== useEffect ที่เลื่อนจอตอน mount (�
     if (/\/admin\//.test(rel(f))) continue;          // หน้าเจ้าของแพลตฟอร์ม ไม่ใช่หน้าลูกค้า
     const lines = readFileSync(f, "utf8").split("\n");
     lines.forEach((line, i) => {
-      if (!/<button|role="(button|radio)"/.test(line)) return;
+      // ⚠️ ด่านนี้เคยมองไม่เห็นของจริง (วัดบนมือถือ 6 ส.ค. 2569 เจอ 8 จุดที่ด่านบอก "ไม่พบ")
+      // สาเหตุ: มองหาแต่ <button> ที่มี py-1/py-1.5 — แต่ตัวที่แย่ที่สุดคือ <summary>
+      // ของ FAQ ซึ่งไม่มีคลาส padding เลย ความสูงจึงเท่าบรรทัดข้อความ = 20px
+      // บทเรียน: "ไม่ประกาศความสูงไว้เลย" อันตรายกว่า "ประกาศไว้ว่าเตี้ย"
+      if (!/<button|<summary|role="(button|radio)"/.test(line)) return;
       const block = lines.slice(i, i + 4).join(" ");
-      if (!/\bpy-(1|1\.5)\b/.test(block)) return;
-      if (/min-h-\[(3[6-9]|4\d|5\d)px\]|h-1[01]\b/.test(block)) return;
+      // ผ่านถ้าประกาศความสูงถึงเกณฑ์ไว้ชัดเจนแล้ว
+      if (/min-h-\[(4[4-9]|[5-9]\d)px\]|\bh-(1[1-9]|[2-9]\d)\b/.test(block)) return;
+      // <summary> ต้องประกาศความสูงเสมอ · <button> ยังใช้เกณฑ์เดิม (มี py เตี้ย ๆ)
+      if (!/<summary/.test(line) && !/\bpy-(1|1\.5)\b/.test(block)) return;
       hits.push(`${rel(f)}:${i + 1}`);
     });
   }

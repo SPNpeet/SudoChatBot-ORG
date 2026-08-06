@@ -254,7 +254,7 @@ export default function BillingClient({
         <Card>
           <CardContent className="pt-4">
             <details>
-              <summary className="cursor-pointer text-sm font-medium text-neutral-600 hover:text-neutral-900">
+              <summary className="flex min-h-[44px] cursor-pointer items-center text-sm font-medium text-neutral-600 hover:text-neutral-900">
                 <Wallet className="mr-1.5 inline h-4 w-4 text-emerald-600" /> เติมเครดิตล่วงหน้า (ไม่บังคับ — ไว้ให้ระบบต่ออายุแพ็กอัตโนมัติ)
               </summary>
               <div className="mt-3 space-y-3">

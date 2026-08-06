@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { Shop } from "@/lib/types/db";
-import { CheckCircle2, Circle, ArrowRight, ChevronDown } from "lucide-react";
+import { CheckCircle2, Circle, ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default async function SetupChecklist({ shop }: { shop: Shop }) {
@@ -67,7 +67,9 @@ export default async function SetupChecklist({ shop }: { shop: Shop }) {
         </div>
         <span className="flex shrink-0 items-center gap-2">
           <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">{doneCount}/{steps.length}</span>
-          <ChevronDown className="h-4 w-4 text-emerald-700 transition-transform group-open:rotate-180" />
+          {/* สลับไอคอนด้วย display ไม่ใช่หมุน — วัดแล้ว transform ไม่ทำงานกับไอคอนพวกนี้ ดู globals.css */}
+          <ChevronDown className="chev-closed h-4 w-4 text-emerald-700" />
+          <ChevronUp className="chev-open h-4 w-4 text-emerald-700" />
         </span>
       </summary>
       <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-emerald-100">

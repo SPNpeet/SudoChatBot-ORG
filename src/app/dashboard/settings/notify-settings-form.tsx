@@ -109,7 +109,7 @@ export default function NotifySettingsForm({ shopId, platformReady, oaBasicId, l
       )}
 
       <details className="rounded-xl border border-neutral-200 p-3">
-        <summary className="cursor-pointer text-xs font-medium text-neutral-600">ตั้งค่าขั้นสูง — ใช้ LINE OA ของกิจการเอง</summary>
+        <summary className="flex min-h-[44px] cursor-pointer items-center text-xs font-medium text-neutral-600">ตั้งค่าขั้นสูง — ใช้ LINE OA ของกิจการเอง</summary>
         <form action={saveOwn} className="mt-3 space-y-3">
           <p className="text-[11px] leading-relaxed text-neutral-400">
             เหมาะกับกิจการที่อยากให้ข้อความมาจากบัญชีทางการของตัวเอง หรืออยากส่งเข้ากลุ่ม LINE ของทีม —
