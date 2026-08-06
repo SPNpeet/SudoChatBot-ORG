@@ -133,7 +133,7 @@ export default function BillingClient({
           {/* สวิตช์งวดชำระ — ปุ่มจริง 44px ไม่ใช่ลิงก์จิ๋ว เพราะนี่คือจุดตัดสินใจจ่ายเงิน */}
           <div className="mb-4 flex justify-center">
             <div role="radiogroup" aria-label="งวดชำระ" className="inline-flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
-              {([["monthly", "รายเดือน"], ["yearly", "รายปี — จ่าย 10 เดือน ฟรี 2 เดือน"]] as const).map(([v, label]) => (
+              {([["monthly", "รายเดือน"], ["yearly", "รายปี — ประหยัด 2 เดือน"]] as const).map(([v, label]) => (
                 <button key={v} type="button" role="radio" aria-checked={period === v}
                   onClick={() => setPeriod(v)}
                   className={cn(
@@ -190,14 +190,26 @@ export default function BillingClient({
                     {picked && !current && <Badge tone="blue">กำลังเลือก</Badge>}
                   </div>
                   <p className="font-bold">{p.name}</p>
+                  {/* ⚠️ กติกาการโชว์ราคา (ต้องตรงกับหน้าราคาสาธารณะเป๊ะ)
+                      งวดรายปีให้โชว์ "ราคาต่อเดือนหลังลดแล้ว" เป็นตัวเลขใหญ่
+                      ยอดที่เรียกเก็บจริงทั้งปีเป็นบรรทัดรอง เพราะคนเทียบราคากันที่เดือนละเท่าไหร่
+                      บั๊กเดิมตรงนี้: เอา price_monthly (99) มาติดป้ายว่า "/ปี" = บอกราคาผิดกับคนกำลังจะจ่ายเงิน */}
                   <p className="mt-1 flex items-baseline gap-1">
-                    <span className="text-2xl font-bold leading-none tracking-tight tabular-nums">{Number(p.price_monthly).toLocaleString("th-TH")}</span>
-                    <span className="text-xs font-medium text-neutral-500">บาท{period === "yearly" ? "/ปี" : "/เดือน"}</span>
+                    <span className="text-2xl font-bold leading-none tracking-tight tabular-nums">
+                      {(period === "yearly" ? Math.round(payPrice / 12) : Number(p.price_monthly)).toLocaleString("th-TH")}
+                    </span>
+                    <span className="text-xs font-medium text-neutral-500">บาท/เดือน</span>
                   </p>
                   {paid && period === "yearly" && (
-                    <p className="mt-0.5 text-[11px] font-medium text-emerald-700">จ่ายครั้งเดียว ใช้ 12 เดือน — ประหยัด {(Number(p.price_monthly) * 2).toLocaleString("th-TH")} บาท</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-neutral-500">
+                      เรียกเก็บปีละครั้ง <span className="font-semibold tabular-nums text-neutral-800">{payPrice.toLocaleString("th-TH")}</span> บาท ·
+                      <span className="font-semibold text-emerald-700"> ประหยัด {(Number(p.price_monthly) * 2).toLocaleString("th-TH")} บาท</span>
+                    </p>
                   )}
-                  <dl className="mt-2 space-y-1 text-[11px] text-neutral-500">
+                  {paid && period === "monthly" && (
+                    <p className="mt-0.5 text-xs text-neutral-400">จ่ายเดือนต่อเดือน ยกเลิกได้ทุกเมื่อ</p>
+                  )}
+                  <dl className="mt-2 space-y-1 text-xs text-neutral-500">
                     <div className="flex justify-between gap-2"><dt>กิจการ</dt><dd className="font-medium text-neutral-700">{p.max_companies ? `${p.max_companies} กิจการ` : "ไม่จำกัด"}</dd></div>
                     <div className="flex justify-between gap-2"><dt>พนักงาน</dt><dd className="font-medium text-neutral-700">ไม่จำกัด</dd></div>
                     {/* ⚠️ เดิมฮาร์ดโค้ดว่าแพ็กฟรี = daily_reply_cap ?? 30 ต่อวัน ทั้งที่ฐานข้อมูลตั้ง
@@ -208,7 +220,7 @@ export default function BillingClient({
                   </dl>
                   <ul className="mt-3 flex-1 space-y-1.5">
                     {(p.features ?? []).map((f, i) => (
-                      <li key={i} className="flex items-start gap-1.5 text-[11px] text-neutral-600"><Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" /> {f}</li>
+                      <li key={i} className="flex items-start gap-1.5 text-xs text-neutral-600"><Check className="mt-0.5 h-3 w-3 shrink-0 text-emerald-500" /> {f}</li>
                     ))}
                   </ul>
                   {isOwner && paid && gatewayReady && (
@@ -231,7 +243,7 @@ export default function BillingClient({
                   {freePlan.name} <span className="text-neutral-400">· ฟรี</span>
                   {currentPlan === freePlan.code && <Badge tone="green">แพ็กเกจปัจจุบัน</Badge>}
                 </p>
-                <p className="mt-0.5 text-[11px] text-neutral-500">
+                <p className="mt-0.5 text-xs text-neutral-500">
                   {freePlan.max_companies ? `${freePlan.max_companies} กิจการ` : "ไม่จำกัดกิจการ"} ·
                   {" "}งาน AI {freePlan.included_replies.toLocaleString()}/เดือน ·
                   {" "}ตรวจสลิป {freePlan.slip_quota ? `${freePlan.slip_quota.toLocaleString()}/เดือน` : "ไม่จำกัด"} · พนักงานไม่จำกัด
@@ -243,7 +255,7 @@ export default function BillingClient({
             </div>
           )}
           {topupErr && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{topupErr}</p>}
-          <p className="mt-3 text-[11px] text-neutral-400">
+          <p className="mt-3 text-xs text-neutral-400">
             จ่ายด้วยพร้อมเพย์หรือบัตรบนหน้าชำระเงินที่ปลอดภัย — จ่ายเสร็จแพ็กเปิดทันที ไม่ต้องอัปโหลดสลิป ไม่ต้องรอใครอนุมัติ · ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด
           </p>
         </CardContent>
@@ -293,7 +305,7 @@ function DowngradeFreeButton({ shopId, planCode, planName }: { shopId: string; p
       <Button size="sm" variant="outline" className="mt-3" disabled={pending} onClick={() => setOpen(true)}>
         {pending ? "กำลังเปลี่ยน..." : "ใช้แพ็กฟรี"}
       </Button>
-      {err && <p className="mt-1.5 text-[11px] text-red-600">{err}</p>}
+      {err && <p className="mt-1.5 text-xs text-red-600">{err}</p>}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setOpen(false)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>

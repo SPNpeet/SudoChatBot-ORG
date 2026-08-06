@@ -85,7 +85,7 @@ export default async function BillingPage() {
           <CardContent className="pt-5">
             <p className="text-xs text-neutral-400">แพ็กเกจปัจจุบัน</p>
             <p className="mt-1 text-2xl font-bold tracking-tight">{plan?.name ?? "-"}</p>
-            <p className="text-[11px] text-neutral-400">{plan?.price_monthly ? `${Number(plan.price_monthly).toLocaleString("th-TH")} บาท/เดือน` : "ฟรี"}</p>
+            <p className="text-xs text-neutral-400">{plan?.price_monthly ? `${Number(plan.price_monthly).toLocaleString("th-TH")} บาท/เดือน` : "ฟรี"}</p>
           </CardContent>
         </Card>
         <Card>
@@ -120,13 +120,13 @@ export default async function BillingPage() {
                 <>
                   <div>
                     <p className="text-sm font-medium tabular-nums">{baht(t.amount)}</p>
-                    <p className="text-[11px] text-neutral-400">{dateTH(t.created_at)}</p>
+                    <p className="text-xs text-neutral-400">{dateTH(t.created_at)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge tone={paid ? "green" : t.status === "rejected" ? "red" : "amber"}>
                       {paid ? "สำเร็จ" : t.status === "verifying" ? "กำลังตรวจสลิป" : t.status === "rejected" ? "ไม่ผ่าน" : "รอชำระ"}
                     </Badge>
-                    {paid && <span className="hidden items-center gap-1 text-[11px] font-medium text-emerald-700 sm:inline-flex">ดูใบเสร็จ →</span>}
+                    {paid && <span className="hidden items-center gap-1 text-xs font-medium text-emerald-700 sm:inline-flex">ดูใบเสร็จ →</span>}
                   </div>
                 </>
               );
@@ -154,14 +154,14 @@ export default async function BillingPage() {
             <div key={t.id} className="flex items-center justify-between border-b border-neutral-50 py-2 text-sm last:border-0">
               <div>
                 <span className="font-medium">{t.type === "topup" ? "เติมเงิน" : t.type === "debit" ? "ค่างาน AI" : t.type === "bonus" ? "โบนัส" : "ปรับปรุง"}</span>
-                {t.note && <span className="text-[11px] text-neutral-400"> · {t.note}</span>}
-                <p className="text-[11px] text-neutral-400">{dateTH(t.created_at)}</p>
+                {t.note && <span className="text-xs text-neutral-400"> · {t.note}</span>}
+                <p className="text-xs text-neutral-400">{dateTH(t.created_at)}</p>
               </div>
               <div className="text-right">
                 <span className={Number(t.amount) >= 0 ? "font-semibold text-emerald-600" : "font-semibold text-neutral-800"}>
                   {Number(t.amount) >= 0 ? "+" : ""}{baht(t.amount)}
                 </span>
-                <p className="text-[11px] text-neutral-400">คงเหลือ {baht(t.balance_after)}</p>
+                <p className="text-xs text-neutral-400">คงเหลือ {baht(t.balance_after)}</p>
               </div>
             </div>
           ))}
