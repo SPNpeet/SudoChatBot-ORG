@@ -13,6 +13,7 @@
 import { calcDocTotals } from "../src/lib/finance.ts";
 import { quotaNotice } from "../src/lib/notice-rules.ts";
 import { verifyStripeSignature } from "../src/lib/stripe.ts";
+import { promptPayPayload } from "../src/lib/promptpay.ts";
 import { createHmac } from "node:crypto";
 
 let failures = 0;
@@ -281,6 +282,70 @@ section("ลายเซ็น webhook Stripe (กันคนปลอม event
   ok(verifyStripeSignature(body, "garbage", secret) === false, "header เพี้ยน = ปฏิเสธ");
   ok(verifyStripeSignature(body, `t=${now},v1=ab`, secret) === false, "ลายเซ็นสั้นกว่าจริง = ปฏิเสธ (ห้าม throw)");
   ok(verifyStripeSignature(body, `t=${now},v1=${sign(now)}`, "") === false, "ยังไม่ได้ตั้ง webhook secret = ปฏิเสธทุกกรณี (fail-closed)");
+}
+
+// ============================================================
+//  QR พร้อมเพย์ — โครงสร้างตามมาตรฐาน EMVCo
+//
+//  ⚠️ ทำไมต้องอยู่ในชุดตรวจ (เพิ่ม 6 ส.ค. 2569 — ไม่เคยถูกตรวจเลยตั้งแต่ทำมา)
+//  QR ใบนี้คือสิ่งที่ "ลูกค้าของลูกค้า" เอามือถือไปสแกนจ่ายเงินจริง
+//  ถ้า payload เพี้ยนแม้แต่ไบต์เดียว แอปธนาคารจะขึ้นว่า QR ไม่ถูกต้อง
+//  แล้วร้านจะเก็บเงินไม่ได้ทั้งระบบ โดยที่หน้าเว็บเราดูปกติทุกอย่าง
+//  (รูป QR ยังขึ้นสวยเหมือนเดิม — ความผิดพลาดมองไม่เห็นด้วยตาเลย)
+//
+//  ที่พังง่ายที่สุดคือ CRC16: มันคำนวณจากทุกอักขระ *รวม* "6304" ที่ต่อท้าย
+//  ใครแก้ลำดับ tag แล้วลืมคิด CRC ใหม่ = QR ตายทั้งใบ
+//  ตัวถอด TLV ในนี้เขียนแยกจากตัวสร้างโดยตั้งใจ จะได้ไม่ผิดพร้อมกันสองที่
+// ============================================================
+section("QR พร้อมเพย์ (มาตรฐาน EMVCo)");
+{
+  const parseTLV = (str) => {
+    const out = {};
+    let i = 0;
+    while (i + 4 <= str.length) {
+      const id = str.slice(i, i + 2);
+      const len = Number(str.slice(i + 2, i + 4));
+      if (!Number.isFinite(len)) break;
+      out[id] = str.slice(i + 4, i + 4 + len);
+      i += 4 + len;
+    }
+    return out;
+  };
+  const crc = (str) => {
+    let c = 0xffff;
+    for (let i = 0; i < str.length; i++) { c ^= str.charCodeAt(i) << 8; for (let j = 0; j < 8; j++) c = (c & 0x8000 ? (c << 1) ^ 0x1021 : c << 1) & 0xffff; }
+    return c.toString(16).toUpperCase().padStart(4, "0");
+  };
+
+  for (const [target, kind, tag] of [
+    ["0812345678", "เบอร์ 10 หลัก", "01"],
+    ["1234567890123", "บัตร ปชช. 13 หลัก", "02"],
+    ["123456789012345", "e-wallet 15 หลัก", "03"],
+  ]) {
+    const p = promptPayPayload(target, 1234.5);
+    const t = parseTLV(p);
+    const m = parseTLV(t["29"] ?? "");
+    ok(t["00"] === "01" && t["01"] === "12", `${kind}: header ถูก`);
+    ok(t["53"] === "764" && t["58"] === "TH", `${kind}: สกุลเงินบาท + ประเทศไทย`);
+    ok(t["54"] === "1234.50", `${kind}: ยอดเงินทศนิยม 2 ตำแหน่ง`, t["54"]);
+    ok(m["00"] === "A000000677010111", `${kind}: AID พร้อมเพย์`, m["00"]);
+    ok(tag in m, `${kind}: ใช้ tag ${tag} ตามชนิดเลข`, Object.keys(m).join(","));
+    ok(p.slice(-8, -4) === "6304", `${kind}: มี tag 6304 ก่อน CRC`);
+    ok(p.endsWith(crc(p.slice(0, -4))), `${kind}: CRC16 ถูกต้อง`, p.slice(-4));
+  }
+
+  // เบอร์มือถือต้องกลายเป็นรูปแบบสากล ไม่ว่าจะพิมพ์มาแบบไหน
+  ok(parseTLV(parseTLV(promptPayPayload("0812345678", 1))["29"])["01"] === "0066812345678",
+    "0812345678 -> 0066812345678");
+  ok(parseTLV(parseTLV(promptPayPayload("081-234-5678", 1))["29"])["01"] === "0066812345678",
+    "มีขีดคั่นก็ได้ผลเดียวกัน");
+
+  // ยอดที่เสี่ยงปัดเศษ — ยอดใน QR ต้องตรงกับยอดบนเอกสารเป๊ะ ไม่งั้นลูกค้าโอนผิด
+  for (const [amt, want] of [[0.01, "0.01"], [1, "1.00"], [1234.5, "1234.50"], [99999.99, "99999.99"], [2340.51, "2340.51"]]) {
+    const p = promptPayPayload("0812345678", amt);
+    ok(parseTLV(p)["54"] === want, `ยอด ${amt} -> "${want}"`, parseTLV(p)["54"]);
+    ok(p.endsWith(crc(p.slice(0, -4))), `ยอด ${amt}: CRC ยังถูกหลังเปลี่ยนยอด`);
+  }
 }
 
 console.log(failures === 0
