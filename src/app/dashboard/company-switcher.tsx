@@ -119,7 +119,7 @@ export default function CompanySwitcher({ companies, currentId }: { companies: C
                 c.id === currentId && "bg-emerald-50 text-emerald-700",
               )}>
               <span className="flex-1 truncate">{c.name}</span>
-              <span className="text-[10px] text-neutral-400">{roleLabel(c.role)}</span>
+              <span className="text-xs text-neutral-400">{roleLabel(c.role)}</span>
             </button>
           ))}
           <button onClick={() => { setCreateOpen(true); setOpen(false); }}

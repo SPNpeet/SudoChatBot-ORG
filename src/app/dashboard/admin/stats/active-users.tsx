@@ -74,7 +74,7 @@ export default async function ActiveUsersPanel() {
         <ul className="mt-3 divide-y divide-neutral-100">
           {rows.map((r) => (
             <li key={r.user_id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
-              <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+              <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${
                 r.is_online ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500"}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${r.is_online ? "bg-emerald-500" : "bg-neutral-300"}`} />
                 {r.is_online ? "ออนไลน์" : ago(r.minutes_ago)}

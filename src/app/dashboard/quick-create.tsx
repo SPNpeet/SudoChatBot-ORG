@@ -56,7 +56,7 @@ export default function QuickCreate() {
                 </span>
                 <span className="text-left">
                   <span className="block text-[13px] font-semibold leading-tight text-neutral-800">{a.label}</span>
-                  <span className="block text-[10px] text-neutral-400">{a.hint}</span>
+                  <span className="block text-xs text-neutral-400">{a.hint}</span>
                 </span>
               </Link>
             ))}
@@ -72,7 +72,7 @@ export default function QuickCreate() {
               </span>
               <span className="text-left">
                 <span className="block text-[13px] font-semibold leading-tight text-neutral-800">แนะนำ/ติชม</span>
-                <span className="block text-[10px] text-neutral-400">ส่งตรงถึงทีมงาน</span>
+                <span className="block text-xs text-neutral-400">ส่งตรงถึงทีมงาน</span>
               </span>
             </button>
           </div>

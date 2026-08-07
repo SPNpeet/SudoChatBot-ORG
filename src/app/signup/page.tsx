@@ -91,7 +91,7 @@ export default function SignupPage() {
 
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-neutral-200" />
-            <span className="text-[11px] text-neutral-400">หรือสมัครด้วยอีเมล</span>
+            <span className="text-xs text-neutral-400">หรือสมัครด้วยอีเมล</span>
             <div className="h-px flex-1 bg-neutral-200" />
           </div>
 
@@ -122,8 +122,8 @@ export default function SignupPage() {
               <input type={showPw ? "text" : "password"} required value={pw2} onChange={(e) => setPw2(e.target.value)}
                 placeholder="พิมพ์รหัสผ่านอีกครั้ง" autoComplete="new-password"
                 className={`${inputCls} ${mismatch ? "border-red-300 focus:border-red-400" : match ? "border-emerald-400" : ""}`} />
-              {mismatch && <p className="mt-1 text-[11px] text-red-500">รหัสผ่านยังไม่ตรงกัน</p>}
-              {match && <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-600"><Check className="h-3 w-3" /> รหัสผ่านตรงกัน</p>}
+              {mismatch && <p className="mt-1 text-xs text-red-500">รหัสผ่านยังไม่ตรงกัน</p>}
+              {match && <p className="mt-1 flex items-center gap-1 text-xs text-emerald-600"><Check className="h-3 w-3" /> รหัสผ่านตรงกัน</p>}
             </div>
             <button type="submit" disabled={loading || mismatch}
               className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60">
@@ -137,7 +137,7 @@ export default function SignupPage() {
             มีบัญชีอยู่แล้ว? <Link href="/login" className="inline-flex min-h-[44px] items-center font-semibold text-emerald-600 hover:underline">เข้าสู่ระบบ</Link>
           </p>
         </div>
-        <p className="mt-4 text-center text-[11px] leading-relaxed text-neutral-400">
+        <p className="mt-4 text-center text-xs leading-relaxed text-neutral-400">
           การสมัครถือว่ายอมรับ<Link href="/terms" className="inline-flex min-h-[44px] items-center px-0.5 underline">เงื่อนไขการใช้งาน</Link>และ<Link href="/privacy" className="inline-flex min-h-[44px] items-center px-0.5 underline">นโยบายความเป็นส่วนตัว</Link>
         </p>
       </div>

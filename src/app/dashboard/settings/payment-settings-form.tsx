@@ -48,7 +48,7 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
           </Select>
         </div>
       </div>
-      <p className="text-[11px] text-neutral-400">QR พร้อมเพย์จะขึ้นบนใบแจ้งหนี้และลิงก์เอกสารที่ส่งให้ลูกค้า — ลูกค้าสแกนจ่ายเข้าบัญชีคุณตรง 100%</p>
+      <p className="text-xs text-neutral-400">QR พร้อมเพย์จะขึ้นบนใบแจ้งหนี้และลิงก์เอกสารที่ส่งให้ลูกค้า — ลูกค้าสแกนจ่ายเข้าบัญชีคุณตรง 100%</p>
 
       <div>
         <Label>การตรวจสลิปอัตโนมัติ</Label>
@@ -60,7 +60,7 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
           </Select>
           <Input name="slip_api_key" type="password" placeholder="รหัสเชื่อมต่อจากผู้ให้บริการ (กรอกเมื่อต้องการเปลี่ยน)" />
         </div>
-        <p className="mt-1 text-[11px] text-neutral-400">
+        <p className="mt-1 text-xs text-neutral-400">
           สมัคร EasySlip ที่ easyslip.com (~0.05฿/สลิป) — ระบบตรวจสลิปจริง กันสลิปซ้ำ จับคู่ใบแจ้งหนี้ และให้ลูกค้าอัปสลิปจ่ายเองจากลิงก์เอกสารได้
         </p>
       </div>

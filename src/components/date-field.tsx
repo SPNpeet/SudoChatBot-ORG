@@ -113,21 +113,21 @@ export default function DateField({
         )}
         {!hideToday && value !== today && (
           <button type="button" onClick={() => onChange(today)}
-            className="text-[11px] text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+            className="text-xs text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
             ใช้วันนี้
           </button>
         )}
       </div>
 
       {farFuture && (
-        <p className="mt-1 text-[11px] leading-relaxed text-red-600">
+        <p className="mt-1 text-xs leading-relaxed text-red-600">
           วันที่นี้อยู่ในอนาคตไกลผิดปกติ — ถ้าตั้งใจกรอก พ.ศ. {value.slice(0, 4)} ให้ใส่ ค.ศ. {Number(value.slice(0, 4)) - 543} แทน
         </p>
       )}
       {!farFuture && veryOld && (
-        <p className="mt-1 text-[11px] text-amber-700">วันที่เก่ากว่า 5 ปี — ทานอีกครั้งว่าพิมพ์ปีถูก</p>
+        <p className="mt-1 text-xs text-amber-700">วันที่เก่ากว่า 5 ปี — ทานอีกครั้งว่าพิมพ์ปีถูก</p>
       )}
-      {hint && !farFuture && <p className="mt-1 text-[11px] text-neutral-400">{hint}</p>}
+      {hint && !farFuture && <p className="mt-1 text-xs text-neutral-400">{hint}</p>}
     </div>
   );
 }

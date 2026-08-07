@@ -161,10 +161,10 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold tabular-nums text-neutral-900">{bahtDoc(totalDr)}</span>
                     {balanced
-                      ? <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600" title="เดบิตเท่ากับเครดิต ถูกต้องตามหลักบัญชี">
+                      ? <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600" title="เดบิตเท่ากับเครดิต ถูกต้องตามหลักบัญชี">
                           <CheckCircle2 className="h-3.5 w-3.5" />ลงตัว
                         </span>
-                      : <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600" title="สองฝั่งไม่เท่ากัน ต้องตรวจสอบ">
+                      : <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600" title="สองฝั่งไม่เท่ากัน ต้องตรวจสอบ">
                           <AlertTriangle className="h-3.5 w-3.5" />ไม่ลงตัว
                         </span>}
                   </div>
@@ -202,10 +202,10 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                         return (
                           <tr key={l.id} className="hover:bg-neutral-50/60">
                             <Td className={cn("min-w-0", !isDebit && "pl-7 sm:pl-9")}>
-                              <span className="mr-1.5 font-mono text-[11px] text-neutral-300">{acct?.code}</span>
+                              <span className="mr-1.5 font-mono text-xs text-neutral-300">{acct?.code}</span>
                               <span className={cn("text-[13px]", isDebit ? "text-neutral-800" : "text-neutral-500")}>{acct?.name}</span>
                               {/* มือถือไม่มีคอลัมน์ประเภท/ผล เลยยัดมาไว้ใต้ชื่อบัญชีแทน จะได้ไม่เสียข้อมูล */}
-                              {t && <span className="mt-0.5 block text-[11px] text-neutral-400 sm:hidden">{TYPE_TH[t]} · {plainEffect(t, isDebit)}</span>}
+                              {t && <span className="mt-0.5 block text-xs text-neutral-400 sm:hidden">{TYPE_TH[t]} · {plainEffect(t, isDebit)}</span>}
                             </Td>
                             <Td className="hidden sm:table-cell">
                               {t && <Badge tone={TYPE_TONE[t]}>{TYPE_TH[t]}</Badge>}

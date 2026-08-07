@@ -59,7 +59,7 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
           const on = active(m.href);
           return (
             <Link key={m.href} href={m.href} aria-current={on ? "page" : undefined}
-              className={cn("relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px]",
+              className={cn("relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs",
                 on ? "font-semibold text-emerald-600" : "text-neutral-400")}>
               {/* ขีดบนหัว = รู้ทันทีว่าอยู่แท็บไหน แม้มองแวบเดียว */}
               {on && <span aria-hidden className="absolute inset-x-5 top-0 h-[3px] rounded-b-full bg-emerald-500" />}
@@ -68,7 +68,7 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
           );
         })}
         <button onClick={() => setOpen((v) => !v)} aria-expanded={open}
-          className={cn("relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px]",
+          className={cn("relative flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs",
             open || moreActive ? "font-semibold text-emerald-600" : "text-neutral-400")}>
           {(open || moreActive) && <span aria-hidden className="absolute inset-x-5 top-0 h-[3px] rounded-b-full bg-emerald-500" />}
           <Menu className="h-5 w-5" /> เพิ่มเติม

@@ -160,13 +160,13 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
               พาไปที่ที่ลองออกเอกสารได้ทันทีย่อมตรงกับสิ่งที่เขาเพิ่งเห็นมากกว่าหน้าโฆษณา */}
           <a href="https://sudochatbot.online/try" target="_blank" rel="noopener"
             className="group mx-auto flex max-w-xs flex-col items-center gap-1.5 rounded-2xl px-4 py-3 transition-colors hover:bg-neutral-50">
-            <span className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+            <span className="flex items-center gap-1.5 text-xs text-neutral-400">
               เอกสารนี้ออกด้วย <Logo />
             </span>
-            <span className="text-center text-[11px] leading-relaxed text-neutral-400">
+            <span className="text-center text-xs leading-relaxed text-neutral-400">
               ระบบบัญชีออนไลน์สำหรับธุรกิจไทย — ออกใบแจ้งหนี้ รับเงิน ลงบัญชี ยื่นภาษี ครบในที่เดียว
             </span>
-            <span className="text-[11px] font-semibold text-emerald-700 group-hover:underline">
+            <span className="text-xs font-semibold text-emerald-700 group-hover:underline">
               ทดลองใช้ฟรี ไม่ต้องใส่บัตร →
             </span>
           </a>

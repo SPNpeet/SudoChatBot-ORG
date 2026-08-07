@@ -176,8 +176,8 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
                     </div>
                   )}
                 </div>
-                {row.matched && !row.done && <p className="mt-0.5 text-[11px] text-emerald-600">จับคู่อัตโนมัติ: {row.matched.docNumber} ({row.matched.contact ?? "-"})</p>}
-                {row.error && <p className="mt-0.5 text-[11px] text-red-500">{row.error}</p>}
+                {row.matched && !row.done && <p className="mt-0.5 text-xs text-emerald-600">จับคู่อัตโนมัติ: {row.matched.docNumber} ({row.matched.contact ?? "-"})</p>}
+                {row.error && <p className="mt-0.5 text-xs text-red-500">{row.error}</p>}
               </div>
             ))}
           </div>

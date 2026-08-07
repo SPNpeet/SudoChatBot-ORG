@@ -141,7 +141,7 @@ export default function SignaturePad({ shopId, current }: { shopId: string; curr
         </div>
       </div>
 
-      <p className="text-[11px] leading-relaxed text-neutral-400">
+      <p className="text-xs leading-relaxed text-neutral-400">
         ลายเซ็นนี้เป็น<b>ภาพประกอบบนเอกสาร</b>เพื่อความสะดวก ไม่ใช่ลายมือชื่ออิเล็กทรอนิกส์
         ที่ใช้ผูกพันตามกฎหมายธุรกรรมทางอิเล็กทรอนิกส์ · เก็บบนคลาวด์ เปลี่ยนเครื่องก็ยังอยู่
       </p>

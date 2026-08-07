@@ -37,7 +37,7 @@ export default function LineOaCard({ configured, basicId }: { configured: boolea
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="h-4 w-4 text-[#06C755]" /> บัญชี LINE กลางของแพลตฟอร์ม
-          {configured && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700"><CheckCircle2 className="h-3 w-3" /> ตั้งค่าแล้ว</span>}
+          {configured && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700"><CheckCircle2 className="h-3 w-3" /> ตั้งค่าแล้ว</span>}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -81,7 +81,7 @@ export default function LineOaCard({ configured, basicId }: { configured: boolea
         {configured && (
           <div className="mt-4 rounded-xl border border-neutral-200 p-3">
             <p className="flex items-center gap-1.5 text-xs font-medium"><LayoutGrid className="h-3.5 w-3.5 text-emerald-600" /> เมนูในแชท LINE (Rich Menu)</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-neutral-500">
+            <p className="mt-1 text-xs leading-relaxed text-neutral-500">
               สร้างเมนู 6 ปุ่มให้ลูกค้ากดจากแชท LINE เข้าใช้งานได้ทันที — ผู้ช่วยบัญชี AI · ถ่ายรูปบิล · ออกเอกสาร · ยอดค้าง · รายงานภาษี · ช่วยเหลือ
               (ระบบสร้างรูปเมนูให้เอง ไม่ต้องออกแบบ)
             </p>

@@ -163,7 +163,7 @@ export default function TryDocEditor() {
           </Link>
         </div>
         {restored && (
-          <p className="border-t border-neutral-100 bg-emerald-50/60 px-3 py-1.5 text-center text-[11px] text-emerald-800">
+          <p className="border-t border-neutral-100 bg-emerald-50/60 px-3 py-1.5 text-center text-xs text-emerald-800">
             กู้ร่างที่ค้างไว้ในเครื่องนี้ให้แล้ว — ร่างเก็บเฉพาะในเบราว์เซอร์ ล้างประวัติแล้วหาย
             <button onClick={() => { localStorage.removeItem(DRAFT_KEY); setD(EMPTY); setRestored(false); }}
               className="ml-2 underline">เริ่มใหม่</button>
@@ -205,7 +205,7 @@ export default function TryDocEditor() {
 
           {/* ผู้ซื้อ */}
           <div className="mt-3 border-b border-neutral-200 pb-3">
-            <p className="text-[11px] text-neutral-400">ลูกค้า</p>
+            <p className="text-xs text-neutral-400">ลูกค้า</p>
             <Field wide value={d.buyerName} placeholder="ชื่อลูกค้า / บริษัท"
               onChange={(e) => set({ buyerName: e.target.value })} className="font-semibold" />
             <Field wide value={d.buyerAddress} placeholder="ที่อยู่ลูกค้า"
@@ -222,7 +222,7 @@ export default function TryDocEditor() {
             ให้ลูกไหลกลับเข้ากริดแถวเดียวเหมือนตารางบนกระดาษ A4
           */}
           <div className={cn(
-            "mt-3 hidden border-b border-neutral-300 pb-1.5 text-[11px] text-neutral-500",
+            "mt-3 hidden border-b border-neutral-300 pb-1.5 text-xs text-neutral-500",
             "sm:grid sm:grid-cols-[minmax(0,1fr)_4rem_6rem_6rem_2rem] sm:gap-2",
             "print:grid print:grid-cols-[minmax(0,1fr)_4rem_6rem_6rem_2rem] print:gap-2",
           )}>
@@ -245,11 +245,11 @@ export default function TryDocEditor() {
                 {/* ชั้นล่างบนมือถือ · sm+/พิมพ์ กลายเป็นช่องของกริดแม่ด้วย contents
                     ป้าย "จำนวน" กับเครื่องหมาย × = มีเฉพาะมือถือ เพราะจอเล็กไม่มีหัวคอลัมน์ */}
                 <div className="mt-0.5 flex flex-wrap items-center gap-1.5 sm:mt-0 sm:contents print:contents">
-                  <span className="text-[11px] text-neutral-400 sm:hidden print:hidden">จำนวน</span>
+                  <span className="text-xs text-neutral-400 sm:hidden print:hidden">จำนวน</span>
                   <Field inputMode="decimal" value={r.qty} aria-label="จำนวน"
                     onChange={(e) => setRow(i, { qty: e.target.value })}
                     className="w-14 text-right sm:w-full" />
-                  <span className="text-[11px] text-neutral-400 sm:hidden print:hidden">×</span>
+                  <span className="text-xs text-neutral-400 sm:hidden print:hidden">×</span>
                   <Field inputMode="decimal" value={r.price} placeholder="0.00" aria-label="ราคาต่อหน่วย"
                     onChange={(e) => setRow(i, { price: e.target.value })}
                     className="w-24 text-right sm:w-full" />
@@ -303,7 +303,7 @@ export default function TryDocEditor() {
               <div className="flex justify-between gap-4 border-t-2 border-neutral-900 pt-1 text-base font-bold">
                 <span>ยอดรวมสุทธิ</span><span>{bahtDoc(totals.total)}</span>
               </div>
-              <p className="text-[11px] text-neutral-500">({bahtText(totals.total)})</p>
+              <p className="text-xs text-neutral-500">({bahtText(totals.total)})</p>
             </div>
           </div>
 
@@ -313,7 +313,7 @@ export default function TryDocEditor() {
           </div>
 
           {/* ช่องเซ็น */}
-          <div className="mt-10 grid grid-cols-2 gap-6 text-center text-[11px] sm:mt-14 sm:gap-10">
+          <div className="mt-10 grid grid-cols-2 gap-6 text-center text-xs sm:mt-14 sm:gap-10">
             <div>
               <div className="mx-auto w-full max-w-56 border-b border-dotted border-neutral-400 pb-7" />
               <p className="mt-2">ผู้รับเอกสาร / วันที่</p>

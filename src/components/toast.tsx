@@ -87,7 +87,7 @@ function Row({ t, onClose }: { t: ToastItem; onClose: () => void }) {
       {t.undo && (
         <button type="button" disabled={busy}
           onClick={async () => { setBusy(true); try { await t.undo!(); } finally { onClose(); } }}
-          className="inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-lg bg-neutral-900 px-3 text-[11px] font-semibold text-white transition-colors hover:bg-neutral-700 disabled:opacity-60">
+          className="inline-flex min-h-[44px] shrink-0 items-center gap-1 rounded-lg bg-neutral-900 px-3 text-xs font-semibold text-white transition-colors hover:bg-neutral-700 disabled:opacity-60">
           {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Undo2 className="h-3 w-3" />}
           {t.undoLabel ?? "เลิกทำ"}
         </button>

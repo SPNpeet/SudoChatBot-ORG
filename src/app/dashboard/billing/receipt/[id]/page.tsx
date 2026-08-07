@@ -47,14 +47,14 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           <Logo />
           <div className="text-right">
             <p className="text-sm font-semibold">{vatRegistered ? "ใบเสร็จรับเงิน / ใบกำกับภาษี" : "ใบเสร็จรับเงิน"}</p>
-            <p className="text-[11px] text-neutral-400">{vatRegistered ? "RECEIPT / TAX INVOICE" : "RECEIPT"}</p>
+            <p className="text-xs text-neutral-400">{vatRegistered ? "RECEIPT / TAX INVOICE" : "RECEIPT"}</p>
           </div>
         </div>
 
         {/* ผู้ขาย / ผู้ซื้อ */}
         <div className="grid grid-cols-2 gap-4 border-b border-neutral-100 py-4 text-sm">
           <div>
-            <p className="text-[11px] font-semibold text-neutral-400">ผู้ขาย</p>
+            <p className="text-xs font-semibold text-neutral-400">ผู้ขาย</p>
             <p className="font-medium">{pf?.company_name ?? pf?.account_name ?? "SudoChatBot Platform"}</p>
             {pf?.company_address && <p className="whitespace-pre-line text-xs text-neutral-500">{pf.company_address}</p>}
             {vatRegistered && (
@@ -62,7 +62,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
             )}
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-neutral-400">ผู้ซื้อ</p>
+            <p className="text-xs font-semibold text-neutral-400">ผู้ซื้อ</p>
             <p className="font-medium">{shopTax?.billing_name ?? shop.name}</p>
             {shopTax?.billing_address && <p className="whitespace-pre-line text-xs text-neutral-500">{shopTax.billing_address}</p>}
             {shopTax?.tax_id && <p className="text-xs text-neutral-500">เลขประจำตัวผู้เสียภาษี {shopTax.tax_id}</p>}
@@ -71,15 +71,15 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
 
         <div className="grid grid-cols-3 gap-4 py-4 text-sm">
           <div>
-            <p className="text-[11px] text-neutral-400">เลขที่</p>
+            <p className="text-xs text-neutral-400">เลขที่</p>
             <p className="font-mono">{docNo}</p>
           </div>
           <div>
-            <p className="text-[11px] text-neutral-400">วันที่</p>
+            <p className="text-xs text-neutral-400">วันที่</p>
             <p>{dateTH(t.paid_at ?? t.created_at)}</p>
           </div>
           <div className="text-right">
-            <p className="text-[11px] text-neutral-400">ช่องทาง</p>
+            <p className="text-xs text-neutral-400">ช่องทาง</p>
             <p>{method}</p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
-        <p className="mt-6 text-center text-[11px] text-neutral-400">
+        <p className="mt-6 text-center text-xs text-neutral-400">
           ผู้รับเงิน: {pf?.company_name ?? pf?.account_name ?? "SudoChatBot Platform"}<br />
           เอกสารนี้ออกโดยระบบอัตโนมัติ{vatRegistered ? " · ราคารวมภาษีมูลค่าเพิ่มแล้ว" : " · ต้องการใบกำกับภาษีเต็มรูปแบบ ติดต่อผู้ดูแลระบบ"}
         </p>

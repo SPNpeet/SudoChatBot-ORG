@@ -16,10 +16,32 @@ export interface NotifyInput {
   tag?: string;           // กันเด้งซ้ำเรื่องเดิม
 }
 
-/** แจ้งเตือนกิจการหนึ่ง — LINE + Web Push พร้อมกัน */
+/**
+ * แจ้งเตือนกิจการหนึ่ง — กล่องในระบบ + LINE + Web Push พร้อมกัน
+ *
+ * ⚠️ เดิมส่งแค่ LINE กับ Web Push ไม่ได้เขียนลงตาราง notifications เลย
+ * พบ 6 ส.ค. 2569 ตอนยิงสลิปทดสอบผ่านเส้นทาง manual จริง แล้ววัดพบว่า
+ * ไฟล์แนบเข้าเรียบร้อย แต่ notifications = 0 แถว
+ *
+ * ผลจริง: ร้านที่ยังไม่ได้เชื่อม LINE และยังไม่ได้กดอนุญาต Web Push
+ * (ซึ่งคือร้านส่วนใหญ่ เพราะทั้งสองอย่างต้องไปตั้งค่าเอง) **ไม่ได้รับอะไรเลยสักช่องทาง**
+ * ทั้งที่หน้าแดชบอร์ดมีกล่องแจ้งเตือนอยู่แล้ว แต่ไม่เคยมีใครเขียนลงไป
+ *
+ * เรื่องที่ส่งผ่านทางนี้คือเรื่องที่ "มีคนรออยู่" — ลูกค้าส่งสลิปมา / ระบบตรวจสลิปล่ม
+ * เงียบตรงนี้แปลว่าลูกค้าของร้านโอนเงินไปแล้วแต่ไม่มีใครมาดู
+ *
+ * กติกา: กล่องในระบบต้องเขียนเสมอ เพราะเป็นช่องทางเดียวที่ไม่ต้องตั้งค่าอะไรก่อน
+ * LINE/Push เป็นของเสริมที่เร็วกว่า — ช่องไหนล้มก็ต้องไม่ทำให้ช่องอื่นล้มตาม
+ */
 export async function notifyShop(svc: SupabaseClient, shopId: string, n: NotifyInput): Promise<void> {
   const url = n.url ? (n.url.startsWith("http") ? n.url : `https://sudochatbot.online${n.url}`) : undefined;
   await Promise.allSettled([
+    svc.from("notifications").insert({
+      shop_id: shopId,
+      type: "system",
+      title: n.title.slice(0, 200),
+      body: `${n.body}${url ? `\n${url}` : ""}`.slice(0, 1000),
+    }),
     notifyShopLine(svc, shopId, `${n.title}\n${n.body}${url ? `\n${url}` : ""}`),
     pushToShop(svc, shopId, { title: n.title, body: n.body, url: n.url, tag: n.tag } as PushPayload),
   ]);

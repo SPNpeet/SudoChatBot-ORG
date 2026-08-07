@@ -87,16 +87,16 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
                       if (!touchedKind) setKind(guessRecipientKind(v));
                     }} />
                   {taxDigits.length === 13 && !taxOk && (
-                    <p className="mt-1 text-[11px] text-red-600">เลขนี้ไม่ผ่านการตรวจหลักสุดท้าย ลองทานอีกครั้ง — เลขผิดจะติดไปถึงไฟล์ที่ยื่นสรรพากร</p>
+                    <p className="mt-1 text-xs text-red-600">เลขนี้ไม่ผ่านการตรวจหลักสุดท้าย ลองทานอีกครั้ง — เลขผิดจะติดไปถึงไฟล์ที่ยื่นสรรพากร</p>
                   )}
                   {taxDigits.length > 0 && taxDigits.length !== 13 && (
-                    <p className="mt-1 text-[11px] text-neutral-400">กรอกแล้ว {taxDigits.length} หลัก (ต้องครบ 13)</p>
+                    <p className="mt-1 text-xs text-neutral-400">กรอกแล้ว {taxDigits.length} หลัก (ต้องครบ 13)</p>
                   )}
                 </div>
                 <div>
                   <Label>สาขา</Label>
                   <Input name="branch" defaultValue={contact?.branch ?? ""} placeholder="สำนักงานใหญ่" />
-                  <p className="mt-1 text-[11px] text-neutral-400">ว่างไว้ = สำนักงานใหญ่ · สาขาให้กรอกเลข เช่น 1</p>
+                  <p className="mt-1 text-xs text-neutral-400">ว่างไว้ = สำนักงานใหญ่ · สาขาให้กรอกเลข เช่น 1</p>
                 </div>
                 <div className="sm:col-span-2">
                   <Label>ประเภทผู้รับเงิน (ใช้เลือกแบบยื่นหัก ณ ที่จ่าย)</Label>
@@ -104,7 +104,7 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
                     onChange={(e) => { setKind(e.target.value as RecipientKind); setTouchedKind(true); }}>
                     {RECIPIENT_KINDS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </Select>
-                  <p className="mt-1 text-[11px] text-neutral-400">
+                  <p className="mt-1 text-xs text-neutral-400">
                     {RECIPIENT_KINDS.find((r) => r.value === kind)?.hint} · หักภาษีให้รายนี้จะเข้าแบบ{" "}
                     <span className="font-semibold text-neutral-600">{RECIPIENT_KINDS.find((r) => r.value === kind)?.form}</span>
                   </p>

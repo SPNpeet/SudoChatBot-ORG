@@ -56,7 +56,7 @@ export default function AiGuardCard({ status }: { status: AiGuardStatus }) {
               <div className="h-2 overflow-hidden rounded-full bg-neutral-100">
                 <div className={`h-full ${over ? "bg-red-500" : pct > 80 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }} />
               </div>
-              <p className={`mt-1 text-[11px] ${over ? "text-red-600 font-medium" : "text-neutral-400"}`}>
+              <p className={`mt-1 text-xs ${over ? "text-red-600 font-medium" : "text-neutral-400"}`}>
                 {over ? "เกินเพดานแล้ว — บอทตอบลูกค้าหยุดชั่วคราวอัตโนมัติ" : `${pct.toFixed(0)}% ของเพดาน ${usd(capNum)}/วัน`}
               </p>
             </div>
@@ -71,7 +71,7 @@ export default function AiGuardCard({ status }: { status: AiGuardStatus }) {
               placeholder="เช่น 5 = จ่ายไม่เกิน ~180 บาท/วัน" className="flex-1" />
             <Button size="sm" onClick={() => save()} disabled={pending}>{pending ? "บันทึก..." : "บันทึกเพดาน"}</Button>
           </div>
-          <p className="mt-1 text-[11px] text-neutral-400">เกินเพดานเมื่อไหร่ บอทตอบลูกค้าหยุดทันทีจนถึงเที่ยงคืน (เวลาไทย) — เครื่องมือของคุณ (ผู้จัดการร้าน AI ฯลฯ) ยังใช้ได้ปกติ</p>
+          <p className="mt-1 text-xs text-neutral-400">เกินเพดานเมื่อไหร่ บอทตอบลูกค้าหยุดทันทีจนถึงเที่ยงคืน (เวลาไทย) — เครื่องมือของคุณ (ผู้จัดการร้าน AI ฯลฯ) ยังใช้ได้ปกติ</p>
         </div>
 
         {/* สวิตช์ฉุกเฉิน */}
@@ -80,7 +80,7 @@ export default function AiGuardCard({ status }: { status: AiGuardStatus }) {
             <Power className={`h-4 w-4 ${kill ? "text-red-600" : "text-neutral-400"}`} />
             <div>
               <p className="text-sm font-medium">{kill ? "AI ถูกปิดฉุกเฉินอยู่" : "ปิด AI ฉุกเฉิน (Kill Switch)"}</p>
-              <p className="text-[11px] text-neutral-400">ถ้าเห็นว่าโดนโจมตี กดปิดหยุดบอทตอบลูกค้าทั้งแพลตฟอร์มทันที</p>
+              <p className="text-xs text-neutral-400">ถ้าเห็นว่าโดนโจมตี กดปิดหยุดบอทตอบลูกค้าทั้งแพลตฟอร์มทันที</p>
             </div>
           </div>
           <Button size="sm" variant={kill ? "outline" : "ghost"} onClick={() => save(!kill)} disabled={pending}

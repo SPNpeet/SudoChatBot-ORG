@@ -73,11 +73,11 @@ export default function AccountForm({ email, displayName, phone, joined, provide
         {/* อีเมลมาก่อนช่องกรอก — นี่คือสิ่งที่ผู้ใช้เข้ามาหน้านี้เพื่อดู
             ชื่อซ้ำกันได้ อีเมลคือตัวที่ระบุตัวตนได้จริงว่าล็อกอินด้วยบัญชีไหน */}
         <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-3.5 py-3">
-          <p className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+          <p className="flex items-center gap-1.5 text-xs text-neutral-400">
             <Mail className="h-3 w-3" /> อีเมลที่ใช้เข้าสู่ระบบ
           </p>
           <p className="mt-0.5 break-all text-sm font-semibold text-neutral-900">{email ?? "ไม่มีอีเมล"}</p>
-          <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-400">
+          <p className="mt-1.5 text-xs leading-relaxed text-neutral-400">
             เปลี่ยนเองไม่ได้ เพราะเป็นทั้งกุญแจเข้าสู่ระบบและชื่อที่ติดอยู่กับเอกสารทุกใบที่บันทึกไว้
             — ถ้าต้องเปลี่ยนจริง ๆ ให้ติดต่อผู้ดูแลระบบ
             {joinedTH && <> · เปิดบัญชีเมื่อ {joinedTH}</>}
@@ -89,7 +89,7 @@ export default function AccountForm({ email, displayName, phone, joined, provide
             <Label>ชื่อที่แสดง</Label>
             <Input name="display_name" defaultValue={displayName ?? ""} required minLength={2} maxLength={80}
               placeholder="เช่น สมชาย ใจดี" autoComplete="name" />
-            <p className="mt-1 text-[11px] text-neutral-400">
+            <p className="mt-1 text-xs text-neutral-400">
               ชื่อนี้จะขึ้นในประวัติการแก้ไขเอกสาร และในรายชื่อทีมของกิจการ — ใส่ชื่อจริงจะตามงานกันง่ายที่สุด
             </p>
           </div>
@@ -140,7 +140,7 @@ export default function AccountForm({ email, displayName, phone, joined, provide
               ============================================================ */}
           {!hasPassword && pwState !== "sent" && (
             <>
-              <p className="mt-3 text-[11px] leading-relaxed text-neutral-400">
+              <p className="mt-3 text-xs leading-relaxed text-neutral-400">
                 ถ้าอยากเข้าระบบได้โดยไม่ต้องผ่าน{providers.map((p) => PROVIDER_LABEL[p] ?? p).join("/")}
                 {" "}จะตั้งรหัสผ่านเพิ่มไว้ก็ได้ — ทางเดิมยังใช้ได้เหมือนเดิม
               </p>
@@ -158,7 +158,7 @@ export default function AccountForm({ email, displayName, phone, joined, provide
             </p>
           ) : hasPassword && (
             <>
-              <p className="mt-3 text-[11px] leading-relaxed text-neutral-400">
+              <p className="mt-3 text-xs leading-relaxed text-neutral-400">
                 เปลี่ยนรหัสผ่านได้ทางลิงก์ที่ส่งไปอีเมล — ตั้งจากหน้านี้ตรง ๆ ไม่ได้
                 เพื่อกันคนที่มานั่งเครื่องต่อจากคุณยึดบัญชีไปโดยไม่รู้รหัสเดิม
               </p>

@@ -86,7 +86,7 @@ export default function TodayPanel({ overdue, pendingApproval, unmatchedSlips, t
     <div>
       <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-neutral-700">
         วันนี้ต้องทำ
-        <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-[11px] font-bold text-white">{tasks.length}</span>
+        <span className="rounded-full bg-neutral-900 px-2 py-0.5 text-xs font-bold text-white">{tasks.length}</span>
       </p>
       <div className="grid gap-2 lg:grid-cols-2">
         {tasks.map((t) => (
@@ -95,9 +95,9 @@ export default function TodayPanel({ overdue, pendingApproval, unmatchedSlips, t
             <t.icon className="h-5 w-5 shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-semibold">{t.title}</p>
-              <p className="truncate text-[11px] opacity-80">{t.sub}</p>
+              <p className="truncate text-xs opacity-80">{t.sub}</p>
             </div>
-            <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold opacity-70 group-hover:opacity-100">
+            <span className="flex shrink-0 items-center gap-1 text-xs font-semibold opacity-70 group-hover:opacity-100">
               {t.cta} <ArrowRight className="h-3.5 w-3.5" />
             </span>
           </Link>

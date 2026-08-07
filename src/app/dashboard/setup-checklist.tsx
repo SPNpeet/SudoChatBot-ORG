@@ -87,7 +87,7 @@ export default async function SetupChecklist({ shop }: { shop: Shop }) {
               : <Circle className="h-5 w-5 shrink-0 text-neutral-300" />}
             <span className="flex-1">
               <span className={cn("block text-sm font-medium", s.done ? "text-neutral-400 line-through" : "text-neutral-800")}>{s.title}</span>
-              {!s.done && <span className="block text-[11px] text-neutral-400">{s.hint}</span>}
+              {!s.done && <span className="block text-xs text-neutral-400">{s.hint}</span>}
             </span>
             {!s.done && <ArrowRight className="h-4 w-4 text-neutral-300 group-hover:text-emerald-500" />}
           </Link>

@@ -62,7 +62,7 @@ export default function LoginPage() {
 
           <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-neutral-200" />
-            <span className="text-[11px] text-neutral-400">หรือใช้อีเมล</span>
+            <span className="text-xs text-neutral-400">หรือใช้อีเมล</span>
             <div className="h-px flex-1 bg-neutral-200" />
           </div>
 
@@ -101,7 +101,7 @@ export default function LoginPage() {
         {/* ต้องมีนโยบายความเป็นส่วนตัวด้วย ไม่ใช่เงื่อนไขอย่างเดียว —
             หน้านี้มีปุ่มเข้าระบบด้วย Google ซึ่งบังคับให้ลิงก์นโยบายไว้
             และ PDPA ก็ต้องแจ้งก่อน/ขณะเก็บข้อมูล (หน้าสมัครมีครบอยู่แล้ว หน้านี้ตกไป) */}
-        <p className="mt-4 text-center text-[11px] leading-relaxed text-neutral-400">
+        <p className="mt-4 text-center text-xs leading-relaxed text-neutral-400">
           การเข้าสู่ระบบถือว่ายอมรับ<Link href="/terms" className="inline-flex min-h-[44px] items-center px-0.5 underline">เงื่อนไขการใช้งาน</Link>
           และ<Link href="/privacy" className="inline-flex min-h-[44px] items-center px-0.5 underline">นโยบายความเป็นส่วนตัว</Link>
         </p>

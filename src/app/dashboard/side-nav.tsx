@@ -121,7 +121,7 @@ export default function SideNav({ isAdmin, children, foot }: {
           <>
             {collapsed
               ? <div className="my-2 border-t border-neutral-100" />
-              : <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">ผู้ดูแลแพลตฟอร์ม</p>}
+              : <p className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-neutral-400">ผู้ดูแลแพลตฟอร์ม</p>}
             {adminItems.map((i) => row(i, true))}
           </>
         )}

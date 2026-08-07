@@ -39,11 +39,11 @@ export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings
           <Input name="stripe_secret_key" type="password" placeholder="Secret key (sk_live_... กรอกเมื่อเปลี่ยน)" />
           <Input name="stripe_webhook_secret" type="password" placeholder="Webhook signing secret (whsec_... กรอกเมื่อเปลี่ยน)" />
         </div>
-        <p className="mt-1 text-[11px] text-neutral-400">
+        <p className="mt-1 text-xs text-neutral-400">
           ทั้งสองคีย์เก็บใน Vault · ตั้ง webhook ใน Stripe Dashboard ไปที่ <span className="font-mono">/api/billing/stripe/webhook</span>
           {" "}แล้วติ๊ก event: <span className="font-mono">checkout.session.completed</span>, <span className="font-mono">async_payment_succeeded</span>, <span className="font-mono">async_payment_failed</span>, <span className="font-mono">expired</span>
         </p>
-        <p className="mt-1 text-[11px] text-neutral-400">
+        <p className="mt-1 text-xs text-neutral-400">
           ต้องเปิด <span className="font-medium">PromptPay</span> ในหน้า Payment methods ของ Stripe ก่อน ไม่งั้นลูกค้าจะเห็นเฉพาะบัตร ·
           บัญชี Stripe ต้องจดทะเบียนในไทยและรับเงินสกุล THB · ไม่มี webhook secret = ระบบไม่รับ event ใด ๆ (กันคนปลอมยิงเข้ามาเครดิตเงินให้ตัวเอง)
         </p>
@@ -62,7 +62,7 @@ export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings
           <Input name="slip_monthly_cap" type="number" min={0} defaultValue={pf?.slip_monthly_cap ?? 100}
             placeholder="เพดานตรวจสลิป/เดือน ทั้งแพลตฟอร์ม" />
         </div>
-        <p className="mt-1 text-[11px] text-neutral-400">
+        <p className="mt-1 text-xs text-neutral-400">
           เพดานคือจำนวนครั้งที่ยิง API ต่อเดือนของทั้งระบบ (เดือนนี้ใช้ไป {slipUsed}/{pf?.slip_monthly_cap ?? 100} ครั้ง) ·
           เต็มแล้วระบบสลับเป็นยืนยันเองอัตโนมัติ ไม่มีใครจ่ายไม่ได้ · ใส่ 0 = ปิดตรวจอัตโนมัติทั้งระบบ
         </p>
@@ -74,7 +74,7 @@ export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings
           <Input name="email_from" defaultValue={pf?.email_from ?? ""} placeholder='ผู้ส่ง เช่น SudoChatBot <no-reply@โดเมนคุณ>' />
           <Input name="low_credit_threshold" type="number" min={0} defaultValue={pf?.low_credit_threshold ?? 50} placeholder="เตือนเมื่อเครดิตต่ำกว่า (บาท)" />
         </div>
-        <p className="mt-1 text-[11px] text-neutral-400">ไม่ใส่ key = ไม่ส่งอีเมล (ยังแจ้งใน dashboard เสมอ) · สมัครฟรีที่ resend.com</p>
+        <p className="mt-1 text-xs text-neutral-400">ไม่ใส่ key = ไม่ส่งอีเมล (ยังแจ้งใน dashboard เสมอ) · สมัครฟรีที่ resend.com</p>
       </div>
       <div className="border-t border-neutral-100 pt-3">
         <Label>ข้อมูลผู้ขายบนใบกำกับภาษี (VAT 7%)</Label>

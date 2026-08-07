@@ -78,7 +78,7 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
               <div>
                 <Label>ราคาทุน (บาท) *</Label>
                 <Input name="cost" inputMode="decimal" required placeholder="60000" />
-                <p className="mt-1 text-[11px] text-neutral-400">ราคาซื้อ + ค่าติดตั้ง/ขนส่ง ไม่รวมภาษีซื้อที่ขอคืนได้</p>
+                <p className="mt-1 text-xs text-neutral-400">ราคาซื้อ + ค่าติดตั้ง/ขนส่ง ไม่รวมภาษีซื้อที่ขอคืนได้</p>
               </div>
               <div>
                 <DateField label="วันที่ได้ทรัพย์สินมา" required name="acquired_on"
@@ -101,7 +101,7 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
               <div>
                 <Label>ราคาซาก (บาท)</Label>
                 <Input name="salvage" inputMode="decimal" defaultValue="1" />
-                <p className="mt-1 text-[11px] text-neutral-400">กฎหมายให้เหลือไว้อย่างน้อย 1 บาทจนกว่าจะขายทิ้ง</p>
+                <p className="mt-1 text-xs text-neutral-400">กฎหมายให้เหลือไว้อย่างน้อย 1 บาทจนกว่าจะขายทิ้ง</p>
               </div>
               <div className="sm:col-span-2">
                 <Label>หมายเหตุ</Label>
@@ -132,8 +132,8 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
                       onChange={(e) => pickPhoto(e.target.files?.[0])} />
                   </label>
                 )}
-                {photoErr && <p className="mt-1 text-[11px] text-red-600">{photoErr}</p>}
-                <p className="mt-1 text-[11px] text-neutral-400">
+                {photoErr && <p className="mt-1 text-xs text-red-600">{photoErr}</p>}
+                <p className="mt-1 text-xs text-neutral-400">
                   เก็บเป็นความลับของกิจการ เปิดดูได้เฉพาะคนในทีม · ใช้เป็นหลักฐานตอนตรวจนับ
                 </p>
               </div>
@@ -154,7 +154,7 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
             <div>
               <Label>เดือนที่ต้องการลง</Label>
               <Input type="month" value={depMonth} onChange={(e) => setDepMonth(e.target.value)} />
-              <p className="mt-1 text-[11px] text-neutral-400">ลงได้เมื่อสิ้นเดือนนั้นผ่านไปแล้ว</p>
+              <p className="mt-1 text-xs text-neutral-400">ลงได้เมื่อสิ้นเดือนนั้นผ่านไปแล้ว</p>
             </div>
             <Button variant="outline" disabled={pending} onClick={() => run(() => runDepreciation(shopId, depMonth))}>
               <Calculator className="h-4 w-4" /> {pending ? "กำลังคำนวณ..." : "ลงค่าเสื่อมเดือนนี้"}
@@ -183,7 +183,7 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
                 <p className="flex items-center gap-1.5 text-[12px] font-bold text-amber-800">
                   <TriangleAlert className="h-4 w-4 shrink-0" /> ยืนยันปิดบัญชีถึง {yearEnd}
                 </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-amber-700">
+                <p className="mt-1 text-xs leading-relaxed text-amber-700">
                   ระบบจะลงรายการปิดบัญชีในสมุดรายวัน ณ วันสิ้นรอบ ควรตรวจงบทดลองให้เรียบร้อยก่อน
                   แนะนำให้ลงค่าเสื่อมของทุกเดือนในรอบนั้นให้ครบก่อนปิด
                 </p>

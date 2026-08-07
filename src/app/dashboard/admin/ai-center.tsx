@@ -86,7 +86,7 @@ export default function AdminAiCenter({
             <KeyRound className="h-4 w-4 text-neutral-400" /> ขั้นสูง — คีย์สำรอง (Auto-Fallback)
           </span>
           <span className="flex items-center gap-2">
-            <span className="text-[11px] text-neutral-400">{keys.length ? `มี ${keys.length} ค่าย` : "ไม่บังคับ"}</span>
+            <span className="text-xs text-neutral-400">{keys.length ? `มี ${keys.length} ค่าย` : "ไม่บังคับ"}</span>
             <><span className="chev-closed text-neutral-300">▾</span><span className="chev-open text-neutral-400">▴</span></>
           </span>
         </summary>
@@ -213,7 +213,7 @@ function FunctionCard({ def, row }: { def: FunctionCardDef; row?: PurposeKeyRow 
             </>
           )}
           {meta && (
-            <a href={meta.keyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-sky-600 hover:underline">
+            <a href={meta.keyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-sky-600 hover:underline">
               <ExternalLink className="h-3 w-3" /> ไปหน้าออก API key ของ {meta.label}
             </a>
           )}
@@ -252,7 +252,7 @@ function ProviderKeyRow({ meta, row }: { meta: ProviderMeta; row?: KeyRow }) {
           {row ? (
             <Badge tone="green"><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /><span className="font-mono">••••{row.key_last4}</span></Badge>
           ) : (
-            <span className="text-[11px] text-neutral-300">ไม่ได้ตั้ง</span>
+            <span className="text-xs text-neutral-300">ไม่ได้ตั้ง</span>
           )}
           {row?.test_status === "ok" && <span title="ทดสอบผ่าน"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /></span>}
           {row?.test_status === "failed" && <span title={row.test_message ?? ""}><XCircle className="h-3.5 w-3.5 text-red-500" /></span>}
@@ -272,7 +272,7 @@ function ProviderKeyRow({ meta, row }: { meta: ProviderMeta; row?: KeyRow }) {
           <Button size="sm" onClick={save} disabled={pending || key.length < 10}>{pending ? "..." : "บันทึก"}</Button>
         </div>
       )}
-      {saveError && <p className="mt-1.5 rounded-lg bg-red-50 px-2.5 py-1.5 text-[11px] text-red-600">{saveError}</p>}
+      {saveError && <p className="mt-1.5 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs text-red-600">{saveError}</p>}
     </div>
   );
 }

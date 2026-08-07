@@ -14,7 +14,7 @@ function KickButton({ memberId, shopId }: { memberId: string; shopId: string }) 
         disabled={pending} className="text-xs text-neutral-400 hover:text-red-600 disabled:opacity-50">
         {pending ? "กำลังลบ..." : "ลบออก"}
       </button>
-      {error && <p className="mt-1 text-[10px] text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
@@ -40,7 +40,7 @@ export default function TeamForm({ shopId, members, canEdit }: { shopId: string;
           <div key={m.id} className="flex items-center justify-between rounded-xl border border-neutral-100 px-4 py-2.5">
             <div>
               <p className="text-sm font-medium">{m.display_name ?? m.email ?? "สมาชิก"}</p>
-              <p className="text-[11px] text-neutral-400">{m.email}</p>
+              <p className="text-xs text-neutral-400">{m.email}</p>
             </div>
             <div className="flex items-center gap-3">
               <Badge tone={m.role === "owner" ? "green" : "neutral"}>

@@ -97,7 +97,7 @@ export function StatCard({ label, value, hint, icon, tone = "neutral", className
         "mt-2 text-2xl font-bold tabular-nums tracking-tight",
         tone === "red" ? "text-red-600" : tone === "green" ? "text-emerald-700" : "text-neutral-900",
       )}>{value}</p>
-      {hint && <p className="mt-1 text-[11px] text-neutral-400">{hint}</p>}
+      {hint && <p className="mt-1 text-xs text-neutral-400">{hint}</p>}
     </>
   );
 
@@ -203,8 +203,8 @@ export function Field({ label, hint, error, required, children, className }: {
       </Label>
       {children}
       {error
-        ? <p className="mt-1 text-[11px] text-red-600">{error}</p>
-        : hint ? <p className="mt-1 text-[11px] text-neutral-400">{hint}</p> : null}
+        ? <p className="mt-1 text-xs text-red-600">{error}</p>
+        : hint ? <p className="mt-1 text-xs text-neutral-400">{hint}</p> : null}
     </div>
   );
 }
@@ -213,7 +213,7 @@ export function Badge({ className, tone = "neutral", ...props }: React.HTMLAttri
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset",
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
         tone === "neutral" && "bg-neutral-50 text-neutral-600 ring-neutral-200",
         tone === "green" && "bg-emerald-50 text-emerald-700 ring-emerald-200",
         tone === "amber" && "bg-amber-50 text-amber-700 ring-amber-200",
@@ -249,7 +249,7 @@ export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTab
   );
 }
 export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
-  return <th className={cn("whitespace-nowrap px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-neutral-400", className)} {...props} />;
+  return <th className={cn("whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400", className)} {...props} />;
 }
 /**
  * ช่องข้อมูลในตาราง
@@ -293,7 +293,7 @@ export function EmptyState({ title, hint, icon: Icon = Inbox, steps, action, sec
         <ol className="mt-5 w-full max-w-sm space-y-2 text-left">
           {steps.map((s, i) => (
             <li key={i} className="flex items-start gap-2.5 rounded-xl bg-neutral-50/80 px-3 py-2.5">
-              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-[11px] font-bold text-neutral-500 ring-1 ring-neutral-200">
+              <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-white text-xs font-bold text-neutral-500 ring-1 ring-neutral-200">
                 {i + 1}
               </span>
               <span className="text-[12.5px] leading-relaxed text-neutral-600">{s}</span>

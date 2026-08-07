@@ -122,7 +122,7 @@ export default async function PrintDocPage({ params, searchParams }: {
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[11px] text-red-600">
+          <p className="mt-2 text-xs text-red-600">
             เติมข้อมูลให้ครบแล้วเปิดหน้านี้ใหม่ ระบบจะออกใบที่ใช้ได้จริงให้ทันที
           </p>
         </div>
@@ -153,14 +153,14 @@ export default async function PrintDocPage({ params, searchParams }: {
                 {/* พิมพ์แค่ "ต้นฉบับ" เท่านั้น — ข้อความ "เอกสารออกเป็นชุด" ใช้ได้เฉพาะกรณีที่
                     ออกใบกำกับภาษีรวมชุดกับใบส่งของ/ใบเสร็จในการพิมพ์ครั้งเดียว ซึ่งระบบนี้ไม่ได้ทำ
                     ถ้าพิมพ์ทั้งที่ไม่ได้ออกเป็นชุด = ข้อความบนเอกสารไม่ตรงความจริง */}
-                {isTaxInvoice && <p className="text-[11px] font-medium text-neutral-500">ต้นฉบับ</p>}
+                {isTaxInvoice && <p className="text-xs font-medium text-neutral-500">ต้นฉบับ</p>}
               </div>
             </div>
 
             {/* ข้อมูลเอกสาร + ลูกค้า */}
             <div className="mt-4 flex justify-between gap-3 sm:gap-6">
               <div className="min-w-0 max-w-[58%]">
-                <p className="text-[11px] font-semibold text-neutral-400">ลูกค้า</p>
+                <p className="text-xs font-semibold text-neutral-400">ลูกค้า</p>
                 <p className="break-words font-semibold">{doc.contact_name ?? "-"}</p>
                 {doc.contact_address && <p className="whitespace-pre-wrap break-words text-neutral-600">{doc.contact_address}</p>}
                 {doc.contact_tax_id && (
@@ -185,13 +185,13 @@ export default async function PrintDocPage({ params, searchParams }: {
             {/* เหตุผลต้องพิมพ์บนหน้าเอกสาร ไม่ใช่เก็บไว้ในระบบเฉย ๆ */}
             {isNote && doc.note_reason && (
               <div className="mt-4 rounded-lg border border-neutral-300 px-3 py-2">
-                <p className="text-[11px] text-neutral-500">
+                <p className="text-xs text-neutral-500">
                   เหตุผลในการออก{DOC_TYPE_TH[doc.doc_type as DocType]}
                   {doc.doc_type === "credit_note" ? " (ประมวลรัษฎากร มาตรา 86/10)" : " (ประมวลรัษฎากร มาตรา 86/9)"}
                 </p>
                 <p className="mt-0.5 font-medium">{doc.note_reason}</p>
                 {originDoc && (
-                  <p className="mt-1 text-[11px] text-neutral-500">
+                  <p className="mt-1 text-xs text-neutral-500">
                     มูลค่าตามใบกำกับภาษีเดิม {Number(originDoc.total).toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท ·
                     มูลค่าที่{doc.doc_type === "credit_note" ? "ลด" : "เพิ่ม"} {Number(doc.total).toLocaleString("th-TH", { minimumFractionDigits: 2 })} บาท
                   </p>
@@ -205,7 +205,7 @@ export default async function PrintDocPage({ params, searchParams }: {
                 <col className="w-[7%]" /><col /><col className="w-[14%]" /><col className="w-[18%]" /><col className="w-[18%]" />
               </colgroup>
               <thead>
-                <tr className="border-b border-t border-neutral-900 text-[11px]">
+                <tr className="border-b border-t border-neutral-900 text-xs">
                   <th className="py-2 text-left font-semibold">#</th>
                   <th className="py-2 text-left font-semibold">รายการ</th>
                   <th className="py-2 text-right font-semibold">จำนวน</th>
@@ -269,7 +269,7 @@ export default async function PrintDocPage({ params, searchParams }: {
             </div>
 
             {/* ช่องเซ็น */}
-            <div className="mt-10 grid grid-cols-2 gap-4 text-center text-[11px] sm:mt-16 sm:gap-10 sm:text-[12px]">
+            <div className="mt-10 grid grid-cols-2 gap-4 text-center text-xs sm:mt-16 sm:gap-10 sm:text-[12px]">
               <div>
                 <div className="mx-auto w-full max-w-56 border-b border-dotted border-neutral-400 pb-8" />
                 <p className="mt-2">ผู้รับเอกสาร / วันที่</p>
@@ -314,7 +314,7 @@ function WhtCert({ doc, shopName, shopTaxId, shopAddress }: {
           <p className="text-[12px] text-neutral-500">ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร</p>
         </div>
         {/* เลขที่อ้างอิง — ผู้สอบบัญชี/สรรพากรใช้โยงกลับหาเอกสารต้นทางได้ */}
-        <div className="shrink-0 border border-neutral-300 px-3 py-1.5 text-right text-[11px]">
+        <div className="shrink-0 border border-neutral-300 px-3 py-1.5 text-right text-xs">
           <p className="text-neutral-400">เลขที่</p>
           <p className="font-semibold">{doc.doc_number}</p>
         </div>
@@ -322,14 +322,14 @@ function WhtCert({ doc, shopName, shopTaxId, shopAddress }: {
 
       <div className="mt-6 space-y-4">
         <section className="rounded border border-neutral-300 p-4">
-          <p className="text-[11px] font-semibold text-neutral-400">ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (ผู้จ่ายเงิน)</p>
+          <p className="text-xs font-semibold text-neutral-400">ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (ผู้จ่ายเงิน)</p>
           <p className="font-semibold">{shopName}</p>
           {shopAddress && <p className="whitespace-pre-wrap text-neutral-600">{shopAddress}</p>}
           {shopTaxId && <p className="text-neutral-600">เลขประจำตัวผู้เสียภาษี {shopTaxId}</p>}
         </section>
 
         <section className="rounded border border-neutral-300 p-4">
-          <p className="text-[11px] font-semibold text-neutral-400">ผู้ถูกหักภาษี ณ ที่จ่าย (ผู้รับเงิน)</p>
+          <p className="text-xs font-semibold text-neutral-400">ผู้ถูกหักภาษี ณ ที่จ่าย (ผู้รับเงิน)</p>
           <p className="font-semibold">{doc.contact_name ?? "-"}</p>
           {doc.contact_address && <p className="whitespace-pre-wrap text-neutral-600">{doc.contact_address}</p>}
           {doc.contact_tax_id && <p className="text-neutral-600">เลขประจำตัวผู้เสียภาษี {doc.contact_tax_id}</p>}
@@ -349,7 +349,7 @@ function WhtCert({ doc, shopName, shopTaxId, shopAddress }: {
 
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b border-t border-neutral-900 text-[11px]">
+            <tr className="border-b border-t border-neutral-900 text-xs">
               <th className="py-2 text-left">ประเภทเงินได้พึงประเมินที่จ่าย</th>
               <th className="py-2 text-right">วันที่จ่าย</th>
               <th className="py-2 text-right">จำนวนเงินที่จ่าย</th>
@@ -362,7 +362,7 @@ function WhtCert({ doc, shopName, shopTaxId, shopAddress }: {
               <td className="py-2">
                 {/* ประเภทเงินได้ตาม ม.40 — เดิมพิมพ์แค่ชื่อรายการ ทำให้นักบัญชีต้องมาจัดประเภทเองทุกใบ */}
                 <span className="font-semibold">{incomeLabel}</span>
-                <span className="block text-[11px] text-neutral-500">
+                <span className="block text-xs text-neutral-500">
                   {(doc.fin_doc_items ?? []).map((i) => i.name).join(", ").slice(0, 110) || "ค่าสินค้า/บริการ"}
                   {" · อ้างอิง "}{doc.doc_number}
                 </span>

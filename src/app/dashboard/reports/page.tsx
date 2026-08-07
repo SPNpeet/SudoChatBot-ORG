@@ -253,7 +253,7 @@ async function AgingTab({ shopId, supabase }: { shopId: string; supabase: SB }) 
           <div className="grid grid-cols-2 gap-2 px-5 sm:grid-cols-3 lg:grid-cols-5 pb-3">
             {Object.entries(buckets).map(([k, v]) => (
               <div key={k} className="rounded-xl bg-neutral-50 px-2 py-2 text-center">
-                <p className="text-[10px] text-neutral-400">{AGING_LABEL_TH[k]}</p>
+                <p className="text-xs text-neutral-400">{AGING_LABEL_TH[k]}</p>
                 <p className={cn("text-sm font-bold", k === "current" ? "text-neutral-700" : k === "d90up" ? "text-red-600" : "text-amber-600")}>{baht(v)}</p>
               </div>
             ))}
@@ -353,7 +353,7 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
               <p className={cn("text-lg font-bold", net >= 0 ? "text-amber-700" : "text-emerald-700")}>{bahtDoc(Math.abs(net))}</p>
             </div>
           </div>
-          <p className="mt-2 text-[11px] text-neutral-400">
+          <p className="mt-2 text-xs text-neutral-400">
             ภ.พ.30 ยื่นเป็นรายเดือน — ดูรายไตรมาส/ปีไว้ตรวจภาพรวม ตอนยื่นจริงเลือกงวด &quot;รายเดือน&quot; แล้วใช้ตัวเลขกรอกแบบบน e-filing ได้เลย
           </p>
         </CardContent>
@@ -482,13 +482,13 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
             )}
           </p>
           {due.shifted && (
-            <p className="mt-1 text-[11px] text-neutral-500">
+            <p className="mt-1 text-xs text-neutral-500">
               วันที่ {dateOnlyTH(due.paper_statutory)} ตรงวันหยุด — ตามกฎหมายเลื่อนเป็นวันทำการถัดไปคือ{" "}
               <b className="text-neutral-700">{dateOnlyTH(due.paper)}</b> แต่ระบบนับถอยหลังจากวันเดิมไว้ก่อนเพื่อความปลอดภัย
             </p>
           )}
           {/* บอกข้อจำกัดตรง ๆ ดีกว่าให้เขาเชื่อวันที่ผิด */}
-          <p className="mt-1 text-[11px] text-neutral-400">
+          <p className="mt-1 text-xs text-neutral-400">
             เลื่อนพ้นเสาร์-อาทิตย์ให้อัตโนมัติ ·{" "}
             {due.holidays_loaded
               ? "วันหยุดราชการปีนี้กรอกไว้ในระบบแล้ว"
@@ -518,15 +518,15 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
               </p>
               <ul className="mt-1.5 space-y-1">
                 {issues.slice(0, 8).map((it) => (
-                  <li key={it.docNumber} className="text-[11px] leading-relaxed text-amber-800">
+                  <li key={it.docNumber} className="text-xs leading-relaxed text-amber-800">
                     <b>{it.docNumber}</b> {it.contactName} — {it.problems.join(" · ")}
                   </li>
                 ))}
               </ul>
               {issues.length > 8 && (
-                <p className="mt-1 text-[11px] text-amber-700">และอีก {issues.length - 8} รายการ</p>
+                <p className="mt-1 text-xs text-amber-700">และอีก {issues.length - 8} รายการ</p>
               )}
-              <p className="mt-1.5 text-[11px] text-amber-700">
+              <p className="mt-1.5 text-xs text-amber-700">
                 แก้ได้ที่หน้า <Link href="/dashboard/contacts" className="font-semibold underline">ผู้ติดต่อ</Link> (ชื่อ ที่อยู่ เลขผู้เสียภาษี)
                 หรือเปิดเอกสารนั้นเพื่อแก้ประเภทเงินได้
               </p>
@@ -587,13 +587,13 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
           อันตรายกว่าไฟล์ถูกตีกลับ เพราะไฟล์ถูกตีกลับผู้ใช้รู้ทันที */}
       <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
         <p className="text-xs font-semibold text-amber-900">ตอนนำเข้าโปรแกรม RD Prep: ห้ามติ๊ก &quot;บรรทัดแรกชื่อคอลัมน์&quot;</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-amber-800">
+        <p className="mt-1 text-xs leading-relaxed text-amber-800">
           ไฟล์นี้เริ่มด้วยข้อมูลแถวแรกเลย ไม่มีบรรทัดหัวคอลัมน์ — ถ้าติ๊กช่องนั้น
           โปรแกรมจะกินเอกสารใบแรกไปเป็นหัวตาราง แบบยื่นจะขาดไปหนึ่งรายการโดยไม่มีคำเตือน ·
           ตั้งตัวคั่นเป็น <b>|</b> · รูปแบบวันที่ <b>dd/mm/yyyy</b> และเลือก <b>พ.ศ.</b>
         </p>
       </div>
-      <p className="text-[11px] text-neutral-400">
+      <p className="text-xs text-neutral-400">
         ภ.ง.ด.3/53 ยื่นรายเดือน — ไฟล์ .txt คั่นด้วย | เข้ารหัส TIS-620 วันที่ พ.ศ. (มาตรฐานโปรแกรมโอนย้ายข้อมูลสรรพากร) ·
         ก่อนยื่นรอบแรกให้ทดลองนำเข้าโปรแกรม RD Prep 1 ครั้งเพื่อยืนยันลำดับคอลัมน์ตรงเวอร์ชันล่าสุด · หนังสือรับรอง 50 ทวิ พิมพ์ได้จากตาราง
       </p>

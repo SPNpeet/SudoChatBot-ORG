@@ -186,7 +186,7 @@ export default function ImportClient({ shopId }: { shopId: string }) {
             )}
           </div>
           {err && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{err}</p>}
-          <p className="mt-4 text-[11px] text-neutral-400">
+          <p className="mt-4 text-xs text-neutral-400">
             ตัวอย่างหัวตารางที่ระบบจับคู่ให้อัตโนมัติ: ชื่อสินค้า · ราคา · สต๊อก · SKU · หมวดหมู่ · รายละเอียด (สลับลำดับ/ภาษาอังกฤษก็ได้)
           </p>
         </CardContent>
@@ -205,7 +205,7 @@ export default function ImportClient({ shopId }: { shopId: string }) {
             <div className="grid gap-2 sm:grid-cols-3">
               {Object.keys(FIELD_LABELS).map((f) => (
                 <div key={f}>
-                  <p className="mb-1 text-[11px] text-neutral-400">{FIELD_LABELS[f]}</p>
+                  <p className="mb-1 text-xs text-neutral-400">{FIELD_LABELS[f]}</p>
                   <Select value={mapping[f] ?? -1}
                     onChange={(e) => {
                       const v = Number(e.target.value);
@@ -235,7 +235,7 @@ export default function ImportClient({ shopId }: { shopId: string }) {
           <div className="max-h-[26rem] overflow-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-white shadow-[0_1px_0_0_#e5e5e5]">
-                <tr className="text-left text-[11px] text-neutral-400">
+                <tr className="text-left text-xs text-neutral-400">
                   <th className="px-3 py-2">
                     <input type="checkbox" checked={includedCount === previewRows.length && previewRows.length > 0}
                       onChange={(e) => {
@@ -258,7 +258,7 @@ export default function ImportClient({ shopId }: { shopId: string }) {
                     <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" value={r.price} onChange={(e) => setPreviewRow(i, { price: Number(e.target.value) })} className="h-8 w-24 text-xs" /></td>
                     <td className="px-2 py-1.5"><Input type="number" min={0} value={r.stock ?? 0} onChange={(e) => setPreviewRow(i, { stock: Math.max(0, parseInt(e.target.value || "0", 10) || 0) })} className="h-8 w-20 text-xs" /></td>
                     <td className="px-2 py-1.5"><Input value={r.description ?? ""} onChange={(e) => setPreviewRow(i, { description: e.target.value || undefined })} className="h-8 min-w-44 text-xs" /></td>
-                    <td className="px-2 py-1.5 text-[11px] text-sky-600">
+                    <td className="px-2 py-1.5 text-xs text-sky-600">
                       {r.variants?.length ? `${r.variants.length} ตัวเลือก: ${r.variants.map((v) => v.name).join(", ").slice(0, 40)}` : "-"}
                     </td>
                   </tr>

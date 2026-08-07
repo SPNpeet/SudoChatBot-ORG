@@ -28,7 +28,7 @@ export default function FeedbackRow({ id, message, page, shopName, createdAt, st
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm">{message}</p>
-          <p className="mt-1 text-[11px] text-neutral-400">
+          <p className="mt-1 text-xs text-neutral-400">
             {shopName} · {page ?? "-"} · {dateTH(createdAt)} · <Badge tone={STATUS_TONE[localStatus] ?? "neutral"}>{STATUS_TH[localStatus] ?? localStatus}</Badge>
           </p>
         </div>

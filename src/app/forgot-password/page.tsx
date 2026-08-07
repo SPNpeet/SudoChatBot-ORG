@@ -88,7 +88,7 @@ export default function ForgotPasswordPage() {
               <p className="mt-5 text-center text-xs text-neutral-500">
                 นึกออกแล้ว? <Link href="/login" className="inline-flex min-h-[44px] items-center font-semibold text-emerald-700 hover:underline">กลับไปเข้าสู่ระบบ</Link>
               </p>
-              <p className="mt-2 text-center text-[11px] leading-relaxed text-neutral-400">
+              <p className="mt-2 text-center text-xs leading-relaxed text-neutral-400">
                 สมัครด้วยบัญชี Google ก็ขอลิงก์นี้ได้ — ตั้งรหัสแล้วจะเข้าได้ทั้งสองทาง เผื่อวันไหนเข้าบัญชี Google ไม่ได้
               </p>
             </>

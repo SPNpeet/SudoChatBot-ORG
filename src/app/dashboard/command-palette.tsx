@@ -126,7 +126,7 @@ export default function CommandPalette({ shopId }: { shopId: string }) {
         )}>
         <Search className="h-3.5 w-3.5" />
         <span>ค้นหา</span>
-        <kbd className="rounded border border-neutral-200 bg-neutral-50 px-1 py-px font-sans text-[10px] text-neutral-400">Ctrl K</kbd>
+        <kbd className="rounded border border-neutral-200 bg-neutral-50 px-1 py-px font-sans text-xs text-neutral-400">Ctrl K</kbd>
       </button>
 
       {!open ? null : (
@@ -155,7 +155,7 @@ export default function CommandPalette({ shopId }: { shopId: string }) {
                 const head = i === 0 || results[i - 1].group !== r.group;
                 return (
                   <div key={r.id}>
-                    {head && <p className="px-3 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">{r.group}</p>}
+                    {head && <p className="px-3 pb-1 pt-2.5 text-xs font-semibold uppercase tracking-wider text-neutral-400">{r.group}</p>}
                     <button type="button" onClick={() => go(r)} onMouseEnter={() => setCursor(i)}
                       className={cn(
                         "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm transition-colors",
@@ -173,7 +173,7 @@ export default function CommandPalette({ shopId }: { shopId: string }) {
               })}
             </div>
 
-            <div className="hidden items-center gap-3 border-t border-neutral-100 px-4 py-2 text-[11px] text-neutral-400 sm:flex">
+            <div className="hidden items-center gap-3 border-t border-neutral-100 px-4 py-2 text-xs text-neutral-400 sm:flex">
               <span>↑↓ เลื่อน</span><span>Enter เปิด</span><span>Esc ปิด</span>
             </div>
           </div>

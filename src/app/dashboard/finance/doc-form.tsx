@@ -287,7 +287,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
                 <p className="flex items-center gap-1.5 text-xs font-bold text-red-700">
                   <TriangleAlert className="h-3.5 w-3.5 shrink-0" />ยอดไม่ตรงกับที่พิมพ์ไว้ท้ายบิล — มีตัวเลขอ่านผิดแน่นอน
                 </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-red-600">
+                <p className="mt-1 text-xs leading-relaxed text-red-600">
                   ท้ายบิลเขียนว่า <b>{baht(ocrMismatch.ocrTotal)}</b> แต่รวมจากรายการด้านล่างได้ <b>{baht(totals.total)}</b>
                   {" "}(ต่างกัน {baht(ocrMismatch.diff)}) — เทียบกับบิลจริงแล้วแก้ราคา/จำนวนให้ตรงก่อนบันทึก
                 </p>
@@ -299,7 +299,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
                   <TriangleAlert className="h-3.5 w-3.5 shrink-0" />ตรวจตัวเลขก่อนบันทึกนะ — บิลนี้อ่านได้ไม่ชัดทั้งหมด
                 </p>
                 <ul className="mt-1 space-y-0.5">
-                  {aiWarn.map((w, i) => <li key={i} className="text-[11px] leading-relaxed text-amber-700">• {w}</li>)}
+                  {aiWarn.map((w, i) => <li key={i} className="text-xs leading-relaxed text-amber-700">• {w}</li>)}
                 </ul>
               </div>
             )}
@@ -417,7 +417,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
             )}
             {/* คำกำกับใต้ช่อง — บอกกติกาไว้ก่อนที่ผู้ใช้จะกดบันทึกแล้วเจอ error
                 ข้อความสั้นตรงจุดที่กรอก ได้ผลกว่าข้อความยาวท้ายฟอร์มที่คนไม่อ่าน */}
-            <p className={cn("mt-1.5 text-[11px] leading-relaxed",
+            <p className={cn("mt-1.5 text-xs leading-relaxed",
               showRowErrors ? "font-medium text-red-600" : "text-neutral-400")}>
               ต้องกรอก <b>ชื่อรายการ · จำนวน · ราคา/หน่วย</b> ให้ครบอย่างน้อย 1 บรรทัด — ยอดรวมต้องมากกว่า 0 ระบบถึงลงบัญชีให้ได้
             </p>
@@ -481,7 +481,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
                   ไม่ต้องหัก
                 </button>
               </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-400">
+              <p className="mt-1.5 text-xs leading-relaxed text-neutral-400">
                 อัตราพวกนี้เป็น <b>ตัวช่วยกรอกสำหรับกรณีที่เจอบ่อย</b> — อัตราจริงขึ้นกับว่าผู้รับเงินเป็นบุคคลธรรมดาหรือนิติบุคคลด้วย
                 ปรับเองได้ที่ช่อง &ldquo;หัก ณ ที่จ่าย&rdquo; และควรให้ผู้ทำบัญชียืนยันก่อนยื่น
               </p>
@@ -494,7 +494,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
               <Select value={incomeType} onChange={(e) => setIncomeType(e.target.value)}>
                 {WHT_INCOME_TYPES.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
               </Select>
-              <p className="mt-1 text-[11px] text-neutral-400">
+              <p className="mt-1 text-xs text-neutral-400">
                 ไม่แน่ใจให้เลือก <b>40(8)</b> — ค่าบริการทั่วไปของธุรกิจเข้าหมวดนี้เกือบทั้งหมด
               </p>
             </div>
@@ -513,7 +513,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
                 <option value="delivery">ขายสินค้า / ส่งมอบแล้ว — ยื่นภาษีขายเดือนที่ออกใบนี้ (ม.78)</option>
                 <option value="payment">งานบริการ ขายเชื่อ — ยื่นภาษีขายเดือนที่ลูกค้าจ่ายเงิน (ม.78/1)</option>
               </Select>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-400">
+              <p className="mt-1.5 text-xs leading-relaxed text-neutral-400">
                 {taxPoint === "delivery"
                   ? "ใบนี้เป็นใบกำกับภาษีทันที ภาษีขายเข้า ภ.พ.30 ของเดือนนี้เลย · ใบที่มีทั้งสินค้าและบริการให้ใช้ตัวเลือกนี้ (กฎหมายรองรับ เพราะออกใบกำกับภาษีก่อน = ความรับผิดเกิดทันที)"
                   : "ใบนี้เป็นใบแจ้งหนี้เฉย ๆ ยังไม่ใช่ใบกำกับภาษี · ระบบพักภาษีขายไว้ที่บัญชี 2035 แล้วย้ายเข้าภาษีขายจริงตอนรับเงิน ใบกำกับภาษีออกตอนออกใบเสร็จ"}
@@ -600,7 +600,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
               {pending ? "กำลังบันทึก..." : `ออก${DOC_TYPE_TH[docType]}`}
             </Button>
           </div>
-          <p className="text-right text-[11px] text-neutral-400">
+          <p className="text-right text-xs text-neutral-400">
             ออกเอกสารแล้วระบบลงสมุดรายวัน (เดบิต/เครดิต){docType !== "quotation" ? " และอัปเดตลูกหนี้/เจ้าหนี้/สต๊อก" : ""} ให้อัตโนมัติ
           </p>
         </CardContent>

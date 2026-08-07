@@ -64,7 +64,7 @@ export default function SystemAlertCard({ active }: { active: AlertRow[] }) {
                   <input type="radio" name="level" value={l.v} defaultChecked={i === 0} className="mt-0.5 accent-emerald-600" />
                   <span>
                     <span className="block text-xs font-medium">{l.label}</span>
-                    <span className="block text-[10px] text-neutral-400">{l.hint}</span>
+                    <span className="block text-xs text-neutral-400">{l.hint}</span>
                   </span>
                 </label>
               ))}
@@ -78,7 +78,7 @@ export default function SystemAlertCard({ active }: { active: AlertRow[] }) {
             <Label>รายละเอียด (ไม่บังคับ)</Label>
             <Textarea name="body" rows={3} maxLength={500} placeholder="เช่น กำลังแก้ไข คาดว่าใช้งานได้ปกติภายใน 1 ชม. งานคีย์เอกสารเองยังใช้ได้ตามปกติ" />
           </div>
-          <p className="text-[11px] text-neutral-400">
+          <p className="text-xs text-neutral-400">
             ส่งแล้วลูกค้าจะเห็นแบนเนอร์ในแอปทันที + ได้รับแจ้งเตือนทาง LINE และบนเครื่อง (เฉพาะคนที่เปิดไว้)
           </p>
           <Button disabled={pending}>{pending ? "กำลังส่ง..." : "ส่งประกาศถึงลูกค้าทุกคน"}</Button>

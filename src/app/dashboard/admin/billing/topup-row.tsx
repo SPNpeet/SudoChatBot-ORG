@@ -27,7 +27,7 @@ export default function TopupRow({ id, shopName, amount, status, createdAt, slip
             {/* บอกให้ชัดว่ากดยืนยันแล้วจะเปิดแพ็กด้วย ไม่ใช่แค่เครดิตเข้า */}
             {planLabel && <> · <Badge tone="blue">{planLabel}</Badge></>}
           </p>
-          <p className="text-[11px] text-neutral-400">{dateTH(createdAt)} · <Badge tone={status === "verifying" ? "amber" : "neutral"}>{status === "verifying" ? "อัปโหลดสลิปแล้ว" : "รอชำระ"}</Badge>
+          <p className="text-xs text-neutral-400">{dateTH(createdAt)} · <Badge tone={status === "verifying" ? "amber" : "neutral"}>{status === "verifying" ? "อัปโหลดสลิปแล้ว" : "รอชำระ"}</Badge>
             {slipUrl && <> · <a href={slipUrl} target="_blank" rel="noreferrer" className="text-sky-600">ดูสลิป</a></>}</p>
         </div>
         <div className="flex gap-1.5">

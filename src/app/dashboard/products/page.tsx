@@ -67,7 +67,7 @@ export default async function ProductsPage() {
                         )}
                         <div>
                           <p className="font-medium">{p.name}</p>
-                          {p.category && <p className="text-[11px] text-neutral-400">{p.category}</p>}
+                          {p.category && <p className="text-xs text-neutral-400">{p.category}</p>}
                         </div>
                       </div>
                     </Td>

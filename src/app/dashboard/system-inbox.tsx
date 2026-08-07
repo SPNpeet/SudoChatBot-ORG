@@ -70,7 +70,7 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
         {variant === "row" && <span className="flex-1 text-left">กล่องจดหมาย</span>}
         {unread > 0 && (
           <span className={cn(
-            "grid min-w-[18px] place-items-center rounded-full px-1 text-[10px] font-bold leading-[18px] text-white",
+            "grid min-w-[18px] place-items-center rounded-full px-1 text-xs font-bold leading-[18px] text-white",
             worst === "critical" ? "bg-red-600" : worst === "warn" ? "bg-amber-600" : "bg-blue-600",
             variant === "icon" && "absolute right-1 top-1.5",
           )}>{unread > 9 ? "9+" : unread}</span>

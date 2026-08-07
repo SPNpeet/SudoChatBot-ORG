@@ -37,7 +37,7 @@ function Stat({ label, value, sub, icon: Icon, tone = "neutral" }: {
       <CardContent className="pt-5">
         <p className="flex items-center gap-1.5 text-xs text-neutral-400"><Icon className="h-3.5 w-3.5" /> {label}</p>
         <p className={`mt-1 text-2xl font-bold tracking-tight ${color}`}>{value}</p>
-        {sub && <p className="text-[11px] text-neutral-400">{sub}</p>}
+        {sub && <p className="text-xs text-neutral-400">{sub}</p>}
       </CardContent>
     </Card>
   );
@@ -157,7 +157,7 @@ export default async function PlatformStatsPage() {
               {(fbRows as unknown as { message: string; page: string | null; created_at: string; shops: { name: string } | null }[]).map((f, i) => (
                 <div key={i} className="rounded-xl border border-neutral-100 px-4 py-2.5">
                   <p className="text-sm">{f.message}</p>
-                  <p className="mt-1 text-[11px] text-neutral-400">{f.shops?.name ?? "-"} · {f.page ?? "-"} · {dateTH(f.created_at)}</p>
+                  <p className="mt-1 text-xs text-neutral-400">{f.shops?.name ?? "-"} · {f.page ?? "-"} · {dateTH(f.created_at)}</p>
                 </div>
               ))}
             </div>

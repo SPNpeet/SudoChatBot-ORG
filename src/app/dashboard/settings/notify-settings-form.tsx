@@ -97,7 +97,7 @@ export default function NotifySettingsForm({ shopId, platformReady, oaBasicId, l
             className="mt-3 inline-flex items-center gap-2 rounded-xl bg-[#06C755] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95">
             <MessageCircle className="h-4 w-4" /> เชื่อมต่อ LINE
           </a>
-          <p className="mt-2 text-[11px] text-neutral-400">
+          <p className="mt-2 text-xs text-neutral-400">
             ระบบจะขอให้เพิ่มบัญชีทางการ{oaBasicId ? ` ${oaBasicId}` : ""} เป็นเพื่อนในขั้นตอนเดียวกัน (จำเป็นเพื่อให้ส่งข้อความหาคุณได้)
           </p>
         </div>
@@ -111,7 +111,7 @@ export default function NotifySettingsForm({ shopId, platformReady, oaBasicId, l
       <details className="rounded-xl border border-neutral-200 p-3">
         <summary className="flex min-h-[44px] cursor-pointer items-center text-xs font-medium text-neutral-600">ตั้งค่าขั้นสูง — ใช้ LINE OA ของกิจการเอง</summary>
         <form action={saveOwn} className="mt-3 space-y-3">
-          <p className="text-[11px] leading-relaxed text-neutral-400">
+          <p className="text-xs leading-relaxed text-neutral-400">
             เหมาะกับกิจการที่อยากให้ข้อความมาจากบัญชีทางการของตัวเอง หรืออยากส่งเข้ากลุ่ม LINE ของทีม —
             สร้าง LINE Official Account ฟรีที่ developers.line.biz → เปิด Messaging API → คัดลอก Channel access token
             แล้วเพิ่มบอทเป็นเพื่อน/ดึงเข้ากลุ่มปลายทาง

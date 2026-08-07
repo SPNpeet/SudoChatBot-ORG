@@ -30,7 +30,7 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
         <p className="mt-1 text-sm text-neutral-500">
           อาจเป็นปัญหาเครือข่ายชั่วคราว ลองใหม่ได้เลย — ข้อมูลของร้านคุณปลอดภัยไม่หายไปไหน
         </p>
-        {error.digest && <p className="mt-2 text-[11px] text-neutral-300">รหัสอ้างอิง: {error.digest}</p>}
+        {error.digest && <p className="mt-2 text-xs text-neutral-300">รหัสอ้างอิง: {error.digest}</p>}
         <div className="mt-4 flex justify-center gap-2">
           <button onClick={reset}
             className="h-10 rounded-xl bg-emerald-600 px-5 text-sm font-medium text-white hover:bg-emerald-500">

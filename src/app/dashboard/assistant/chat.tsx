@@ -512,7 +512,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
                 ))}
               </div>
 
-              <p className="mx-auto mt-4 hidden max-w-md items-start justify-center gap-1.5 text-center text-[11px] leading-relaxed text-neutral-400 sm:flex">
+              <p className="mx-auto mt-4 hidden max-w-md items-start justify-center gap-1.5 text-center text-xs leading-relaxed text-neutral-400 sm:flex">
                 <Paperclip className="mt-[1px] h-3 w-3 shrink-0" />
                 แนบรูปบิลได้ทีละหลายใบ พิมพ์กำกับได้ เช่น &ldquo;ค่าเช่า ยังไม่จ่าย&rdquo; · ตัวเลขไม่ชัดระบบจะถามก่อนบันทึกเสมอ
               </p>
@@ -522,7 +522,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
 
         {msgs.length > 0 && (
           <div className="flex justify-end">
-            <button onClick={clearChat} className="inline-flex items-center gap-1 text-[11px] text-neutral-400 hover:text-red-600">
+            <button onClick={clearChat} className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-red-600">
               <Trash2 className="h-3 w-3" /> ล้างแชท
             </button>
           </div>
@@ -550,7 +550,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
                 </div>
               )}
               {!m.images?.length && m.fileNames && m.fileNames.length > 0 && (
-                <p className="mb-1 flex items-center gap-1 text-[11px] opacity-70">
+                <p className="mb-1 flex items-center gap-1 text-xs opacity-70">
                   <Paperclip className="h-3 w-3" /> {m.fileNames.join(", ")}
                 </p>
               )}
@@ -568,7 +568,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
                 </div>
               )}
               {m.toolCalls && m.toolCalls.length > 0 && (
-                <p className="mt-1 text-[10px] text-neutral-400">{m.toolCalls.map((t) => t.label).join(" · ")}</p>
+                <p className="mt-1 text-xs text-neutral-400">{m.toolCalls.map((t) => t.label).join(" · ")}</p>
               )}
               {/* ปุ่มตอบ AI — โชว์เฉพาะข้อความล่าสุด กันกดย้อนอดีตแล้วสับสน */}
               {m.choices && m.choices.length > 0 && i === msgs.length - 1 && !busy && !reading && (
@@ -626,8 +626,8 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
         {pendingFiles.length > 0 && (
           <div className="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2">
             <div className="mb-1.5 flex items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold text-emerald-800">แนบไว้ {pendingFiles.length} ใบ — พิมพ์สั่งกำกับได้ เช่น &ldquo;ทั้งหมดยังไม่จ่าย&rdquo;</p>
-              <button type="button" onClick={() => setPendingFiles([])} className="shrink-0 text-[11px] text-emerald-700 underline">เอาออกทั้งหมด</button>
+              <p className="text-xs font-semibold text-emerald-800">แนบไว้ {pendingFiles.length} ใบ — พิมพ์สั่งกำกับได้ เช่น &ldquo;ทั้งหมดยังไม่จ่าย&rdquo;</p>
+              <button type="button" onClick={() => setPendingFiles([])} className="shrink-0 text-xs text-emerald-700 underline">เอาออกทั้งหมด</button>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {pendingFiles.map((f, i) => (

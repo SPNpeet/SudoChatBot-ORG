@@ -91,7 +91,7 @@ export default function AccountMenu({ me, signOut, variant = "row" }: {
   const Avatar = ({ big }: { big?: boolean }) => (
     <span aria-hidden className={cn(
       "grid shrink-0 place-items-center rounded-full bg-emerald-600 font-semibold text-white",
-      big ? "h-10 w-10 text-sm" : "h-8 w-8 text-[11px]",
+      big ? "h-10 w-10 text-sm" : "h-8 w-8 text-xs",
     )}>{initials}</span>
   );
 
@@ -111,7 +111,7 @@ export default function AccountMenu({ me, signOut, variant = "row" }: {
                 ชื่อซ้ำกันได้ จึงต้องเห็นอีเมลโดยไม่ต้องกดอะไรเลย */}
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13px] font-medium text-neutral-800">{me.name?.trim() || "ยังไม่ได้ตั้งชื่อ"}</span>
-              <span className="block truncate text-[11px] text-neutral-400">{me.email ?? "—"}</span>
+              <span className="block truncate text-xs text-neutral-400">{me.email ?? "—"}</span>
             </span>
             <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
           </>
@@ -129,17 +129,17 @@ export default function AccountMenu({ me, signOut, variant = "row" }: {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-neutral-900">{me.name?.trim() || "ยังไม่ได้ตั้งชื่อ"}</p>
                 {/* break-all เพราะอีเมลบริษัทไทยยาวเกินกล่องบ่อย — ตัดท้ายทิ้งแล้วระบุตัวไม่ได้ */}
-                <p className="break-all text-[11px] leading-snug text-neutral-500">{me.email ?? "ไม่มีอีเมล"}</p>
+                <p className="break-all text-xs leading-snug text-neutral-500">{me.email ?? "ไม่มีอีเมล"}</p>
               </div>
             </div>
 
             <div className="border-b border-neutral-100 px-4 py-2.5">
-              <p className="text-[11px] leading-relaxed text-neutral-500">
+              <p className="text-xs leading-relaxed text-neutral-500">
                 กำลังทำงานในกิจการ <b className="text-neutral-700">{me.shopName}</b>
                 {" "}สิทธิ์ <b className="text-neutral-700">{roleLabel(me.role)}</b>
               </p>
               {/* บอกให้รู้ว่าการกระทำถูกบันทึกในชื่อนี้ — คนที่ใช้เครื่องร่วมกันจะได้เช็คก่อนลงบัญชี */}
-              <p className="mt-1 text-[10px] leading-relaxed text-neutral-400">
+              <p className="mt-1 text-xs leading-relaxed text-neutral-400">
                 เอกสารที่บันทึกจะถูกประทับชื่อบัญชีนี้ไว้ในประวัติการแก้ไข
               </p>
             </div>

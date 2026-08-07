@@ -71,7 +71,7 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
               placeholder="ตามแพ็ก" title="เพดานงาน AI/วัน เฉพาะกิจการนี้ — ว่าง = ใช้ตามแพ็กเกจ"
               className="h-8 w-20 rounded-lg border border-neutral-300 px-2 text-xs outline-none focus:border-emerald-500" />
             <button onClick={saveQuota} disabled={pending}
-              className="h-8 rounded-lg bg-neutral-900 px-2.5 text-[11px] text-white hover:bg-neutral-700 disabled:opacity-40">
+              className="h-8 rounded-lg bg-neutral-900 px-2.5 text-xs text-white hover:bg-neutral-700 disabled:opacity-40">
               {savedQuota ? "บันทึกแล้ว" : "บันทึก"}
             </button>
           </div>
@@ -90,7 +90,7 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
               </span>
               <span className="text-neutral-400"> · เดือน {usage.used_month}{usage.cap_month ? `/${usage.cap_month}` : ""}</span>
               {/* OCR แยกบรรทัด — แพงกว่าคำสั่งแชท ~8 เท่า (0.72฿ vs 0.09฿) ต้องเห็นถึงคุมต้นทุนถูก */}
-              <span className="block text-[11px] text-neutral-400">
+              <span className="block text-xs text-neutral-400">
                 OCR เดือนนี้ {ocr?.month ?? 0} · สะสม {ocr?.total ?? 0}
               </span>
             </>

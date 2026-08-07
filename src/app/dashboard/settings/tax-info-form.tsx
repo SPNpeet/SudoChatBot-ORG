@@ -34,12 +34,12 @@ export default function TaxInfoForm({ shopId, taxInfo }: {
       <div className="sm:max-w-xs">
         <Label>สำนักงานใหญ่หรือสาขา</Label>
         <Input name="branch" defaultValue={taxInfo?.branch ?? "สำนักงานใหญ่"} placeholder="สำนักงานใหญ่" maxLength={40} />
-        <p className="mt-1 text-[11px] text-neutral-400">
+        <p className="mt-1 text-xs text-neutral-400">
           ถ้าเป็นสาขา พิมพ์เลขสาขาได้เลย เช่น <b>1</b> ระบบจะแปลงเป็น &ldquo;สาขาที่ 00001&rdquo; ให้เอง
         </p>
       </div>
 
-      <p className="rounded-xl bg-neutral-50 px-3 py-2 text-[11px] leading-relaxed text-neutral-500">
+      <p className="rounded-xl bg-neutral-50 px-3 py-2 text-xs leading-relaxed text-neutral-500">
         3 อย่างนี้ (ชื่อจดทะเบียน · เลขผู้เสียภาษี 13 หลัก · ที่อยู่) กฎหมายบังคับว่าต้องมีบนใบกำกับภาษีเต็มรูป
         ตามมาตรา 86/4 ประมวลรัษฎากร — ขาดข้อใดข้อหนึ่ง ลูกค้าเอาใบไปขอคืนภาษีซื้อไม่ได้
       </p>

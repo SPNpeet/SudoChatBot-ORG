@@ -85,20 +85,20 @@ export default async function IntegrityCard({ shopId }: { shopId?: string }) {
                 {r.severity === "critical" ? "ต้องแก้ทันที" : "ควรตรวจ"} · {r.title} ({r.bad_count})
               </p>
               {r.detail && (
-                <p className={`mt-0.5 break-words text-[11px] leading-relaxed ${
+                <p className={`mt-0.5 break-words text-xs leading-relaxed ${
                   r.severity === "critical" ? "text-red-600" : "text-amber-700"}`}>
                   {r.detail}
                 </p>
               )}
               {HOW_TO_FIX[r.code] && (
-                <p className={`mt-1.5 text-[11px] leading-relaxed ${
+                <p className={`mt-1.5 text-xs leading-relaxed ${
                   r.severity === "critical" ? "text-red-700" : "text-amber-800"}`}>
                   <b>วิธีแก้ที่ปลอดภัย:</b> {HOW_TO_FIX[r.code]}
                 </p>
               )}
             </div>
           ))}
-          <p className="pt-1 text-[11px] leading-relaxed text-neutral-400">
+          <p className="pt-1 text-xs leading-relaxed text-neutral-400">
             ระบบตรวจอย่างเดียว ไม่แก้ข้อมูลให้เอง — การซ่อมอัตโนมัติในงานบัญชี
             อันตรายกว่าให้คนเห็นแล้วตัดสินใจ · <b>ห้ามแก้ตัวเลขในฐานข้อมูลตรง ๆ
             เพื่อให้คำเตือนหาย</b> เพราะเอกสารจะไม่ตรงกับสมุดรายวันและไม่มีร่องรอยการแก้

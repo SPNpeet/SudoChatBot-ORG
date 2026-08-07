@@ -113,7 +113,7 @@ export default function LandingSandboxChat() {
             }>{m.text}</p>
           </div>
         ))}
-        {busy && <p className="text-[11px] text-neutral-400"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> กำลังตอบ...</p>}
+        {busy && <p className="text-xs text-neutral-400"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> กำลังตอบ...</p>}
         <div ref={bottomRef} />
       </div>
 
@@ -136,7 +136,7 @@ export default function LandingSandboxChat() {
           </button>
         </form>
       )}
-      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-[11px] text-red-600">{error}</p>}
+      {error && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
