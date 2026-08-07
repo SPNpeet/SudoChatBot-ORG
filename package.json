@@ -13,7 +13,8 @@
     "backup:verify": "tsx scripts/verify-backup.mjs",
     "verify": "npm run typecheck && npm run check && npm run check:ui && npm run check:migrations && npm run check:actions && npm run build",
     "check:migrations": "tsx scripts/check-migrations.mjs",
-    "check:actions": "tsx scripts/check-server-actions.mjs"
+    "check:actions": "tsx scripts/check-server-actions.mjs",
+    "check:ui:auth": "tsx scripts/check-logged-in-ui.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
