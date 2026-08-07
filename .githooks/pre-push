@@ -44,6 +44,12 @@ if ! npm run check:migrations; then
   exit 1
 fi
 
+if ! npm run check:actions; then
+  echo ""
+  echo "  หยุด: มี Server Action ที่แตะข้อมูลโดยไม่มีด่านสิทธิ์ — ห้าม push"
+  exit 1
+fi
+
 echo ""
-echo "  ผ่าน 4 ด่าน (typecheck · บัญชี · UI · ลำดับ migration) — build จะถูกตรวจอีกรอบที่ Vercel"
+echo "  ผ่าน 5 ด่าน (typecheck · บัญชี · UI · ลำดับ migration · สิทธิ์ Server Action) — build จะถูกตรวจอีกรอบที่ Vercel"
 echo ""

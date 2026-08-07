@@ -54,6 +54,18 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
     for (const s of signed ?? []) if (s.signedUrl && s.path) urlMap.set(s.path, s.signedUrl);
   }
 
+  // ⚠️ สลิปที่ "ลูกค้าส่งมาแต่ยังไม่ได้บันทึกรับเงิน" ต้องโผล่ที่นี่ (เพิ่ม 6 ส.ค. 2569)
+  // เส้นทางโหมด manual เก็บสลิปไว้ใน fin_doc_files ไม่ได้ผูกกับ fin_payments
+  // เพราะยังไม่มีอะไรยืนยันว่าสลิปจริง จึงห้ามแตะยอดค้าง
+  // ถ้าไม่แสดงตรงนี้ ร้านจะไม่มีวันเห็นสลิปใบนั้นเลย = ลูกค้าส่งไปในความว่างเปล่า
+  const { data: attachRows } = await svc.from("fin_doc_files")
+    .select("path,name,created_at").eq("doc_id", id).order("created_at");
+  const attachments: { url: string; name: string }[] = [];
+  for (const r of attachRows ?? []) {
+    const { data: signed } = await svc.storage.from("slips").createSignedUrl(r.path as string, 3600);
+    if (signed?.signedUrl) attachments.push({ url: signed.signedUrl, name: (r.name as string) || "ไฟล์แนบ" });
+  }
+
   const outstanding = docOutstanding(doc);
   const isMoneyDoc = doc.doc_type === "invoice";
 
@@ -145,6 +157,25 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
             <Link key={r.id} href={`/dashboard/sales/${r.id}`} className="mr-2 text-emerald-700 hover:underline">{r.doc_number}</Link>
           ))}
         </p>
+      )}
+
+      {/* สลิปที่ลูกค้าส่งมาเอง — ยังไม่ได้บันทึกรับเงิน ต้องให้ร้านตรวจแล้วกดเอง
+          วางไว้ "เหนือ" ประวัติรับเงิน เพราะนี่คือสิ่งที่ยังไม่ได้ทำ ไม่ใช่สิ่งที่ทำไปแล้ว */}
+      {attachments.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>สลิปจากลูกค้า — รอคุณยืนยัน</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-xs leading-relaxed text-neutral-500">
+              ลูกค้าส่งสลิปมาผ่านลิงก์เอกสาร ระบบยังไม่ได้บันทึกรับเงินให้ — เปิดดูสลิปแล้วกด &ldquo;บันทึกรับเงิน&rdquo; ถ้ายอดถูกต้อง
+            </p>
+            {attachments.map((a) => (
+              <a key={a.url} href={a.url} target="_blank" rel="noopener"
+                className="flex min-h-[44px] items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50/60 px-3 text-sm font-medium text-amber-900 hover:bg-amber-50">
+                {a.name}<span className="text-xs font-normal text-amber-700">เปิดดู →</span>
+              </a>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {(payments ?? []).length > 0 && (

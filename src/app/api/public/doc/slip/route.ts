@@ -82,8 +82,40 @@ export async function POST(request: Request) {
     const pfReady = !!pfRow?.slip_provider && pfRow.slip_provider !== "manual" && !!pfKey;
     const provider = shopReady ? pay!.slip_provider : pfReady ? pfRow!.slip_provider : null;
     const slipKey = shopReady ? shopKey : pfReady ? pfKey : null;
+    // ⚠️ ไม่มีผู้ให้บริการตรวจสลิป ≠ ห้ามลูกค้าส่งสลิป (แก้ 6 ส.ค. 2569)
+    //
+    // เดิมตรงนี้ปฏิเสธทิ้งแล้วบอกว่า "ส่งสลิปให้ร้านโดยตรง" ซึ่งเป็นทางตันสองชั้น:
+    //  1. หน้าเว็บไม่โชว์ช่องอัปโหลดเลยด้วยซ้ำ ลูกค้าจึงไม่มีทางส่งผ่านระบบได้
+    //  2. "ส่งให้ร้านโดยตรง" คือช่องทางไหนก็ไม่รู้ — หน้านั้นไม่มีเบอร์ ไม่มีไลน์
+    // ผลจริง: ตราบใดที่ยังไม่ได้ตั้งคีย์ SlipOK ลูกค้าของ **ทุกร้าน** ส่งสลิปผ่านระบบไม่ได้เลย
+    //
+    // โหมด manual แปลว่า "คนตรวจ" ไม่ใช่ "ห้ามส่ง" — เก็บสลิปไว้ให้ร้านแล้วปลุกร้าน
+    // ⚠️ ห้ามบันทึกรับเงินหรือแตะยอดค้างเด็ดขาดในเส้นนี้ ไม่มีอะไรยืนยันว่าสลิปจริง
+    // ร้านต้องเป็นคนกดรับเงินเองที่หน้าเอกสาร (ซึ่งเป็นเส้นทางที่มีอยู่แล้ว)
     if (!provider || !slipKey) {
-      return NextResponse.json({ ok: false, error: "ร้านยังไม่เปิดตรวจสลิปอัตโนมัติ — ส่งสลิปให้ร้านโดยตรงได้เลย" });
+      const manualPath = `${doc.shop_id}/finance/manual-${crypto.randomUUID()}.jpg`;
+      const { error: upErr } = await svc.storage.from("slips").upload(manualPath, bytes, { contentType: file.type });
+      if (upErr) {
+        return NextResponse.json({ ok: false, error: "เก็บสลิปไม่สำเร็จ — ลองใหม่อีกครั้ง หรือส่งให้ร้านโดยตรง" });
+      }
+      const { error: fileErr } = await svc.from("fin_doc_files").insert({
+        doc_id: doc.id, shop_id: doc.shop_id, path: manualPath, name: "สลิปจากลูกค้า",
+      });
+      if (fileErr) {
+        // แนบไม่ติด = ร้านจะไม่มีวันเห็นสลิปใบนี้ ห้ามบอกลูกค้าว่าส่งสำเร็จ
+        await svc.storage.from("slips").remove([manualPath]);
+        return NextResponse.json({ ok: false, error: "เก็บสลิปไม่สำเร็จ — ลองใหม่อีกครั้ง หรือส่งให้ร้านโดยตรง" });
+      }
+      const { notifyShop } = await import("@/lib/notify");
+      await notifyShop(svc, doc.shop_id, {
+        title: "ลูกค้าส่งสลิปมาแล้ว รอยืนยัน",
+        body: `เอกสาร ${doc.doc_number} — เปิดดูสลิปที่หน้าเอกสาร แล้วกดบันทึกรับเงินถ้าถูกต้อง`,
+        url: `/dashboard/sales/${doc.id}`, tag: `manual-slip:${doc.id}`,
+      });
+      return NextResponse.json({
+        ok: true, paid: false,
+        message: "ส่งสลิปให้ร้านแล้ว — ร้านได้รับแจ้งเตือนและจะยืนยันให้ สถานะจะเปลี่ยนเมื่อร้านตรวจเรียบร้อย",
+      });
     }
     // fail-closed แบบเดียวกับด่าน AI: RPC พัง/คืน null ต้องไม่แปลว่า "ผ่าน"
     // (เดิมเช็ค === false แล้ว null หลุดผ่านไปเสียค่า API ตอน DB มีปัญหา)
