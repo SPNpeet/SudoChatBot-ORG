@@ -72,12 +72,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   };
 
   const active = TABS.find((t) => t.id === tab)!;
+  // ⚠️ คำโปรยต้องบอกว่า "เหลืออะไรต้องทำ" ไม่ใช่ทวนคำว่าตั้งค่า (8 ส.ค. 2569)
+  // เดิมเขียนว่า "ตั้งครั้งเดียวใช้ได้ตลอดสำหรับ <ชื่อร้าน>" ซึ่งไม่บอกอะไรที่ทำต่อได้เลย
+  // ป้ายสีบนแท็บมีอยู่แล้วแต่ต้องกวาดตาหา — สรุปเป็นตัวเลขให้เห็นตั้งแต่บรรทัดแรก
+  const todoCount = Object.values(todo).filter(Boolean).length;
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <PageHeader
         title="ตั้งค่า"
-        lead={<>ตั้งครั้งเดียวใช้ได้ตลอดสำหรับ {shop.name}</>}
+        lead={todoCount > 0
+          ? <>ยังตั้งค่าไม่ครบ <b className="text-amber-600">{todoCount} เรื่อง</b> — จุดที่มีป้ายสีคือที่ต้องไปต่อ</>
+          : "ตั้งค่าครบแล้ว — เอกสารที่ออกจะมีข้อมูลกิจการครบตามที่กฎหมายกำหนด"}
       />
 
       {!canEdit && (

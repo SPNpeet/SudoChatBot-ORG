@@ -46,7 +46,7 @@ export default async function AccountPage() {
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <PageHeader
         title="บัญชีของฉัน"
-        lead="ข้อมูลผู้ใช้ที่กำลังล็อกอินอยู่ตอนนี้"
+        lead="ชื่อที่นี่คือชื่อที่ถูกประทับไว้ในประวัติการแก้ไขเอกสารทุกใบที่คุณบันทึก"
         back={{ href: "/dashboard", label: "ภาพรวม" }}
       />
 

@@ -45,12 +45,22 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
 
   const rows = (contacts ?? []) as Contact[];
   const kindTH: Record<string, string> = { customer: "ลูกค้า", vendor: "ผู้ขาย", both: "ลูกค้า+ผู้ขาย" };
+  const arTotal = [...owed.values()].reduce((a, v) => a + v.ar, 0);
+  const apTotal = [...owed.values()].reduce((a, v) => a + v.ap, 0);
 
   return (
     <div className="space-y-5">
+      {/* ⚠️ คำโปรยต้องบอก "ของจริงที่เพิ่งเปลี่ยน" ไม่ใช่ทวนชื่อหน้า (8 ส.ค. 2569)
+          เดิมเขียนว่า "ลูกค้าและผู้ขายทั้งหมดของ <ชื่อร้าน>" ซึ่งไม่ได้อะไรเพิ่มจากคำว่า
+          "ผู้ติดต่อ" ที่อยู่ข้างบนเลย — เจ้าของบอกว่าอ่านแล้วเหมือนเขียนส่ง ๆ
+          บรรทัดนี้คนกวาดตาผ่านทุกครั้งที่เข้าหน้า ต้องคุ้มค่าที่กวาด */}
       <PageHeader
         title="ผู้ติดต่อ"
-        lead={<>ลูกค้าและผู้ขายทั้งหมดของ {shop.name}</>}
+        lead={<>
+          {rows.length} รายชื่อ
+          {arTotal > 0 && <> · ค้างรับรวม <b className="text-amber-600">{baht(arTotal)}</b></>}
+          {apTotal > 0 && <> · ค้างจ่ายรวม <b className="text-red-600">{baht(apTotal)}</b></>}
+        </>}
         help="เก็บชื่อ เลขผู้เสียภาษี และที่อยู่ของคู่ค้าไว้ครั้งเดียว — ครั้งต่อไปออกเอกสารแค่เลือกชื่อ ระบบเติมให้ครบเอง ออกใบกำกับภาษีเต็มรูปได้ทันที และเห็นด้วยว่าใครค้างเราอยู่เท่าไหร่"
         action={canEdit && <ContactForm shopId={shop.id} />}
       />

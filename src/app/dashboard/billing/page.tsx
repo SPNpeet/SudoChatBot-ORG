@@ -57,7 +57,7 @@ export default async function BillingPage() {
     <div className="mx-auto w-full max-w-5xl space-y-6">
       <PageHeader
         title="แพ็กเกจและเครดิต"
-        lead={<>จัดการแพ็กเกจของ {shop.name}</>}
+        lead={<>แพ็กปัจจุบัน <b>{plan?.name ?? "ทดลองใช้"}</b>{quotaMax > 0 && <> · โควตา AI เหลือ <b>{Math.max(0, quotaMax - quotaUsed).toLocaleString()}</b> จาก {quotaMax.toLocaleString()} {dailyCap ? "วันนี้" : "เดือนนี้"}</>}</>}
         help="ค่าบริการคิดตามแพ็กเกจที่เลือก ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด · ที่จำกัดคือ “งาน AI” (ผู้ช่วย + อ่านบิล) เท่านั้น — การออกเอกสาร ลงบัญชี และดูรายงานเองใช้ได้ไม่จำกัดทุกแพ็ก แม้โควตา AI หมด"
       />
 

@@ -17,6 +17,8 @@ export default async function ProductsPage() {
     .select("*").eq("shop_id", shop.id).neq("status", "archived")
     .order("created_at", { ascending: false }).limit(200);
   const products = (data ?? []) as Product[];
+  // เกณฑ์เดียวกับที่ตารางใช้ทำตัวแดง (≤3) — ตัวเลขบนหัวหน้ากับในตารางต้องหมายถึงของอย่างเดียวกัน
+  const lowStock = products.filter((p) => p.track_stock && p.stock <= 3).length;
 
   async function save(formData: FormData) {
     "use server";
@@ -25,8 +27,13 @@ export default async function ProductsPage() {
 
   return (
     <div className="space-y-5">
+      {/* คำโปรยบอกจำนวนกับของที่ใกล้หมด — สองอย่างที่คนเปิดหน้านี้มาดู ไม่ใช่ทวนชื่อหน้า */}
       <PageHeader
         title="สินค้า / บริการ"
+        lead={products.length === 0 ? "ยังไม่มีรายการ — ใส่ของที่ขายประจำไว้ครั้งเดียว ใช้ได้ตลอด" : <>
+          {products.length} รายการ
+          {lowStock > 0 && <> · <b className="text-amber-600">{lowStock} รายการสต๊อกใกล้หมด</b></>}
+        </>}
         help="ใส่ของที่ขายประจำไว้ที่นี่ — ตอนออกเอกสารแค่เลือกชื่อ ราคาขึ้นเอง ไม่ต้องพิมพ์ซ้ำทุกครั้ง · ถ้าใส่ต้นทุนไว้ด้วย ระบบจะคำนวณกำไรและตัดสต๊อกให้อัตโนมัติเมื่อขาย"
         action={canEdit && (
           <div className="flex flex-wrap items-center gap-2">
