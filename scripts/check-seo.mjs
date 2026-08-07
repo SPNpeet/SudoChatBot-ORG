@@ -149,6 +149,23 @@ if (BASE.startsWith("https://") && !BASE.includes("localhost")) {
   else if ([301, 308].includes(r.status)) console.log(`  ถูก  www ส่งกลับโดเมนหลัก (${r.status})`);
 }
 
+// --- หัวข้อความปลอดภัยที่ทุกหน้าต้องมี ---
+// ไม่ใช่เรื่อง SEO ตรง ๆ แต่ตรวจที่เดียวกันได้เพราะอ่านจาก response เดียวกัน
+// และเป็นของที่หายไปเงียบ ๆ ได้ทุกครั้งที่แก้ next.config
+{
+  const res = await fetch(`${BASE}/`);
+  const need = {
+    "strict-transport-security": "บังคับ https",
+    "x-content-type-options": "กันเบราว์เซอร์เดาชนิดไฟล์ (ไฟล์ที่ลูกค้าอัปโหลด)",
+    "x-frame-options": "กันเอาหน้าเราไปฝัง iframe แล้ววางปุ่มปลอมทับ",
+    "referrer-policy": "กันลิงก์เอกสารลับหลุดไปเว็บอื่นผ่าน referrer",
+  };
+  for (const [h, why] of Object.entries(need)) {
+    if (!res.headers.get(h)) bad(`ไม่มี header ${h} — ${why}`);
+  }
+  if (Object.keys(need).every((h) => res.headers.get(h))) console.log("  ถูก  security headers ครบ");
+}
+
 console.log(failures === 0
   ? "\n  ผ่านทุกข้อ\n"
   : `\nสรุป: ไม่ผ่าน ${failures} ข้อ\n`);
