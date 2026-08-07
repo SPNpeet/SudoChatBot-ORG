@@ -77,6 +77,23 @@ export async function notifyEveryone(svc: SupabaseClient, n: NotifyInput): Promi
   const url = n.url ? (n.url.startsWith("http") ? n.url : `https://sudochatbot.online${n.url}`) : undefined;
   const text = `${n.title}\n${n.body}${url ? `\n${url}` : ""}`;
 
+  // ⚠️ ประกาศถึงทุกกิจการก็ต้องลงกล่องในระบบด้วย (แก้ 6 ส.ค. 2569 พร้อมกับ notifyShop)
+  // เหตุผลเดียวกัน: ร้านที่ไม่ได้ต่อ LINE และไม่ได้เปิด Push จะไม่เห็นประกาศเลย
+  // เขียนรวดเดียวด้วย insert หลายแถว (ไม่ใช่ยิงทีละร้าน) เพราะประกาศมีไม่บ่อย
+  // แต่จำนวนร้านโตได้เรื่อย ๆ — ยิงทีละแถวจะกลายเป็นภาระตอนมีร้านหลักพัน
+  try {
+    const { data: allShops } = await svc.from("shops").select("id").eq("status", "active");
+    const rows = (allShops ?? []).map((s) => ({
+      shop_id: s.id as string,
+      type: "system",
+      title: n.title.slice(0, 200),
+      body: `${n.body}${url ? `\n${url}` : ""}`.slice(0, 1000),
+    }));
+    if (rows.length) await svc.from("notifications").insert(rows);
+  } catch (e) {
+    console.error("notifyEveryone inbox error", (e as Error).message);
+  }
+
   const pushCount = await pushToEveryone(svc, { title: n.title, body: n.body, url: n.url, tag: n.tag } as PushPayload);
 
   // LINE: ยิงทีละกิจการที่เชื่อมไว้ (คนละ token/ปลายทางกัน)
