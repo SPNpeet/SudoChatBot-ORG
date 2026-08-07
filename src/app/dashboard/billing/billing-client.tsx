@@ -133,7 +133,7 @@ export default function BillingClient({
           {/* สวิตช์งวดชำระ — ปุ่มจริง 44px ไม่ใช่ลิงก์จิ๋ว เพราะนี่คือจุดตัดสินใจจ่ายเงิน */}
           <div className="mb-4 flex justify-center">
             <div role="radiogroup" aria-label="งวดชำระ" className="inline-flex rounded-xl border border-neutral-200 bg-neutral-50 p-1">
-              {([["monthly", "รายเดือน"], ["yearly", "รายปี — ประหยัด 2 เดือน"]] as const).map(([v, label]) => (
+              {([["monthly", "รายเดือน"], ["yearly", "รายปี — จ่าย 10 เดือน ใช้ 12"]] as const).map(([v, label]) => (
                 <button key={v} type="button" role="radio" aria-checked={period === v}
                   onClick={() => setPeriod(v)}
                   className={cn(
@@ -153,6 +153,9 @@ export default function BillingClient({
               const current = p.code === currentPlan;
               const paid = Number(p.price_monthly) > 0;
               const picked = selected === p.code;
+              // ใบที่ทำหน้าที่เป็นจุดตั้งต้นให้คนเทียบ — ต้องตรงกับหน้าราคาสาธารณะ (lib/plans.ts)
+              // ไม่งั้นคนเห็นหน้าแรกแนะนำอันหนึ่ง เข้ามาในระบบเจอแนะนำอีกอัน = ไม่น่าเชื่อถือ
+              const hot = p.code === "professional";
               // ยอดที่ต้องจ่ายตามงวด — พรีวิวเท่านั้น ยอดจริงมาจาก server (purchasePlan)
               const payPrice = Number(p.price_monthly) * (period === "yearly" ? 10 : 1);
               return (
@@ -179,12 +182,23 @@ export default function BillingClient({
                     }
                   }}
                   className={cn(
-                    "flex cursor-pointer flex-col rounded-2xl border p-4 transition-all duration-150",
+                    "relative flex cursor-pointer flex-col rounded-2xl border p-4 transition-all duration-150",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2",
                     picked
                       ? "border-emerald-500 bg-emerald-50/40 shadow-[0_0_0_3px_rgba(16,185,129,0.12)]"
-                      : "border-neutral-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md",
+                      : hot
+                        // ⚠️ ต้องมีใบที่เด่นกว่าเพื่อน (8 ส.ค. 2569)
+                        // เดิมทั้ง 4 ใบหน้าตาน้ำหนักเท่ากันหมด คนที่ยังไม่รู้จักแพ็กจึงไม่มีจุดตั้งต้น
+                        // ต้องอ่านครบทั้ง 4 ใบก่อนตัดสินใจ = ส่วนใหญ่เลื่อนผ่านแล้วไม่ซื้อ
+                        // ใบที่เด่นคือใบที่คนเลือกจริงมากที่สุด ไม่ใช่ใบที่แพงที่สุด
+                        ? "border-emerald-400 shadow-md hover:-translate-y-0.5 hover:shadow-lg"
+                        : "border-neutral-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md",
                   )}>
+                  {hot && !picked && !current && (
+                    <span className="absolute -top-2.5 left-4 rounded-full bg-emerald-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                      คนเลือกมากที่สุด
+                    </span>
+                  )}
                   <div className="mb-2 flex min-h-[22px] items-center gap-1.5">
                     {current && <Badge tone="green">แพ็กเกจปัจจุบัน</Badge>}
                     {picked && !current && <Badge tone="blue">กำลังเลือก</Badge>}
@@ -226,9 +240,11 @@ export default function BillingClient({
                   {isOwner && paid && gatewayReady && (
                     <Button size="lg" variant={picked ? "brand" : "outline"} className="mt-3 w-full"
                       disabled={pending} onClick={(e) => { e.stopPropagation(); setSelected(p.code); buyPlan(p.code); }}>
+                      {/* ปุ่มต้องบอกยอดที่จะถูกตัดจริง ไม่ใช่แค่คำว่า "สมัคร"
+                          คนกดปุ่มจ่ายเงินต้องรู้ก่อนกดว่าจะเสียเท่าไหร่และรอบต่อไปเมื่อไหร่ */}
                       {buying === p.code
                         ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังพาไปหน้าชำระเงิน…</>
-                        : current ? `ต่ออายุ — จ่าย ${payPrice.toLocaleString("th-TH")} บาท` : `สมัคร — จ่าย ${payPrice.toLocaleString("th-TH")} บาท`}
+                        : `${current ? "ต่ออายุ" : "เริ่มใช้"} — ${payPrice.toLocaleString("th-TH")} บาท${period === "yearly" ? "/ปี" : "/เดือน"}`}
                     </Button>
                   )}
                 </div>
