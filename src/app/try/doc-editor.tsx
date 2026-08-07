@@ -174,9 +174,18 @@ export default function TryDocEditor() {
         )}
       </div>
 
-      <p className="mx-auto max-w-[210mm] px-3 pt-3 text-center text-xs text-neutral-500 print:hidden">
-        พิมพ์ลงบนกระดาษได้เลย — ช่องที่แก้ได้จะขึ้นสีเขียวจาง ๆ ตอนชี้
-      </p>
+      {/* ⚠️ หน้านี้เคยไม่มี <h1> เลย (พบ 8 ส.ค. 2569 จากด่าน check:seo)
+          Google ใช้ h1 เป็นตัวบอกว่าหน้านี้ "เกี่ยวกับอะไร" — ไม่มีเลยแปลว่า
+          หน้าที่เป็นสินทรัพย์ SEO ดีที่สุดของเว็บ (ใช้ฟรีไม่ต้องสมัคร) ไม่มีหัวเรื่องให้จัดอันดับ
+          วางไว้ตรงนี้เพราะเป็นข้อความแรกเหนือตัวเอกสาร และไม่รบกวนตอนสั่งพิมพ์ (print:hidden) */}
+      <div className="mx-auto max-w-[210mm] px-3 pt-3 text-center print:hidden">
+        <h1 className="text-sm font-semibold text-neutral-700">
+          ลองออกใบเสนอราคา ใบแจ้งหนี้ และใบเสร็จ ฟรี ไม่ต้องสมัคร
+        </h1>
+        <p className="mt-0.5 text-xs text-neutral-500">
+          พิมพ์ลงบนตัวเอกสารได้เลย — ช่องที่แก้ได้จะขึ้นสีเขียวจาง ๆ ตอนชี้ · คำนวณ VAT และตัวอักษรจำนวนเงินให้อัตโนมัติ
+        </p>
+      </div>
 
       <div className="mx-auto px-3 py-3 sm:px-0 print:px-0 print:py-0">
         <div className="sheet mx-auto bg-white leading-relaxed text-neutral-900 shadow print:shadow-none">

@@ -1,4 +1,12 @@
-export const metadata = { title: "การลบข้อมูลผู้ใช้" };
+// ⚠️ ต้องมี description + canonical ของตัวเอง (8 ส.ค. 2569)
+// เดิมมีแค่ title จึงไปหยิบ description ของหน้าแรกมาใช้ และ canonical ก็ชี้หน้าแรก
+// = Google เห็นเป็นสำเนาของหน้าแรก แล้วตัดหน้านี้ออกจากดัชนี
+// ทั้งที่เป็นหน้าที่ LINE/Meta ใช้ตรวจ และผู้ใช้จริงค้นหา
+export const metadata = {
+  title: "การลบข้อมูลผู้ใช้",
+  description: "วิธีขอลบบัญชีและข้อมูลทั้งหมดออกจาก SudoChatBot ใช้เวลาเท่าไหร่ และข้อมูลไหนที่กฎหมายบังคับให้เก็บต่อ",
+  alternates: { canonical: "https://sudochatbot.online/data-deletion" },
+};
 
 // ============================================================
 //  ⚠️ URL นี้คือ "Data Deletion Instructions URL" ที่ลงทะเบียนไว้กับ Meta (Facebook Login)

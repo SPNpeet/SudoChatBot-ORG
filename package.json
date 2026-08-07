@@ -19,6 +19,7 @@
     "check:ailinks": "tsx scripts/check-ai-links.mjs",
     "check:models": "tsx scripts/check-ai-models.mjs",
     "e2e:assistant": "tsx scripts/assistant-readonly-e2e.mjs",
+    "check:seo": "tsx scripts/check-seo.mjs",
     "line:menu": "tsx scripts/line-menu-deploy.mjs",
     "check:ready": "tsx scripts/check-ready.mjs",
     "check:ui:auth": "tsx scripts/check-logged-in-ui.mjs"

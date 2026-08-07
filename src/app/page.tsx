@@ -100,8 +100,33 @@ const faqs = [
   { q: "ยกเลิกยากไหม ข้อมูลเป็นของใคร?", a: "ไม่มีสัญญาผูกมัด หยุดใช้เมื่อไหร่ก็ได้ ข้อมูลเป็นของคุณ ดาวน์โหลดรายงานเป็น Excel ได้ตลอด และขอลบข้อมูลได้ตามนโยบายความเป็นส่วนตัว" },
 ];
 
+// ⚠️ หน้าแรกต้องประกาศ canonical ของตัวเอง (8 ส.ค. 2569)
+// เดิม canonical ถูกตั้งไว้ที่ layout ซึ่งสืบทอดไปทุกหน้า ทำให้หน้าอื่นประกาศว่า
+// ตัวเองคือสำเนาของหน้าแรก — ย้ายมาไว้ที่หน้าเจ้าของ ไม่ให้รั่วไปหน้าอื่นอีก
+export const metadata = {
+  alternates: { canonical: "https://sudochatbot.online" },
+};
+
 // ราคามาจากตาราง plans โดยตรง · แคช 1 ชั่วโมง — หน้าแรกไม่ต้องยิงฐานข้อมูลทุก request
 export const revalidate = 3600;
+
+/**
+ * ข้อมูลโครงสร้าง FAQ สำหรับ Google
+ *
+ * ⚠️ ต้องสร้างจากตัวแปร faqs ตัวเดียวกับที่แสดงบนหน้าเท่านั้น
+ * Google กำหนดว่าคำถาม-คำตอบใน structured data ต้องตรงกับที่ผู้ใช้เห็นบนหน้าจริง
+ * ถ้าเขียนแยกกันสองชุด วันหนึ่งจะแก้ที่หน้าแล้วลืมแก้ที่นี่ = ส่งข้อมูลไม่ตรงให้ Google
+ * ซึ่งโดนตัดสิทธิ์ rich result และเสียความน่าเชื่อถือของทั้งโดเมน
+ */
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
 
 export default async function Landing() {
   const plans = await getPublicPlans();
@@ -114,6 +139,9 @@ export default async function Landing() {
   return (
     // พื้นหลังขาว (5 ส.ค. 2569 เจ้าของเคาะเอง) — ห้ามเปลี่ยนกลับเป็นครีมโดยไม่ถาม
     <main className="min-h-screen bg-white">
+      {/* FAQ ให้ Google แสดงเป็นคำถาม-คำตอบใต้ผลค้นหา — กินพื้นที่บนหน้าผลลัพธ์มากกว่าผลธรรมดา
+          และตอบคำถามที่คนไทยค้นจริง ("โปรแกรมบัญชีไม่มีความรู้บัญชีใช้ได้ไหม") ตั้งแต่ในหน้าค้นหา */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <header className="sticky top-0 z-30 border-b border-neutral-100 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <Logo />

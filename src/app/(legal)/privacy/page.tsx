@@ -1,4 +1,12 @@
-export const metadata = { title: "นโยบายความเป็นส่วนตัว" };
+// ⚠️ ต้องมี description + canonical ของตัวเอง (8 ส.ค. 2569)
+// เดิมมีแค่ title จึงไปหยิบ description ของหน้าแรกมาใช้ และ canonical ก็ชี้หน้าแรก
+// = Google เห็นเป็นสำเนาของหน้าแรก แล้วตัดหน้านี้ออกจากดัชนี
+// ทั้งที่เป็นหน้าที่ LINE/Meta ใช้ตรวจ และผู้ใช้จริงค้นหา
+export const metadata = {
+  title: "นโยบายความเป็นส่วนตัว",
+  description: "เก็บอะไร ใช้ทำอะไร เก็บนานแค่ไหน และขอลบได้อย่างไร — นโยบายความเป็นส่วนตัวของ SudoChatBot ระบบบัญชีออนไลน์สำหรับธุรกิจไทย",
+  alternates: { canonical: "https://sudochatbot.online/privacy" },
+};
 
 // ============================================================
 //  ⚠️ เอกสารนี้เป็น URL ที่ลงทะเบียนไว้กับ LINE Developers และ Meta (Facebook Login)
