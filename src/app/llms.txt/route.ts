@@ -25,10 +25,11 @@ export async function GET() {
   const plans = await getPublicPlans();
   const paid = plans.filter((p) => !p.free);
 
+  // ⚠️ ลำดับคำสำคัญ — เขียนครั้งแรกได้ "99/เดือน บาท" ซึ่งอ่านสะดุด
+  // ไฟล์นี้มีไว้ให้ผู้ช่วย AI เอาไปพูดต่อ รูปประโยคเพี้ยน = มัน quote เพี้ยนตามไปด้วย
   const priceLines = paid.map((p) => {
-    const monthly = `${p.price}/เดือน`;
     const yearly = p.yearly ? ` · รายปี ${p.yearly} บาท (จ่าย 10 เดือน ใช้ 12 เดือน)` : "";
-    return `- ${p.name}: ${monthly} บาท${yearly}`;
+    return `- ${p.name}: ${p.price} บาท/เดือน${yearly}`;
   }).join("\n");
 
   const free = plans.find((p) => p.free);
