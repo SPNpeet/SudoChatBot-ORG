@@ -50,6 +50,12 @@ if ! npm run check:actions; then
   exit 1
 fi
 
+if ! npm run check:csv; then
+  echo ""
+  echo "  หยุด: ตัวอ่าน CSV นำเข้าผิด — ข้อมูลลูกค้าจะลงผิดคอลัมน์ ห้าม push"
+  exit 1
+fi
+
 echo ""
-echo "  ผ่าน 5 ด่าน (typecheck · บัญชี · UI · ลำดับ migration · สิทธิ์ Server Action) — build จะถูกตรวจอีกรอบที่ Vercel"
+echo "  ผ่าน 6 ด่าน (typecheck · บัญชี · UI · ลำดับ migration · สิทธิ์ Server Action · นำเข้า CSV) — build จะถูกตรวจอีกรอบที่ Vercel"
 echo ""
