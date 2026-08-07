@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { Button, Input, Label, Select } from "@/components/ui";
+import { Button, Input, InfoHint, Label, Select } from "@/components/ui";
 import { savePaymentSettings } from "../actions";
 import type { ShopPaymentSettings } from "@/lib/types/db";
 import { CheckCircle2, AlertTriangle, CircleDashed } from "lucide-react";
@@ -56,7 +56,13 @@ export default function PaymentSettingsForm({ shopId, p, hasSlipKey = false }: {
       <p className="text-xs text-neutral-400">QR พร้อมเพย์จะขึ้นบนใบแจ้งหนี้และลิงก์เอกสารที่ส่งให้ลูกค้า — ลูกค้าสแกนจ่ายเข้าบัญชีคุณตรง 100%</p>
 
       <div>
-        <Label>การตรวจสลิปอัตโนมัติ</Label>
+        <Label className="flex items-center gap-1.5">
+          การตรวจสลิปอัตโนมัติ
+          <InfoHint>
+            สมัคร EasySlip ที่ easyslip.com (~0.05฿/สลิป) — ระบบตรวจสลิปจริง กันสลิปซ้ำ
+            จับคู่ใบแจ้งหนี้ให้เอง และให้ลูกค้าอัปสลิปจ่ายเองจากลิงก์เอกสารได้
+          </InfoHint>
+        </Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select name="slip_provider" value={provider} onChange={(e) => setProvider(e.target.value)}>
             <option value="manual">ตรวจเอง (กดยืนยันเองในหน้าเอกสาร)</option>
@@ -83,9 +89,6 @@ export default function PaymentSettingsForm({ shopId, p, hasSlipKey = false }: {
             <span>เลือกตรวจอัตโนมัติไว้แต่ยังไม่มีรหัสเชื่อมต่อ — ระบบจะกลับไปให้คุณกดยืนยันสลิปเองทุกใบ ไม่ตัดยอดให้อัตโนมัติ</span>
           </p>
         )}
-        <p className="mt-1 text-xs text-neutral-400">
-          สมัคร EasySlip ที่ easyslip.com (~0.05฿/สลิป) — ระบบตรวจสลิปจริง กันสลิปซ้ำ จับคู่ใบแจ้งหนี้ และให้ลูกค้าอัปสลิปจ่ายเองจากลิงก์เอกสารได้
-        </p>
       </div>
 
       <div className="flex items-center gap-3">

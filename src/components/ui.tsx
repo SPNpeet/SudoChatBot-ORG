@@ -11,6 +11,37 @@ import { ChevronLeft, Lightbulb, Inbox, ArrowRight } from "lucide-react";
 
 const FOCUS = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-1";
 
+/**
+ * ปุ่ม "?" ที่กางคำอธิบายตอนเอาเมาส์ไปวาง / กด (มือถือ)
+ *
+ * ⚠️ ทำไม (8 ส.ค. 2569): ฟอร์มตั้งค่าหลายหน้ามีคำอธิบายตัวเล็ก 2-3 บรรทัดใต้ทุกช่อง
+ * รวมกันแล้วยาวกว่าตัวฟอร์มเอง เจ้าของบอกว่า "รกมาก" และของสำคัญจมหายไปกับคำอธิบาย
+ * ที่คนอ่านครั้งเดียวตอนตั้งค่าครั้งแรกแล้วไม่เคยอ่านอีก
+ * ย้ายมาซ่อนหลังปุ่มเล็ก ๆ — ยังอ่านได้ครบเมื่ออยากอ่าน แต่ไม่กินพื้นที่ตลอดเวลา
+ *
+ * ใช้ CSS ล้วน (group-hover + focus-within) ไม่ใช้ state
+ * เพราะ component นี้ถูกใช้ในไฟล์ที่เป็น Server Component ได้ด้วย
+ * บนมือถือที่ไม่มี hover ใช้ tabIndex ให้แตะแล้ว focus ค้าง = อ่านได้เหมือนกัน
+ */
+export function InfoHint({ children, className, align = "left" }: {
+  children: React.ReactNode; className?: string; align?: "left" | "right";
+}) {
+  return (
+    <span className={cn("group relative inline-flex", className)}>
+      <button type="button" tabIndex={0} aria-label="ดูคำอธิบาย"
+        className={cn(
+          "grid h-5 w-5 place-items-center rounded-full border border-neutral-300 text-xs leading-none text-neutral-400",
+          "transition-colors hover:border-neutral-500 hover:text-neutral-700", FOCUS,
+        )}>?</button>
+      <span className={cn(
+        "pointer-events-none absolute top-[calc(100%+0.375rem)] z-50 w-[min(20rem,80vw)] rounded-xl bg-neutral-900 px-3 py-2 text-xs leading-relaxed text-white opacity-0 shadow-xl transition-opacity",
+        "group-hover:opacity-100 group-focus-within:opacity-100",
+        align === "right" ? "right-0" : "left-0",
+      )}>{children}</span>
+    </span>
+  );
+}
+
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div

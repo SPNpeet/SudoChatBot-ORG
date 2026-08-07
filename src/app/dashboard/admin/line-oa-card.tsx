@@ -1,7 +1,7 @@
 "use client";
 // ตั้งค่า LINE OA กลางของแพลตฟอร์ม — ตั้งครั้งเดียว ทุกกิจการได้ปุ่ม "เชื่อมต่อ LINE" คลิกเดียวทันที
 import { useState, useTransition } from "react";
-import { Card, CardContent, CardHeader, CardTitle, Button, Input, Label } from "@/components/ui";
+import { Card, CardContent, CardHeader, CardTitle, Button, Input, InfoHint, Label } from "@/components/ui";
 import { MessageCircle, CheckCircle2, LayoutGrid, AlertTriangle, CircleDashed } from "lucide-react";
 import { savePlatformLine } from "./actions";
 
@@ -64,13 +64,15 @@ export default function LineOaCard({ stored, basicId }: { stored: LineStored; ba
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="mb-3 text-xs leading-relaxed text-neutral-500">
-          ตั้งครั้งเดียว → ลูกค้าทุกกิจการกดปุ่มเดียวเชื่อม LINE ได้เลย ไม่ต้องสร้าง OA เอง<br />
-          วิธีเอาค่า: developers.line.biz → สร้าง <b>Provider</b> 1 อัน → ในนั้นสร้าง 2 channel:
-          <b> Messaging API</b> (ได้ Channel access token + @basic id) และ <b>LINE Login</b> (ได้ Channel ID + Secret) —
-          ต้องอยู่ Provider เดียวกันเท่านั้น ระบบถึงจะส่งข้อความหาคนที่ล็อกอินได้ ·
-          ตั้ง Callback URL ของ LINE Login เป็น <code className="rounded bg-neutral-100 px-1">https://sudochatbot.online/api/line/callback</code> ·
-          และผูก OA เข้ากับ LINE Login channel (Linked OA) เพื่อให้ชวนเพิ่มเพื่อนอัตโนมัติ
+        <p className="mb-3 flex items-center gap-1.5 text-xs leading-relaxed text-neutral-500">
+          ตั้งครั้งเดียว → ลูกค้าทุกกิจการกดปุ่มเดียวเชื่อม LINE ได้เลย ไม่ต้องสร้าง OA เอง
+          <InfoHint>
+            วิธีเอาค่า: developers.line.biz → สร้าง Provider 1 อัน → ในนั้นสร้าง 2 channel:
+            Messaging API (ได้ Channel access token + @basic id) และ LINE Login (ได้ Channel ID + Secret) —
+            ต้องอยู่ Provider เดียวกันเท่านั้น ระบบถึงจะส่งข้อความหาคนที่ล็อกอินได้ ·
+            ตั้ง Callback URL ของ LINE Login เป็น https://sudochatbot.online/api/line/callback ·
+            และผูก OA เข้ากับ LINE Login channel (Linked OA) เพื่อให้ชวนเพิ่มเพื่อนอัตโนมัติ
+          </InfoHint>
         </p>
         <form action={submit} className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">

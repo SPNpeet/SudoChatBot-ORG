@@ -2,7 +2,7 @@
 // ฟอร์มตั้งค่าบัญชีรับเงินแพลตฟอร์ม — ต้องมี feedback ชัดเจนหลังกดบันทึก
 // (บั๊กเดิม: กดแล้วเงียบ ผู้ใช้คิดว่ากดไม่ติดทั้งที่บันทึกสำเร็จจริง)
 import { useRef, useState, useTransition } from "react";
-import { Button, Input, Label, Select } from "@/components/ui";
+import { Button, Input, InfoHint, Label, Select } from "@/components/ui";
 import { savePlatformBilling } from "./actions";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, AlertTriangle, CircleDashed } from "lucide-react";
@@ -14,8 +14,11 @@ interface Settings {
   slip_monthly_cap: number | null;
 }
 
-/** มี/ไม่มีคีย์ใน Vault — ส่งมาแค่ boolean ห้ามส่งค่าคีย์ลง client เด็ดขาด */
-export interface StoredKeys { stripeKey: boolean; stripeWebhook: boolean; slipKey: boolean }
+/**
+ * คีย์ที่เก็บไว้ในรูปย่อ เช่น "sk_test_••••mocb" — null = ยังไม่ได้ตั้ง
+ * ⚠️ ห้ามส่งค่าคีย์เต็มลง client เด็ดขาด (ดู maskKey ใน page.tsx)
+ */
+export interface StoredKeys { stripeKey: string | null; stripeWebhook: string | null; slipKey: string | null }
 
 /**
  * ป้ายสถานะข้างช่องคีย์
@@ -26,14 +29,16 @@ export interface StoredKeys { stripeKey: boolean; stripeWebhook: boolean; slipKe
  * รอบต่อมากรอกแต่ webhook secret แล้วกดบันทึก → ระบบเก็บ webhook ไว้แต่ secret key ยังว่าง
  * = ยังรับเงินไม่ได้ โดยไม่มีอะไรบอกเลย ต้องมาเปิดฐานข้อมูลดูถึงจะรู้
  */
-function KeyStatus({ set, label }: { set: boolean; label: string }) {
-  return set ? (
-    <span className="mt-1 flex items-center gap-1 text-xs text-emerald-600">
-      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> {label}: ตั้งค่าไว้แล้ว — เว้นว่างไว้ถ้าไม่เปลี่ยน
+function KeyStatus({ masked }: { masked: string | null }) {
+  return masked ? (
+    <span className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-700">
+      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+      <code className="rounded bg-emerald-50 px-1.5 py-0.5 font-mono tracking-tight">{masked}</code>
+      <span className="text-neutral-400">เว้นว่างไว้ถ้าไม่เปลี่ยน</span>
     </span>
   ) : (
-    <span className="mt-1 flex items-center gap-1 text-xs text-neutral-400">
-      <CircleDashed className="h-3.5 w-3.5 shrink-0" /> {label}: ยังไม่ได้ตั้ง
+    <span className="mt-1.5 flex items-center gap-1.5 text-xs text-neutral-400">
+      <CircleDashed className="h-3.5 w-3.5 shrink-0" /> ยังไม่ได้ตั้ง
     </span>
   );
 }
@@ -42,8 +47,10 @@ export default function BillingSettingsForm({ pf, slipUsed = 0, stored }: { pf: 
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
-  const stripeReady = stored.stripeKey && stored.stripeWebhook;
-  const stripeHalf = stored.stripeKey !== stored.stripeWebhook;
+  // ⚠️ ต้อง !! ก่อนเทียบ — ตอนนี้ค่าที่ส่งมาเป็นสตริงคีย์ย่อ ไม่ใช่ boolean แล้ว
+  // เทียบสตริงกันตรง ๆ จะได้ "ไม่เท่ากัน" เสมอแม้ตั้งครบทั้งคู่ = ขึ้นเตือนแดงผิด ๆ
+  const stripeReady = !!stored.stripeKey && !!stored.stripeWebhook;
+  const stripeHalf = !!stored.stripeKey !== !!stored.stripeWebhook;
 
   function submit(fd: FormData) {
     setResult(null);
@@ -68,17 +75,25 @@ export default function BillingSettingsForm({ pf, slipUsed = 0, stored }: { pf: 
         <Input name="account_name" defaultValue={pf?.account_name ?? ""} />
       </div>
       <div>
-        <Label>รับเงินค่าแพ็กเกจผ่าน Stripe</Label>
+        <Label className="flex items-center gap-1.5">
+          รับเงินค่าแพ็กเกจผ่าน Stripe
+          <InfoHint>
+            ทั้งสองคีย์เก็บใน Vault · ตั้ง webhook ใน Stripe Dashboard ไปที่ /api/billing/stripe/webhook
+            แล้วติ๊ก event: checkout.session.completed, async_payment_succeeded, async_payment_failed, expired ·
+            ต้องเปิด PromptPay ในหน้า Payment methods ของ Stripe ก่อน ไม่งั้นลูกค้าจะเห็นเฉพาะบัตร ·
+            บัญชี Stripe ต้องจดทะเบียนในไทยและรับเงินสกุล THB
+          </InfoHint>
+        </Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <Input name="stripe_secret_key" type="password" autoComplete="off"
               placeholder={stored.stripeKey ? "Secret key — กรอกเมื่อต้องการเปลี่ยน" : "Secret key (sk_live_... / sk_test_...)"} />
-            <KeyStatus set={stored.stripeKey} label="Secret key" />
+            <KeyStatus masked={stored.stripeKey} />
           </div>
           <div>
             <Input name="stripe_webhook_secret" type="password" autoComplete="off"
               placeholder={stored.stripeWebhook ? "Webhook secret — กรอกเมื่อต้องการเปลี่ยน" : "Webhook signing secret (whsec_...)"} />
-            <KeyStatus set={stored.stripeWebhook} label="Webhook secret" />
+            <KeyStatus masked={stored.stripeWebhook} />
           </div>
         </div>
         {/* สรุปสถานะรับเงินเป็นประโยคเดียว — สิ่งที่เจ้าของอยากรู้จริง ๆ คือ "ตอนนี้ลูกค้าจ่ายเงินได้ไหม"
@@ -99,17 +114,16 @@ export default function BillingSettingsForm({ pf, slipUsed = 0, stored }: { pf: 
                   : "ยังไม่ได้ตั้งค่า Stripe — หน้าแพ็กเกจซ่อนปุ่มสมัคร ไม่มีใครสมัครแพ็กเสียเงินได้"}
           </span>
         </div>
-        <p className="mt-1 text-xs text-neutral-400">
-          ทั้งสองคีย์เก็บใน Vault · ตั้ง webhook ใน Stripe Dashboard ไปที่ <span className="font-mono">/api/billing/stripe/webhook</span>
-          {" "}แล้วติ๊ก event: <span className="font-mono">checkout.session.completed</span>, <span className="font-mono">async_payment_succeeded</span>, <span className="font-mono">async_payment_failed</span>, <span className="font-mono">expired</span>
-        </p>
-        <p className="mt-1 text-xs text-neutral-400">
-          ต้องเปิด <span className="font-medium">PromptPay</span> ในหน้า Payment methods ของ Stripe ก่อน ไม่งั้นลูกค้าจะเห็นเฉพาะบัตร ·
-          บัญชี Stripe ต้องจดทะเบียนในไทยและรับเงินสกุล THB · ไม่มี webhook secret = ระบบไม่รับ event ใด ๆ (กันคนปลอมยิงเข้ามาเครดิตเงินให้ตัวเอง)
-        </p>
       </div>
       <div>
-        <Label>ตรวจสลิปอัตโนมัติ — สำหรับลูกค้าของร้านที่จ่ายบิลให้ร้าน (ไม่เกี่ยวกับค่าแพ็กเกจ)</Label>
+        <Label className="flex items-center gap-1.5">
+          ตรวจสลิปอัตโนมัติ — ของลูกค้าร้าน (ไม่เกี่ยวกับค่าแพ็กเกจ)
+          <InfoHint>
+            เพดานคือจำนวนครั้งที่ยิง API ต่อเดือนของทั้งระบบ · คีย์ใบเดียวใช้ร่วมกันทุกร้าน
+            ถ้าไม่คุมเพดาน ร้านฟรีจะกินโควตาของร้านที่จ่ายเงิน ·
+            เต็มแล้วระบบสลับเป็นยืนยันเองอัตโนมัติ ไม่มีใครจ่ายไม่ได้ · ใส่ 0 = ปิดตรวจอัตโนมัติทั้งระบบ
+          </InfoHint>
+        </Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select name="slip_provider" defaultValue={pf?.slip_provider ?? "manual"}>
             <option value="manual">ยืนยันเอง (ร้านกดจับคู่สลิปเอง)</option>
@@ -119,26 +133,28 @@ export default function BillingSettingsForm({ pf, slipUsed = 0, stored }: { pf: 
           <div>
             <Input name="slip_api_key" type="password" autoComplete="off"
               placeholder={stored.slipKey ? "API Key — กรอกเมื่อต้องการเปลี่ยน" : "API Key"} />
-            <KeyStatus set={stored.slipKey} label="API Key" />
+            <KeyStatus masked={stored.slipKey} />
           </div>
           {/* เพดานกลาง: คีย์ใบเดียวใช้ร่วมกันทุกร้าน ถ้าไม่คุมตรงนี้ ร้านฟรีกินโควตาร้านที่จ่ายเงินได้
               ค่าเริ่มต้น 100 = แพ็กฟรีของ SlipOK · อัปแพ็กเมื่อไหร่ให้แก้เลขนี้ตาม */}
           <Input name="slip_monthly_cap" type="number" min={0} defaultValue={pf?.slip_monthly_cap ?? 100}
             placeholder="เพดานตรวจสลิป/เดือน ทั้งแพลตฟอร์ม" />
         </div>
-        <p className="mt-1 text-xs text-neutral-400">
-          เพดานคือจำนวนครั้งที่ยิง API ต่อเดือนของทั้งระบบ (เดือนนี้ใช้ไป {slipUsed}/{pf?.slip_monthly_cap ?? 100} ครั้ง) ·
-          เต็มแล้วระบบสลับเป็นยืนยันเองอัตโนมัติ ไม่มีใครจ่ายไม่ได้ · ใส่ 0 = ปิดตรวจอัตโนมัติทั้งระบบ
-        </p>
+        <p className="mt-1.5 text-xs text-neutral-500">เดือนนี้ใช้ไป {slipUsed}/{pf?.slip_monthly_cap ?? 100} ครั้ง</p>
       </div>
       <div className="border-t border-neutral-100 pt-3">
-        <Label>อีเมลแจ้งเตือน (Resend) — เครดิตใกล้หมด / บอทหยุดเพราะเครดิตหมด</Label>
+        <Label className="flex items-center gap-1.5">
+          อีเมลแจ้งเตือน (Resend)
+          <InfoHint>
+            ใช้เตือนเรื่องเครดิตใกล้หมด และบอทหยุดเพราะเครดิตหมด ·
+            ไม่ใส่ key = ไม่ส่งอีเมล (ยังแจ้งใน dashboard เสมอ) · สมัครฟรีที่ resend.com
+          </InfoHint>
+        </Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Input name="resend_api_key" type="password" placeholder="Resend API Key (re_... กรอกเมื่อเปลี่ยน)" />
           <Input name="email_from" defaultValue={pf?.email_from ?? ""} placeholder='ผู้ส่ง เช่น SudoChatBot <no-reply@โดเมนคุณ>' />
           <Input name="low_credit_threshold" type="number" min={0} defaultValue={pf?.low_credit_threshold ?? 50} placeholder="เตือนเมื่อเครดิตต่ำกว่า (บาท)" />
         </div>
-        <p className="mt-1 text-xs text-neutral-400">ไม่ใส่ key = ไม่ส่งอีเมล (ยังแจ้งใน dashboard เสมอ) · สมัครฟรีที่ resend.com</p>
       </div>
       <div className="border-t border-neutral-100 pt-3">
         <Label>ข้อมูลผู้ขายบนใบกำกับภาษี (VAT 7%)</Label>

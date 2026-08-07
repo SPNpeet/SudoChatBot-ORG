@@ -10,6 +10,23 @@ import type { PendingTopup } from "./actions";
 export const dynamic = "force-dynamic";
 const TOPUPS_PAGE_SIZE = 30;
 
+/**
+ * ย่อคีย์ให้เห็นว่า "ตัวไหน" โดยไม่เปิดเผยคีย์ — sk_test_••••mocb
+ *
+ * ⚠️ ส่งลง client ได้เฉพาะรูปนี้เท่านั้น ห้ามส่งค่าเต็มเด็ดขาด
+ * ส่วนที่โชว์คือ prefix (บอกว่าเป็นคีย์ทดสอบหรือคีย์จริง — สำคัญมาก เพราะใส่ sk_test_
+ * บน production แปลว่าไม่มีเงินเข้าจริงสักบาท) กับ 4 ตัวท้ายไว้เทียบกับหน้า Stripe
+ * เท่ากับที่ Stripe Dashboard เองโชว์ ไม่ได้เพิ่มความเสี่ยงจากเดิม
+ */
+function maskKey(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s) return null;
+  const m = s.match(/^([a-z]+_[a-z]+_)/);          // sk_test_ / sk_live_ / whsec_ ไม่เข้าเงื่อนไขนี้
+  const prefix = m ? m[1] : s.slice(0, 6);
+  return `${prefix}••••${s.slice(-4)}`;
+}
+
 export default async function AdminBillingPage() {
   const { supabase } = await requireUser();
   const { data: isAdmin } = await supabase.rpc("is_platform_admin");
@@ -36,9 +53,9 @@ export default async function AdminBillingPage() {
     svc.rpc("get_platform_slip_key"),
   ]);
   const stored = {
-    stripeKey: typeof skKey === "string" && skKey.trim().length > 0,
-    stripeWebhook: typeof skWh === "string" && skWh.trim().length > 0,
-    slipKey: typeof slipKey === "string" && slipKey.trim().length > 0,
+    stripeKey: maskKey(skKey),
+    stripeWebhook: maskKey(skWh),
+    slipKey: maskKey(slipKey),
   };
 
   const r = (rev ?? {}) as Record<string, number>;
