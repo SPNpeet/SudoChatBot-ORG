@@ -444,7 +444,10 @@ async function findDocByNumber(ctx: AssistantCtx, docNumber: string) {
  */
 const OWNER_ONLY_TOOLS = new Set(["update_shop_info", "update_payment_settings", "upsert_product"]);
 
-async function executeTool(ctx: AssistantCtx, name: string, input: Record<string, unknown>): Promise<string> {
+// export เพื่อให้ scripts/assistant-readonly-e2e.mjs รัน tool ฝั่ง "อ่านอย่างเดียว"
+// กับข้อมูลจริงได้ — พิสูจน์ว่าลิงก์/ไฟล์ที่ผู้ช่วยส่งให้ผู้ใช้ใช้ได้จริง ไม่ใช่แค่คอมไพล์ผ่าน
+// ⚠️ สคริปต์นั้นห้ามเรียก tool ฝั่งเขียนเด็ดขาด (เขียนจะไปโดนบัญชีลูกค้าจริง)
+export async function executeTool(ctx: AssistantCtx, name: string, input: Record<string, unknown>): Promise<string> {
   const s = ctx.svc;
   if (OWNER_ONLY_TOOLS.has(name) && ctx.role !== "owner" && ctx.role !== "admin") {
     return JSON.stringify({ error: "เฉพาะเจ้าของกิจการหรือผู้ดูแลเท่านั้นที่แก้ข้อมูลกิจการ บัญชีรับเงิน หรือสินค้าได้ — แจ้งเจ้าของให้แก้ที่หน้าตั้งค่าแทน" });
