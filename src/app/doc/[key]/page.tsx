@@ -94,9 +94,33 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
               <tr className="border-t-2 border-neutral-900 text-base font-bold">
                 <td className="py-2">ยอดรวมสุทธิ</td><td className="py-2 text-right">{bahtDoc(doc.total)}</td>
               </tr>
+              {/* ⚠️ บรรทัดหัก ณ ที่จ่าย หายไปจากหน้านี้มาตลอด (พบ 6 ส.ค. 2569 ตอนเปิดดูของจริง)
+                  ผลที่เกิดกับลูกค้าของร้าน: เอกสารบอกยอดรวมสุทธิ 5,350 แต่ QR ให้จ่าย 5,200
+                  โดยไม่มีอะไรอธิบายส่วนต่าง 150 บาทเลย — คนจ่ายมีสองทางเลือกคือ
+                  โทรมาถามว่าร้านคิดผิดหรือเปล่า หรือจ่ายเต็ม 5,350 แล้วร้านต้องคืนเงินทีหลัง
+                  ทั้งที่ใบพิมพ์ของเราเอง (dashboard/print) แสดงบรรทัดนี้อยู่แล้ว
+                  = เอกสารใบเดียวกันบอกตัวเลขไม่ตรงกันสองที่ ซึ่งแย่กว่าไม่มีข้อมูล */}
+              {Number(doc.wht_amount) > 0 && (
+                <>
+                  <tr className="text-neutral-500">
+                    <td className="py-1">หัก ณ ที่จ่าย</td>
+                    <td className="py-1 text-right">-{bahtDoc(doc.wht_amount)}</td>
+                  </tr>
+                  <tr className="border-t border-neutral-200 font-semibold text-emerald-700">
+                    <td className="py-1.5">ยอดที่ต้องโอน</td>
+                    <td className="py-1.5 text-right">{bahtDoc(Number(doc.total) - Number(doc.wht_amount))}</td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
-          <p className="text-[11px] text-neutral-400">({bahtText(Number(doc.total))})</p>
+          {/* ตัวหนังสือกำกับต้องเป็นยอดเดียวกับที่ผู้จ่ายต้องโอนจริง ไม่ใช่ยอดก่อนหัก */}
+          <p className="text-xs text-neutral-400">({bahtText(Number(doc.total) - Number(doc.wht_amount || 0))})</p>
+          {Number(doc.wht_amount) > 0 && (
+            <p className="mt-1 text-xs leading-relaxed text-neutral-500">
+              ผู้จ่ายหักภาษี ณ ที่จ่ายไว้ {bahtDoc(doc.wht_amount)} บาท — กรุณาออกหนังสือรับรองการหักภาษี (50 ทวิ) ให้ผู้รับเงินด้วย
+            </p>
+          )}
           {payable && Number(doc.paid_amount) > 0 && (
             <p className="mt-1 text-sm text-amber-600">ชำระแล้ว {bahtDoc(doc.paid_amount)} · คงเหลือ {bahtDoc(outstanding)}</p>
           )}
