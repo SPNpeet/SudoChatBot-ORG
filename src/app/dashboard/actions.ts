@@ -8,6 +8,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { assertMember } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
 import { branchLabel } from "@/lib/tax-th";
+import { getNoticeHistory, type HistoryItem } from "@/lib/notices";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -198,6 +199,76 @@ export async function dismissNotice(shopId: string, noticeKey: string): Promise<
     return { ok: true };
   } catch (e) {
     return { ok: false, error: friendly(e, "ปิดข้อความไม่สำเร็จ") };
+  }
+}
+
+/** โหลดประวัติที่อ่านแล้ว — เรียกตอนผู้ใช้กดแท็บเท่านั้น ไม่ถ่วงการโหลดทุกหน้า */
+export async function loadNoticeHistory(shopId: string): Promise<{ ok: true; items: HistoryItem[] } | { ok: false; error: string }> {
+  try {
+    await assertMember(shopId);
+    return { ok: true, items: await getNoticeHistory(shopId) };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "โหลดประวัติไม่สำเร็จ") };
+  }
+}
+
+/**
+ * ลบข้อความในกล่องจดหมายทิ้งจริง ๆ (เฉพาะแถวจริงในตาราง notifications)
+ *
+ * ⚠️ เรื่องที่คำนวณสด (อัตรา VAT ใกล้หมดอายุ ฯลฯ) ลบไม่ได้และไม่ควรลบได้
+ * เพราะไม่มีแถวให้ลบ และถ้าปัญหายังอยู่ต้องกลับมาเตือนอีก — คำเตือนที่ลบทิ้งได้ถาวร
+ * ทั้งที่ปัญหายังอยู่คือคำเตือนที่หลอกผู้ใช้ ของพวกนั้นใช้ "อ่านแล้ว" เท่านั้น
+ */
+export async function deleteNotification(shopId: string, noticeKey: string): Promise<ActionResult> {
+  try {
+    await assertMember(shopId);
+    if (!noticeKey.startsWith("row:")) return { ok: false, error: "เรื่องนี้ลบไม่ได้ — ระบบคำนวณสดจากข้อมูลจริง" };
+    const id = noticeKey.slice(4);
+    const supabase = await createClient();
+    const { error } = await supabase.from("notifications").delete().eq("id", id).eq("shop_id", shopId);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/dashboard", "layout");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ลบข้อความไม่สำเร็จ") };
+  }
+}
+
+/** เอาเรื่องที่กด "อ่านแล้ว" ไปแล้วกลับมาแสดงใหม่ (กดผิด/อยากดูซ้ำ) */
+export async function restoreNotice(shopId: string, noticeKey: string): Promise<ActionResult> {
+  try {
+    await assertMember(shopId);
+    const supabase = await createClient();
+    if (noticeKey.startsWith("row:")) {
+      const { error } = await supabase.from("notifications")
+        .update({ read: false }).eq("id", noticeKey.slice(4)).eq("shop_id", shopId);
+      if (error) return { ok: false, error: error.message };
+    } else {
+      const { data: me } = await supabase.auth.getUser();
+      if (!me?.user) return { ok: false, error: "เซสชันหมดอายุ เข้าระบบใหม่อีกครั้ง" };
+      const { error } = await supabase.from("notice_dismissals").delete()
+        .eq("shop_id", shopId).eq("user_id", me.user.id).eq("notice_key", noticeKey.slice(0, 200));
+      if (error) return { ok: false, error: error.message };
+    }
+    revalidatePath("/dashboard", "layout");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "เอากลับมาแสดงไม่สำเร็จ") };
+  }
+}
+
+/** ล้างประวัติที่อ่านแล้วทั้งหมด — ลบเฉพาะแถวจริง ไม่แตะบันทึกว่าเคยกดอ่านเรื่องที่คำนวณสด */
+export async function clearReadNotifications(shopId: string): Promise<ActionResult> {
+  try {
+    await assertMember(shopId);
+    const supabase = await createClient();
+    const { error } = await supabase.from("notifications")
+      .delete().eq("shop_id", shopId).eq("read", true);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/dashboard", "layout");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: friendly(e, "ล้างประวัติไม่สำเร็จ") };
   }
 }
 

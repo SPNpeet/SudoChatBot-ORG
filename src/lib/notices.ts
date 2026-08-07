@@ -225,3 +225,65 @@ export async function getNotices(shopId: string, quota?: QuotaLike | null): Prom
 
   return { notices, unread: notices.length };
 }
+
+/**
+ * ประวัติ "ที่อ่านแล้ว" — สิ่งที่กดอ่านไปแล้วแต่ยังอยากย้อนดูหรือลบทิ้งจริง ๆ
+ *
+ * ⚠️ ทำไมต้องมี (8 ส.ค. 2569): เดิมกล่องจดหมายมีปุ่มเดียวคือ "อ่านแล้ว"
+ * กดแล้วข้อความหายไปเลย — ย้อนดูไม่ได้ ลบทิ้งจริง ๆ ก็ไม่ได้ (ไม่มี policy delete)
+ * เจ้าของรายงานว่า "อ่านแล้วแต่ยังไม่ได้ลบ ไม่มีให้ลบอีก"
+ *
+ * แยกฟังก์ชันจาก getNotices เพราะแท็บนี้ผู้ใช้ต้องกดเปิดเอง
+ * ไม่ควรไปถ่วงการโหลดกระดิ่งซึ่งเรนเดอร์ทุกหน้าใน dashboard
+ */
+export interface HistoryItem {
+  key: string;            // row:<id> = แถวจริง (ลบได้) · อื่น ๆ = ข้อความคำนวณสด (เอากลับมาแสดงได้)
+  title: string;
+  body?: string;
+  at?: string;
+  deletable: boolean;
+}
+
+export async function getNoticeHistory(shopId: string): Promise<HistoryItem[]> {
+  const out: HistoryItem[] = [];
+  try {
+    const supabase = await createClient();
+    const [{ data: rows }, { data: dismissed }] = await Promise.all([
+      supabase.from("notifications").select("id,title,body,created_at")
+        .eq("shop_id", shopId).eq("read", true)
+        .order("created_at", { ascending: false }).limit(30),
+      supabase.from("notice_dismissals").select("notice_key,created_at")
+        .eq("shop_id", shopId).order("created_at", { ascending: false }).limit(30),
+    ]);
+    for (const r of rows ?? []) {
+      const row = r as { id: string; title: string; body: string | null; created_at: string };
+      out.push({ key: `row:${row.id}`, title: row.title, body: row.body ?? undefined, at: row.created_at, deletable: true });
+    }
+    // ข้อความคำนวณสดไม่มีเนื้อความเก็บไว้ (ตั้งใจ — ดูหมายเหตุหัวไฟล์)
+    // จึงแสดงได้แค่ว่า "เคยกดอ่านเรื่องนี้ไปเมื่อไหร่" พร้อมปุ่มเอากลับมาแสดง
+    for (const d of dismissed ?? []) {
+      const row = d as { notice_key: string; created_at: string };
+      if (row.notice_key.startsWith("row:")) continue;   // แถวจริงนับจากตาราง notifications แล้ว
+      out.push({
+        key: row.notice_key,
+        title: dismissedLabel(row.notice_key),
+        body: "เรื่องนี้ระบบคำนวณสดจากข้อมูลจริง — ถ้าปัญหายังอยู่ กดเอากลับมาแสดงเพื่อดูรายละเอียดอีกครั้ง",
+        at: row.created_at,
+        deletable: false,
+      });
+    }
+  } catch { /* ประวัติอ่านไม่ได้ ไม่ควรทำให้กล่องจดหมายพัง */ }
+  return out.sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
+}
+
+/** แปลกุญแจเป็นชื่อเรื่องที่คนอ่านรู้เรื่อง — กุญแจเป็นของภายใน ไม่ควรโชว์ดิบ ๆ */
+function dismissedLabel(key: string): string {
+  const head = key.split(":")[0];
+  return {
+    quota: "โควตาผู้ช่วย AI",
+    alert: "ประกาศจากผู้ดูแลระบบ",
+    vat: "อัตรา VAT ใกล้หมดอายุ",
+    health: "ข้อมูลกิจการ/คู่ค้ายังไม่ครบ",
+    wht_due: "กำหนดนำส่งภาษีหัก ณ ที่จ่าย",
+  }[head] ?? "เรื่องที่กดอ่านแล้ว";
+}

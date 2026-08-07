@@ -13,11 +13,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, X, AlertTriangle, Siren, Info, Check } from "lucide-react";
+import { Bell, X, AlertTriangle, Siren, Info, Check, Trash2, Undo2, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDismiss } from "@/components/use-dismiss";
-import { dismissNotice } from "./actions";
-import type { Notice, NoticeTone } from "@/lib/notices";
+import { dismissNotice, loadNoticeHistory, deleteNotification, restoreNotice, clearReadNotifications } from "./actions";
+import type { Notice, NoticeTone, HistoryItem } from "@/lib/notices";
 
 const TONE: Record<NoticeTone, { ring: string; text: string; Icon: typeof Info }> = {
   critical: { ring: "border-red-200 bg-red-50", text: "text-red-800", Icon: Siren },
@@ -38,6 +38,9 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
   place?: "header" | "sidebar";
 }) {
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"open" | "history">("open");
+  const [history, setHistory] = useState<HistoryItem[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
   useDismiss(open, () => setOpen(false));
@@ -50,6 +53,30 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
   function read(key: string) {
     start(async () => {
       await dismissNotice(shopId, key);
+      router.refresh();
+    });
+  }
+
+  // ⚠️ ประวัติโหลดตอนกดแท็บเท่านั้น (8 ส.ค. 2569)
+  // กระดิ่งเรนเดอร์ทุกหน้าใน dashboard ถ้าดึงประวัติมาด้วยเสมอ = เพิ่มคิวรี 2 ชุดต่อการเปิดหน้าทุกครั้ง
+  // เพื่อของที่คนส่วนใหญ่ไม่เปิดดู
+  function openHistory() {
+    setTab("history");
+    if (history !== null) return;
+    start(async () => {
+      const r = await loadNoticeHistory(shopId);
+      setHistory(r.ok ? r.items : []);
+      if (!r.ok) setErr(r.error);
+    });
+  }
+
+  function act(fn: () => Promise<{ ok: boolean; error?: string }>) {
+    setErr(null);
+    start(async () => {
+      const r = await fn();
+      if (!r.ok) { setErr(r.error ?? "ทำรายการไม่สำเร็จ"); return; }
+      const fresh = await loadNoticeHistory(shopId);
+      setHistory(fresh.ok ? fresh.items : []);
       router.refresh();
     });
   }
@@ -109,7 +136,62 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
               </button>
             </div>
 
-            {unread === 0 ? (
+            {/* แท็บ: ค้างอยู่ / อ่านแล้ว — เดิมมีแค่รายการค้าง กดอ่านแล้วหายไปเลย ย้อนดูไม่ได้ ลบไม่ได้ */}
+            <div className="flex border-b border-neutral-100">
+              {([["open", `ค้างอยู่${unread ? ` (${unread})` : ""}`], ["history", "อ่านแล้ว"]] as const).map(([id, label]) => (
+                <button key={id} type="button"
+                  onClick={() => (id === "history" ? openHistory() : setTab("open"))}
+                  className={cn(
+                    "min-h-11 flex-1 px-3 text-xs font-semibold transition-colors",
+                    tab === id ? "border-b-2 border-emerald-600 text-emerald-700" : "text-neutral-500 hover:text-neutral-800",
+                  )}>{label}</button>
+              ))}
+            </div>
+
+            {err && <p className="bg-red-50 px-4 py-2 text-xs text-red-600">{err}</p>}
+
+            {tab === "history" ? (
+              history === null ? (
+                <p className="px-4 py-6 text-center text-sm text-neutral-400">กำลังโหลด...</p>
+              ) : history.length === 0 ? (
+                <div className="px-4 py-6 text-center">
+                  <Archive className="mx-auto h-5 w-5 text-neutral-300" />
+                  <p className="mt-1.5 text-sm text-neutral-500">ยังไม่มีเรื่องที่อ่านแล้ว</p>
+                </div>
+              ) : (
+                <>
+                  <ul className="max-h-[min(22rem,55vh)] divide-y divide-neutral-100 overflow-y-auto">
+                    {history.map((h) => (
+                      <li key={h.key} className="px-4 py-3">
+                        <p className="text-[13px] font-medium leading-snug text-neutral-700">{h.title}</p>
+                        {h.body && <p className="mt-1 text-xs leading-relaxed text-neutral-500">{h.body}</p>}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3">
+                          {h.at && <span className="text-[11px] text-neutral-400">{new Date(h.at).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" })}</span>}
+                          <button onClick={() => act(() => restoreNotice(shopId, h.key))} disabled={pending}
+                            className="inline-flex min-h-[44px] items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-50">
+                            <Undo2 className="h-3.5 w-3.5" /> เอากลับมาแสดง
+                          </button>
+                          {h.deletable && (
+                            <button onClick={() => act(() => deleteNotification(shopId, h.key))} disabled={pending}
+                              className="inline-flex min-h-[44px] items-center gap-1 text-xs text-neutral-400 hover:text-red-600 disabled:opacity-50">
+                              <Trash2 className="h-3.5 w-3.5" /> ลบ
+                            </button>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  {history.some((h) => h.deletable) && (
+                    <div className="border-t border-neutral-100 px-4 py-2">
+                      <button onClick={() => act(() => clearReadNotifications(shopId))} disabled={pending}
+                        className="inline-flex min-h-[44px] items-center gap-1 text-xs text-neutral-500 hover:text-red-600 disabled:opacity-50">
+                        <Trash2 className="h-3.5 w-3.5" /> ลบที่อ่านแล้วทั้งหมด
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
+            ) : unread === 0 ? (
               <div className="px-4 py-6 text-center">
                 <Check className="mx-auto h-5 w-5 text-emerald-600" />
                 <p className="mt-1.5 text-sm text-neutral-500">ไม่มีเรื่องค้าง</p>
