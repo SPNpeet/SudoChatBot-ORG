@@ -10,7 +10,9 @@ import { resolvePurposeKey, resolveDefaultAiConfig } from "@/lib/ai-config";
 import { docOutstanding, agingBucket, AGING_LABEL_TH, DOC_TYPE_TH } from "@/lib/finance";
 // กฎเลือกเอกสารสำหรับ VAT/หัก ณ ที่จ่าย ต้องมาจากที่เดียวกับหน้ารายงาน ห้ามเขียนใหม่ในนี้
 import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, sumVat, recognitionsAsDocs } from "@/lib/vat-docs";
-import { saveDoc, recordPayment, convertDoc, voidDoc, type SaveDocInput } from "../finance/actions";
+import { saveDoc, recordPayment, convertDoc, voidDoc, issueCreditDebitNote, addManualJournal,
+  approveExpense, rejectExpense, type SaveDocInput } from "../finance/actions";
+import { addFixedAsset, runDepreciation } from "../assets/actions";
 import type { DocType, VatMode } from "@/lib/types/finance";
 
 export interface AssistantCtx {
@@ -294,6 +296,107 @@ export const TOOLS = [
     description: "ดูเครดิต แพ็กเกจ และรายการเงินของบัญชีระบบ (ไม่ใช่บัญชีของธุรกิจ)",
     input_schema: { type: "object", properties: {} },
   },
+  // ============================================================
+  //  ⚠️ tool ชุดล่างเพิ่ม 8 ส.ค. 2569 — เจ้าของสั่งว่า "ai ต้องทำได้ทุกอย่างเลยทั้งหมด
+  //  ออกเอกสารส่งมาให้ผู้ใช้งานได้ทั้งหมดทุกรูปแบบ"
+  //
+  //  ก่อนหน้านี้ AI มี 19 tool ครอบแค่ ขาย-ซื้อ-รับเงิน-รายงาน
+  //  งานที่ระบบทำได้แต่ AI แตะไม่ได้เลยมี 7 อย่าง แล้วเวลาผู้ใช้สั่ง AI จะตอบว่า
+  //  "ทำที่หน้านั้นเอง" ซึ่งขัดกับเหตุผลทั้งหมดของการมีผู้ช่วย —
+  //  ผู้ช่วยที่ทำได้ครึ่งเดียวแปลว่าผู้ใช้ต้องจำเองว่าเรื่องไหนสั่งได้ เรื่องไหนสั่งไม่ได้
+  // ============================================================
+  {
+    name: "get_doc_links",
+    description: "ขอลิงก์ของเอกสารทุกแบบในครั้งเดียว: ลิงก์ส่งลูกค้า (เปิดดู+จ่าย+อัปสลิปได้) · ลิงก์พิมพ์/บันทึกเป็น PDF · ลิงก์เปิดในระบบ — ใช้เมื่อผู้ใช้ขอ 'ส่งให้ลูกค้า' 'ขอ PDF' 'ขอลิงก์' 'พิมพ์' หรือหลังออกเอกสารเสร็จทุกครั้ง",
+    input_schema: { type: "object", properties: { doc_number: { type: "string" } }, required: ["doc_number"] },
+  },
+  {
+    name: "issue_credit_note",
+    description: "ออกใบลดหนี้ (credit_note ลดยอด เช่น ของคืน/ลดราคาหลังออกใบกำกับ) หรือใบเพิ่มหนี้ (debit_note เพิ่มยอด) อ้างอิงใบแจ้งหนี้/ใบเสร็จเดิม — ระบบลงบัญชีกลับรายการและบันทึกภาษีตาม ม.86/9-86/10 ให้เอง",
+    input_schema: {
+      type: "object",
+      properties: {
+        origin_doc_number: { type: "string", description: "เลขที่ใบกำกับต้นทาง" },
+        kind: { type: "string", enum: ["credit_note", "debit_note"] },
+        reason: { type: "string", description: "เหตุผล เช่น ลูกค้าคืนสินค้า 2 ชิ้น" },
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { name: { type: "string" }, qty: { type: "number" }, unit: { type: "string" }, unit_price: { type: "number" } },
+            required: ["name", "qty", "unit_price"],
+          },
+        },
+        settle: { type: "string", enum: ["ar", "cash", "bank"], description: "ar = ตัดกับลูกหนี้ (ปกติ) · cash/bank = คืนเงินจริง" },
+        issue_date: { type: "string", description: "YYYY-MM-DD" },
+      },
+      required: ["origin_doc_number", "kind", "reason", "items"],
+    },
+  },
+  {
+    name: "add_journal_entry",
+    description: "ลงสมุดรายวันเอง (JV ปรับปรุง) สำหรับรายการที่ไม่มีเอกสาร เช่น ปรับปรุงค่าใช้จ่ายค้างจ่าย ตัดหนี้สูญ โอนระหว่างบัญชี — เดบิตรวมต้องเท่ากับเครดิตรวม",
+    input_schema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "YYYY-MM-DD" },
+        memo: { type: "string", description: "คำอธิบายรายการ" },
+        lines: {
+          type: "array",
+          description: "อย่างน้อย 2 บรรทัด · code = รหัสบัญชีในผังบัญชี",
+          items: {
+            type: "object",
+            properties: { code: { type: "string" }, debit: { type: "number" }, credit: { type: "number" }, memo: { type: "string" } },
+            required: ["code", "debit", "credit"],
+          },
+        },
+      },
+      required: ["memo", "lines"],
+    },
+  },
+  {
+    name: "approve_expense",
+    description: "อนุมัติหรือไม่อนุมัติค่าใช้จ่ายที่รออนุมัติ (พนักงานบันทึกไว้) — อนุมัติแล้วระบบลงบัญชีให้ทันที",
+    input_schema: {
+      type: "object",
+      properties: {
+        doc_number: { type: "string" },
+        approve: { type: "boolean", description: "true = อนุมัติ · false = ไม่อนุมัติ" },
+        reason: { type: "string", description: "เหตุผลเมื่อไม่อนุมัติ" },
+      },
+      required: ["doc_number", "approve"],
+    },
+  },
+  {
+    name: "add_fixed_asset",
+    description: "เพิ่มทรัพย์สินเข้าทะเบียน (ของที่ใช้ได้เกิน 1 ปี เช่น คอมพิวเตอร์ รถ เครื่องจักร) — ระบบออกรหัสทรัพย์สินให้และคำนวณค่าเสื่อมตามอายุการใช้งาน",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        cost: { type: "number", description: "ราคาทุน (รวมค่าติดตั้ง/ขนส่ง ไม่รวมภาษีซื้อที่ขอคืนได้)" },
+        life_years: { type: "number", description: "อายุการใช้งาน (ปี) — คอมพ์ 3 · เครื่องใช้สำนักงาน/รถ/เครื่องจักร 5 · อาคาร 20" },
+        acquired_on: { type: "string", description: "YYYY-MM-DD วันที่ได้ทรัพย์สินมา" },
+        salvage: { type: "number", description: "ราคาซาก ไม่ใส่ = 1 บาทตามประมวลรัษฎากร" },
+        serial_no: { type: "string" }, brand_model: { type: "string" },
+        location: { type: "string" }, holder: { type: "string" },
+      },
+      required: ["name", "cost", "life_years", "acquired_on"],
+    },
+  },
+  {
+    name: "run_depreciation",
+    description: "ลงค่าเสื่อมราคาของเดือนที่ระบุให้ทรัพย์สินทุกชิ้นในทะเบียน (YYYY-MM) — กดซ้ำได้ปลอดภัย ลงได้เฉพาะเดือนที่จบไปแล้ว",
+    input_schema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM" } }, required: ["month"] },
+  },
+  {
+    name: "get_report_files",
+    description: "ขอลิงก์ไฟล์รายงานของงวด: ชุดส่งสำนักงานบัญชี (Excel เดียวครบทั้งงวด) และหน้ารายงานภาษีแต่ละแท็บ — ใช้เมื่อผู้ใช้ขอ 'ส่งให้นักบัญชี' 'ขอไฟล์ Excel' 'ขอรายงานภาษี'",
+    input_schema: {
+      type: "object",
+      properties: { period: { type: "string", description: "YYYY-MM หรือ YYYY-Qn หรือ YYYY — ไม่ใส่ = เดือนนี้" } },
+    },
+  },
 ];
 
 export const ASSISTANT_TOOL_LABEL_TH: Record<string, string> = {
@@ -305,6 +408,10 @@ export const ASSISTANT_TOOL_LABEL_TH: Record<string, string> = {
   search_contacts: "ค้นผู้ติดต่อ", create_contact: "เพิ่มผู้ติดต่อ", get_expense_categories: "ดูหมวดค่าใช้จ่าย",
   search_products: "ค้นสินค้า", upsert_product: "จัดการสินค้า",
   update_shop_info: "แก้ข้อมูลกิจการ", update_payment_settings: "ตั้งค่ารับเงิน", get_billing_status: "เช็คเครดิต",
+  get_doc_links: "ขอลิงก์เอกสาร", issue_credit_note: "ออกใบลดหนี้/เพิ่มหนี้",
+  add_journal_entry: "ลงสมุดรายวัน", approve_expense: "อนุมัติค่าใช้จ่าย",
+  add_fixed_asset: "เพิ่มทรัพย์สิน", run_depreciation: "ลงค่าเสื่อมราคา",
+  get_report_files: "ขอไฟล์รายงาน",
 };
 
 // จับคู่ผู้ติดต่อจากชื่อ (ตรงตัวหรือ contains) — ไม่เจอคืน null ให้ snapshot ชื่อดิบแทน
@@ -802,6 +909,123 @@ async function executeTool(ctx: AssistantCtx, name: string, input: Record<string
           note: "เติมเงิน/เปลี่ยนแพ็กเกจทำได้ที่หน้า แพ็กเกจ/เครดิต",
         });
       }
+      // ---------- ส่งเอกสารให้ลูกค้าได้ทุกรูปแบบ ----------
+      case "get_doc_links": {
+        const doc = await findDocByNumber(ctx, String(input.doc_number ?? ""));
+        if (!doc) return JSON.stringify({ error: "ไม่พบเอกสารเลขนี้" });
+        // ⚠️ ค่าใช้จ่ายไม่มีลิงก์ส่งลูกค้า — เป็นบิลที่เราได้รับมา ไม่ใช่เอกสารที่เราออกให้ใคร
+        // ส่งลิงก์ผิดฝั่งให้ลูกค้า = ลูกค้าเห็นบิลที่เราจ่ายให้คนอื่น
+        const isExpense = doc.doc_type === "expense";
+        return JSON.stringify({
+          doc_number: doc.doc_number,
+          view_link: `/dashboard/${isExpense ? "expenses" : "sales"}/${doc.id}`,
+          // ⚠️ หน้าพิมพ์อยู่ที่ /dashboard/print/<id> เส้นเดียวสำหรับทุกชนิดเอกสาร
+          // (เคยเขียนผิดเป็น /sales/<id>/print ตอนเพิ่ม tool นี้ = ปุ่มพาไป 404)
+          print_link: `/dashboard/print/${doc.id}`,
+          share_link: !isExpense && doc.share_key ? `/doc/${doc.share_key}` : undefined,
+          note: isExpense
+            ? "เอกสารค่าใช้จ่ายไม่มีลิงก์ส่งลูกค้า (เป็นบิลที่เราได้รับมา)"
+            : "ลิงก์ส่งลูกค้า: เปิดดูเอกสาร สแกน QR จ่าย และอัปสลิปได้ในหน้าเดียว · ลิงก์พิมพ์: กด Ctrl+P แล้วเลือก Save as PDF",
+        });
+      }
+      // ---------- ใบลดหนี้ / ใบเพิ่มหนี้ ----------
+      case "issue_credit_note": {
+        const origin = await findDocByNumber(ctx, String(input.origin_doc_number ?? ""));
+        if (!origin) return JSON.stringify({ error: "ไม่พบใบกำกับต้นทางเลขนี้" });
+        const kind = String(input.kind) as "credit_note" | "debit_note";
+        if (!["credit_note", "debit_note"].includes(kind)) return JSON.stringify({ error: "kind ต้องเป็น credit_note หรือ debit_note" });
+        const items = (input.items as { name: string; qty: number; unit?: string; unit_price: number }[]) ?? [];
+        if (!items.length) return JSON.stringify({ error: "ต้องมีรายการอย่างน้อย 1 บรรทัด" });
+        const r = await issueCreditDebitNote(ctx.shopId, {
+          origin_doc_id: origin.id,
+          kind,
+          reason: String(input.reason ?? "").trim(),
+          items,
+          settle: (input.settle as "ar" | "cash" | "bank" | undefined) ?? "ar",
+          issue_date: typeof input.issue_date === "string" ? input.issue_date : undefined,
+        });
+        if (!r.ok) return JSON.stringify({ error: r.error });
+        return JSON.stringify({
+          ok: true, doc_number: r.docNumber, doc_id: r.docId,
+          view_link: `/dashboard/sales/${r.docId}`,
+          print_link: `/dashboard/print/${r.docId}`,
+          note: kind === "credit_note" ? "ออกใบลดหนี้และกลับรายการบัญชีให้แล้ว" : "ออกใบเพิ่มหนี้และลงบัญชีให้แล้ว",
+        });
+      }
+      // ---------- สมุดรายวันเอง (JV ปรับปรุง) ----------
+      case "add_journal_entry": {
+        const lines = (input.lines as { code: string; debit: number; credit: number; memo?: string }[]) ?? [];
+        if (lines.length < 2) return JSON.stringify({ error: "ต้องมีอย่างน้อย 2 บรรทัด" });
+        // ⚠️ ตรวจเดบิต=เครดิตตรงนี้ด้วย ไม่ใช่ปล่อยให้ล้มที่ฐานข้อมูลอย่างเดียว
+        // เพราะข้อความ error จากฐานข้อมูลอ่านไม่รู้เรื่อง แล้ว AI จะไปเดาสาเหตุผิด
+        const dr = Math.round(lines.reduce((a, l) => a + Number(l.debit || 0), 0) * 100) / 100;
+        const cr = Math.round(lines.reduce((a, l) => a + Number(l.credit || 0), 0) * 100) / 100;
+        if (dr !== cr) return JSON.stringify({ error: `เดบิตรวม ${dr} ไม่เท่ากับเครดิตรวม ${cr} — แก้ให้เท่ากันก่อน` });
+        if (dr <= 0) return JSON.stringify({ error: "ยอดต้องมากกว่า 0" });
+        const r = await addManualJournal(
+          ctx.shopId,
+          typeof input.date === "string" ? input.date : "",
+          String(input.memo ?? ""),
+          lines,
+        );
+        if (!r.ok) return JSON.stringify({ error: r.error });
+        return JSON.stringify({ ok: true, view_link: "/dashboard/journal", doc_number: "สมุดรายวัน", note: "ลงสมุดรายวันแล้ว" });
+      }
+      // ---------- อนุมัติค่าใช้จ่าย ----------
+      case "approve_expense": {
+        const doc = await findDocByNumber(ctx, String(input.doc_number ?? ""));
+        if (!doc) return JSON.stringify({ error: "ไม่พบเอกสารเลขนี้" });
+        if (doc.doc_type !== "expense") return JSON.stringify({ error: "อนุมัติได้เฉพาะเอกสารค่าใช้จ่าย" });
+        const approve = input.approve === true;
+        const r = approve
+          ? await approveExpense(ctx.shopId, doc.id)
+          : await rejectExpense(ctx.shopId, doc.id, String(input.reason ?? "").trim());
+        if (!r.ok) return JSON.stringify({ error: r.error });
+        return JSON.stringify({
+          ok: true, doc_number: doc.doc_number, view_link: `/dashboard/expenses/${doc.id}`,
+          note: approve ? "อนุมัติและลงบัญชีให้แล้ว" : "ไม่อนุมัติแล้ว — ยังไม่ลงบัญชี",
+        });
+      }
+      // ---------- ทะเบียนทรัพย์สิน ----------
+      case "add_fixed_asset": {
+        const fd = new FormData();
+        fd.set("name", String(input.name ?? ""));
+        fd.set("cost", String(input.cost ?? ""));
+        fd.set("life_years", String(input.life_years ?? ""));
+        fd.set("acquired_on", String(input.acquired_on ?? ""));
+        fd.set("salvage", String(input.salvage ?? 1));
+        for (const k of ["serial_no", "brand_model", "location", "holder"]) {
+          if (typeof input[k] === "string") fd.set(k, input[k] as string);
+        }
+        const r = await addFixedAsset(ctx.shopId, fd);
+        if (!r.ok) return JSON.stringify({ error: r.error });
+        return JSON.stringify({ ok: true, doc_number: String(input.name ?? "ทรัพย์สิน"), view_link: "/dashboard/assets", note: r.message });
+      }
+      case "run_depreciation": {
+        const month = String(input.month ?? "");
+        if (!/^\d{4}-\d{2}$/.test(month)) return JSON.stringify({ error: "เดือนต้องเป็นรูปแบบ YYYY-MM" });
+        const r = await runDepreciation(ctx.shopId, month);
+        if (!r.ok) return JSON.stringify({ error: r.error });
+        return JSON.stringify({ ok: true, doc_number: `ค่าเสื่อม ${month}`, view_link: "/dashboard/assets", note: r.message });
+      }
+      // ---------- ไฟล์รายงานของงวด ----------
+      case "get_report_files": {
+        const raw = typeof input.period === "string" ? input.period.trim() : "";
+        const period = /^\d{4}(-(\d{2}|Q[1-4]))?$/.test(raw)
+          ? raw
+          : new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7);
+        return JSON.stringify({
+          period,
+          // ไฟล์ Excel ชุดเดียวครบทั้งงวด — ปลายทางเดียวกับปุ่มบนหน้ารายงาน
+          accountant_xlsx: `/api/sheet/accountant?period=${encodeURIComponent(period)}`,
+          view_link: `/dashboard/reports?period=${encodeURIComponent(period)}`,
+          vat_report: `/dashboard/reports?t=vat&period=${encodeURIComponent(period)}`,
+          wht_report: `/dashboard/reports?t=wht&period=${encodeURIComponent(period)}`,
+          trial_balance: `/dashboard/reports?t=trial&period=${encodeURIComponent(period)}`,
+          doc_number: `รายงานงวด ${period}`,
+          note: "ชุดส่งสำนักงานบัญชีเป็นไฟล์ Excel เดียวครบทั้งงวด (ภาษีขาย · ภาษีซื้อ · หัก ณ ที่จ่าย · สมุดรายวัน · งบทดลอง · ยอดค้าง)",
+        });
+      }
       default: return JSON.stringify({ error: "unknown tool" });
     }
   } catch (e) {
@@ -853,6 +1077,16 @@ export function buildSystemPrompt(ctx: AssistantCtx): string {
     เช่น "เดือนนี้จ่ายอะไรไปบ้าง" ให้ตอบยอดรวม + ไล่ว่าจ่ายอะไรบ้างทีละรายการ (คู่ค้า/หมวด/ยอด)
     ถ้ามีเกิน 5 รายการ ให้เล่า 5 อันที่ยอดสูงสุดแล้วบอกว่าที่เหลือกี่รายการ รวมเท่าไหร่
     และปิดท้ายด้วยข้อสังเกตที่ใช้ตัดสินใจได้ 1 ประโยค (เช่น หมวดไหนกินเงินมากสุด มีอะไรผิดปกติ)
+8.3 **ออกเอกสารเสร็จแล้วต้องส่งต่อได้ทันที — ห้ามให้ผู้ใช้ไปหาลิงก์เอง**
+    ทุกครั้งที่ออกเอกสารขายสำเร็จ ให้บอกในคำตอบว่ามี 3 ทางให้ใช้ต่อ:
+    ลิงก์ส่งลูกค้า (ลูกค้าเปิดดู สแกน QR จ่าย และอัปสลิปได้ในหน้าเดียว) ·
+    ลิงก์พิมพ์/บันทึกเป็น PDF · เปิดในระบบ — ระบบขึ้นปุ่มให้อัตโนมัติจากลิงก์ที่ tool คืนมา
+    ผู้ใช้ขอย้อนหลัง ("ขอลิงก์ใบนั้น" / "ขอ PDF" / "ส่งให้ลูกค้าหน่อย") ให้เรียก get_doc_links
+    ขอไฟล์รายงาน/ส่งนักบัญชี ให้เรียก get_report_files
+9.1 **งานที่ทำได้แล้วห้ามตอบว่าให้ไปทำเอง** — ใบลดหนี้/ใบเพิ่มหนี้ (issue_credit_note) ·
+    ลงสมุดรายวันเอง (add_journal_entry) · อนุมัติค่าใช้จ่าย (approve_expense) ·
+    เพิ่มทรัพย์สิน (add_fixed_asset) · ลงค่าเสื่อม (run_depreciation)
+    ทั้งหมดนี้สั่งจากแชทได้ ให้ทำให้เลยตามกติกาข้อ 2
 8.2 **ข้อความที่อ่านไม่ออก/พิมพ์มั่ว/สั้นเกินจะเดาเจตนา — ห้ามทวนคำนั้นกลับไปแล้วบอกว่าไม่เข้าใจ**
     เกิดจริง 8 ส.ค. 2569: ผู้ใช้พิมพ์ "ฟหก" แล้วได้ตอบว่า 'ฉันไม่เข้าใจคำว่า "ฟหก" ค่ะ คุณต้องการให้ฉันช่วยอะไรคะ'
     ซ้ำแบบเดียวกันทุกครั้งที่พิมพ์มั่ว — อ่านแล้วเหมือนระบบพัง และไม่ช่วยให้ผู้ใช้ไปต่อได้เลยสักนิด
@@ -1008,6 +1242,9 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
 const WRITE_TOOLS = new Set([
   "create_sales_doc", "create_expense", "record_payment", "convert_doc", "void_doc",
   "create_contact", "upsert_product", "update_shop_info", "update_payment_settings",
+  // tool เขียนชุดใหม่ — ต้องอยู่ในลิสต์นี้ด้วย ไม่งั้นตาข่ายกันโกหกจะไม่นับว่า "ทำจริงแล้ว"
+  // แล้วบังคับให้โมเดลวนทำซ้ำ = ออกใบลดหนี้/ลงสมุดรายวันซ้ำสองครั้ง
+  "issue_credit_note", "add_journal_entry", "approve_expense", "add_fixed_asset", "run_depreciation",
 ]);
 // อ้างว่าทำรายการสำเร็จ (เช่น "บันทึก...เรียบร้อยแล้ว") แต่ไม่นับประโยคปฏิเสธ
 const CLAIM_RE = /(บันทึก|ออกใบ|สร้างใบ|ลงบัญชี|ตั้งหนี้|ยกเลิกเอกสาร|แปลงเป็น|รับชำระ|จ่ายเงิน)[^\n]{0,60}(แล้ว|เรียบร้อย|สำเร็จ)/;

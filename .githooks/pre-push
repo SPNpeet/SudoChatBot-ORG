@@ -62,6 +62,12 @@ if ! npm run check:columns; then
   exit 1
 fi
 
+if ! npm run check:ailinks; then
+  echo ""
+  echo "  หยุด: ลิงก์ที่ผู้ช่วย AI ส่งให้ผู้ใช้ชี้ไปหน้าที่ไม่มีอยู่จริง ห้าม push"
+  exit 1
+fi
+
 echo ""
-echo "  ผ่าน 7 ด่าน (typecheck · บัญชี · UI · ลำดับ migration · สิทธิ์ Server Action · นำเข้า CSV · จับคู่คอลัมน์) — build จะถูกตรวจอีกรอบที่ Vercel"
+echo "  ผ่าน 8 ด่าน (typecheck · บัญชี · UI · ลำดับ migration · สิทธิ์ Server Action · นำเข้า CSV · จับคู่คอลัมน์ · ลิงก์ AI) — build จะถูกตรวจอีกรอบที่ Vercel"
 echo ""
