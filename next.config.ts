@@ -34,7 +34,20 @@ const nextConfig: NextConfig = {
     ],
   },
   async headers() {
-    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+    return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
+      {
+        // ⚠️ ไฟล์ใน public/ ถูกส่งมาพร้อม max-age=0, must-revalidate เป็นค่าเริ่มต้น
+        // วัดจริง 8 ส.ค. 2569: /logo-mark.png (14 KB) ถูกขอใหม่ทุกครั้งที่เปิดหน้า
+        // ทั้งที่เป็นรูปที่แทบไม่เคยเปลี่ยน — เสียเวลาผู้ใช้และค่า egress ฟรี ๆ
+        //
+        // ใช้ 1 วัน + stale-while-revalidate 7 วัน (ไม่ใช่ immutable)
+        // เพราะชื่อไฟล์พวกนี้ไม่มี hash ต่อท้าย ถ้าตั้ง immutable แล้วเปลี่ยนโลโก้
+        // ผู้ใช้เดิมจะเห็นของเก่าไปอีกนานโดยที่เราแก้อะไรไม่ได้เลย
+        source: "/:file*.(png|jpg|jpeg|svg|webp|ico|woff2)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
+      },
+    ];
   },
 };
 
