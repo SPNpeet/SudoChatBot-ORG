@@ -8,12 +8,18 @@ import { baht } from "@/lib/utils";
 import { recordPayment } from "../finance/actions";
 import { parseStatementPdf } from "./statement-actions";
 import { useToast } from "@/components/toast";
+import { matchColumns, STATEMENT_FIELDS } from "@/lib/column-map";
 
 interface InvoiceLite { docId: string; docNumber: string; contact: string | null; outstanding: number; due: string | null }
 interface StmtRow { idx: number; date: string; desc: string; amount: number; matched?: InvoiceLite; docId: string; done?: boolean; error?: string }
 
 export default function StatementImport({ shopId, invoices }: { shopId: string; invoices: InvoiceLite[] }) {
   const [rows, setRows] = useState<StmtRow[]>([]);
+  // ขั้นจับคู่คอลัมน์ — มีค่าเมื่ออ่านไฟล์ตารางเสร็จแต่ยังไม่ยืนยันคอลัมน์
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [dataRows, setDataRows] = useState<unknown[][]>([]);
+  const [map, setMap] = useState<{ date: number; desc: number; amountIn: number }>({ date: -1, desc: -1, amountIn: -1 });
+  const [guessed, setGuessed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
@@ -67,32 +73,51 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
       const aoa = await readSheet(f);
       if (aoa.length < 2) { setError("อ่านไฟล์ไม่ได้ หรือไฟล์มีแต่หัวตาราง"); return; }
 
-      // เดาคอลัมน์: วันที่ / รายละเอียด / ยอดเงินเข้า (รองรับหัวตารางไทย-อังกฤษของธนาคารทั่วไป)
-      const headers = aoa[0].map((h) => String(h ?? ""));
-      const findIdx = (cands: string[]) =>
-        headers.findIndex((h) => cands.some((c) => h.toLowerCase().replace(/\s/g, "").includes(c)));
-      const at = (i: number, fb: number) => (i >= 0 ? i : fb);
-      const dateIdx = at(findIdx(["date", "วันที่", "วัน/เดือน/ปี"]), 0);
-      const descIdx = at(findIdx(["desc", "รายละเอียด", "รายการ", "detail", "memo", "หมายเหตุ", "channel"]), 1);
-      const inIdx = at(findIdx(["deposit", "credit", "ฝาก", "เงินเข้า", "รับ"]), findIdx(["amount", "จำนวนเงิน", "ยอด"]));
-
-      const parsed: StmtRow[] = aoa.slice(1).map((r, i) => {
-        const amtRaw = String(inIdx >= 0 ? r[inIdx] ?? "" : "").replace(/[^0-9.\-]/g, "");
-        const amount = Math.round((Number(amtRaw) || 0) * 100) / 100;
-        return {
-          idx: i,
-          date: String(r[dateIdx] ?? "").slice(0, 20),
-          desc: String(r[descIdx] ?? "").slice(0, 80),
-          amount, docId: "",
-        };
-      }).filter((r) => r.amount > 0).slice(0, 100);
-
-      if (!parsed.length) { setError("ไม่พบแถวเงินเข้า (ยอด > 0) ในไฟล์ — เช็คว่ามีคอลัมน์ยอดเงินฝาก/เงินเข้า"); return; }
-
-      setRows(autoMatch(parsed));
+      // ⚠️ ห้ามเดาคอลัมน์แบบมั่วอีกแล้ว (แก้ 8 ส.ค. 2569)
+      // ของเดิม: หาไม่เจอให้ใช้คอลัมน์ที่ 0 กับ 1 และยอดเงินหาไม่เจอก็ปล่อยเป็น 0
+      // ผลคือไฟล์ที่หัวคอลัมน์ไม่ตรงแบบจะ "นำเข้าสำเร็จ" โดยอ่านยอดจากคอลัมน์ผิด
+      // ไม่มี error ให้เห็นเลย ตัวเลขแค่ผิด — อันตรายที่สุดในงานเงิน
+      // ตอนนี้: เดาให้ก่อน แล้วให้คนยืนยัน/แก้เองได้ทุกช่อง ก่อนเห็นตัวเลขจริง
+      const hd = aoa[0].map((h) => String(h ?? ""));
+      const guess = matchColumns(hd, STATEMENT_FIELDS);
+      setHeaders(hd);
+      setDataRows(aoa.slice(1));
+      setMap({
+        date: guess.date.index,
+        desc: guess.desc.index,
+        // ไฟล์คอลัมน์เดียว (มีแต่ "จำนวนเงิน") ก็ใช้เป็นเงินเข้าได้
+        amountIn: guess.amountIn.index >= 0 ? guess.amountIn.index : guess.amount.index,
+      });
+      setGuessed(guess.date.confidence !== "none" || guess.amountIn.confidence !== "none");
     } catch {
       setError("อ่านไฟล์ไม่สำเร็จ — ลองใช้ไฟล์ CSV, Excel หรือ PDF ที่โหลดจากแอปธนาคารโดยตรง");
     }
+  }
+
+  /** แปลงตามคอลัมน์ที่ผู้ใช้ยืนยันแล้ว — เรียกตอนกดปุ่ม ไม่ใช่ตอนอ่านไฟล์ */
+  function applyMapping() {
+    if (map.date < 0 || map.amountIn < 0) {
+      setError("เลือกให้ครบว่าคอลัมน์ไหนคือวันที่ และคอลัมน์ไหนคือยอดเงินเข้า");
+      return;
+    }
+    setError(null);
+    const parsed: StmtRow[] = dataRows.map((r, i) => {
+      const amtRaw = String(r[map.amountIn] ?? "").replace(/[^0-9.\-]/g, "");
+      return {
+        idx: i,
+        date: String(r[map.date] ?? "").slice(0, 20),
+        desc: map.desc >= 0 ? String(r[map.desc] ?? "").slice(0, 80) : "",
+        amount: Math.round((Number(amtRaw) || 0) * 100) / 100,
+        docId: "",
+      };
+    }).filter((r) => r.amount > 0).slice(0, 100);
+
+    if (!parsed.length) {
+      setError(`คอลัมน์ "${headers[map.amountIn] || `ที่ ${map.amountIn + 1}`}" ไม่มีตัวเลขที่มากกว่า 0 เลยสักแถว — น่าจะเลือกคอลัมน์ผิด ลองเลือกใหม่`);
+      return;
+    }
+    setHeaders([]); setDataRows([]);
+    setRows(autoMatch(parsed));
   }
 
   function confirmRow(row: StmtRow) {
@@ -147,6 +172,52 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
           <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
             <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" />{note}
           </p>
+        )}
+
+        {/* ⚠️ ขั้นยืนยันคอลัมน์ — ขั้นนี้ห้ามข้าม (8 ส.ค. 2569)
+            ไฟล์ที่ลูกค้าเอามาไม่มีวันหน้าตาเหมือนกัน ระบบเดาให้ได้แต่ต้องให้คนตรวจก่อน
+            เพราะเดาผิดแล้วเงียบ = ยอดผิดทั้งไฟล์โดยไม่มีใครรู้
+            โชว์ตัวอย่าง 3 แถวแรกของคอลัมน์ที่เลือกไว้ด้วย จะได้เห็นด้วยตาว่าเลือกถูกไหม */}
+        {headers.length > 0 && (
+          <div className="space-y-3 rounded-xl border border-neutral-200 bg-neutral-50/60 p-3">
+            <div>
+              <p className="text-sm font-semibold text-neutral-800">ตรวจว่าคอลัมน์ตรงไหม</p>
+              <p className="mt-0.5 text-xs text-neutral-500">
+                {guessed
+                  ? "ระบบเดาให้แล้วจากหัวตารางในไฟล์ — ดูตัวอย่างข้างล่างว่าตรงไหม แล้วกดอ่านรายการ"
+                  : "ไฟล์นี้หัวตารางไม่ตรงแบบที่ระบบรู้จัก เลือกเองว่าคอลัมน์ไหนคืออะไร"}
+              </p>
+            </div>
+            <div className="grid gap-2.5 sm:grid-cols-3">
+              {([
+                ["date", "วันที่ *"],
+                ["amountIn", "ยอดเงินเข้า *"],
+                ["desc", "รายละเอียด"],
+              ] as const).map(([field, label]) => (
+                <div key={field}>
+                  <label className="text-xs font-medium text-neutral-600">{label}</label>
+                  <select
+                    className="mt-1 h-11 w-full rounded-xl border border-neutral-300 bg-white px-2.5 text-sm"
+                    value={map[field]}
+                    onChange={(e) => setMap((m) => ({ ...m, [field]: Number(e.target.value) }))}>
+                    <option value={-1}>— ไม่มีในไฟล์ —</option>
+                    {headers.map((h, i) => (
+                      <option key={i} value={i}>{h.trim() || `คอลัมน์ที่ ${i + 1}`}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 truncate text-xs text-neutral-400">
+                    {map[field] >= 0
+                      ? `ตัวอย่าง: ${dataRows.slice(0, 3).map((r) => String(r[map[field]] ?? "").trim()).filter(Boolean).join(" · ") || "(ว่าง)"}`
+                      : "ยังไม่ได้เลือก"}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={applyMapping}>อ่านรายการตามนี้</Button>
+              <Button size="sm" variant="outline" onClick={() => { setHeaders([]); setDataRows([]); setError(null); }}>ยกเลิก</Button>
+            </div>
+          </div>
         )}
 
         {rows.length > 0 && (

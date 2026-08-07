@@ -11,10 +11,11 @@
     "check:ui": "tsx scripts/check-ui-hazards.mjs",
     "backup": "tsx scripts/backup-data.mjs",
     "backup:verify": "tsx scripts/verify-backup.mjs",
-    "verify": "npm run typecheck && npm run check && npm run check:ui && npm run check:migrations && npm run check:actions && npm run check:csv && npm run build",
+    "verify": "npm run typecheck && npm run check && npm run check:ui && npm run check:migrations && npm run check:actions && npm run check:csv && npm run check:columns && npm run build",
     "check:migrations": "tsx scripts/check-migrations.mjs",
     "check:actions": "tsx scripts/check-server-actions.mjs",
     "check:csv": "tsx scripts/check-csv-import.mjs",
+    "check:columns": "tsx scripts/check-column-map.mjs",
     "check:ready": "tsx scripts/check-ready.mjs",
     "check:ui:auth": "tsx scripts/check-logged-in-ui.mjs"
   },
