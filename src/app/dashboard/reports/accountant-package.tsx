@@ -38,20 +38,15 @@ export default function AccountantPackage({ period }: { period: string }) {
     }
   }
 
+  // ⚠️ เดิมเป็นการ์ดเขียวเต็มความกว้าง 2 บรรทัดอยู่เหนือทุกแท็บ (แก้ 8 ส.ค. 2569)
+  // เจ้าของบอกว่าหน้ารายงาน "ใหญ่มากๆ ดูรกสุดๆ" และ "โหลดให้ง่ายหน่อย"
+  // ปุ่มโหลดคือสิ่งที่คนมาหน้านี้มาทำ จึงต้องเป็น "ปุ่ม" ที่เห็นทันที
+  // ไม่ใช่กล่องโฆษณาที่ต้องอ่านคำอธิบาย 2 บรรทัดก่อนถึงจะเจอปุ่ม
+  // รายละเอียดว่ามีแผ่นอะไรบ้างย้ายไปอยู่ใน title ของปุ่ม (hover อ่านได้)
   return (
-    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 px-4 py-3.5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-neutral-900">ส่งให้สำนักงานบัญชี</p>
-          <p className="mt-0.5 text-[12px] leading-relaxed text-neutral-600">
-            ได้ไฟล์ Excel เดียวครบทั้งงวด — ภาษีขาย · ภาษีซื้อ · หัก ณ ที่จ่าย · สมุดรายวัน · งบทดลอง · ยอดค้าง
-            พร้อมแท็บอธิบายว่าแต่ละแผ่นคืออะไร
-          </p>
-        </div>
-        <Button variant="brand" onClick={download} disabled={busy} className="shrink-0">
-          {busy ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังรวมไฟล์…</> : <><FileSpreadsheet className="h-4 w-4" />ดาวน์โหลดชุดส่งนักบัญชี</>}
-        </Button>
-      </div>
-    </div>
+    <Button variant="brand" onClick={download} disabled={busy} className="shrink-0"
+      title="ไฟล์ Excel เดียวครบทั้งงวด — ภาษีขาย · ภาษีซื้อ · หัก ณ ที่จ่าย · สมุดรายวัน · งบทดลอง · ยอดค้าง พร้อมแท็บอธิบายแต่ละแผ่น">
+      {busy ? <><Loader2 className="h-4 w-4 animate-spin" />กำลังรวมไฟล์…</> : <><FileSpreadsheet className="h-4 w-4" />โหลดชุดส่งนักบัญชี</>}
+    </Button>
   );
 }

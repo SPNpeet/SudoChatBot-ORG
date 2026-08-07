@@ -58,30 +58,42 @@ export default async function IntegrityCard({ shopId }: { shopId?: string }) {
   const warn = bad.filter((r) => r.severity === "warning");
   const allOk = bad.length === 0;
 
+  // ⚠️ ผ่านหมด = แถวเดียวพอ (8 ส.ค. 2569)
+  // เดิมเป็นการ์ดเต็มใบอยู่บนสุดของหน้ารายงานทุกแท็บ ทั้งที่ 99% ของเวลามันเขียนว่า "ผ่านทั้งหมด"
+  // เจ้าของบอกว่าหน้ารายงาน "ใหญ่มากๆ ดูรกสุดๆ" — ของที่ปกติไม่มีอะไรต้องทำ
+  // ไม่ควรกินพื้นที่เท่าของที่ต้องลงมือ · พอมีปัญหาจริงค่อยกางเป็นการ์ดเต็ม
+  if (allOk) {
+    return (
+      <p className="flex items-center gap-1.5 text-xs text-emerald-700">
+        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+        ความถูกต้องทางบัญชี: ตรวจ {rows.length} ข้อ ผ่านทั้งหมด
+        <span className="hidden text-neutral-400 sm:inline">
+          — ยอดเอกสาร · อัตรา VAT · ฐานหัก ณ ที่จ่าย · เดบิต=เครดิต · เลขเอกสารไม่ซ้ำ · รายงานตรงสมุดรายวัน
+        </span>
+      </p>
+    );
+  }
+
   return (
-    <Card className={critical.length ? "border-red-300" : warn.length ? "border-amber-300" : undefined}>
+    <Card className={critical.length ? "border-red-300" : "border-amber-300"}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          {allOk ? <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            : critical.length ? <CircleAlert className="h-4 w-4 text-red-600" />
-              : <TriangleAlert className="h-4 w-4 text-amber-600" />}
+          {critical.length ? <CircleAlert className="h-4 w-4 text-red-600" />
+            : <TriangleAlert className="h-4 w-4 text-amber-600" />}
           ความถูกต้องทางบัญชี
         </CardTitle>
         <p className="mt-1 text-xs font-normal text-neutral-500">
-          {allOk
-            ? `ตรวจ ${rows.length} ข้อ ผ่านทั้งหมด — ยอดเอกสาร · อัตรา VAT · ฐานหัก ณ ที่จ่าย · เดบิต=เครดิต · เลขเอกสารไม่ซ้ำ · รายงานตรงสมุดรายวัน`
-            : `ตรวจ ${rows.length} ข้อ พบต้องแก้ ${bad.length} ข้อ`}
+          ตรวจ {rows.length} ข้อ พบต้องแก้ {bad.length} ข้อ
         </p>
       </CardHeader>
 
-      {!allOk && (
-        <CardContent className="space-y-2">
+      <CardContent className="space-y-2">
           {[...critical, ...warn].map((r) => (
             <div key={r.code}
               className={`rounded-xl border px-3 py-2.5 ${
                 r.severity === "critical" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"
               }`}>
-              <p className={`text-[13px] font-bold ${r.severity === "critical" ? "text-red-700" : "text-amber-800"}`}>
+              <p className={`text-sm font-bold ${r.severity === "critical" ? "text-red-700" : "text-amber-800"}`}>
                 {r.severity === "critical" ? "ต้องแก้ทันที" : "ควรตรวจ"} · {r.title} ({r.bad_count})
               </p>
               {r.detail && (
@@ -103,8 +115,7 @@ export default async function IntegrityCard({ shopId }: { shopId?: string }) {
             อันตรายกว่าให้คนเห็นแล้วตัดสินใจ · <b>ห้ามแก้ตัวเลขในฐานข้อมูลตรง ๆ
             เพื่อให้คำเตือนหาย</b> เพราะเอกสารจะไม่ตรงกับสมุดรายวันและไม่มีร่องรอยการแก้
           </p>
-        </CardContent>
-      )}
+      </CardContent>
     </Card>
   );
 }

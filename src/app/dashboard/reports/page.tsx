@@ -86,10 +86,19 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         title="รายงาน + ภาษี"
         lead={<>กำลังดู{period.label}</>}
         help="ตัวเลขทุกช่องมาจากเอกสารจริงที่คุณบันทึกไว้ ไม่ต้องรอปิดงบ — ดูกำไร-ขาดทุน ใครค้างเรานานแค่ไหน และภาษีที่ต้องยื่นเดือนนี้ · โหลดเป็น Excel ส่งนักบัญชี หรือโหลดไฟล์ยื่นสรรพากรได้เลย"
-        action={<PeriodPicker tab={t} period={period.key} />}
+        action={
+          // ⚠️ ปุ่มโหลดต้องอยู่คู่กับตัวเลือกงวด (8 ส.ค. 2569)
+          // สิ่งที่คนมาหน้านี้มาทำคือ "เลือกงวด แล้วโหลดไฟล์" — สองอย่างนี้ต้องอยู่ติดกัน
+          // เดิมปุ่มโหลดเป็นการ์ดเขียวเต็มแถวคนละที่กับตัวเลือกงวด ต้องเลื่อนหาและดูรก
+          <div className="flex flex-wrap items-center gap-2">
+            <PeriodPicker tab={t} period={period.key} />
+            <AccountantPackage period={period.key} />
+          </div>
+        }
       />
 
       {/* ยามเฝ้าความถูกต้องทางบัญชี — รันสดทุกครั้งที่เปิดหน้า
+          ผ่านหมด = แสดงแค่บรรทัดเดียว · มีปัญหาจริงค่อยกางเป็นการ์ดเต็มพร้อมวิธีแก้
           เดิมการตรวจ 11 ข้อนี้ทำด้วยมือครั้งเดียวตอนออดิต ซึ่งเป็นภาพนิ่ง
           ลูกค้าบันทึกข้อมูลทุกวัน ถ้าวันไหนเพี้ยนต้องรู้ทันที ไม่ใช่รู้ตอนใกล้ยื่นภาษี */}
       <IntegrityCard shopId={shop.id} />
@@ -98,15 +107,13 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         {TABS.map((x) => (
           <Link key={x.id} href={`/dashboard/reports?t=${x.id}&period=${period.key}`}
             className={cn(
-              "inline-flex min-h-[44px] items-center rounded-full px-4 py-1.5 text-sm font-medium",
-              t === x.id ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50",
+              "inline-flex min-h-[44px] items-center rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+              t === x.id ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50",
             )}>
             {x.label}
           </Link>
         ))}
       </div>
-
-      <AccountantPackage period={period.key} />
 
       {t === "summary" && <SummaryTab shopId={shop.id} supabase={supabase} period={period} />}
       {t === "aging" && <AgingTab shopId={shop.id} supabase={supabase} />}
@@ -474,7 +481,7 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
       {/* กำหนดยื่นของงวด — คนพลาดเพราะจำสลับระหว่างวันยื่นกระดาษกับออนไลน์บ่อยมาก
           แสดงคู่กันไปเลย ไม่ต้องให้ไปเปิดปฏิทินสรรพากรเอง */}
       {due && sumPaid > 0 && (
-        <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-[12px] leading-relaxed text-neutral-600">
+        <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-xs leading-relaxed text-neutral-600">
           <p>
             <b className="text-neutral-800">กำหนดนำส่งของงวดนี้</b> — ยื่นกระดาษภายใน{" "}
             <b className="text-neutral-800">{dateOnlyTH(due.paper_statutory)}</b> (ประมวลรัษฎากร มาตรา 52)
@@ -519,7 +526,7 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
           </CardHeader>
           {issues.length > 0 && (
             <div className="mx-4 mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5">
-              <p className="text-[12px] font-bold text-amber-800">
+              <p className="text-xs font-bold text-amber-800">
                 {issues.length} จาก {sec.list.length} รายการยังกรอกไม่ครบ — โหลดไฟล์ไปตอนนี้ RD Prep อาจไม่รับ
               </p>
               <ul className="mt-1.5 space-y-1">
