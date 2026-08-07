@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
                     placeholder="รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)" className={field} />
                   <button type="button" aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
                     onClick={() => setShowPw((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600">
+                    className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-lg text-neutral-400 hover:text-neutral-600">
                     {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>

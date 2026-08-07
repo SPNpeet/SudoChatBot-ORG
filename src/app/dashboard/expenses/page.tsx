@@ -64,7 +64,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         {tabs.map((x) => (
           <Link key={x.id} href={x.id === "all" ? "/dashboard/expenses" : `/dashboard/expenses?t=${x.id}`}
             className={cn(
-              "inline-flex min-h-[36px] items-center rounded-full px-4 py-1.5 text-sm font-medium",
+              "inline-flex min-h-[44px] items-center rounded-full px-4 py-1.5 text-sm font-medium",
               t === x.id ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50",
             )}>
             {x.label}

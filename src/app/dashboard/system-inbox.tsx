@@ -129,12 +129,12 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
                           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
                             {n.href && (
                               <Link href={n.href} onClick={() => setOpen(false)}
-                                className={cn("inline-flex min-h-[28px] items-center text-xs font-semibold underline", t.text)}>
+                                className={cn("inline-flex min-h-[44px] items-center text-xs font-semibold underline", t.text)}>
                                 {n.cta ?? "ไปดู"} →
                               </Link>
                             )}
                             <button onClick={() => read(n.key)} disabled={pending}
-                              className="inline-flex min-h-[28px] items-center text-xs text-neutral-500 underline hover:text-neutral-800 disabled:opacity-50">
+                              className="inline-flex min-h-[44px] items-center text-xs text-neutral-500 underline hover:text-neutral-800 disabled:opacity-50">
                               {pending ? "กำลังบันทึก..." : "อ่านแล้ว"}
                             </button>
                           </div>

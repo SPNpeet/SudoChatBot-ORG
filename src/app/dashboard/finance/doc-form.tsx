@@ -464,7 +464,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
                     <button key={p.key} type="button" title={p.note}
                       onClick={() => { setIncomeType(p.income); setWhtRate(String(p.rate)); }}
                       className={cn(
-                        "inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 text-xs transition-colors",
+                        "inline-flex min-h-[44px] items-center gap-1.5 rounded-full border px-3 text-xs transition-colors",
                         on ? "border-emerald-500 bg-emerald-50 font-semibold text-emerald-700"
                            : "border-neutral-200 bg-white text-neutral-600 hover:border-emerald-300 hover:text-emerald-700",
                       )}>
@@ -474,7 +474,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
                 })}
                 <button type="button" onClick={() => { setWhtRate("0"); }}
                   className={cn(
-                    "inline-flex min-h-[36px] items-center rounded-full border px-3 text-xs transition-colors",
+                    "inline-flex min-h-[44px] items-center rounded-full border px-3 text-xs transition-colors",
                     Number(whtRate) === 0 ? "border-neutral-900 bg-neutral-900 font-semibold text-white"
                                           : "border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50",
                   )}>

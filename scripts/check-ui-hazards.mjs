@@ -122,6 +122,18 @@ console.log("\n== useEffect ที่เลื่อนจอตอน mount (�
       if (!/<summary/.test(line) && !/\bpy-(1|1\.5)\b/.test(block)) return;
       hits.push(`${rel(f)}:${i + 1}`);
     });
+
+    // ⚠️ กฎเพิ่ม (6 ส.ค. 2569): "ประกาศความสูงไว้ต่ำกว่าเกณฑ์" ก็ผิดเหมือนกัน
+    // ด่านเดิมมองหาแต่ py เตี้ย ๆ เลยมองข้าม min-h-[36px] / min-h-[40px] / min-h-[30px]
+    // ซึ่งใช้อยู่จริง 12 จุดทั่วระบบ รวมถึงหน้าสมัครสมาชิกและหน้าเข้าสู่ระบบ
+    // (วัดบนมือถือจริงแล้วเจอ ทั้งที่ด่านรายงานว่า "ไม่พบ")
+    lines.forEach((line, i) => {
+      const m = line.match(/min-h-\[(\d+)px\]/);
+      if (!m || Number(m[1]) >= 44) return;
+      const around = lines.slice(Math.max(0, i - 3), i + 2).join(" ");
+      if (!/<button|<summary|<Link|<a |role="(button|radio)"/.test(around)) return;
+      hits.push(`${rel(f)}:${i + 1}`);
+    });
   }
   console.log(`\n== เป้ากดต่ำกว่า 44px ในหน้าลูกค้า (แจ้งเพื่อทราบ ไม่บล็อก) ==`);
   console.log(hits.length ? `  พบ ${hits.length} จุด: ${hits.slice(0, 8).join(" · ")}${hits.length > 8 ? " ..." : ""}`

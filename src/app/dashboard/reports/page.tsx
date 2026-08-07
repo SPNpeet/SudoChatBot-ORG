@@ -92,7 +92,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         {TABS.map((x) => (
           <Link key={x.id} href={`/dashboard/reports?t=${x.id}&period=${period.key}`}
             className={cn(
-              "inline-flex min-h-[36px] items-center rounded-full px-4 py-1.5 text-sm font-medium",
+              "inline-flex min-h-[44px] items-center rounded-full px-4 py-1.5 text-sm font-medium",
               t === x.id ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50",
             )}>
             {x.label}

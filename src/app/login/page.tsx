@@ -74,13 +74,13 @@ export default function LoginPage() {
                 placeholder="รหัสผ่าน" autoComplete="current-password" className={`${field} pr-11`} />
               <button type="button" onClick={() => setShowPw((v) => !v)} tabIndex={-1}
                 aria-label={showPw ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
-                className="absolute right-1 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-lg text-neutral-400 transition-colors hover:text-neutral-600">
+                className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-lg text-neutral-400 transition-colors hover:text-neutral-600">
                 {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {/* ลืมรหัสผ่านต้องอยู่ตรงนี้ ตอนที่คนเพิ่งกรอกรหัสผิด ไม่ใช่ซ่อนท้ายหน้า */}
             <div className="flex justify-end">
-              <Link href="/forgot-password" className="inline-flex min-h-[36px] items-center text-xs text-neutral-500 hover:text-emerald-700 hover:underline">
+              <Link href="/forgot-password" className="inline-flex min-h-[44px] items-center text-xs text-neutral-500 hover:text-emerald-700 hover:underline">
                 ลืมรหัสผ่าน?
               </Link>
             </div>
@@ -93,7 +93,7 @@ export default function LoginPage() {
           {error && <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-center text-xs text-red-600">{error}</p>}
 
           <p className="mt-5 rounded-xl bg-neutral-50 px-3 py-2.5 text-center text-xs text-neutral-500">
-            ยังไม่มีบัญชี? <Link href="/signup" className="inline-flex min-h-[36px] items-center font-semibold text-emerald-600 hover:underline">สมัครสมาชิกฟรี</Link>
+            ยังไม่มีบัญชี? <Link href="/signup" className="inline-flex min-h-[44px] items-center font-semibold text-emerald-600 hover:underline">สมัครสมาชิกฟรี</Link>
           </p>
 
         </div>
@@ -102,8 +102,8 @@ export default function LoginPage() {
             หน้านี้มีปุ่มเข้าระบบด้วย Google ซึ่งบังคับให้ลิงก์นโยบายไว้
             และ PDPA ก็ต้องแจ้งก่อน/ขณะเก็บข้อมูล (หน้าสมัครมีครบอยู่แล้ว หน้านี้ตกไป) */}
         <p className="mt-4 text-center text-[11px] leading-relaxed text-neutral-400">
-          การเข้าสู่ระบบถือว่ายอมรับ<Link href="/terms" className="inline-flex min-h-[36px] items-center px-0.5 underline">เงื่อนไขการใช้งาน</Link>
-          และ<Link href="/privacy" className="inline-flex min-h-[36px] items-center px-0.5 underline">นโยบายความเป็นส่วนตัว</Link>
+          การเข้าสู่ระบบถือว่ายอมรับ<Link href="/terms" className="inline-flex min-h-[44px] items-center px-0.5 underline">เงื่อนไขการใช้งาน</Link>
+          และ<Link href="/privacy" className="inline-flex min-h-[44px] items-center px-0.5 underline">นโยบายความเป็นส่วนตัว</Link>
         </p>
       </div>
     </main>

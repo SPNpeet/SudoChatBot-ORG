@@ -89,7 +89,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             return (
               <Link key={t.id} href={`/dashboard/settings?s=${t.id}`} aria-current={on ? "page" : undefined}
                 className={cn(
-                  "relative inline-flex min-h-[40px] items-center gap-2 whitespace-nowrap rounded-xl px-3.5 text-sm font-medium transition-colors",
+                  "relative inline-flex min-h-[44px] items-center gap-2 whitespace-nowrap rounded-xl px-3.5 text-sm font-medium transition-colors",
                   on ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50",
                 )}>
                 <t.icon className="h-4 w-4" />

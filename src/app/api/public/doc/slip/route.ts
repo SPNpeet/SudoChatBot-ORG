@@ -16,7 +16,16 @@ export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const fd = await request.formData();
+    // ⚠️ แยก "ส่ง body มาผิดรูปแบบ" ออกจาก "ระบบเราพัง" (พบ 6 ส.ค. 2569 ตอนกวาด endpoint)
+    // ยิง JSON เข้ามาที่ endpoint ที่รอ multipart -> formData() โยน error -> ตกไปที่ catch ก้อนล่าง
+    // ซึ่งตอบ 500 "ระบบขัดข้องชั่วคราว ลองใหม่อีกครั้ง" ทั้งที่ลองใหม่กี่ครั้งก็ไม่มีทางผ่าน
+    // 500 ยังทำให้ระบบเฝ้าระวังเข้าใจผิดว่าเซิร์ฟเวอร์เรามีปัญหา ทั้งที่คนเรียกส่งมาผิดเอง
+    let fd: FormData;
+    try {
+      fd = await request.formData();
+    } catch {
+      return NextResponse.json({ ok: false, error: "รูปแบบข้อมูลไม่ถูกต้อง — ต้องส่งเป็นฟอร์มพร้อมไฟล์รูปสลิป" }, { status: 400 });
+    }
     const key = String(fd.get("key") ?? "");
     const file = fd.get("file") as File | null;
     if (!/^[0-9a-f-]{36}$/i.test(key) || !file || !file.size) {

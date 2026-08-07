@@ -73,6 +73,21 @@ echo "  โครงสร้างที่ได้:"
 psql -U postgres -tAf /tmp/summary.sql
 [ "$fail" -eq 0 ] || exit 1
 '
+# ---- ตรวจว่าไม่มีฟังก์ชันไหน body อ้างของที่ถูกลบไปแล้ว ----
+# ⚠️ เกิดจริง 6 ส.ค. 2569: migration 093 ลบคอลัมน์ payment_gateway ทิ้ง
+# แต่ platform_billing_public() ยัง select คอลัมน์นั้นอยู่ใน body
+# Postgres ไม่ผูก dependency กับ body ของฟังก์ชัน LANGUAGE sql จึง drop ผ่านฉลุย
+# ฟังก์ชันเลยพัง "ตอนมีคนเรียก" ไม่ใช่ตอนถูกทำให้พัง = ไม่มีใครรู้จนกว่าลูกค้าจะเจอ
+# วิธีตรวจ: สั่งสร้างฟังก์ชันทุกตัวใหม่จากนิยามเดิม ตัวไหน body เพี้ยนจะ error ทันที
+echo "  ตรวจ body ของฟังก์ชันทุกตัว…"
+docker cp scripts/check-function-bodies.sql "$NAME":/tmp/fnchk.sql >/dev/null
+# ⚠️ ต้องดู exit code ของ psql ไม่ใช่ผลของ grep — เขียนครั้งแรกเป็น `| grep` ทำให้
+# สถานะที่อ่านได้กลายเป็นของ grep แล้ว "ผ่าน" ทั้งที่ psql ตายไปแล้ว
+if ! docker exec "$NAME" sh -c 'psql -U postgres -v ON_ERROR_STOP=1 -q -f /tmp/fnchk.sql' 2>&1; then
+  echo "  ตรวจ body ฟังก์ชันไม่ผ่าน — มีฟังก์ชันอ้างถึงคอลัมน์/ตารางที่ถูกลบไปแล้ว"
+  exit 1
+fi
+
 # ---- ทดสอบกู้ "ข้อมูล" ต่อ ถ้ามีไฟล์สำรองในเครื่อง ----
 # โครงสร้างถูกอย่างเดียวไม่พอ — แผนกู้ระบบต้องพิสูจน์ว่าเอาข้อมูลกลับเข้าไปได้จริงด้วย
 # (ครั้งแรกที่ทดสอบส่วนนี้เจอคอลัมน์/CHECK ที่มีแต่บน production อีก 7 จุด)
@@ -93,5 +108,5 @@ else
 fi
 
 echo ""
-echo "  เทียบกับ production (ณ 5 ส.ค. 2569): ตาราง 71 · policy 137 · trigger 25 · index 186"
+echo "  เทียบกับ production (ณ 6 ส.ค. 2569): ตาราง 72 · policy 138 · trigger 25 · index 190"
 echo ""

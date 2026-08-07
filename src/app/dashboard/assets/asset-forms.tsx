@@ -92,7 +92,7 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
                   {LIFE_PRESETS.map((p) => (
                     <button key={p.label} type="button" title={`${p.years} ปี`}
                       onClick={() => setLife(String(p.years))}
-                      className="inline-flex min-h-[30px] items-center rounded-full border border-neutral-200 bg-white px-2.5 text-[11px] text-neutral-600 transition-colors hover:border-emerald-300 hover:text-emerald-700">
+                      className="inline-flex min-h-[44px] items-center rounded-full border border-neutral-200 bg-white px-3 text-xs text-neutral-600 transition-colors hover:border-emerald-300 hover:text-emerald-700">
                       {p.label} {p.years}ปี
                     </button>
                   ))}

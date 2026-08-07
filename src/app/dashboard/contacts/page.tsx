@@ -59,7 +59,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         {FILTERS.map((t) => (
           <Link key={t.id} href={t.id === "all" ? "/dashboard/contacts" : `/dashboard/contacts?f=${t.id}`}
             className={cn(
-              "inline-flex min-h-[36px] items-center rounded-full px-4 py-1.5 text-sm font-medium",
+              "inline-flex min-h-[44px] items-center rounded-full px-4 py-1.5 text-sm font-medium",
               f === t.id ? "bg-neutral-900 text-white" : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50",
             )}>
             {t.label}
