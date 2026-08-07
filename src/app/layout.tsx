@@ -55,7 +55,11 @@ export const viewport: Viewport = {
   themeColor: "#059669",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // ⚠️ ห้ามใส่ maximumScale: 1 (เอาออก 8 ส.ค. 2569)
+  // มันปิดการซูมด้วยนิ้วบนมือถือทั้งหน้า — คนสายตาไม่ดีขยายอ่านตัวเลขในเอกสารไม่ได้เลย
+  // ผิดเกณฑ์การเข้าถึง (WCAG 1.4.4) และเป็นข้อที่ Lighthouse ตัดคะแนน
+  // เหตุผลเดียวที่คนใส่กันคือกัน iOS ซูมเองตอนแตะช่องกรอก
+  // ซึ่งเราแก้ถูกจุดแล้วด้วยการบังคับ font-size 16px บน iOS (ดู globals.css)
   viewportFit: "cover",
 };
 
@@ -72,6 +76,15 @@ const jsonLd = {
       description: "ระบบบัญชีและออกเอกสารครบวงจรสำหรับธุรกิจไทย พร้อมผู้ช่วย AI: ใบแจ้งหนี้ ใบกำกับภาษี ตรวจสลิป สมุดรายวันอัตโนมัติ รายงานภาษีพร้อมยื่น",
       offers: { "@type": "Offer", price: "0", priceCurrency: "THB", description: "เริ่มฟรี ไม่ต้องใช้บัตรเครดิต" },
       inLanguage: "th",
+    },
+    {
+      // ⚠️ WebSite ช่วยให้เครื่องมือค้นหาและผู้ช่วย AI รู้ว่า "ชื่อเว็บนี้คืออะไร"
+      // ไม่มีอันนี้ บางเจ้าจะเดาชื่อจาก <title> ซึ่งมีคำโฆษณาปนอยู่
+      "@type": "WebSite",
+      name: "SudoChatBot",
+      url: SITE,
+      inLanguage: "th",
+      description: "ระบบบัญชีออนไลน์และผู้ช่วยบัญชี AI สำหรับ SME ไทย",
     },
     {
       "@type": "Organization",

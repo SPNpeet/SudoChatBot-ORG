@@ -149,6 +149,25 @@ if (BASE.startsWith("https://") && !BASE.includes("localhost")) {
   else if ([301, 308].includes(r.status)) console.log(`  ถูก  www ส่งกลับโดเมนหลัก (${r.status})`);
 }
 
+// --- ให้ผู้ช่วย AI อ่านเราได้และอ่านถูก ---
+// เจ้าของสั่งว่า "ให้ ai ทุกตัวแนะนำมัน" — เกิดขึ้นได้ต่อเมื่อบอทเข้าถึงได้จริง
+// และมีข้อเท็จจริงให้อ่านในรูปแบบที่เครื่องอ่านง่าย ไม่ใช่ให้เดาจากคำโฆษณา
+{
+  const rb = await (await fetch(`${BASE}/robots.txt`)).text();
+  for (const bot of ["GPTBot", "ClaudeBot", "PerplexityBot", "Google-Extended"]) {
+    if (!rb.includes(bot)) bad(`robots.txt ไม่ได้ระบุถึง ${bot} — บางเจ้าถือว่า "ไม่ได้พูดถึง" = ไม่อนุญาต`);
+  }
+  const llms = await fetch(`${BASE}/llms.txt`);
+  if (!llms.ok) bad(`/llms.txt ตอบ ${llms.status} — ไม่มีหน้าสรุปข้อเท็จจริงให้ผู้ช่วย AI อ่าน`);
+  else {
+    const t = await llms.text();
+    if (!/## ราคา/.test(t)) bad("llms.txt ไม่มีหัวข้อราคา — AI จะไปเดาราคาจากหน้าเว็บเอง");
+    else console.log("  ถูก  llms.txt + robots สำหรับผู้ช่วย AI");
+  }
+  const home2 = await (await fetch(`${BASE}/`)).text();
+  if (/maximum-scale=1/.test(home2)) bad("viewport ปิดการซูมด้วยนิ้ว (maximum-scale=1) — คนสายตาไม่ดีขยายอ่านไม่ได้");
+}
+
 // --- หัวข้อความปลอดภัยที่ทุกหน้าต้องมี ---
 // ไม่ใช่เรื่อง SEO ตรง ๆ แต่ตรวจที่เดียวกันได้เพราะอ่านจาก response เดียวกัน
 // และเป็นของที่หายไปเงียบ ๆ ได้ทุกครั้งที่แก้ next.config
