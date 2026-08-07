@@ -67,7 +67,7 @@ interface Msg extends AssistantTurn {
   fileNames?: string[];
   toolCalls?: { name: string; label: string }[];
   artifacts?: { label: string; href: string }[];
-  choices?: { label: string; reply: string }[];    // ปุ่มตอบ AI — กดแล้วส่งคำตอบให้เลย ไม่ต้องพิมพ์
+  choices?: { label: string; reply: string; hint?: string }[];    // ปุ่มตอบ AI — กดแล้วส่งคำตอบให้เลย ไม่ต้องพิมพ์
 }
 
 const MAX_FILES = 8;
@@ -530,11 +530,18 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
 
         {msgs.map((m, i) => (
           // data-last-msg = จุดอ้างอิงให้ตัวเลื่อนจอวัดว่าคำตอบล่าสุดสูงเกินจอไหม
+          // ⚠️ คำตอบของผู้ช่วยไม่ใส่กรอบฟอง (8 ส.ค. 2569)
+          // เดิมเป็นฟองเทาทั้งก้อน ซึ่งพอคำตอบยาว (สรุปภาษี/ไล่รายการค่าใช้จ่าย)
+          // จะกลายเป็นบล็อกเทาก้อนใหญ่กลางจอ อ่านยากและดูเป็นของเล่น
+          // แชทที่คนใช้ทำงานจริงให้คำตอบเป็น "ข้อความบนหน้า" มีเส้นบาง ๆ คั่น
+          // ส่วนคำพูดของผู้ใช้ยังเป็นฟอง เพราะต้องแยกให้ออกว่าใครพูด และมันสั้นเสมอ
           <div key={i} data-last-msg={i === msgs.length - 1 ? "" : undefined}
             className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
             <div className={cn(
-              "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm",
-              m.role === "user" ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-800",
+              "text-sm",
+              m.role === "user"
+                ? "max-w-[85%] rounded-2xl rounded-br-md bg-neutral-900 px-3.5 py-2 text-white"
+                : "w-full border-l-2 border-emerald-100 pl-3.5 text-neutral-800 sm:pl-4",
             )}>
               {/* รูปบิลที่แนบ — โชว์เป็นรูปจริง ไม่ใช่ path */}
               {m.images && m.images.length > 0 && (
@@ -554,7 +561,7 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
                   <Paperclip className="h-3 w-3" /> {m.fileNames.join(", ")}
                 </p>
               )}
-              <p className="whitespace-pre-wrap break-words">
+              <p className={cn("whitespace-pre-wrap break-words", m.role === "assistant" && "leading-relaxed")}>
                 {m.display ?? (m.role === "user" && m.content.startsWith("[ไฟล์แนบ") ? m.content.split("\n")[0] : m.content)}
               </p>
               {m.artifacts && m.artifacts.length > 0 && (
@@ -572,12 +579,15 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
               )}
               {/* ปุ่มตอบ AI — โชว์เฉพาะข้อความล่าสุด กันกดย้อนอดีตแล้วสับสน */}
               {m.choices && m.choices.length > 0 && i === msgs.length - 1 && !busy && !reading && (
-                <div className="mt-2 flex flex-col gap-1.5">
+                <div className="mt-2.5 flex flex-col gap-1.5 sm:max-w-md">
                   {m.choices.map((c, j) => (
                     <button key={j} type="button" onClick={() => send(c.reply)}
-                      className="flex w-full items-center justify-between gap-2 rounded-xl border border-emerald-300 bg-white px-3 py-2.5 text-left text-[13px] font-medium text-emerald-800 transition hover:bg-emerald-50 active:scale-[0.99]">
-                      <span className="min-w-0">{c.label}</span>
-                      <span className="shrink-0 text-emerald-400">›</span>
+                      className="group flex w-full items-center justify-between gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 text-left text-[13px] font-medium text-neutral-700 transition-all hover:border-emerald-500/50 hover:bg-emerald-50/60 hover:text-emerald-900 active:scale-[0.99]">
+                      <span className="min-w-0">
+                        {c.label}
+                        {c.hint && <span className="block text-xs font-normal text-neutral-400 group-hover:text-emerald-700">{c.hint}</span>}
+                      </span>
+                      <span className="shrink-0 text-neutral-300 transition-colors group-hover:text-emerald-500">›</span>
                     </button>
                   ))}
                 </div>
