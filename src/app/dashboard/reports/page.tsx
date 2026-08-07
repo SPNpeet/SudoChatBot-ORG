@@ -33,6 +33,12 @@ const TABS = [
 
 interface Period { start: string; end: string; label: string; key: string; months: string[] }
 
+/** ชื่อประเภทบัญชีเป็นไทย — งบทดลองต้องบอกประเภทด้วย ไม่งั้นคนอ่านต้องจำรหัสเอง */
+const ACC_TYPE_TH: Record<string, string> = {
+  asset: "สินทรัพย์", liability: "หนี้สิน", equity: "ส่วนของเจ้าของ",
+  revenue: "รายได้", income: "รายได้", expense: "ค่าใช้จ่าย", cogs: "ต้นทุนขาย",
+};
+
 /** แปลง "2026-07" | "2026-Q3" | "2026" -> ช่วงวันที่ [start, end) + รายชื่อเดือนในงวด */
 function parsePeriod(raw: string | undefined): Period {
   const nowMonth = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 7);
@@ -607,22 +613,50 @@ async function TrialTab({ shopId, supabase, period }: { shopId: string; supabase
     .select("debit, credit, chart_of_accounts(code,name,type), journal_entries!inner(entry_date)")
     .eq("shop_id", shopId).lt("journal_entries.entry_date", period.end);
 
-  const byAcc = new Map<string, { code: string; name: string; type: string; dr: number; cr: number }>();
-  for (const l of (lines ?? []) as unknown as { debit: number; credit: number; chart_of_accounts: { code: string; name: string; type: string } | null }[]) {
+  // ⚠️ งบทดลองที่มีแค่ "เดบิต/เครดิต" คือยอดสะสม ซึ่งตอบไม่ได้ว่า "งวดนี้เกิดอะไรขึ้น"
+  // ผู้ทำบัญชีใช้งบทดลองเพื่อกระทบยอดกับงวดก่อน: ยกมา + เคลื่อนไหวงวดนี้ = คงเหลือ
+  // ถ้าเห็นแต่ยอดคงเหลือ ต้องไปเปิดงบทดลองงวดก่อนมาลบเองทุกบรรทัด
+  // แยกเส้นแบ่งที่ period.start — ก่อนหน้านั้นคือยกมา ในช่วงคืองวดนี้
+  type Acc = { code: string; name: string; type: string; oDr: number; oCr: number; mDr: number; mCr: number };
+  const byAcc = new Map<string, Acc>();
+  for (const l of (lines ?? []) as unknown as {
+    debit: number; credit: number;
+    chart_of_accounts: { code: string; name: string; type: string } | null;
+    journal_entries: { entry_date: string } | null;
+  }[]) {
     if (!l.chart_of_accounts) continue;
     const key = l.chart_of_accounts.code;
-    const cur = byAcc.get(key) ?? { ...l.chart_of_accounts, dr: 0, cr: 0 };
-    cur.dr += Number(l.debit); cur.cr += Number(l.credit);
+    const cur = byAcc.get(key) ?? { ...l.chart_of_accounts, oDr: 0, oCr: 0, mDr: 0, mCr: 0 };
+    const inPeriod = (l.journal_entries?.entry_date ?? "") >= period.start;
+    if (inPeriod) { cur.mDr += Number(l.debit); cur.mCr += Number(l.credit); }
+    else { cur.oDr += Number(l.debit); cur.oCr += Number(l.credit); }
     byAcc.set(key, cur);
   }
-  const accounts = [...byAcc.values()].filter((a) => Math.abs(a.dr - a.cr) > 0.004 || a.dr > 0).sort((a, b) => a.code.localeCompare(b.code));
-  const totalDr = accounts.reduce((a, x) => a + Math.max(0, x.dr - x.cr), 0);
-  const totalCr = accounts.reduce((a, x) => a + Math.max(0, x.cr - x.dr), 0);
+
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  const accounts = [...byAcc.values()]
+    .map((a) => {
+      const open = r2(a.oDr - a.oCr);          // + = ยอดยกมาด้านเดบิต · − = ด้านเครดิต
+      const close = r2(a.oDr + a.mDr - a.oCr - a.mCr);
+      return { ...a, open, close, mDr: r2(a.mDr), mCr: r2(a.mCr) };
+    })
+    // ตัดบัญชีที่ทั้งงวดไม่มีอะไรเลยและยกมาก็ศูนย์ออก — เหลือแต่บรรทัดที่มีความหมาย
+    .filter((a) => Math.abs(a.open) > 0.004 || a.mDr > 0.004 || a.mCr > 0.004 || Math.abs(a.close) > 0.004)
+    .sort((a, b) => a.code.localeCompare(b.code));
+
+  const sum = (pick: (a: (typeof accounts)[number]) => number) => r2(accounts.reduce((s, a) => s + pick(a), 0));
+  const tOpenDr = sum((a) => Math.max(0, a.open));
+  const tOpenCr = sum((a) => Math.max(0, -a.open));
+  const tMoveDr = sum((a) => a.mDr);
+  const tMoveCr = sum((a) => a.mCr);
+  const totalDr = sum((a) => Math.max(0, a.close));
+  const totalCr = sum((a) => Math.max(0, -a.close));
 
   const exportRows = accounts.map((a) => ({
-    "รหัส": a.code, "ชื่อบัญชี": a.name,
-    "เดบิต": Math.max(0, Math.round((a.dr - a.cr) * 100) / 100),
-    "เครดิต": Math.max(0, Math.round((a.cr - a.dr) * 100) / 100),
+    "รหัส": a.code, "ชื่อบัญชี": a.name, "ประเภท": ACC_TYPE_TH[a.type] ?? a.type,
+    "ยกมา เดบิต": Math.max(0, a.open), "ยกมา เครดิต": Math.max(0, -a.open),
+    "งวดนี้ เดบิต": a.mDr, "งวดนี้ เครดิต": a.mCr,
+    "คงเหลือ เดบิต": Math.max(0, a.close), "คงเหลือ เครดิต": Math.max(0, -a.close),
   }));
 
   return (
@@ -637,27 +671,50 @@ async function TrialTab({ shopId, supabase, period }: { shopId: string; supabase
             hint="ทุกครั้งที่ออกเอกสารหรือบันทึกเงิน ระบบลงบัญชีให้เอง แล้วงบทดลองจะขึ้นที่นี่"
             action={{ href: "/dashboard/sales/new?type=invoice", label: "ออกเอกสารใบแรก" }} />
         ) : (
-          <Table>
-            <thead><tr><Th>รหัส</Th><Th>บัญชี</Th><Th className="text-right">เดบิต</Th><Th className="text-right">เครดิต</Th></tr></thead>
-            <tbody>
-              {accounts.map((a) => {
-                const bal = a.dr - a.cr;
-                return (
+          // ตารางกว้างเกินจอมือถือแน่นอน — ต้องเลื่อนในกล่องตัวเอง ห้ามให้ทั้งหน้าเลื่อนแนวนอน
+          <div className="overflow-x-auto">
+            <Table className="min-w-[52rem]">
+              <thead>
+                <tr>
+                  <Th rowSpan={2}>รหัส</Th>
+                  <Th rowSpan={2}>บัญชี</Th>
+                  <Th rowSpan={2}>ประเภท</Th>
+                  <Th colSpan={2} className="border-l border-neutral-100 text-center">ยอดยกมา</Th>
+                  <Th colSpan={2} className="border-l border-neutral-100 text-center">เคลื่อนไหวงวดนี้</Th>
+                  <Th colSpan={2} className="border-l border-neutral-100 text-center">ยอดคงเหลือ</Th>
+                </tr>
+                <tr>
+                  <Th className="border-l border-neutral-100 text-right">เดบิต</Th><Th className="text-right">เครดิต</Th>
+                  <Th className="border-l border-neutral-100 text-right">เดบิต</Th><Th className="text-right">เครดิต</Th>
+                  <Th className="border-l border-neutral-100 text-right">เดบิต</Th><Th className="text-right">เครดิต</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {accounts.map((a) => (
                   <tr key={a.code}>
-                    <Td className="text-neutral-400">{a.code}</Td>
-                    <Td>{a.name}</Td>
-                    <Td className="text-right">{bal > 0.004 ? bahtDoc(bal) : ""}</Td>
-                    <Td className="text-right">{bal < -0.004 ? bahtDoc(-bal) : ""}</Td>
+                    <Td label="รหัส" className="font-mono text-xs text-neutral-400">{a.code}</Td>
+                    <Td label="บัญชี">{a.name}</Td>
+                    <Td label="ประเภท" className="text-xs text-neutral-500">{ACC_TYPE_TH[a.type] ?? a.type}</Td>
+                    <Td label="ยกมา เดบิต" className="border-l border-neutral-100 text-right tabular-nums">{a.open > 0.004 ? bahtDoc(a.open) : ""}</Td>
+                    <Td label="ยกมา เครดิต" className="text-right tabular-nums">{a.open < -0.004 ? bahtDoc(-a.open) : ""}</Td>
+                    <Td label="งวดนี้ เดบิต" className="border-l border-neutral-100 text-right tabular-nums">{a.mDr > 0.004 ? bahtDoc(a.mDr) : ""}</Td>
+                    <Td label="งวดนี้ เครดิต" className="text-right tabular-nums">{a.mCr > 0.004 ? bahtDoc(a.mCr) : ""}</Td>
+                    <Td label="คงเหลือ เดบิต" className="border-l border-neutral-100 text-right font-medium tabular-nums">{a.close > 0.004 ? bahtDoc(a.close) : ""}</Td>
+                    <Td label="คงเหลือ เครดิต" className="text-right font-medium tabular-nums">{a.close < -0.004 ? bahtDoc(-a.close) : ""}</Td>
                   </tr>
-                );
-              })}
-              <tr className="font-bold">
-                <Td colSpan={2}>รวม</Td>
-                <Td className="text-right">{bahtDoc(totalDr)}</Td>
-                <Td className="text-right">{bahtDoc(totalCr)}</Td>
-              </tr>
-            </tbody>
-          </Table>
+                ))}
+                <tr className="font-bold">
+                  <Td colSpan={3}>รวม</Td>
+                  <Td className="border-l border-neutral-100 text-right tabular-nums">{bahtDoc(tOpenDr)}</Td>
+                  <Td className="text-right tabular-nums">{bahtDoc(tOpenCr)}</Td>
+                  <Td className="border-l border-neutral-100 text-right tabular-nums">{bahtDoc(tMoveDr)}</Td>
+                  <Td className="text-right tabular-nums">{bahtDoc(tMoveCr)}</Td>
+                  <Td className="border-l border-neutral-100 text-right tabular-nums">{bahtDoc(totalDr)}</Td>
+                  <Td className="text-right tabular-nums">{bahtDoc(totalCr)}</Td>
+                </tr>
+              </tbody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>
