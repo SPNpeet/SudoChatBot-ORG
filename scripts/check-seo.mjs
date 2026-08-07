@@ -133,6 +133,22 @@ if (types.includes("FAQPage")) {
   else console.log(`  ถูก  ข้อมูลโครงสร้างครบ (FAQ ${qCount} ข้อ)`);
 }
 
+// --- URL ที่ไม่มีอยู่จริงต้องตอบ 404 ไม่ใช่ 200 ---
+// soft 404 (ตอบ 200 ทั้งที่ไม่มีหน้า) ทำให้ Google เก็บ URL ขยะเข้าดัชนี
+for (const junk of ["/no-such-page", "/abc/def"]) {
+  const r = await fetch(`${BASE}${junk}`);
+  if (r.status !== 404) bad(`${junk} ตอบ ${r.status} ควรเป็น 404 (soft 404 ทำให้ Google เก็บ URL ขยะ)`);
+}
+
+// --- เว็บเดียวต้องอยู่โดเมนเดียว ---
+// www กับไม่มี www เสิร์ฟเนื้อหาเดียวกันทั้งคู่ = แบ่งน้ำหนักลิงก์ออกเป็นสองกอง
+if (BASE.startsWith("https://") && !BASE.includes("localhost")) {
+  const wwwUrl = BASE.replace("https://", "https://www.");
+  const r = await fetch(`${wwwUrl}/`, { redirect: "manual" });
+  if (r.status === 200) bad(`${wwwUrl} ตอบ 200 — ควรส่ง 301/308 กลับมาที่ ${BASE}`);
+  else if ([301, 308].includes(r.status)) console.log(`  ถูก  www ส่งกลับโดเมนหลัก (${r.status})`);
+}
+
 console.log(failures === 0
   ? "\n  ผ่านทุกข้อ\n"
   : `\nสรุป: ไม่ผ่าน ${failures} ข้อ\n`);

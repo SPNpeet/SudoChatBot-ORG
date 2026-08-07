@@ -15,6 +15,19 @@ function withGuestCookie(request: NextRequest, res: NextResponse): NextResponse 
 }
 
 export async function middleware(request: NextRequest) {
+  // ⚠️ www กับไม่มี www เสิร์ฟเว็บเดียวกันทั้งคู่ (วัดจริง 8 ส.ค. 2569)
+  // www.sudochatbot.online ตอบ 200 พร้อมเนื้อหาชุดเดียวกับโดเมนหลัก
+  // = Google เห็นเว็บเดียวกันบนสองโดเมน ซึ่งแบ่งน้ำหนักลิงก์ออกเป็นสองกอง
+  // canonical ช่วยกลบไว้ได้ระดับหนึ่ง แต่ทางที่ถูกคือส่ง 301 ไปโดเมนเดียว
+  // ทำที่นี่เพราะเปลี่ยนที่เดียวได้ผลทุกหน้า และไม่ต้องรอตั้งค่าฝั่งโดเมน
+  // 308 = ย้ายถาวรและคงเมธอดเดิม (POST ที่ยิงมาที่ www จะไม่กลายเป็น GET)
+  const host = request.headers.get("host") ?? "";
+  if (host.startsWith("www.")) {
+    const url = new URL(request.url);
+    url.host = host.slice(4);
+    return NextResponse.redirect(url, 308);
+  }
+
   let response = NextResponse.next({ request });
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
