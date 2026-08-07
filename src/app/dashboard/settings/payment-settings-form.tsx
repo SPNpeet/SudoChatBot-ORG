@@ -3,7 +3,7 @@ import { useState, useTransition } from "react";
 import { Button, Input, Label, Select } from "@/components/ui";
 import { savePaymentSettings } from "../actions";
 import type { ShopPaymentSettings } from "@/lib/types/db";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, AlertTriangle, CircleDashed } from "lucide-react";
 
 // ธนาคารไทยที่คนใช้จริง เรียงตามส่วนแบ่งลูกค้ารายย่อย — ชื่อทางการแบบสั้นที่พิมพ์บนเอกสารได้เลย
 const THAI_BANKS = [
@@ -12,9 +12,14 @@ const THAI_BANKS = [
   "ยูโอบี", "แลนด์ แอนด์ เฮ้าส์", "ธ.ก.ส.", "อาคารสงเคราะห์", "อิสลามแห่งประเทศไทย",
 ];
 
-export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: Partial<ShopPaymentSettings> }) {
+export default function PaymentSettingsForm({ shopId, p, hasSlipKey = false }: { shopId: string; p: Partial<ShopPaymentSettings>; hasSlipKey?: boolean }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  // ⚠️ เลือกผู้ให้บริการตรวจสลิปไว้แต่ไม่มีคีย์ = ตรวจอัตโนมัติล้มทุกครั้งแบบเงียบ ๆ
+  // (ระบบตกกลับไปให้กดยืนยันเอง ซึ่งถูกต้อง แต่เจ้าของร้านเข้าใจว่าเปิดใช้แล้ว จึงไม่มีใครไปกดยืนยัน
+  //  = ลูกค้าโอนเงินมาแล้วเอกสารค้างสถานะรอจ่ายไปเรื่อย ๆ) ต้องเห็นตั้งแต่ตอนตั้งค่า
+  const [provider, setProvider] = useState(p.slip_provider ?? "manual");
+  const autoNoKey = provider !== "manual" && !hasSlipKey;
 
   function submit(fd: FormData) {
     setResult(null);
@@ -53,13 +58,31 @@ export default function PaymentSettingsForm({ shopId, p }: { shopId: string; p: 
       <div>
         <Label>การตรวจสลิปอัตโนมัติ</Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Select name="slip_provider" defaultValue={p.slip_provider ?? "manual"}>
+          <Select name="slip_provider" value={provider} onChange={(e) => setProvider(e.target.value)}>
             <option value="manual">ตรวจเอง (กดยืนยันเองในหน้าเอกสาร)</option>
             <option value="easyslip">EasySlip — อัตโนมัติ 100%</option>
             <option value="slipok">SlipOK — อัตโนมัติ 100%</option>
           </Select>
-          <Input name="slip_api_key" type="password" placeholder="รหัสเชื่อมต่อจากผู้ให้บริการ (กรอกเมื่อต้องการเปลี่ยน)" />
+          <div>
+            <Input name="slip_api_key" type="password" autoComplete="off"
+              placeholder={hasSlipKey ? "รหัสเชื่อมต่อ — กรอกเมื่อต้องการเปลี่ยน" : "รหัสเชื่อมต่อจากผู้ให้บริการ"} />
+            {hasSlipKey ? (
+              <span className="mt-1 flex items-center gap-1 text-xs text-emerald-600">
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> ตั้งรหัสเชื่อมต่อไว้แล้ว — เว้นว่างไว้ถ้าไม่เปลี่ยน
+              </span>
+            ) : (
+              <span className="mt-1 flex items-center gap-1 text-xs text-neutral-400">
+                <CircleDashed className="h-3.5 w-3.5 shrink-0" /> ยังไม่ได้ตั้งรหัสเชื่อมต่อ
+              </span>
+            )}
+          </div>
         </div>
+        {autoNoKey && (
+          <p className="mt-2 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
+            <AlertTriangle className="mt-px h-4 w-4 shrink-0" />
+            <span>เลือกตรวจอัตโนมัติไว้แต่ยังไม่มีรหัสเชื่อมต่อ — ระบบจะกลับไปให้คุณกดยืนยันสลิปเองทุกใบ ไม่ตัดยอดให้อัตโนมัติ</span>
+          </p>
+        )}
         <p className="mt-1 text-xs text-neutral-400">
           สมัคร EasySlip ที่ easyslip.com (~0.05฿/สลิป) — ระบบตรวจสลิปจริง กันสลิปซ้ำ จับคู่ใบแจ้งหนี้ และให้ลูกค้าอัปสลิปจ่ายเองจากลิงก์เอกสารได้
         </p>

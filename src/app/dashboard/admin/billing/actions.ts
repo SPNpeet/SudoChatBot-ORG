@@ -75,7 +75,15 @@ export async function confirmTopup(topupId: string, approve: boolean): Promise<A
   }
 }
 
-export async function savePlatformBilling(formData: FormData): Promise<ActionResult> {
+// ผลของการบันทึกต้อง "ยืนยันได้" ไม่ใช่แค่บอกว่าสำเร็จ
+// เกิดจริง 8 ส.ค. 2569: กดบันทึกแล้วขึ้น "บันทึกสำเร็จ" ทุกครั้งแม้ไม่ได้กรอกคีย์อะไรเลย
+// เจ้าของจึงแยกไม่ออกว่าคีย์เข้าจริงไหม และไม่รู้ว่าตอนนี้ระบบรับเงินได้หรือยัง
+// จึงคืนกลับมาว่า "เก็บอะไรไปบ้าง" + อ่านซ้ำจาก Vault เพื่อบอกสถานะจริงหลังบันทึก
+export type SaveBillingResult =
+  | { ok: true; savedKeys: string[]; stripeReady: boolean }
+  | { ok: false; error: string };
+
+export async function savePlatformBilling(formData: FormData): Promise<SaveBillingResult> {
   try {
     await assertPlatformAdmin();
     const svc = createServiceClient();
@@ -100,28 +108,48 @@ export async function savePlatformBilling(formData: FormData): Promise<ActionRes
     if (error) return { ok: false, error: `บันทึกไม่สำเร็จ: ${error.message}` };
 
     const supabase = await createClient();
+    const savedKeys: string[] = [];
     const slipKey = String(formData.get("slip_api_key") ?? "").trim();
     if (slipKey) {
       const { error: e1 } = await supabase.rpc("store_platform_slip_key", { p_key: slipKey });
       if (e1) return { ok: false, error: `บันทึก slip API key ไม่สำเร็จ: ${e1.message}` };
+      savedKeys.push("คีย์ตรวจสลิป");
     }
     const stripeKey = String(formData.get("stripe_secret_key") ?? "").trim();
     if (stripeKey) {
+      // กันพิมพ์ผิดช่อง: เอา whsec_ ไปใส่ช่อง secret key แล้วระบบเก็บเงียบ ๆ
+      // ผลคือสร้าง checkout ไม่ได้เลยแต่หน้าจอบอกว่าบันทึกสำเร็จ — ต้องดักตั้งแต่ตรงนี้
+      if (!stripeKey.startsWith("sk_") && !stripeKey.startsWith("rk_")) {
+        return { ok: false, error: "Secret key ต้องขึ้นต้นด้วย sk_ (หรือ rk_) — ค่าที่กรอกมาน่าจะสลับช่องกับ webhook secret" };
+      }
       const { error: e4 } = await supabase.rpc("store_platform_stripe_key", { p_key: stripeKey });
       if (e4) return { ok: false, error: `บันทึก Stripe secret key ไม่สำเร็จ: ${e4.message}` };
+      savedKeys.push("Stripe secret key");
     }
     const stripeWh = String(formData.get("stripe_webhook_secret") ?? "").trim();
     if (stripeWh) {
+      if (!stripeWh.startsWith("whsec_")) {
+        return { ok: false, error: "Webhook signing secret ต้องขึ้นต้นด้วย whsec_ — ค่าที่กรอกมาน่าจะสลับช่องกับ secret key" };
+      }
       const { error: e5 } = await supabase.rpc("store_platform_stripe_webhook_secret", { p_key: stripeWh });
       if (e5) return { ok: false, error: `บันทึก Stripe webhook secret ไม่สำเร็จ: ${e5.message}` };
+      savedKeys.push("Stripe webhook secret");
     }
     const resendKey = String(formData.get("resend_api_key") ?? "").trim();
     if (resendKey) {
       const { error: e3 } = await supabase.rpc("store_platform_resend_key", { p_key: resendKey });
       if (e3) return { ok: false, error: `บันทึก Resend API key ไม่สำเร็จ: ${e3.message}` };
+      savedKeys.push("Resend API key");
     }
+    // อ่านซ้ำจาก Vault หลังบันทึก — ยืนยันด้วยของจริง ไม่ใช่เชื่อว่า RPC ที่เพิ่งเรียกสำเร็จแล้วต้องมีค่า
+    const [{ data: sk }, { data: wh }] = await Promise.all([
+      svc.rpc("get_platform_stripe_key"),
+      svc.rpc("get_platform_stripe_webhook_secret"),
+    ]);
+    const stripeReady = typeof sk === "string" && sk.trim().length > 0
+      && typeof wh === "string" && wh.trim().length > 0;
     revalidatePath("/dashboard/admin/billing");
-    return { ok: true };
+    return { ok: true, savedKeys, stripeReady };
   } catch (e) {
     const m = (e as Error).message;
     return { ok: false, error: m.includes("forbidden") ? "ไม่มีสิทธิ์ตั้งค่านี้" : `บันทึกไม่สำเร็จ: ${m.slice(0, 150)}` };

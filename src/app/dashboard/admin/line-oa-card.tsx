@@ -2,10 +2,33 @@
 // ตั้งค่า LINE OA กลางของแพลตฟอร์ม — ตั้งครั้งเดียว ทุกกิจการได้ปุ่ม "เชื่อมต่อ LINE" คลิกเดียวทันที
 import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Label } from "@/components/ui";
-import { MessageCircle, CheckCircle2, LayoutGrid } from "lucide-react";
+import { MessageCircle, CheckCircle2, LayoutGrid, AlertTriangle, CircleDashed } from "lucide-react";
 import { savePlatformLine } from "./actions";
 
-export default function LineOaCard({ configured, basicId }: { configured: boolean; basicId: string | null }) {
+/** มี/ไม่มีค่ารายช่อง — การ์ดนี้มีความลับ 4 ตัวที่ขาดตัวใดตัวหนึ่งก็ใช้งานไม่ได้คนละแบบ */
+export interface LineStored { loginId: boolean; loginSecret: boolean; oaToken: boolean; oaSecret: boolean }
+
+function FieldStatus({ set }: { set: boolean }) {
+  return set ? (
+    <span className="mt-1 flex items-center gap-1 text-xs text-emerald-600">
+      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> ตั้งค่าไว้แล้ว — เว้นว่างไว้ถ้าไม่เปลี่ยน
+    </span>
+  ) : (
+    <span className="mt-1 flex items-center gap-1 text-xs text-neutral-400">
+      <CircleDashed className="h-3.5 w-3.5 shrink-0" /> ยังไม่ได้ตั้ง
+    </span>
+  );
+}
+
+export default function LineOaCard({ stored, basicId }: { stored: LineStored; basicId: string | null }) {
+  const configured = stored.loginId && stored.loginSecret && stored.oaToken && stored.oaSecret;
+  // ครึ่ง ๆ กลาง ๆ อันตรายกว่าไม่ตั้งเลย เพราะปุ่มเชื่อม LINE จะโผล่ให้กดแล้วพังกลางทาง
+  const missing = [
+    !stored.loginId && "Channel ID",
+    !stored.loginSecret && "Login channel secret (ล็อกอิน LINE ไม่ได้)",
+    !stored.oaToken && "Channel access token (ส่งข้อความไม่ได้)",
+    !stored.oaSecret && "Messaging channel secret (ตรวจลายเซ็น webhook ไม่ได้ — ระบบจะทิ้ง event ทุกตัว)",
+  ].filter(Boolean) as string[];
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [menuMsg, setMenuMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -53,23 +76,33 @@ export default function LineOaCard({ configured, basicId }: { configured: boolea
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>LINE Login — Channel ID</Label>
-              <Input name="login_channel_id" placeholder={configured ? "ตั้งค่าไว้แล้ว — เว้นว่าง = ใช้ค่าเดิม" : "เช่น 2001234567"} />
+              <Input name="login_channel_id" placeholder={stored.loginId ? "เว้นว่าง = ใช้ค่าเดิม" : "เช่น 2001234567"} />
+              <FieldStatus set={stored.loginId} />
             </div>
             <div>
               <Label>LINE Login — Channel secret</Label>
-              <Input name="login_channel_secret" type="password" autoComplete="off" placeholder={configured ? "••••••••" : "วาง secret"} />
+              <Input name="login_channel_secret" type="password" autoComplete="off" placeholder={stored.loginSecret ? "เว้นว่าง = ใช้ค่าเดิม" : "วาง secret"} />
+              <FieldStatus set={stored.loginSecret} />
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>Messaging API — Channel access token (long-lived)</Label>
-              <Input name="oa_token" type="password" autoComplete="off" placeholder={configured ? "••••••••" : "วาง token ของ OA กลาง"} />
+              <Input name="oa_token" type="password" autoComplete="off" placeholder={stored.oaToken ? "เว้นว่าง = ใช้ค่าเดิม" : "วาง token ของ OA กลาง"} />
+              <FieldStatus set={stored.oaToken} />
             </div>
             <div>
               <Label>Messaging API — Channel secret (ตรวจลายเซ็น webhook)</Label>
-              <Input name="oa_channel_secret" type="password" autoComplete="off" placeholder={configured ? "••••••••" : "วาง secret ของ Messaging channel"} />
+              <Input name="oa_channel_secret" type="password" autoComplete="off" placeholder={stored.oaSecret ? "เว้นว่าง = ใช้ค่าเดิม" : "วาง secret ของ Messaging channel"} />
+              <FieldStatus set={stored.oaSecret} />
             </div>
           </div>
+          {missing.length > 0 && (
+            <p className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
+              <AlertTriangle className="mt-px h-4 w-4 shrink-0" />
+              <span>ยังใช้งานไม่ได้ — ขาด {missing.join(" · ")}</span>
+            </p>
+          )}
           <div>
             <Label>Basic ID ของ OA (ไว้โชว์ให้ผู้ใช้เพิ่มเพื่อน)</Label>
             <Input name="oa_basic_id" defaultValue={basicId ?? ""} placeholder="@sudochatbot" />

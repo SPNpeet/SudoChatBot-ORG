@@ -25,6 +25,22 @@ export default async function AdminBillingPage() {
   const monthStart = new Date(Date.now() + 7 * 3600_000);
   const { data: slipMonth } = await svc.from("platform_slip_monthly").select("calls")
     .eq("month", `${monthStart.toISOString().slice(0, 7)}-01`).maybeSingle();
+  // ⚠️ ช่องคีย์เป็น type=password และไม่เคยแสดงค่าที่เก็บไว้ (ถูกต้องแล้ว — ห้ามส่งคีย์กลับมาที่ client)
+  // แต่เดิมมันแปลว่าเปิดหน้านี้มาแล้ว "ช่องว่างเปล่า" ทั้งที่คีย์ถูกเก็บใน Vault เรียบร้อย
+  // เกิดจริง 8 ส.ค. 2569: เจ้าของกรอก secret key แล้วโหลดหน้าใหม่ เห็นช่องว่าง เข้าใจว่าไม่ได้บันทึก
+  // จึงกรอกใหม่ซ้ำ ๆ และไม่มีทางรู้ว่าตอนนี้ระบบรับเงินได้จริงหรือยัง
+  // ทางแก้: ส่งมาแค่ "มี/ไม่มี" (boolean) ไม่ส่งค่าคีย์ — พอบอกสถานะได้โดยไม่ทำให้คีย์รั่ว
+  const [{ data: skKey }, { data: skWh }, { data: slipKey }] = await Promise.all([
+    svc.rpc("get_platform_stripe_key"),
+    svc.rpc("get_platform_stripe_webhook_secret"),
+    svc.rpc("get_platform_slip_key"),
+  ]);
+  const stored = {
+    stripeKey: typeof skKey === "string" && skKey.trim().length > 0,
+    stripeWebhook: typeof skWh === "string" && skWh.trim().length > 0,
+    slipKey: typeof slipKey === "string" && slipKey.trim().length > 0,
+  };
+
   const r = (rev ?? {}) as Record<string, number>;
   const pendingAll = pending ?? [];
   const pendingRows: PendingTopup[] = pendingAll.slice(0, TOPUPS_PAGE_SIZE).map((t) => ({
@@ -71,7 +87,7 @@ export default async function AdminBillingPage() {
       <Card>
         <CardHeader><CardTitle>บัญชีรับเงินของแพลตฟอร์ม</CardTitle></CardHeader>
         <CardContent>
-          <BillingSettingsForm pf={pf} slipUsed={slipMonth?.calls ?? 0} />
+          <BillingSettingsForm pf={pf} slipUsed={slipMonth?.calls ?? 0} stored={stored} />
         </CardContent>
       </Card>
     </div>

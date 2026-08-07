@@ -4,7 +4,8 @@
 import { useRef, useState, useTransition } from "react";
 import { Button, Input, Label, Select } from "@/components/ui";
 import { savePlatformBilling } from "./actions";
-import { CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { CheckCircle2, AlertTriangle, CircleDashed } from "lucide-react";
 
 interface Settings {
   account_name: string | null; slip_provider: string | null; company_name: string | null;
@@ -13,17 +14,50 @@ interface Settings {
   slip_monthly_cap: number | null;
 }
 
-export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings | null; slipUsed?: number }) {
+/** มี/ไม่มีคีย์ใน Vault — ส่งมาแค่ boolean ห้ามส่งค่าคีย์ลง client เด็ดขาด */
+export interface StoredKeys { stripeKey: boolean; stripeWebhook: boolean; slipKey: boolean }
+
+/**
+ * ป้ายสถานะข้างช่องคีย์
+ *
+ * ⚠️ ทำไมต้องมี (8 ส.ค. 2569): ช่องคีย์เป็น type=password และไม่แสดงค่าที่เก็บไว้
+ * (ถูกต้องแล้ว ห้ามส่งคีย์กลับมา) แต่ผลคือเปิดหน้ามาเห็น "ช่องว่าง" เหมือนไม่เคยตั้งค่า
+ * เจ้าของกรอก secret key ครั้งแรกแล้วโหลดหน้าใหม่ เห็นว่าว่าง เข้าใจว่าไม่ได้บันทึก
+ * รอบต่อมากรอกแต่ webhook secret แล้วกดบันทึก → ระบบเก็บ webhook ไว้แต่ secret key ยังว่าง
+ * = ยังรับเงินไม่ได้ โดยไม่มีอะไรบอกเลย ต้องมาเปิดฐานข้อมูลดูถึงจะรู้
+ */
+function KeyStatus({ set, label }: { set: boolean; label: string }) {
+  return set ? (
+    <span className="mt-1 flex items-center gap-1 text-xs text-emerald-600">
+      <CheckCircle2 className="h-3.5 w-3.5 shrink-0" /> {label}: ตั้งค่าไว้แล้ว — เว้นว่างไว้ถ้าไม่เปลี่ยน
+    </span>
+  ) : (
+    <span className="mt-1 flex items-center gap-1 text-xs text-neutral-400">
+      <CircleDashed className="h-3.5 w-3.5 shrink-0" /> {label}: ยังไม่ได้ตั้ง
+    </span>
+  );
+}
+
+export default function BillingSettingsForm({ pf, slipUsed = 0, stored }: { pf: Settings | null; slipUsed?: number; stored: StoredKeys }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const stripeReady = stored.stripeKey && stored.stripeWebhook;
+  const stripeHalf = stored.stripeKey !== stored.stripeWebhook;
 
   function submit(fd: FormData) {
     setResult(null);
     start(async () => {
       const r = await savePlatformBilling(fd);
-      setResult(r.ok ? { ok: true, msg: "บันทึกสำเร็จ — ตั้งค่ามีผลทันที" } : { ok: false, msg: r.error });
-      if (r.ok) setTimeout(() => setResult(null), 4000);
+      if (!r.ok) { setResult({ ok: false, msg: r.error }); return; }
+      // ยืนยันให้ตรงกับสิ่งที่เกิดขึ้นจริง — ไม่ใช่ "บันทึกสำเร็จ" ลอย ๆ ที่ขึ้นเหมือนกันทุกครั้ง
+      // ต้องบอกว่าเก็บคีย์ตัวไหนไปบ้าง (ช่องคีย์เป็น password จึงตรวจด้วยตาเองไม่ได้)
+      // และบอกผลรวมว่าตอนนี้รับเงินได้หรือยัง ซึ่งเป็นคำถามเดียวที่เจ้าของอยากได้คำตอบ
+      const what = r.savedKeys.length ? `เก็บ ${r.savedKeys.join(" · ")} แล้ว` : "อัปเดตข้อมูลบัญชีรับเงินแล้ว (ไม่ได้เปลี่ยนคีย์)";
+      const state = r.stripeReady ? "พร้อมรับเงินค่าแพ็กเกจ" : "ยังรับเงินไม่ได้ — ดูสถานะใต้ช่องคีย์";
+      setResult({ ok: true, msg: `${what} · ${state}` });
+      // ไม่ซ่อนข้อความเองเมื่อยังไม่พร้อมรับเงิน — ของที่ต้องทำต่อห้ามหายไปเอง
+      if (r.stripeReady) setTimeout(() => setResult(null), 6000);
     });
   }
 
@@ -36,8 +70,34 @@ export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings
       <div>
         <Label>รับเงินค่าแพ็กเกจผ่าน Stripe</Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input name="stripe_secret_key" type="password" placeholder="Secret key (sk_live_... กรอกเมื่อเปลี่ยน)" />
-          <Input name="stripe_webhook_secret" type="password" placeholder="Webhook signing secret (whsec_... กรอกเมื่อเปลี่ยน)" />
+          <div>
+            <Input name="stripe_secret_key" type="password" autoComplete="off"
+              placeholder={stored.stripeKey ? "Secret key — กรอกเมื่อต้องการเปลี่ยน" : "Secret key (sk_live_... / sk_test_...)"} />
+            <KeyStatus set={stored.stripeKey} label="Secret key" />
+          </div>
+          <div>
+            <Input name="stripe_webhook_secret" type="password" autoComplete="off"
+              placeholder={stored.stripeWebhook ? "Webhook secret — กรอกเมื่อต้องการเปลี่ยน" : "Webhook signing secret (whsec_...)"} />
+            <KeyStatus set={stored.stripeWebhook} label="Webhook secret" />
+          </div>
+        </div>
+        {/* สรุปสถานะรับเงินเป็นประโยคเดียว — สิ่งที่เจ้าของอยากรู้จริง ๆ คือ "ตอนนี้ลูกค้าจ่ายเงินได้ไหม"
+            ไม่ใช่ "คีย์ไหนมีบ้าง" · ครึ่ง ๆ กลาง ๆ อันตรายกว่าไม่ตั้งเลย จึงต้องเป็นสีแดง */}
+        <div className={cn(
+          "mt-2 flex items-start gap-2 rounded-lg px-3 py-2 text-xs",
+          stripeReady ? "bg-emerald-50 text-emerald-700"
+            : stripeHalf ? "bg-red-50 text-red-600"
+              : "bg-neutral-50 text-neutral-500",
+        )}>
+          {stripeReady ? <CheckCircle2 className="mt-px h-4 w-4 shrink-0" />
+            : stripeHalf ? <AlertTriangle className="mt-px h-4 w-4 shrink-0" />
+              : <CircleDashed className="mt-px h-4 w-4 shrink-0" />}
+          <span>
+            {stripeReady ? "พร้อมรับเงินค่าแพ็กเกจแล้ว — ครบทั้ง secret key และ webhook secret"
+              : stripeHalf && !stored.stripeKey ? "ยังรับเงินไม่ได้ — มี webhook secret แล้วแต่ยังไม่มี secret key จึงสร้างหน้าจ่ายเงินไม่ได้เลย"
+                : stripeHalf ? "ยังรับเงินไม่ได้ — มี secret key แล้วแต่ยังไม่มี webhook secret ลูกค้าจ่ายเงินได้แต่เครดิตจะไม่เข้า (ระบบปฏิเสธ event ทุกตัวเพื่อกันคนปลอมยิงเข้ามาเครดิตให้ตัวเอง)"
+                  : "ยังไม่ได้ตั้งค่า Stripe — หน้าแพ็กเกจซ่อนปุ่มสมัคร ไม่มีใครสมัครแพ็กเสียเงินได้"}
+          </span>
         </div>
         <p className="mt-1 text-xs text-neutral-400">
           ทั้งสองคีย์เก็บใน Vault · ตั้ง webhook ใน Stripe Dashboard ไปที่ <span className="font-mono">/api/billing/stripe/webhook</span>
@@ -56,7 +116,11 @@ export default function BillingSettingsForm({ pf, slipUsed = 0 }: { pf: Settings
             <option value="easyslip">EasySlip — อัตโนมัติ</option>
             <option value="slipok">SlipOK — อัตโนมัติ</option>
           </Select>
-          <Input name="slip_api_key" type="password" placeholder="API Key (กรอกเมื่อเปลี่ยน)" />
+          <div>
+            <Input name="slip_api_key" type="password" autoComplete="off"
+              placeholder={stored.slipKey ? "API Key — กรอกเมื่อต้องการเปลี่ยน" : "API Key"} />
+            <KeyStatus set={stored.slipKey} label="API Key" />
+          </div>
           {/* เพดานกลาง: คีย์ใบเดียวใช้ร่วมกันทุกร้าน ถ้าไม่คุมตรงนี้ ร้านฟรีกินโควตาร้านที่จ่ายเงินได้
               ค่าเริ่มต้น 100 = แพ็กฟรีของ SlipOK · อัปแพ็กเมื่อไหร่ให้แก้เลขนี้ตาม */}
           <Input name="slip_monthly_cap" type="number" min={0} defaultValue={pf?.slip_monthly_cap ?? 100}

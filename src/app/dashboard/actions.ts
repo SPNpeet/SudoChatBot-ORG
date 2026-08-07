@@ -118,7 +118,11 @@ export async function savePaymentSettings(shopId: string, formData: FormData): P
     const slipKey = String(formData.get("slip_api_key") ?? "").trim();
     if (slipKey) {
       const svc = createServiceClient();
-      await svc.rpc("store_shop_slip_key", { p_shop_id: shopId, p_key: slipKey });
+      // ⚠️ เดิมทิ้งผลลัพธ์ทิ้ง: เก็บคีย์ไม่สำเร็จก็ยังขึ้น "บันทึกแล้ว" สีเขียว
+      // ช่องคีย์เป็น type=password จึงไม่มีทางรู้เลยว่าคีย์เข้าหรือไม่เข้า
+      // เจ้าของร้านเข้าใจว่าเปิดตรวจสลิปอัตโนมัติแล้ว แต่จริง ๆ ยังต้องกดยืนยันเองทุกใบ
+      const { error: keyErr } = await svc.rpc("store_shop_slip_key", { p_shop_id: shopId, p_key: slipKey });
+      if (keyErr) return { ok: false, error: `บันทึกข้อมูลบัญชีแล้ว แต่เก็บรหัสเชื่อมต่อไม่สำเร็จ: ${keyErr.message}` };
     }
     revalidatePath("/dashboard/settings");
     return { ok: true };

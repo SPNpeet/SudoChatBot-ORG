@@ -47,9 +47,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     supabase.from("shops").select("billing_name,billing_address,tax_id,branch").eq("id", shop.id).maybeSingle(),
     // token อยู่หลัง RLS (service เท่านั้น) — ส่งลง client แค่ "มี/ไม่มี" ไม่ส่งค่าจริง
     svc.from("shop_notify_settings").select("line_channel_token,line_to_id,notify_approval,link_source,line_display_name").eq("shop_id", shop.id).maybeSingle(),
-    svc.from("platform_billing_settings").select("line_login_channel_id,line_oa_token,line_oa_basic_id").eq("id", true).maybeSingle(),
+    svc.from("platform_billing_settings")
+      .select("line_login_channel_id,line_login_channel_secret,line_oa_token,line_oa_basic_id").eq("id", true).maybeSingle(),
     supabase.from("fin_period_locks").select("locked_through,locked_at,note").eq("shop_id", shop.id).maybeSingle(),
   ]);
+  // คีย์ตรวจสลิปอยู่ใน Vault และช่องกรอกเป็น type=password จึงไม่มีทางดูด้วยตาว่าตั้งไว้หรือยัง
+  // ส่งลง client แค่ "มี/ไม่มี" — ไม่ส่งค่าคีย์ (กติกาเดียวกับ token LINE บรรทัดบน)
+  const { data: shopSlipKey } = await svc.rpc("get_shop_slip_key", { p_shop_id: shop.id });
+  const hasSlipKey = typeof shopSlipKey === "string" && shopSlipKey.trim().length > 0;
   const p = (pay ?? {}) as Partial<ShopPaymentSettings>;
   const memberRows = (members ?? []).map((m) => {
     const prof = m.profiles as unknown as { display_name: string | null; email: string | null } | null;
@@ -124,14 +129,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             : <Locked />)}
 
           {tab === "payment" && (canEdit
-            ? <PaymentSettingsForm shopId={shop.id} p={p} />
+            ? <PaymentSettingsForm shopId={shop.id} p={p} hasSlipKey={hasSlipKey} />
             : <Locked />)}
 
           {tab === "notify" && (canEdit ? (
             <>
               <PushToggle shopId={shop.id} />
+              {/* platformReady ต้องมี login_channel_secret ด้วย ไม่งั้นปุ่ม "เชื่อมต่อ LINE" โผล่ให้กด
+                  แล้วเด้งกลับพร้อม not_configured กลางทาง (ดู api/line/callback) — เดิมเช็คแค่ id กับ token */}
               <NotifySettingsForm shopId={shop.id}
-                platformReady={!!platform?.line_login_channel_id && !!platform?.line_oa_token}
+                platformReady={!!platform?.line_login_channel_id && !!platform?.line_login_channel_secret && !!platform?.line_oa_token}
                 oaBasicId={platform?.line_oa_basic_id ?? null}
                 hasOwnToken={!!notify?.line_channel_token}
                 status={lineStatus}
