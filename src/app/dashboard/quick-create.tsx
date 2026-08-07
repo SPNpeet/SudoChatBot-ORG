@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, X, Receipt, FileText, Camera, Calculator, MessageCirclePlus, FileSignature } from "lucide-react";
+import { Plus, X, Receipt, FileText, Camera, Calculator, FileSignature } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ACTIONS = [
@@ -48,33 +48,24 @@ export default function QuickCreate() {
             ใช้ animate เข้าจากล่างเล็กน้อยเพื่อให้รู้ว่าโผล่มาจากปุ่ม ไม่ใช่จู่โจม */}
         {open && (
           <div className="flex flex-col items-end gap-2 duration-150 animate-in fade-in slide-in-from-bottom-2 motion-reduce:animate-none">
+            {/* ⚠️ สถานะ hover ต้องต่างจาก "ยังไม่ได้แตะ" อย่างชัดเจน (8 ส.ค. 2569)
+                เดิมทุกใบเป็นการ์ดขาว shadow-lg เท่ากันหมด แล้ว hover เปลี่ยนแค่สีขอบจาง ๆ
+                บนจอจริงจึงดูเหมือน "ใบที่เมาส์ทับอยู่ถูกกดเลือกไปแล้ว" ทั้งที่ยังไม่ได้กด
+                เจ้าของรายงานว่า "ไม่ได้กดมันก็เหมือนกดอันนั้นเลย"
+                ตอนนี้: ปกติ = แบน ขอบบาง · hover = ยกขึ้น + พื้นเขียวจาง + เลื่อนซ้ายนิดเดียว
+                · กดจริง = ยุบลง (scale) — สามสถานะแยกออกจากกันด้วยตาเปล่า */}
             {ACTIONS.map((a) => (
               <Link key={a.href} href={a.href}
-                className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white py-2.5 pl-3.5 pr-4 shadow-lg transition hover:border-emerald-300 active:scale-[0.98]">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-50">
-                  <a.icon className="h-4 w-4 text-emerald-600" />
+                className="group flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white py-2.5 pl-3.5 pr-4 shadow-sm transition-all duration-150 hover:-translate-x-0.5 hover:border-emerald-500/40 hover:bg-emerald-50/60 hover:shadow-xl active:translate-x-0 active:scale-[0.97] active:shadow-sm motion-reduce:transition-none motion-reduce:hover:translate-x-0">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-50 transition-colors group-hover:bg-emerald-600">
+                  <a.icon className="h-4 w-4 text-emerald-600 transition-colors group-hover:text-white" />
                 </span>
                 <span className="text-left">
                   <span className="block text-[13px] font-semibold leading-tight text-neutral-800">{a.label}</span>
-                  <span className="block text-xs text-neutral-400">{a.hint}</span>
+                  <span className="block text-xs text-neutral-400 transition-colors group-hover:text-emerald-700">{a.hint}</span>
                 </span>
               </Link>
             ))}
-            {/* ติชมย้ายมาอยู่ในเมนูนี้แทนการเป็นปุ่มลอยอีกอัน */}
-            <button type="button"
-              onClick={() => {
-                setOpen(false);
-                document.querySelector<HTMLButtonElement>("[data-feedback-open]")?.click();
-              }}
-              className="flex items-center gap-3 rounded-2xl border border-neutral-200 bg-white py-2.5 pl-3.5 pr-4 shadow-lg transition hover:border-neutral-400 active:scale-[0.98]">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-neutral-100">
-                <MessageCirclePlus className="h-4 w-4 text-neutral-600" />
-              </span>
-              <span className="text-left">
-                <span className="block text-[13px] font-semibold leading-tight text-neutral-800">แนะนำ/ติชม</span>
-                <span className="block text-xs text-neutral-400">ส่งตรงถึงทีมงาน</span>
-              </span>
-            </button>
           </div>
         )}
 

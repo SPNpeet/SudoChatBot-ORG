@@ -35,7 +35,7 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
    * ⚠️ ห้ามเดาจาก variant: variant="icon" ถูกใช้ทั้งในหัวมือถือ (ปุ่มชิดขวา ต้องกางไปซ้าย)
    * และในเมนูซ้ายตอนพับ (ปุ่มชิดซ้าย ต้องกางไปขวา) ถ้ายึดขอบผิดด้านแผงจะหลุดออกนอกจอ
    */
-  place?: "header" | "sidebar";
+  place?: "header" | "sidebar" | "sidebar-top";
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"open" | "history">("open");
@@ -124,9 +124,12 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
             place === "header"
               // หัวเว็บ: ห้อยลงมาจากปุ่ม ยึดขอบขวาเพราะปุ่มอยู่ฝั่งขวาของหัว
               ? "sm:right-0 sm:top-[calc(100%+0.5rem)]"
-              // เมนูซ้าย: เด้งขึ้นด้านบน ยึดขอบซ้ายเสมอ ไม่ว่าจะพับอยู่หรือไม่
-              // (พับแล้วปุ่มกว้างแค่ 44px ถ้ายึดขวาแผงจะยื่นออกไปนอกจอทางซ้าย)
-              : "sm:bottom-[calc(100%+0.5rem)] sm:left-0",
+              : place === "sidebar-top"
+                // หัวแถบเมนู: ห้อยลงมา ยึดขอบซ้าย (ปุ่มอยู่บนสุดจึงไม่มีที่เหนือมัน)
+                ? "sm:left-0 sm:top-[calc(100%+0.5rem)]"
+                // ท้ายแถบเมนู: เด้งขึ้นด้านบน ยึดขอบซ้ายเสมอ ไม่ว่าจะพับอยู่หรือไม่
+                // (พับแล้วปุ่มกว้างแค่ 44px ถ้ายึดขวาแผงจะยื่นออกไปนอกจอทางซ้าย)
+                : "sm:bottom-[calc(100%+0.5rem)] sm:left-0",
           )}>
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
               <p className="text-sm font-semibold">กล่องจดหมายระบบ</p>
@@ -166,7 +169,7 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
                         <p className="text-[13px] font-medium leading-snug text-neutral-700">{h.title}</p>
                         {h.body && <p className="mt-1 text-xs leading-relaxed text-neutral-500">{h.body}</p>}
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-3">
-                          {h.at && <span className="text-[11px] text-neutral-400">{new Date(h.at).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" })}</span>}
+                          {h.at && <span className="text-xs text-neutral-400">{new Date(h.at).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" })}</span>}
                           <button onClick={() => act(() => restoreNotice(shopId, h.key))} disabled={pending}
                             className="inline-flex min-h-[44px] items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-50">
                             <Undo2 className="h-3.5 w-3.5" /> เอากลับมาแสดง

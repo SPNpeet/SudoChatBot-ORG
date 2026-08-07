@@ -22,7 +22,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, UserRound, ChevronsUpDown } from "lucide-react";
+import { LogOut, UserRound, ChevronsUpDown, MessageCirclePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { roleLabel } from "@/lib/roles";
 
@@ -149,6 +149,14 @@ export default function AccountMenu({ me, signOut, variant = "row" }: {
                 className="flex items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50">
                 <UserRound className="h-4 w-4 text-neutral-400" /> บัญชีของฉัน
               </Link>
+              {/* ⚠️ ต้องมีตรงนี้ด้วย ไม่ใช่มีแค่ในแถบเมนูซ้าย
+                  บนมือถือไม่มีแถบเมนูซ้าย ถ้ามีแค่ที่นั่น ผู้ใช้มือถือจะไม่มีทางบอกปัญหาได้เลย
+                  (เดิม "แนะนำ/ติชม" ซ่อนอยู่ในเมนูของปุ่ม + ลอย ซึ่งเปิดเพื่อสร้างเอกสาร ไม่ใช่เพื่อบ่น) */}
+              <button role="menuitem" type="button"
+                onClick={() => { setOpen(false); document.querySelector<HTMLButtonElement>("[data-feedback-open]")?.click(); }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                <MessageCirclePlus className="h-4 w-4 text-neutral-400" /> แนะนำ/ติชม
+              </button>
               <form action={signOut}>
                 <button role="menuitem"
                   className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm text-red-600 hover:bg-red-50">
