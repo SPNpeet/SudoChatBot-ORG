@@ -15,6 +15,7 @@
     "check:migrations": "tsx scripts/check-migrations.mjs",
     "check:actions": "tsx scripts/check-server-actions.mjs",
     "check:csv": "tsx scripts/check-csv-import.mjs",
+    "check:ready": "tsx scripts/check-ready.mjs",
     "check:ui:auth": "tsx scripts/check-logged-in-ui.mjs"
   },
   "dependencies": {
