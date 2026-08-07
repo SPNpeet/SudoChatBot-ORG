@@ -957,7 +957,17 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents, tools,
-          generationConfig: { temperature: 0.3, maxOutputTokens: 4000 },
+          // ⚠️ 8000 ไม่ใช่ 4000 — วัดจริง 6 ส.ค. 2569 หลังเปลี่ยนไปใช้ gemini-2.5-pro
+          //
+          // pro เป็นโมเดลที่ "คิดก่อนตอบ" และ token ที่ใช้คิดถูกหักจาก maxOutputTokens ด้วย
+          // วัดได้: thought 585-2,034 tokens ต่อคำถามเดียว ก่อนจะเริ่มเขียนคำตอบสักตัวอักษร
+          // ทดสอบที่เพดาน 500 -> ตอบว่างเปล่า 4/4 คำถาม (คิดจนหมดโควตา ไม่เหลือให้พิมพ์)
+          // ที่ 4000 -> ผ่าน 4/4 แต่เคสหนักสุดใช้ไป 2,998 (คิด 2,034 + ตอบ 964) = เหลือที่ว่างแค่ 25%
+          //
+          // ของจริงหนักกว่าที่ทดสอบมาก: prompt ~7,500 token + ผลลัพธ์ tool + หลายเทิร์น
+          // ชนเพดานเมื่อไหร่ = คำตอบว่าง ซึ่งคือบั๊กเดิมที่เพิ่งแก้ด้วยการย้ายมาใช้ pro
+          // เพดานที่สูงขึ้นไม่ได้แปลว่าจ่ายเพิ่ม — คิดเงินตาม token ที่ใช้จริงเท่านั้น
+          generationConfig: { temperature: 0.3, maxOutputTokens: 8000 },
         }),
       },
     );
