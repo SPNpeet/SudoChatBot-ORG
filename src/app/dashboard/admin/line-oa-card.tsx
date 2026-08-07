@@ -20,7 +20,10 @@ function FieldStatus({ set }: { set: boolean }) {
   );
 }
 
-export default function LineOaCard({ stored, basicId }: { stored: LineStored; basicId: string | null }) {
+export default function LineOaCard({ stored, basicId, liffId, facebookUrl, phone }: {
+  stored: LineStored; basicId: string | null;
+  liffId: string | null; facebookUrl: string | null; phone: string | null;
+}) {
   const configured = stored.loginId && stored.loginSecret && stored.oaToken && stored.oaSecret;
   // ครึ่ง ๆ กลาง ๆ อันตรายกว่าไม่ตั้งเลย เพราะปุ่มเชื่อม LINE จะโผล่ให้กดแล้วพังกลางทาง
   const missing = [
@@ -39,8 +42,9 @@ export default function LineOaCard({ stored, basicId }: { stored: LineStored; ba
     try {
       const res = await fetch("/api/admin/line-richmenu", { method: "POST" });
       const j = await res.json();
+      // บอกด้วยว่าเมนูที่เพิ่งสร้างใช้ลิงก์แบบไหน — เป็นความต่างที่ทำให้คนใช้เมนูจริงหรือเลิกใช้
       setMenuMsg(j.ok
-        ? { ok: true, text: `สร้างเมนูแล้ว ${j.buttons} ปุ่ม — เปิดแชท OA ในมือถือดูได้เลย (อาจต้องปิด-เปิดแชทใหม่)` }
+        ? { ok: true, text: `สร้างเมนูแล้ว ${j.buttons} ปุ่ม · ${j.note ?? ""} — เปิดแชท OA ในมือถือดูได้เลย (อาจต้องปิด-เปิดแชทใหม่)` }
         : { ok: false, text: j.error ?? "สร้างไม่สำเร็จ" });
     } catch (e) {
       setMenuMsg({ ok: false, text: (e as Error).message });
@@ -108,6 +112,39 @@ export default function LineOaCard({ stored, basicId }: { stored: LineStored; ba
           <div>
             <Label>Basic ID ของ OA (ไว้โชว์ให้ผู้ใช้เพิ่มเพื่อน)</Label>
             <Input name="oa_basic_id" defaultValue={basicId ?? ""} placeholder="@sudochatbot" />
+          </div>
+
+          {/* ⚠️ ปลายทางของเมนูในแชท (เพิ่ม 8 ส.ค. 2569)
+              LIFF ID คือตัวที่ทำให้ "กดเมนูแล้วไม่เจอหน้าล็อกอินทุกครั้ง"
+              ซึ่งเป็นสาเหตุเดียวที่ทำให้เมนูเดิมแทบไม่มีคนใช้ */}
+          <div className="rounded-xl border border-neutral-200 p-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-700">
+              ปลายทางของเมนูในแชท
+              <InfoHint>
+                LIFF ID: developers.line.biz เลือก LINE Login channel → แท็บ LIFF → Add
+                → Endpoint URL = https://sudochatbot.online/liff · Size = Full · เปิด scope profile
+                แล้วคัดลอกเลข LIFF ID มาวาง · ตั้งแล้วทุกปุ่มในเมนูจะเปิดแบบแอปในไลน์ เต็มจอ
+                และไม่เด้งหน้าล็อกอินซ้ำทุกครั้งเหมือนลิงก์เว็บธรรมดา
+              </InfoHint>
+            </p>
+            <div className="mt-2 grid gap-3 sm:grid-cols-3">
+              <div>
+                <Label>LIFF ID (แอปในไลน์)</Label>
+                <Input name="liff_id" defaultValue={liffId ?? ""} placeholder="เช่น 2001234567-AbCdEfGh" />
+              </div>
+              <div>
+                <Label>ลิงก์เพจ Facebook</Label>
+                <Input name="facebook_url" defaultValue={facebookUrl ?? ""} placeholder="https://facebook.com/..." />
+              </div>
+              <div>
+                <Label>เบอร์โทรร้าน</Label>
+                <Input name="phone" defaultValue={phone ?? ""} placeholder="0812345678" />
+              </div>
+            </div>
+            <p className="mt-1.5 text-xs text-neutral-400">
+              ช่องสุดท้ายของเมนูจะกลายเป็น &ldquo;เพจของเรา&rdquo; ถ้าใส่ลิงก์เพจ · เป็น &ldquo;โทรหาเรา&rdquo; ถ้าใส่แต่เบอร์ ·
+              ไม่ใส่ทั้งคู่ = เป็นปุ่มช่วยเหลือเหมือนเดิม · แก้แล้วต้องกด &ldquo;สร้าง/อัปเดตเมนู&rdquo; ด้านล่างอีกครั้ง
+            </p>
           </div>
           <Button disabled={pending}>{pending ? "กำลังบันทึก..." : "บันทึก"}</Button>
         </form>

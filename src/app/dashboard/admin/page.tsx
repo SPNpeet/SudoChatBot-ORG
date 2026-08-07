@@ -48,7 +48,7 @@ export default async function AdminPage() {
     svc.from("ai_purpose_keys").select("purpose,provider,model,key_last4,updated_at"),
     supabase.rpc("platform_ai_guard_status"),
     svc.from("platform_billing_settings")
-      .select("line_login_channel_id,line_login_channel_secret,line_oa_token,line_oa_channel_secret,line_oa_basic_id")
+      .select("line_login_channel_id,line_login_channel_secret,line_oa_token,line_oa_channel_secret,line_oa_basic_id,line_liff_id,line_facebook_url,line_phone")
       .eq("id", true).maybeSingle(),
   ]);
   const { data: alerts } = await svc.from("system_alerts")
@@ -76,6 +76,9 @@ export default async function AdminPage() {
           oaSecret: !!pfLine?.line_oa_channel_secret,
         }}
         basicId={pfLine?.line_oa_basic_id ?? null}
+        liffId={pfLine?.line_liff_id ?? null}
+        facebookUrl={pfLine?.line_facebook_url ?? null}
+        phone={pfLine?.line_phone ?? null}
       />
     </div>
   );

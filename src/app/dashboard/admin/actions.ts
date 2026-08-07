@@ -119,6 +119,15 @@ export async function savePlatformLine(formData: FormData): Promise<{ ok: true }
     put("oa_channel_secret", "line_oa_channel_secret", 200);
     const basic = String(formData.get("oa_basic_id") ?? "").trim();
     patch.line_oa_basic_id = basic ? basic.slice(0, 40) : null;
+    // ปลายทางของเมนูในแชท — ล้างค่าได้ด้วยการเว้นว่าง (ต่างจากคีย์ลับที่เว้นว่าง = ใช้ค่าเดิม)
+    // เพราะสามอย่างนี้ไม่ใช่ความลับ ผู้ใช้เห็นค่าเดิมอยู่แล้ว จึงตั้งใจลบได้
+    const liff = String(formData.get("liff_id") ?? "").trim();
+    patch.line_liff_id = liff ? liff.slice(0, 60) : null;
+    const fb = String(formData.get("facebook_url") ?? "").trim();
+    // ต้องเป็นลิงก์เท่านั้น — ค่าที่ไม่ใช่ URL จะทำให้ LINE ปฏิเสธทั้งเมนูตอนสร้าง
+    patch.line_facebook_url = /^https?:\/\//i.test(fb) ? fb.slice(0, 300) : null;
+    const tel = String(formData.get("phone") ?? "").replace(/[^0-9+]/g, "");
+    patch.line_phone = tel ? tel.slice(0, 20) : null;
     const { error } = await svc.from("platform_billing_settings").upsert(patch, { onConflict: "id" });
     if (error) return { ok: false, error: error.message };
     revalidatePath("/dashboard/admin");
