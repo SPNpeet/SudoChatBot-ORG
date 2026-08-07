@@ -40,14 +40,37 @@ export async function addFixedAsset(shopId: string, formData: FormData): Promise
     if (salvage < 1) return { ok: false, error: "ราคาซากต้องไม่ต่ำกว่า 1 บาท ตามประมวลรัษฎากร" };
     if (salvage >= cost) return { ok: false, error: "ราคาซากต้องน้อยกว่าราคาทุน" };
 
+    const txt = (k: string, max = 120) => String(formData.get(k) ?? "").trim().slice(0, max) || null;
+
+    // รหัสทรัพย์สิน: ไม่กรอก = ระบบออกให้ FA-<พ.ศ.>-<ลำดับ 4 หลัก>
+    // ⚠️ รหัสนี้คือสิ่งที่เอาไปติดสติกเกอร์บนตัวของจริง ถ้าปล่อยว่างไว้ทั้งทะเบียน
+    // ตอนตรวจนับจะชี้ไม่ได้ว่าของชิ้นไหนคือแถวไหน — ระบบจึงออกให้เสมอ ไม่รอให้คนคิดเอง
+    let code = txt("asset_code", 40);
+    if (!code) {
+      const yearBE = Number(acquired.slice(0, 4)) + 543;
+      const { data: last } = await svc.from("fixed_assets")
+        .select("asset_code").eq("shop_id", shopId).like("asset_code", `FA-${yearBE}-%`)
+        .order("asset_code", { ascending: false }).limit(1).maybeSingle();
+      const seq = last?.asset_code ? Number(String(last.asset_code).slice(-4)) + 1 : 1;
+      code = `FA-${yearBE}-${String(seq).padStart(4, "0")}`;
+    }
+
     const { error } = await svc.from("fixed_assets").insert({
       shop_id: shopId, name, cost, salvage, acquired_on: acquired,
       life_years: life, note: String(formData.get("note") ?? "").trim().slice(0, 300) || null,
       // รูปถูกอัปโหลดไปก่อนแล้วโดย uploadAssetPhoto (ฟอร์มส่งมาแค่ path)
       photo_path: String(formData.get("photo_path") ?? "").trim().slice(0, 400) || null,
+      asset_code: code,
+      serial_no: txt("serial_no", 80),
+      brand_model: txt("brand_model"),
+      location: txt("location"),
+      holder: txt("holder"),
+      supplier: txt("supplier"),
+      purchase_ref: txt("purchase_ref", 60),
       created_by: user.id,
     });
-    if (error) return { ok: false, error: error.message };
+    // 23505 = รหัสซ้ำในกิจการเดียวกัน — บอกให้ชัดว่าซ้ำที่รหัส ไม่ใช่พังทั้งฟอร์ม
+    if (error) return { ok: false, error: error.code === "23505" ? `รหัส ${code} มีอยู่แล้วในทะเบียน — เปลี่ยนรหัสหรือปล่อยว่างให้ระบบออกให้` : error.message };
 
     revalidatePath("/dashboard/assets");
     return { ok: true, message: `เพิ่ม ${name} เข้าทะเบียนแล้ว` };

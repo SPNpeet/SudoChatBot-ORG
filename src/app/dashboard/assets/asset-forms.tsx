@@ -103,9 +103,54 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
                 <Input name="salvage" inputMode="decimal" defaultValue="1" />
                 <p className="mt-1 text-xs text-neutral-400">กฎหมายให้เหลือไว้อย่างน้อย 1 บาทจนกว่าจะขายทิ้ง</p>
               </div>
+              {/* ⚠️ ข้อมูลชี้ตัวของจริง (เพิ่ม 8 ส.ค. 2569)
+                  เดิมมีแค่ช่อง "หมายเหตุ" ก้อนเดียวให้พิมพ์เลขเครื่อง/ที่ตั้ง/ผู้ครอบครองรวมกัน
+                  ซึ่งค้นไม่ได้ ออกรายงานไม่ได้ และคนละคนกรอกคนละรูปแบบ
+                  ผลจริง: โน้ตบุ๊กชื่อเหมือนกัน 5 เครื่อง ตอนตรวจนับชี้ไม่ได้ว่าเครื่องไหนคือแถวไหน
+                  และผู้สอบบัญชีสุ่มตรวจ "ของมีอยู่จริงไหม" ไม่ผ่านเพราะไม่มีเลขเครื่องให้เทียบ
+                  แยกเป็นช่องของตัวเอง แต่ยุบไว้ใน details กันฟอร์มยาวจนคนกรอกหลัก ๆ ไม่เจอ */}
+              <details className="group sm:col-span-2 rounded-xl border border-neutral-200 px-3">
+                <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-neutral-600">
+                  ข้อมูลชี้ตัวทรัพย์สิน — เลขเครื่อง · ที่ตั้ง · ผู้ครอบครอง
+                  <span className="ml-2 text-xs font-normal text-neutral-400">(แนะนำให้กรอก ใช้ตอนตรวจนับ)</span>
+                </summary>
+                <div className="grid gap-3 pb-3 sm:grid-cols-2">
+                  <div>
+                    <Label>รหัสทรัพย์สิน</Label>
+                    <Input name="asset_code" placeholder="เว้นว่าง = ระบบออกให้ FA-2569-0001" />
+                    <p className="mt-1 text-xs text-neutral-400">รหัสที่เอาไปติดสติกเกอร์บนตัวของ ห้ามซ้ำในกิจการเดียวกัน</p>
+                  </div>
+                  <div>
+                    <Label>เลขเครื่อง (S/N)</Label>
+                    <Input name="serial_no" placeholder="เช่น 5CD1234ABC" />
+                  </div>
+                  <div>
+                    <Label>ยี่ห้อ / รุ่น</Label>
+                    <Input name="brand_model" placeholder="เช่น Dell Latitude 5440" />
+                  </div>
+                  <div>
+                    <Label>ที่ตั้ง</Label>
+                    <Input name="location" placeholder="เช่น สำนักงานใหญ่ ชั้น 2" />
+                  </div>
+                  <div>
+                    <Label>ผู้ครอบครอง / แผนก</Label>
+                    <Input name="holder" placeholder="เช่น ฝ่ายบัญชี" />
+                  </div>
+                  <div>
+                    <Label>ผู้ขาย</Label>
+                    <Input name="supplier" placeholder="เช่น บริษัท ก จำกัด" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label>เลขที่ใบกำกับ/ใบเสร็จตอนซื้อ</Label>
+                    <Input name="purchase_ref" placeholder="เช่น INV-2569-0142" />
+                    <p className="mt-1 text-xs text-neutral-400">ผู้สอบบัญชีขอดูคู่กับทะเบียนเสมอ — กรอกไว้ตอนนี้ประหยัดเวลาตอนปิดปี</p>
+                  </div>
+                </div>
+              </details>
+
               <div className="sm:col-span-2">
                 <Label>หมายเหตุ</Label>
-                <Input name="note" placeholder="เช่น เลขเครื่อง / ที่ตั้ง / ผู้ครอบครอง" />
+                <Input name="note" placeholder="เช่น ซื้อพร้อมประกัน 3 ปี / ย้ายมาจากสาขา 2" />
               </div>
 
               {/* รูปทรัพย์สินจริง — หลักฐานว่าของมีอยู่จริงและอยู่ที่ไหน

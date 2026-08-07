@@ -14,6 +14,12 @@ type AssetRow = AssetForDep & {
   photo_path: string | null;
   verified_on: string | null;
   verified_note: string | null;
+  // ข้อมูลชี้ตัวของจริง — ใช้ตอนตรวจนับและตอนผู้สอบบัญชีสุ่มตรวจ
+  asset_code: string | null;
+  serial_no: string | null;
+  brand_model: string | null;
+  location: string | null;
+  holder: string | null;
 };
 import AssetPhoto from "./asset-photo";
 import { baht, dateOnlyTH } from "@/lib/utils";
@@ -29,7 +35,7 @@ export default async function AssetsPage() {
 
   const [{ data: assetsRaw }, { data: runsRaw }, { data: closesRaw }] = await Promise.all([
     supabase.from("fixed_assets")
-      .select("id,name,cost,salvage,acquired_on,life_years,disposed_on,note,photo_path,verified_on,verified_note")
+      .select("id,name,cost,salvage,acquired_on,life_years,disposed_on,note,photo_path,verified_on,verified_note,asset_code,serial_no,brand_model,location,holder")
       .eq("shop_id", shop.id).order("acquired_on", { ascending: false }),
     supabase.from("depreciation_runs").select("asset_id,amount,period_month").eq("shop_id", shop.id),
     supabase.from("fiscal_closes").select("year_end,net_profit,closed_at").eq("shop_id", shop.id)
@@ -97,7 +103,7 @@ export default async function AssetsPage() {
               <Table>
                 <thead>
                   <tr>
-                    <Th>ทรัพย์สิน</Th><Th>ได้มาเมื่อ</Th><Th>อายุ (ปี)</Th>
+                    <Th>รหัส</Th><Th>ทรัพย์สิน</Th><Th>เลขเครื่อง / ที่ตั้ง</Th><Th>ได้มาเมื่อ</Th><Th>อายุ (ปี)</Th>
                     <Th className="text-right">ราคาทุน</Th>
                     <Th className="text-right">ค่าเสื่อมสะสม</Th>
                     <Th className="text-right">คงเหลือ</Th>
@@ -115,13 +121,21 @@ export default async function AssetsPage() {
                     const done = Math.round((Number(a.cost) - Number(a.salvage) - taken) * 100) / 100 <= 0;
                     return (
                       <tr key={a.id}>
-                        <Td>
+                        <Td label="รหัส" className="whitespace-nowrap font-mono text-xs text-neutral-500">{a.asset_code ?? "—"}</Td>
+                        <Td label="ทรัพย์สิน">
                           {a.photo_path && (
                             <AssetPhoto shopId={shop.id} path={a.photo_path} name={a.name} />
                           )}
                           <span className="font-medium">{a.name}</span>
+                          {a.brand_model && <span className="block text-xs text-neutral-400">{a.brand_model}</span>}
                           {a.disposed_on && <Badge tone="neutral" className="ml-2">จำหน่ายแล้ว</Badge>}
                           {!a.disposed_on && done && <Badge tone="green" className="ml-2">ตัดครบแล้ว</Badge>}
+                        </Td>
+                        {/* เลขเครื่อง + ที่ตั้ง/ผู้ครอบครอง = สิ่งที่ต้องใช้ตอนเดินตรวจนับของจริง
+                            อยู่ในตารางเลย ไม่ต้องกดเข้าไปดูทีละชิ้น (ตรวจนับทำทีเดียวทั้งทะเบียน) */}
+                        <Td label="เลขเครื่อง / ที่ตั้ง" className="text-xs text-neutral-500">
+                          {a.serial_no ? <span className="block font-mono">{a.serial_no}</span> : null}
+                          {[a.location, a.holder].filter(Boolean).join(" · ") || (a.serial_no ? null : "—")}
                         </Td>
                         <Td>{dateOnlyTH(a.acquired_on)}</Td>
                         <Td>{Number(a.life_years)}</Td>
