@@ -209,9 +209,9 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
                   return (
                     <tr key={mm}>
                       <Td className="font-medium">{mm}</Td>
-                      <Td className="text-right text-emerald-700">{bahtDoc(v.income)}</Td>
-                      <Td className="text-right text-red-600">{bahtDoc(v.expense)}</Td>
-                      <Td className={cn("text-right font-semibold", profit >= 0 ? "text-emerald-700" : "text-red-600")}>{bahtDoc(profit)}</Td>
+                      <Td label="รายได้" className="text-right text-emerald-700">{bahtDoc(v.income)}</Td>
+                      <Td label="ค่าใช้จ่าย" className="text-right text-red-600">{bahtDoc(v.expense)}</Td>
+                      <Td label="กำไร" className={cn("text-right font-semibold", profit >= 0 ? "text-emerald-700" : "text-red-600")}>{bahtDoc(profit)}</Td>
                     </tr>
                   );
                 })}
@@ -225,9 +225,9 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
                       {/* เดิมเขียนว่า "รวม{period.label}" ซึ่งผิด เพราะรวมทุกเดือนในตาราง
                           ไม่ใช่เฉพาะงวดที่เลือก — คนอ่านแล้วเข้าใจว่ากำไรของเดือนนั้นเยอะกว่าจริง */}
                       <Td>{rows.length > 1 ? `รวม ${rows[0]} ถึง ${rows[rows.length - 1]}` : `รวม${period.label}`}</Td>
-                      <Td className="text-right text-emerald-700">{bahtDoc(sum.income)}</Td>
-                      <Td className="text-right text-red-600">{bahtDoc(sum.expense)}</Td>
-                      <Td className={cn("text-right", sum.income - sum.expense >= 0 ? "text-emerald-700" : "text-red-600")}>{bahtDoc(sum.income - sum.expense)}</Td>
+                      <Td label="รายได้" className="text-right text-emerald-700">{bahtDoc(sum.income)}</Td>
+                      <Td label="ค่าใช้จ่าย" className="text-right text-red-600">{bahtDoc(sum.expense)}</Td>
+                      <Td label="กำไร" className={cn("text-right", sum.income - sum.expense >= 0 ? "text-emerald-700" : "text-red-600")}>{bahtDoc(sum.income - sum.expense)}</Td>
                     </tr>
                   );
                 })()}
@@ -283,10 +283,10 @@ async function AgingTab({ shopId, supabase }: { shopId: string; supabase: SB }) 
                   return (
                     <tr key={d.id}>
                       <Td><Link href={kind === "invoice" ? `/dashboard/sales/${d.id}` : `/dashboard/expenses/${d.id}`} className="font-medium text-emerald-700 hover:underline">{d.doc_number}</Link></Td>
-                      <Td>{d.contact_name ?? "-"}</Td>
-                      <Td className="text-neutral-400">{dateOnlyTH(d.due_date ?? d.issue_date)}</Td>
-                      <Td className="text-right font-medium">{bahtDoc(docOutstanding(d))}</Td>
-                      <Td><Badge tone={b === "current" ? "neutral" : b === "d90up" ? "red" : "amber"}>{AGING_LABEL_TH[b]}</Badge></Td>
+                      <Td label="คู่ค้า">{d.contact_name ?? "-"}</Td>
+                      <Td label="ครบกำหนด" className="text-neutral-400">{dateOnlyTH(d.due_date ?? d.issue_date)}</Td>
+                      <Td label="ค้าง" className="text-right font-medium">{bahtDoc(docOutstanding(d))}</Td>
+                      <Td label="อายุหนี้"><Badge tone={b === "current" ? "neutral" : b === "d90up" ? "red" : "amber"}>{AGING_LABEL_TH[b]}</Badge></Td>
                     </tr>
                   );
                 })}
@@ -393,11 +393,11 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                   {sec.list.map((d) => (
                     <tr key={d.id}>
                       <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
-                      <Td className="font-medium">{d.doc_number}</Td>
-                      <Td>{d.contact_name ?? "-"}</Td>
-                      <Td className="text-neutral-400">{d.contact_tax_id ?? "-"}</Td>
-                      <Td className="text-right">{bahtDoc(Number(d.total) - Number(d.vat_amount))}</Td>
-                      <Td className="text-right">{bahtDoc(d.vat_amount)}</Td>
+                      <Td label="เลขที่" className="font-medium">{d.doc_number}</Td>
+                      <Td label="คู่ค้า">{d.contact_name ?? "-"}</Td>
+                      <Td label="เลขผู้เสียภาษี" className="text-neutral-400">{d.contact_tax_id ?? "-"}</Td>
+                      <Td label="มูลค่า" className="text-right">{bahtDoc(Number(d.total) - Number(d.vat_amount))}</Td>
+                      <Td label="VAT" className="text-right">{bahtDoc(d.vat_amount)}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -557,12 +557,12 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                   {sec.list.map((d) => (
                     <tr key={d.id}>
                       <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
-                      <Td>{d.contact_name ?? "-"}</Td>
-                      <Td className="text-neutral-400">{d.contact_tax_id ?? "-"}</Td>
-                      <Td className="text-right">{bahtDoc(Number(d.total) - Number(d.vat_amount))}</Td>
-                      <Td className="text-right">{Number(d.wht_rate)}%</Td>
-                      <Td className="text-right font-medium">{bahtDoc(d.wht_amount)}</Td>
-                      <Td><a href={`/dashboard/print/${d.id}?form=wht`} target="_blank" className="text-xs text-emerald-700 hover:underline">พิมพ์</a></Td>
+                      <Td label="ผู้ถูกหัก">{d.contact_name ?? "-"}</Td>
+                      <Td label="เลขผู้เสียภาษี" className="text-neutral-400">{d.contact_tax_id ?? "-"}</Td>
+                      <Td label="ฐานเงิน" className="text-right">{bahtDoc(Number(d.total) - Number(d.vat_amount))}</Td>
+                      <Td label="อัตรา" className="text-right">{Number(d.wht_rate)}%</Td>
+                      <Td label="ภาษีหัก" className="text-right font-medium">{bahtDoc(d.wht_amount)}</Td>
+                      <Td label="50 ทวิ"><a href={`/dashboard/print/${d.id}?form=wht`} target="_blank" className="text-xs text-emerald-700 hover:underline">พิมพ์</a></Td>
                     </tr>
                   ))}
                 </tbody>
@@ -583,9 +583,9 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                 {received.map((d) => (
                   <tr key={d.id}>
                     <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
-                    <Td>{d.contact_name ?? "-"}</Td>
-                    <Td className="font-medium">{d.doc_number}</Td>
-                    <Td className="text-right">{bahtDoc(d.wht_amount)}</Td>
+                    <Td label="ลูกค้า">{d.contact_name ?? "-"}</Td>
+                    <Td label="เอกสาร" className="font-medium">{d.doc_number}</Td>
+                    <Td label="ภาษีถูกหัก" className="text-right">{bahtDoc(d.wht_amount)}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -679,8 +679,14 @@ async function TrialTab({ shopId, supabase, period }: { shopId: string; supabase
             action={{ href: "/dashboard/sales/new?type=invoice", label: "ออกเอกสารใบแรก" }} />
         ) : (
           // ตารางกว้างเกินจอมือถือแน่นอน — ต้องเลื่อนในกล่องตัวเอง ห้ามให้ทั้งหน้าเลื่อนแนวนอน
+          //
+          // ⚠️ min-w ต้องเป็น sm: เท่านั้น (แก้ 9 ส.ค. 2569)
+          // มือถือมีโหมดการ์ดอยู่แล้ว (.rtable ใน globals.css แปลงแต่ละแถวเป็นการ์ด)
+          // แต่ min-w-[52rem] แบบไม่มี breakpoint บังคับความกว้าง 832px ทับโหมดการ์ด
+          // = ได้การ์ดกว้าง 832px ในจอ 375px ต้องเลื่อนซ้ายขวาอ่านทีละใบ
+          // เจ้าของแจ้งว่ารายงานบนมือถือ "ไม่สวยเลย" — นี่คือหน้าที่หนักสุด
           <div className="overflow-x-auto">
-            <Table className="min-w-[52rem]">
+            <Table className="sm:min-w-[52rem]">
               <thead>
                 <tr>
                   <Th rowSpan={2}>รหัส</Th>
@@ -712,12 +718,12 @@ async function TrialTab({ shopId, supabase, period }: { shopId: string; supabase
                 ))}
                 <tr className="font-bold">
                   <Td colSpan={3}>รวม</Td>
-                  <Td className="border-l border-neutral-100 text-right tabular-nums">{bahtDoc(tOpenDr)}</Td>
-                  <Td className="text-right tabular-nums">{bahtDoc(tOpenCr)}</Td>
-                  <Td className="border-l border-neutral-100 text-right tabular-nums">{bahtDoc(tMoveDr)}</Td>
-                  <Td className="text-right tabular-nums">{bahtDoc(tMoveCr)}</Td>
-                  <Td className="border-l border-neutral-100 text-right tabular-nums">{bahtDoc(totalDr)}</Td>
-                  <Td className="text-right tabular-nums">{bahtDoc(totalCr)}</Td>
+                  <Td label="ยกมา เดบิต" className="border-l border-neutral-100 text-right tabular-nums">{bahtDoc(tOpenDr)}</Td>
+                  <Td label="ยกมา เครดิต" className="text-right tabular-nums">{bahtDoc(tOpenCr)}</Td>
+                  <Td label="งวดนี้ เดบิต" className="border-l border-neutral-100 text-right tabular-nums">{bahtDoc(tMoveDr)}</Td>
+                  <Td label="งวดนี้ เครดิต" className="text-right tabular-nums">{bahtDoc(tMoveCr)}</Td>
+                  <Td label="คงเหลือ เดบิต" className="border-l border-neutral-100 text-right tabular-nums">{bahtDoc(totalDr)}</Td>
+                  <Td label="คงเหลือ เครดิต" className="text-right tabular-nums">{bahtDoc(totalCr)}</Td>
                 </tr>
               </tbody>
             </Table>

@@ -8,6 +8,8 @@
 //  CSV ยังอ่านในเบราว์เซอร์เหมือนเดิม เพราะไวยากรณ์สั้น เขียนเองได้ครบและเร็วกว่าส่งขึ้นเซิร์ฟเวอร์
 // ============================================================
 
+import { saveBlob } from "@/lib/download";
+
 export type SheetAoA = unknown[][];
 
 /** แยกบรรทัด CSV โดยรองรับเครื่องหมายคำพูดและคอมมาในเซลล์ */
@@ -70,11 +72,9 @@ export async function downloadWorkbook(sheets: SheetSpec[], fileName: string) {
     throw new Error(j?.error ?? "สร้างไฟล์ไม่สำเร็จ");
   }
   const blob = await res.blob();
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = fileName.endsWith(".xlsx") ? fileName : `${fileName}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  // ⚠️ อย่าเขียนขั้นตอนโหลดไฟล์เองตรงนี้ — ใช้ saveBlob ที่เดียว
+  // เดิมเขียนเอง แล้ว revoke URL ทันทีหลัง click = บนมือถือโหลดไม่ติดเลยสักครั้ง
+  saveBlob(blob, fileName.endsWith(".xlsx") ? fileName : `${fileName}.xlsx`);
 }
 
 /** ส่งออกแท็บเดียว — ทางลัดของ downloadWorkbook */

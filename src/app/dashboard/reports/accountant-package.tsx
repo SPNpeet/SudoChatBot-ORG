@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { useToast } from "@/components/toast";
+import { saveBlob } from "@/lib/download";
 import { FileSpreadsheet, Loader2 } from "lucide-react";
 
 export default function AccountantPackage({ period }: { period: string }) {
@@ -24,12 +25,9 @@ export default function AccountantPackage({ period }: { period: string }) {
       const name = decodeURIComponent(
         res.headers.get("Content-Disposition")?.match(/filename\*=UTF-8''(.+)$/)?.[1] ?? "ชุดส่งสำนักงานบัญชี.xlsx",
       );
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      a.click();
-      URL.revokeObjectURL(a.href);
+      // ⚠️ ห้ามเขียนขั้นตอนโหลดเองตรงนี้ — เดิมเขียนเองแล้ว revoke URL ทันทีหลัง click
+      // ทำให้บนมือถือกดแล้วเงียบสนิททุกครั้ง (ดู src/lib/download.ts)
+      saveBlob(await res.blob(), name);
       toast({ tone: "success", text: "โหลดไฟล์แล้ว — ส่งต่อให้นักบัญชีได้เลย" });
     } catch {
       toast({ tone: "error", text: "เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง" });

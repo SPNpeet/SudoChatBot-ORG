@@ -9,6 +9,7 @@ import { recordPayment } from "../finance/actions";
 import { parseStatementPdf } from "./statement-actions";
 import { useToast } from "@/components/toast";
 import { matchColumns, STATEMENT_FIELDS } from "@/lib/column-map";
+import { saveBlob } from "@/lib/download";
 
 interface InvoiceLite { docId: string; docNumber: string; contact: string | null; outstanding: number; due: string | null }
 interface StmtRow { idx: number; date: string; desc: string; amount: number; matched?: InvoiceLite; docId: string; done?: boolean; error?: string }
@@ -32,11 +33,8 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
   function downloadTemplate() {
     const csv = "﻿วันที่,รายละเอียด,เงินเข้า,เงินออก\n2026-07-01,โอนจากลูกค้า A,5350.00,\n2026-07-02,ค่าธรรมเนียม,,25.00\n2026-07-03,รับชำระ INV-2026-0001,12840.00,\n";
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "statement-template.csv";
-    a.click();
-    URL.revokeObjectURL(a.href);
+    // ⚠️ ใช้ saveBlob เท่านั้น — เดิมเขียนเองแล้วโหลดไม่ติดบนมือถือ (ดู src/lib/download.ts)
+    saveBlob(blob, "statement-template.csv");
   }
 
   /** จับคู่ยอดตรงกับใบแจ้งหนี้ค้างรับ — ใช้ร่วมกันทั้งทาง CSV/Excel และ PDF */

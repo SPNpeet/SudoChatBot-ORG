@@ -5,6 +5,7 @@ import { Download, FileText, Lock, Loader2 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 import { encodeTis620 } from "@/lib/rd";
+import { saveBlob } from "@/lib/download";
 
 export default function ExportButtons({ rows, xlsxName, txtName, txtContent, txtLocked }: {
   rows: Record<string, unknown>[];
@@ -25,11 +26,8 @@ export default function ExportButtons({ rows, xlsxName, txtName, txtContent, txt
     if (!txtContent) return;
     const bytes = encodeTis620(txtContent.replace(/\r?\n/g, "\r\n"));
     const blob = new Blob([bytes as unknown as BlobPart], { type: "text/plain;charset=TIS-620" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = txtName ?? "export.txt";
-    a.click();
-    URL.revokeObjectURL(a.href);
+    // ⚠️ ใช้ saveBlob เท่านั้น — เดิมเขียนเองแล้วโหลดไม่ติดบนมือถือ (ดู src/lib/download.ts)
+    saveBlob(blob, txtName ?? "export.txt");
   }
 
   return (
