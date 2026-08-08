@@ -30,7 +30,7 @@
 | กู้ระบบจากศูนย์ | ✅ | rebuild 81 migration + restore สมดุล (`sh scripts/migration-dryrun.sh`) |
 | รับเงินค่าแพ็กเกจ | ⏳ รอเจ้าของ | คีย์เป็น sk_test + บัญชี Stripe ยังไม่ยืนยันตัวตน (`charges_enabled=false`) |
 | สำรองข้อมูลอัตโนมัติ | ⏳ รอเจ้าของ | ยังไม่ตั้ง `CRON_SECRET` ใน Vercel |
-| กันรหัสผ่านรั่ว | ⏳ รอเจ้าของ | Leaked Password Protection ใน Supabase ยังปิด |
+| กันรหัสผ่านรั่ว | ⛔ ตัดสินใจแล้วว่าไม่ทำ | Leaked Password Protection เป็นฟีเจอร์เฉพาะแพ็ก Pro ขึ้นไป (ยืนยันกับเอกสาร Supabase 9 ส.ค. 2569) — ใช้ความยาวรหัสผ่านขั้นต่ำ 8 แทน |
 
 ## ด่านตรวจอัตโนมัติ (ของที่ส่งมอบพร้อมระบบ)
 
@@ -48,9 +48,14 @@ typecheck · บัญชี-ภาษี (`check`) · UI (`check:ui`) · ลำ
    → เปิด PromptPay โหมด live → webhook live ไป `/api/billing/stripe/webhook` (4 events)
    → ใส่ `sk_live` + `whsec` ที่ `/dashboard/admin/billing` · หน้านั้นจะเตือนเองถ้าคีย์เป็น test
 2. 🔴 **`CRON_SECRET`** — Vercel → Environment Variables → redeploy (ค่าสุ่ม 32 byte)
-3. 🟠 **Leaked Password Protection** — Supabase → Authentication → เปิดสวิตช์
-4. 🟡 **Search Console** — ส่ง sitemap.xml ให้ Google (ไม่ส่งก็ติดเอง แค่ช้ากว่า)
-5. 🟡 **LINE Login** — สร้าง LINE Login channel → ใส่ 2 env ใน Vercel (โค้ดพร้อมแล้ว ปุ่มโผล่เอง)
+3. 🟡 **Search Console** — ส่ง sitemap.xml ให้ Google (ไม่ส่งก็ติดเอง แค่ช้ากว่า)
+4. 🟡 **LINE Login** — สร้าง LINE Login channel → ใส่ 2 env ใน Vercel (โค้ดพร้อมแล้ว ปุ่มโผล่เอง)
+
+> **อย่าไปหาสวิตช์ Leaked Password Protection** — เอกสารฉบับนี้เคยสั่งให้ไปเปิดเองใน
+> Supabase → Authentication ซึ่งผิด สวิตช์นั้นมีให้เฉพาะแพ็ก **Pro ขึ้นไป** เท่านั้น
+> (ยืนยันกับเอกสาร Supabase 9 ส.ค. 2569) และการตรวจ usage เมื่อ 30 ก.ค. พบว่ายังไม่เกิน
+> โควตาแพ็กฟรีสักตัว จึงไม่มีเหตุให้จ่ายค่า Pro เพื่อฟีเจอร์นี้ — ข้อสรุปนี้แทนที่ทุกบรรทัด
+> ที่พูดถึงเรื่องนี้ในบันทึกวันเก่าท้ายไฟล์
 
 ## สิ่งที่ยังไม่ได้ทดสอบสด (พร้อมเหตุผล)
 

@@ -22,7 +22,8 @@
     "check:seo": "tsx scripts/check-seo.mjs",
     "line:menu": "tsx scripts/line-menu-deploy.mjs",
     "check:ready": "tsx scripts/check-ready.mjs",
-    "check:ui:auth": "tsx scripts/check-logged-in-ui.mjs"
+    "check:ui:auth": "tsx scripts/check-logged-in-ui.mjs",
+    "assistant-dryrun": "tsx scripts/assistant-dryrun.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
