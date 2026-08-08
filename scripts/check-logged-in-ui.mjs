@@ -65,8 +65,27 @@ if (!res.ok) {
 }
 const session = await res.json();
 const ref = SUPABASE_URL.replace(/^https:\/\//, "").split(".")[0];
-// รูปแบบ cookie ของ @supabase/ssr — เก็บทั้ง session เป็น JSON
-const cookie = `sb-${ref}-auth-token=${encodeURIComponent(JSON.stringify([session.access_token, session.refresh_token, null, null, null]))}`;
+// ⚠️ รูปแบบ cookie ของ @supabase/ssr 0.6.x = "base64-" + base64url(JSON ของ session ทั้งก้อน)
+// เดิมเขียนเป็น JSON array [access, refresh, ...] ซึ่งเป็นรูปแบบของรุ่นเก่ามาก
+// ผล: ล็อกอินได้ token จริงแต่ middleware อ่าน cookie ไม่ออก ทุกหน้าเด้งกลับ login
+// = รายงาน "ผิด 18 เส้นทาง" ทั้งที่ระบบปกติ — ตัวตรวจผิดเอง ไม่ใช่ระบบผิด
+// (จับได้ 9 ส.ค. 2569 ตอนได้บัญชีทดสอบจริงมารันครั้งแรก)
+const sessionJson = JSON.stringify({
+  access_token: session.access_token,
+  refresh_token: session.refresh_token,
+  expires_at: session.expires_at,
+  expires_in: session.expires_in,
+  token_type: session.token_type,
+  user: session.user,
+});
+const b64 = Buffer.from(sessionJson, "utf8").toString("base64url");
+// cookie ยาวเกิน ~3.2KB จะถูกซอยเป็น .0 .1 ... — ซอยแบบเดียวกับที่ @supabase/ssr ทำ
+const CHUNK = 3180;
+const raw = `base64-${b64}`;
+const cookie = raw.length <= CHUNK
+  ? `sb-${ref}-auth-token=${raw}`
+  : Array.from({ length: Math.ceil(raw.length / CHUNK) },
+      (_, i) => `sb-${ref}-auth-token.${i}=${raw.slice(i * CHUNK, (i + 1) * CHUNK)}`).join("; ");
 
 console.log("\n== ตรวจหน้าหลังล็อกอิน ==");
 console.log(`  ฐาน: ${BASE} · ${ROUTES.length} เส้นทาง`);
@@ -77,7 +96,13 @@ for (const r of ROUTES) {
   const ms = Date.now() - t0;
   const body = page.status < 400 ? await page.text() : "";
   const problems = [];
-  if (page.status === 307 || page.status === 302) problems.push("ถูกเด้งกลับหน้า login (session ไม่ผ่าน)");
+  // ⚠️ redirect ไม่ใช่ความผิดเสมอไป — /onboarding เด้งไป /dashboard เมื่อมีกิจการแล้ว
+  // คือพฤติกรรมที่ถูกต้อง (เคยนับเหมารวมแล้วรายงานผิด 9 ส.ค. 2569)
+  // ความผิดจริงคือเด้งกลับไปหน้า login ทั้งที่แนบ session แล้วเท่านั้น
+  const loc = page.headers.get("location") ?? "";
+  if ((page.status === 307 || page.status === 302) && /login/.test(loc)) {
+    problems.push("ถูกเด้งกลับหน้า login (session ไม่ผ่าน)");
+  }
   if (page.status >= 500) problems.push(`ตอบ ${page.status}`);
   if (body && body.length < 2000) problems.push("เนื้อหาน้อยผิดปกติ (อาจเป็นจอเปล่า)");
   if (/Application error|something went wrong/i.test(body)) problems.push("ขึ้น error boundary");
