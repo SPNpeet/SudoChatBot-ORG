@@ -87,25 +87,36 @@ export async function savePlatformBilling(formData: FormData): Promise<SaveBilli
   try {
     await assertPlatformAdmin();
     const svc = createServiceClient();
-    const { error } = await svc.from("platform_billing_settings").update({
-      account_name: String(formData.get("account_name") ?? "").trim() || null,
-      slip_provider: String(formData.get("slip_provider") ?? "manual"),
-      company_name: String(formData.get("company_name") ?? "").trim() || null,
-      company_address: String(formData.get("company_address") ?? "").trim() || null,
-      tax_id: String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null,
-      tax_branch: String(formData.get("tax_branch") ?? "").trim() || "สำนักงานใหญ่",
-      vat_registered: formData.get("vat_registered") === "on",
-      email_from: String(formData.get("email_from") ?? "").trim() || null,
-      low_credit_threshold: Math.max(0, Number(formData.get("low_credit_threshold") ?? 50) || 50),
-      // 0 เป็นค่าที่ตั้งใจได้ (= ปิดตรวจอัตโนมัติทั้งระบบ) จึงห้ามใช้ || ที่กลืน 0
-      // และต้องกัน NaN ด้วย Number.isFinite ไม่งั้นพิมพ์มั่วแล้วเขียน NaN ลงคอลัมน์ int (บทเรียนเดิม)
-      slip_monthly_cap: (() => {
-        const n = Number(formData.get("slip_monthly_cap"));
-        return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 100;
-      })(),
-      updated_at: new Date().toISOString(),
-    }).eq("id", true);
-    if (error) return { ok: false, error: `บันทึกไม่สำเร็จ: ${error.message}` };
+    // ⚠️ อัปเดตเฉพาะช่องที่ฟอร์มส่งมาเท่านั้น (แก้ 9 ส.ค. 2569)
+    // หน้าตั้งค่าถูกแยกเป็นการ์ดคนละใบ การ์ดละปุ่มบันทึก — ถ้ายังเขียนทับทุกคอลัมน์
+    // เหมือนเดิม การ์ดหนึ่งกดบันทึก = ค่าของการ์ดอื่นถูกล้างเป็น null เงียบ ๆ ทั้งแถบ
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const putText = (key: string, fallback: string | null = null) => {
+      if (formData.has(key)) patch[key] = String(formData.get(key) ?? "").trim() || fallback;
+    };
+    putText("account_name");
+    if (formData.has("slip_provider")) patch.slip_provider = String(formData.get("slip_provider") ?? "manual");
+    putText("company_name");
+    putText("company_address");
+    if (formData.has("tax_id")) patch.tax_id = String(formData.get("tax_id") ?? "").replace(/[^0-9]/g, "") || null;
+    putText("tax_branch", "สำนักงานใหญ่");
+    // checkbox ที่ไม่ได้ติ๊กจะ "หายไป" จาก FormData เฉย ๆ — ต้องมีช่องซ่อน vat_form
+    // เป็นพยานว่าการ์ดภาษีคือการ์ดที่กำลังบันทึก ไม่งั้นแยกไม่ออกจากการ์ดอื่น
+    if (formData.has("vat_form")) patch.vat_registered = formData.get("vat_registered") === "on";
+    putText("email_from");
+    if (formData.has("low_credit_threshold")) {
+      patch.low_credit_threshold = Math.max(0, Number(formData.get("low_credit_threshold") ?? 50) || 50);
+    }
+    // 0 เป็นค่าที่ตั้งใจได้ (= ปิดตรวจอัตโนมัติทั้งระบบ) จึงห้ามใช้ || ที่กลืน 0
+    // และต้องกัน NaN ด้วย Number.isFinite ไม่งั้นพิมพ์มั่วแล้วเขียน NaN ลงคอลัมน์ int (บทเรียนเดิม)
+    if (formData.has("slip_monthly_cap")) {
+      const n = Number(formData.get("slip_monthly_cap"));
+      patch.slip_monthly_cap = Number.isFinite(n) ? Math.max(0, Math.round(n)) : 100;
+    }
+    if (Object.keys(patch).length > 1) {
+      const { error } = await svc.from("platform_billing_settings").update(patch).eq("id", true);
+      if (error) return { ok: false, error: `บันทึกไม่สำเร็จ: ${error.message}` };
+    }
 
     const supabase = await createClient();
     const savedKeys: string[] = [];

@@ -165,6 +165,12 @@ export default function BillingSettingsForm({ pf, slipUsed = 0, stored }: { pf: 
         </div>
       </div>
       <div className="border-t border-neutral-100 pt-3">
+        {/* ⚠️ พยานว่า "การ์ดภาษีถูกส่งมาด้วย" (9 ส.ค. 2569)
+            checkbox ที่ไม่ได้ติ๊กจะหายไปจาก FormData เฉย ๆ — ฝั่ง action จึงแยกไม่ออกระหว่าง
+            "ไม่ได้ติ๊ก" กับ "ฟอร์มนี้ไม่มีช่องนี้เลย" ถ้าไม่มีช่องซ่อนนี้ ค่า จด VAT
+            จะไม่ถูกบันทึกอีกเลย (ทั้งติ๊กและเอาติ๊กออก) โดยหน้าจอยังขึ้นว่าบันทึกสำเร็จ
+            ห้ามลบ แม้จะดูเหมือน input ที่ไม่มีประโยชน์ */}
+        <input type="hidden" name="vat_form" value="1" />
         <Label>ข้อมูลผู้ขายบนใบกำกับภาษี (VAT 7%)</Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input name="company_name" defaultValue={pf?.company_name ?? ""} placeholder="ชื่อบริษัท/ผู้ประกอบการ" />
