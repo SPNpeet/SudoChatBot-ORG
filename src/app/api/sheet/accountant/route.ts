@@ -62,6 +62,42 @@ const C = {
   warnBg: "FFFEF3C7", warnInk: "FF92400E", zebra: "FFFAFAFA",
 } as const;
 
+/**
+ * ที่มาของรายการบัญชี — ต้องแปลเป็นไทยก่อนลงไฟล์
+ *
+ * ⚠️ เกิดจริง 9 ส.ค. 2569: คอลัมน์ "ที่มา" ในแผ่นสมุดรายวันเขียนค่าดิบจากฐานข้อมูล
+ * ลงไปตรง ๆ นักบัญชีจึงเปิดไฟล์ภาษาไทยทั้งแผ่นแล้วเจอ receipt / expense / reversal
+ * ปนอยู่คอลัมน์เดียว อ่านไม่ออกว่าหมายถึงอะไรและดูเหมือนระบบส่งของดิบมาให้
+ * ค่าที่ไม่รู้จักให้ปล่อยผ่านตามเดิม ดีกว่าแปลงเป็น "อื่น ๆ" แล้วกลบของที่ควรรู้
+ */
+const SOURCE_TH: Record<string, string> = {
+  sale: "ขาย", receipt: "รับชำระ", expense: "ค่าใช้จ่าย", payment: "จ่ายชำระ",
+  reversal: "กลับรายการ", stock: "สต๊อก", manual: "บันทึกเอง",
+};
+
+/**
+ * คอลัมน์ที่ต้องเป็น "วันที่จริง" ของ Excel ไม่ใช่ข้อความ
+ *
+ * ⚠️ เกิดจริง 9 ส.ค. 2569: ทุกคอลัมน์วันที่ถูกเขียนเป็นสตริง "2026-08-08"
+ * Excel จึงถือเป็นข้อความ — ตัวกรองวันที่ใช้ไม่ได้ จัดกลุ่มเป็นเดือนใน PivotTable
+ * ไม่ได้ =MONTH() ไม่ทำงาน และช่องชิดซ้ายเหมือนข้อความ
+ * ซึ่งเป็นสิ่งแรกที่คนทำบัญชีสังเกตเห็นเวลาเปิดไฟล์ที่ระบบอื่นส่งมา
+ */
+const DATE_HEADERS = new Set(["วันที่", "วันที่จ่าย", "ครบกำหนด"]);
+const DATE_FMT = "dd/mm/yyyy";
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * แปลง "YYYY-MM-DD" เป็น Date ที่ตกกลางวันตามเวลา UTC
+ * ใช้เที่ยงวันเพราะถ้าใช้เที่ยงคืน การขยับเขตเวลาแค่ชั่วโมงเดียวจะทำให้
+ * วันที่เลื่อนไปหนึ่งวันตอนเขียนลงไฟล์ ซึ่งในงานบัญชีคือวันที่ผิดงวดได้
+ */
+function excelDate(v: unknown): Date | null {
+  if (typeof v !== "string" || !ISO_DATE.test(v)) return null;
+  const [y, m, d] = v.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12));
+}
+
 export async function GET(req: Request) {
   let shop, supabase;
   try { ({ shop, supabase } = await getCurrentShop()); }
@@ -170,7 +206,7 @@ export async function GET(req: Request) {
     for (const l of e.journal_lines ?? []) {
       const a = l.chart_of_accounts;
       jRows.push({
-        "วันที่": e.entry_date, "เลขที่": e.entry_number, "ที่มา": e.source_type,
+        "วันที่": e.entry_date, "เลขที่": e.entry_number, "ที่มา": SOURCE_TH[e.source_type] ?? e.source_type,
         "คำอธิบาย": e.memo ?? "", "รหัสบัญชี": a?.code ?? "", "ชื่อบัญชี": a?.name ?? "",
         "เดบิต": n2(l.debit), "เครดิต": n2(l.credit),
       });
@@ -205,7 +241,13 @@ export async function GET(req: Request) {
     const crTotal = n2(tbRows.reduce((a, r) => a + r["เครดิต"], 0));
     sheets.push({
       name: "งบทดลอง", note: "ยังไม่มียอดบัญชีสะสมถึงสิ้นงวดนี้",
-      rows: tbRows.length ? [...tbRows, { "รหัสบัญชี": "", "ชื่อบัญชี": "รวม", "เดบิต": drTotal, "เครดิต": crTotal }] : [],
+      // ⚠️ แถวรวมต้องมาจาก sum ไม่ใช่ยัดเป็นแถวข้อมูลแถวหนึ่ง (แก้ 9 ส.ค. 2569)
+      // เดิม push { ชื่อบัญชี: "รวม" } ต่อท้าย rows ผลคือแถวรวมกลายเป็นข้อมูลปกติ:
+      // ไม่ตัวหนา ไม่มีเส้นคั่น และอยู่ในขอบเขต AutoFilter ด้วย
+      // นักบัญชีกดเรียง/กรองคอลัมน์เมื่อไหร่ แถวรวมจะไหลไปแทรกกลางตาราง
+      // (แผ่นสมุดรายวันใช้ sum อยู่แล้วจึงถูกต้อง แผ่นนี้แผ่นเดียวที่หลุด)
+      sum: ["เดบิต", "เครดิต"],
+      rows: tbRows,
     });
     // เดบิตรวมต้องเท่าเครดิตรวมเสมอตามหลักบัญชีคู่ ถ้าไม่เท่าแปลว่าข้อมูลมีปัญหา
     // ต้องบอกในไฟล์ ห้ามปล่อยให้นักบัญชีไปเจอเองตอนทำงบ
@@ -253,6 +295,15 @@ export async function GET(req: Request) {
     { kind: "section", a: "ข้อมูลกิจการ" },
     { kind: "kv", a: "ชื่อกิจการ", b: shop.billing_name || shop.name },
     { kind: "kv", a: "เลขประจำตัวผู้เสียภาษี", b: formatTaxId(shop.tax_id) || "ยังไม่ได้กรอก" },
+    // ⚠️ ไม่มีเลขผู้เสียภาษี = สำนักงานบัญชีเอาไฟล์นี้ไปยื่นต่อไม่ได้ (แก้ 9 ส.ค. 2569)
+    // เดิมพิมพ์แค่ "ยังไม่ได้กรอก" เป็นข้อความสีเทาปนกับข้อมูลอื่น แล้วปล่อยไฟล์ออกไปเงียบ ๆ
+    // ผู้ส่งไม่รู้ตัวจนกว่าปลายทางจะทักกลับมา ซึ่งเสียเวลาไปแล้วหนึ่งรอบ
+    ...(formatTaxId(shop.tax_id)
+      ? []
+      : [{
+          kind: "warn" as const,
+          a: "กิจการยังไม่ได้กรอกเลขประจำตัวผู้เสียภาษี — ปลายทางใช้ไฟล์นี้ยื่นภาษีต่อไม่ได้ กรอกที่หน้าตั้งค่ากิจการแล้วโหลดใหม่",
+        }]),
     { kind: "kv", a: "สาขา", b: branchLabel(shop.branch) },
     { kind: "kv", a: "งวดที่ส่ง", b: `${p.label} (${p.start} ถึงก่อน ${p.end})` },
     { kind: "kv", a: "วันที่ออกไฟล์", b: new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10) },
@@ -397,6 +448,20 @@ export async function GET(req: Request) {
       width: Math.min(46, Math.max(11, h.length + 3, ...spec.rows.slice(0, 300).map((r) => String(r[h] ?? "").length + 3))),
     }));
     ws.addRows(spec.rows);
+
+    // คอลัมน์วันที่ต้องเป็นวันที่จริงของ Excel ไม่ใช่ข้อความ (ดูหมายเหตุที่ DATE_HEADERS)
+    // ทำหลัง addRows เพราะ ExcelJS เขียนค่าตามชนิดของ value ที่ส่งเข้าไป
+    for (let c = 1; c <= headers.length; c++) {
+      if (!DATE_HEADERS.has(headers[c - 1])) continue;
+      const col = ws.getColumn(c);
+      col.numFmt = DATE_FMT;
+      col.alignment = { horizontal: "center" };
+      col.eachCell({ includeEmpty: false }, (cell, rowNo) => {
+        if (rowNo === 1) return;                      // หัวตาราง ห้ามแตะ
+        const d = excelDate(cell.value);
+        if (d) cell.value = d;
+      });
+    }
 
     const head = ws.getRow(1);
     head.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
