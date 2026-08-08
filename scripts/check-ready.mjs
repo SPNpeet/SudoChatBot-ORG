@@ -39,12 +39,32 @@ const add = (name, ready, impact, howto) => items.push({ name, ready, impact, ho
   const { data: wh } = await svc.rpc("get_platform_stripe_webhook_secret");
   const hasKey = typeof sk === "string" && sk.trim().length > 0;
   const hasWh = typeof wh === "string" && wh.trim().length > 0;
+  // ⚠️ มีคีย์ครบ != รับเงินจริงได้ (แก้ 8 ส.ค. 2569)
+  // เดิมด่านนี้ขึ้น "พร้อม" ทันทีที่มีคีย์สองตัว ทั้งที่คีย์เป็น sk_test_
+  // ซึ่งรับได้แค่บัตรทดสอบ — ลูกค้าจริงจ่ายไม่ผ่านสักคน
+  // และแม้เป็นคีย์ live ถ้าบัญชี Stripe ยังไม่ผ่านการยืนยันตัวตน (charges_enabled=false)
+  // ก็ยังรับเงินไม่ได้อยู่ดี ต้องถาม Stripe ตรง ๆ ไม่ใช่เดาจากการมีคีย์
+  const isTest = hasKey && sk.trim().startsWith("sk_test");
+  let chargesEnabled = false;
+  let acctNote = "";
+  if (hasKey) {
+    try {
+      const r = await fetch("https://api.stripe.com/v1/account", { headers: { Authorization: `Bearer ${sk.trim()}` } });
+      const a = await r.json();
+      chargesEnabled = a?.charges_enabled === true;
+      if (!chargesEnabled) acctNote = " · บัญชี Stripe ยังไม่ผ่านการยืนยันตัวตน (charges_enabled=false)";
+    } catch { acctNote = " · ถาม Stripe ไม่ได้"; }
+  }
   add(
     "รับเงินค่าแพ็กเกจ (Stripe)",
-    hasKey && hasWh,
+    hasKey && hasWh && !isTest && chargesEnabled,
     !hasKey ? "ไม่มีใครสมัครแพ็กเสียเงินได้เลย — หน้าแพ็กเกจซ่อนปุ่มสมัคร"
-      : "มี secret key แต่ยังไม่มี webhook secret = จ่ายเงินแล้วระบบจะไม่รู้ว่าจ่ายแล้ว",
-    "สมัคร Stripe บัญชีไทย -> เปิด PromptPay -> ตั้ง webhook ไป /api/billing/stripe/webhook -> ใส่ 2 คีย์ที่ /dashboard/admin/billing",
+      : !hasWh ? "มี secret key แต่ยังไม่มี webhook secret = จ่ายเงินแล้วระบบจะไม่รู้ว่าจ่ายแล้ว"
+      : isTest ? `คีย์ที่ใส่เป็นคีย์ทดสอบ (sk_test) รับได้เฉพาะบัตรทดสอบ ลูกค้าจริงจ่ายไม่ผ่านสักคน${acctNote}`
+      : `คีย์เป็น live แล้วแต่ Stripe ยังไม่ให้รับเงิน${acctNote}`,
+    isTest || !chargesEnabled
+      ? "เปิดใช้บัญชี Stripe จริง (กรอกข้อมูลธุรกิจ + บัญชีธนาคาร) -> เปิด PromptPay ในโหมด live -> สร้าง webhook ของโหมด live -> ใส่คีย์ sk_live + whsec ใหม่ที่ /dashboard/admin/billing"
+      : "สมัคร Stripe บัญชีไทย -> เปิด PromptPay -> ตั้ง webhook ไป /api/billing/stripe/webhook -> ใส่ 2 คีย์ที่ /dashboard/admin/billing",
   );
 }
 

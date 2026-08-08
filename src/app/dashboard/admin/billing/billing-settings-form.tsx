@@ -51,6 +51,11 @@ export default function BillingSettingsForm({ pf, slipUsed = 0, stored }: { pf: 
   // เทียบสตริงกันตรง ๆ จะได้ "ไม่เท่ากัน" เสมอแม้ตั้งครบทั้งคู่ = ขึ้นเตือนแดงผิด ๆ
   const stripeReady = !!stored.stripeKey && !!stored.stripeWebhook;
   const stripeHalf = !!stored.stripeKey !== !!stored.stripeWebhook;
+  // ⚠️ คีย์ทดสอบ = ไม่มีเงินจริงเข้าสักบาท (พบ 8 ส.ค. 2569)
+  // เดิมมีคีย์ครบสองตัวก็ขึ้นเขียวว่า "พร้อมรับเงินค่าแพ็กเกจแล้ว" ทันที
+  // ทั้งที่เป็น sk_test_ ซึ่งรับได้แค่บัตรทดสอบ — ลูกค้าจริงจ่ายไม่ผ่าน
+  // และเจ้าของจะเข้าใจว่าเปิดขายได้แล้ว นี่คือคำโกหกที่แพงที่สุดในหน้านี้
+  const isTestKey = !!stored.stripeKey?.startsWith("sk_test");
 
   function submit(fd: FormData) {
     setResult(null);
@@ -100,15 +105,18 @@ export default function BillingSettingsForm({ pf, slipUsed = 0, stored }: { pf: 
             ไม่ใช่ "คีย์ไหนมีบ้าง" · ครึ่ง ๆ กลาง ๆ อันตรายกว่าไม่ตั้งเลย จึงต้องเป็นสีแดง */}
         <div className={cn(
           "mt-2 flex items-start gap-2 rounded-lg px-3 py-2 text-xs",
-          stripeReady ? "bg-emerald-50 text-emerald-700"
+          stripeReady && isTestKey ? "bg-amber-50 text-amber-800"
+            : stripeReady ? "bg-emerald-50 text-emerald-700"
             : stripeHalf ? "bg-red-50 text-red-600"
               : "bg-neutral-50 text-neutral-500",
         )}>
-          {stripeReady ? <CheckCircle2 className="mt-px h-4 w-4 shrink-0" />
-            : stripeHalf ? <AlertTriangle className="mt-px h-4 w-4 shrink-0" />
+          {stripeReady && !isTestKey ? <CheckCircle2 className="mt-px h-4 w-4 shrink-0" />
+            : stripeReady || stripeHalf ? <AlertTriangle className="mt-px h-4 w-4 shrink-0" />
               : <CircleDashed className="mt-px h-4 w-4 shrink-0" />}
           <span>
-            {stripeReady ? "พร้อมรับเงินค่าแพ็กเกจแล้ว — ครบทั้ง secret key และ webhook secret"
+            {stripeReady && isTestKey
+              ? "ยังรับเงินจริงไม่ได้ — คีย์ที่ใส่เป็นคีย์ทดสอบ (sk_test) รับได้เฉพาะบัตรทดสอบเท่านั้น ลูกค้าจริงจ่ายไม่ผ่าน · ต้องเปิดใช้บัญชี Stripe จริงแล้วเปลี่ยนเป็นคีย์ sk_live พร้อม webhook ของโหมด live"
+              : stripeReady ? "พร้อมรับเงินค่าแพ็กเกจแล้ว — ครบทั้ง secret key และ webhook secret"
               : stripeHalf && !stored.stripeKey ? "ยังรับเงินไม่ได้ — มี webhook secret แล้วแต่ยังไม่มี secret key จึงสร้างหน้าจ่ายเงินไม่ได้เลย"
                 : stripeHalf ? "ยังรับเงินไม่ได้ — มี secret key แล้วแต่ยังไม่มี webhook secret ลูกค้าจ่ายเงินได้แต่เครดิตจะไม่เข้า (ระบบปฏิเสธ event ทุกตัวเพื่อกันคนปลอมยิงเข้ามาเครดิตให้ตัวเอง)"
                   : "ยังไม่ได้ตั้งค่า Stripe — หน้าแพ็กเกจซ่อนปุ่มสมัคร ไม่มีใครสมัครแพ็กเสียเงินได้"}
