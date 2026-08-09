@@ -23,7 +23,8 @@
     "line:menu": "tsx scripts/line-menu-deploy.mjs",
     "check:ready": "tsx scripts/check-ready.mjs",
     "check:ui:auth": "tsx scripts/check-logged-in-ui.mjs",
-    "assistant-dryrun": "tsx scripts/assistant-dryrun.mjs"
+    "assistant-dryrun": "tsx scripts/assistant-dryrun.mjs",
+    "check:accountant": "tsx scripts/check-accountant-file.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

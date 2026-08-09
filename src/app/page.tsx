@@ -378,7 +378,15 @@ export default async function Landing() {
 
       <footer className="border-t border-neutral-100 py-8 pb-24 sm:pb-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 text-xs text-neutral-400">
-          {/* พื้นที่กดต้องสูงพอบนมือถือ — เดิมสูงแค่ 16px กดพลาดตลอด */}
+          {/* ⚠️ ลิงก์ไปหน้าเนื้อหาต้องมีอยู่ตรงนี้ (เพิ่ม 9 ส.ค. 2569)
+              หน้าฟีเจอร์/บทความ/ราคา ถูกสร้างขึ้นเพื่อให้คนที่ไม่รู้จักชื่อแบรนด์ค้นเจอ
+              ถ้าไม่มีลิงก์จากหน้าแรกเลย มันจะเป็นหน้าที่ลอยอยู่โดดๆ ซึ่งถูกเก็บเข้าดัชนีช้ากว่ามาก
+              และคนที่เข้ามาหน้าแรกก็ไม่มีทางรู้ว่ามีหน้าพวกนี้อยู่ */}
+          <div className="flex flex-wrap justify-center gap-x-4">
+            <Link href="/features" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">ฟีเจอร์ทั้งหมด</Link>
+            <Link href="/guide" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">บทความบัญชี-ภาษี</Link>
+            <Link href="/pricing" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">ราคา</Link>
+          </div>
           <div className="flex flex-wrap justify-center gap-x-4">
             <Link href="/privacy" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
             <Link href="/terms" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">เงื่อนไขการใช้งาน</Link>

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { FEATURE_PAGES, GUIDE_PAGES } from "@/content/seo-pages";
 
 const SITE = "https://sudochatbot.online";
 
@@ -21,6 +22,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // เครื่องมือฟรีที่ใช้ได้เลยไม่ต้องสมัคร — ประตูหน้าที่ดีที่สุดของเว็บนี้
     { url: `${SITE}/try`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
     { url: `${SITE}/signup`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    // ⚠️ หน้าเนื้อหาต้องมาจาก src/content/seo-pages.ts เท่านั้น (เพิ่ม 9 ส.ค. 2569)
+    // เขียนรายชื่อ URL ซ้ำไว้ที่นี่เมื่อไหร่ = วันหน้าเพิ่มหน้าใหม่แล้วลืมใส่ sitemap
+    // หน้านั้นจะไม่มีวันถูก Google เก็บ และไม่มีอะไรเตือนเลยสักอย่าง
+    { url: `${SITE}/pricing`, lastModified: now, changeFrequency: "monthly", priority: 0.9 },
+    { url: `${SITE}/features`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    { url: `${SITE}/guide`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
+    ...FEATURE_PAGES.map((p) => ({
+      url: `${SITE}/features/${p.slug}`,
+      lastModified: new Date(p.updated),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
+    ...GUIDE_PAGES.map((p) => ({
+      url: `${SITE}/guide/${p.slug}`,
+      lastModified: new Date(p.updated),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
     { url: `${SITE}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE}/data-deletion`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
