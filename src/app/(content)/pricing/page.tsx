@@ -25,25 +25,57 @@ export const metadata: Metadata = {
   alternates: { canonical: "/pricing" },
 };
 
+// คำถามเรื่องราคาเก็บไว้ที่เดียว — ใช้ทั้งแสดงบนหน้าและสร้าง FAQPage schema
+// เขียนแยกสองที่เมื่อไหร่ วันหน้าแก้ข้อความบนหน้าแล้วลืมแก้ schema
+// = บอก Google อย่างหนึ่ง บอกคนอ่านอีกอย่าง ซึ่งแย่กว่าไม่มี schema เลย
+const PRICING_FAQ = [
+  {
+    q: "แพ็กฟรีใช้ได้จริงหรือแค่ทดลอง",
+    a: "ใช้ได้จริงต่อเนื่อง ออกเอกสารและลงบัญชีเองได้ไม่จำกัดจำนวน สิ่งที่จำกัดคือจำนวนงานที่ให้ AI ทำให้และจำนวนสลิปที่ตรวจอัตโนมัติต่อเดือน",
+  },
+  {
+    q: "คิดค่าใช้จ่ายตามจำนวนผู้ใช้ไหม",
+    a: "ไม่คิด ทุกแพ็กเพิ่มพนักงานได้ไม่จำกัดคน และกำหนดสิทธิ์รายคนได้",
+  },
+  {
+    q: "เปลี่ยนแพ็กหรือยกเลิกทีหลังได้ไหม",
+    a: "ได้ เอกสารและบัญชีที่บันทึกไว้ยังอยู่ครบ และดาวน์โหลดข้อมูลออกไปเป็นไฟล์ Excel ได้ตลอด",
+  },
+  {
+    q: "จ่ายเงินยังไง",
+    a: "จ่ายผ่านหน้าชำระเงินที่รองรับพร้อมเพย์และบัตรเครดิต ตัดรอบตามแพ็กที่เลือก ใบเสร็จออกให้ในระบบ",
+  },
+];
+
 export default async function PricingPage() {
   const plans = await getPublicPlans();
-  const paid = plans.filter((p) => !p.free);
-  const lowest = paid.length ? paid[paid.length - 1] : null;
 
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Product",
-    name: "SudoChatBot — ระบบบัญชีออนไลน์และผู้ช่วยบัญชี AI",
-    description: "ระบบบัญชีออนไลน์สำหรับ SME ไทย ออกใบกำกับภาษี รายงานภาษี สมุดรายวัน และผู้ช่วยบัญชี AI",
-    url: `${SITE}/pricing`,
-    offers: plans.map((p) => ({
-      "@type": "Offer",
-      name: p.name,
-      price: p.price.replace(/,/g, ""),
-      priceCurrency: "THB",
-      url: `${SITE}/pricing`,
-      availability: "https://schema.org/InStock",
-    })),
+    "@graph": [
+      {
+        "@type": "Product",
+        name: "SudoChatBot — ระบบบัญชีออนไลน์และผู้ช่วยบัญชี AI",
+        description: "ระบบบัญชีออนไลน์สำหรับ SME ไทย ออกใบกำกับภาษี รายงานภาษี สมุดรายวัน และผู้ช่วยบัญชี AI",
+        url: `${SITE}/pricing`,
+        offers: plans.map((p) => ({
+          "@type": "Offer",
+          name: p.name,
+          price: p.price.replace(/,/g, ""),
+          priceCurrency: "THB",
+          url: `${SITE}/pricing`,
+          availability: "https://schema.org/InStock",
+        })),
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: PRICING_FAQ.map((f) => ({
+          "@type": "Question",
+          name: f.q,
+          acceptedAnswer: { "@type": "Answer", text: f.a },
+        })),
+      },
+    ],
   };
 
   return (
@@ -101,34 +133,12 @@ export default async function PricingPage() {
       <section className="mt-10">
         <h2 className="text-lg font-semibold text-neutral-900">คำถามที่พบบ่อยเรื่องราคา</h2>
         <div className="mt-3 space-y-2.5">
-          <div className="rounded-xl border border-neutral-200 bg-white p-4">
-            <h3 className="font-semibold text-neutral-900">แพ็กฟรีใช้ได้จริงหรือแค่ทดลอง</h3>
-            <p className="mt-1.5 leading-relaxed text-neutral-700">
-              ใช้ได้จริงต่อเนื่อง ออกเอกสารและลงบัญชีเองได้ไม่จำกัดจำนวน
-              สิ่งที่จำกัดคือจำนวนงานที่ให้ AI ทำให้และจำนวนสลิปที่ตรวจอัตโนมัติต่อเดือน
-            </p>
-          </div>
-          <div className="rounded-xl border border-neutral-200 bg-white p-4">
-            <h3 className="font-semibold text-neutral-900">คิดค่าใช้จ่ายตามจำนวนผู้ใช้ไหม</h3>
-            <p className="mt-1.5 leading-relaxed text-neutral-700">
-              ไม่คิด ทุกแพ็กเพิ่มพนักงานได้ไม่จำกัดคน และกำหนดสิทธิ์รายคนได้
-            </p>
-          </div>
-          <div className="rounded-xl border border-neutral-200 bg-white p-4">
-            <h3 className="font-semibold text-neutral-900">เปลี่ยนแพ็กหรือยกเลิกทีหลังได้ไหม</h3>
-            <p className="mt-1.5 leading-relaxed text-neutral-700">
-              ได้ เอกสารและบัญชีที่บันทึกไว้ยังอยู่ครบ และดาวน์โหลดข้อมูลออกไปเป็นไฟล์ Excel ได้ตลอด
-            </p>
-          </div>
-          {lowest && (
-            <div className="rounded-xl border border-neutral-200 bg-white p-4">
-              <h3 className="font-semibold text-neutral-900">จ่ายเงินยังไง</h3>
-              <p className="mt-1.5 leading-relaxed text-neutral-700">
-                จ่ายผ่านหน้าชำระเงินที่รองรับพร้อมเพย์และบัตรเครดิต ตัดรอบตามแพ็กที่เลือก
-                ใบเสร็จออกให้ในระบบ
-              </p>
+          {PRICING_FAQ.map((f) => (
+            <div key={f.q} className="rounded-xl border border-neutral-200 bg-white p-4">
+              <h3 className="font-semibold text-neutral-900">{f.q}</h3>
+              <p className="mt-1.5 leading-relaxed text-neutral-700">{f.a}</p>
             </div>
-          )}
+          ))}
         </div>
       </section>
     </div>
