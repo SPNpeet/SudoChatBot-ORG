@@ -1,4 +1,4 @@
-import { getCurrentShop } from "@/lib/shop";
+import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, Badge, PageHeader } from "@/components/ui";
 import { baht, dateTH } from "@/lib/utils";
@@ -23,7 +23,13 @@ export default async function BillingPage() {
     svc.rpc("get_platform_stripe_key"),
   ]);
 
-  const stripeReady = typeof pf === "string" ? pf.trim().length > 0 : Boolean(process.env.STRIPE_SECRET_KEY);
+  // ⚠️ "มีคีย์" ไม่เท่ากับ "รับเงินได้" — คีย์ sk_test รับได้แค่บัตรทดสอบ
+  // ปล่อยให้ลูกค้าจริงเห็นปุ่มจ่ายเงินทั้งที่จ่ายไม่ผ่าน = เสียลูกค้าฟรี ๆ
+  // และเปิดช่องให้คนที่รู้เลขบัตรทดสอบกดรับแพ็กเสียเงินฟรี (ด่านจริงอยู่ใน actions.ts)
+  // แอดมินแพลตฟอร์มยังเห็นปุ่มอยู่ เพื่อทดสอบเส้นจ่ายเงินให้ครบก่อนเปิดจริง
+  const key = typeof pf === "string" && pf.trim() ? pf.trim() : (process.env.STRIPE_SECRET_KEY ?? "");
+  const { isLiveStripeKey } = await import("@/lib/stripe");
+  const stripeReady = key.length > 0 && (isLiveStripeKey(key) || (await isPlatformAdmin()));
 
   const s = (summary ?? {}) as { balance: number; plan: Plan; usage: { replies_count: number; billed_replies: number; billed_amount: number } };
   const balance = Number(s.balance ?? 0);

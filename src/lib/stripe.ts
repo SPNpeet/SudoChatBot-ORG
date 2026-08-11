@@ -33,6 +33,21 @@ export async function getStripeSecretKey(svc: SupabaseClient): Promise<string | 
   return key || null;
 }
 
+/**
+ * คีย์นี้รับเงินจริงได้ไหม
+ *
+ * ⚠️ ทำไมต้องมี (พบตอนตรวจก่อนเปิดใช้จริง 11 ส.ค. 2569):
+ * เดิมระบบถือว่า "มีคีย์ = เปิดรับเงินได้" ซึ่งเป็นจริงเฉพาะกับคีย์ live
+ * ถ้าคีย์เป็น `sk_test` แล้วปล่อยให้ลูกค้าจริงกดจ่าย จะพังสองทางพร้อมกัน:
+ *  1. บัตรจริงของลูกค้าถูกปฏิเสธเสมอ (โหมดทดสอบไม่รับบัตรจริง) = เสียลูกค้าโดยไม่รู้สาเหตุ
+ *  2. ใครก็ตามที่รู้เลขบัตรทดสอบมาตรฐาน (4242 4242 4242 4242) จ่ายผ่านได้ทันที
+ *     webhook จะเห็นว่า paid จริง แล้วเปิดแพ็กเสียเงินให้ฟรี — ยิงซ้ำได้ไม่จำกัด
+ * เพราะข้อ 2 นี่เอง คีย์ทดสอบจึงต้องถูกมองว่า "ยังไม่เปิดรับเงิน" สำหรับผู้ใช้ทั่วไป
+ */
+export function isLiveStripeKey(key: string | null | undefined): boolean {
+  return !!key && key.trim().startsWith("sk_live");
+}
+
 /** ดึง webhook signing secret (whsec_...) — ไม่มี = ห้ามรับ webhook เด็ดขาด */
 export async function getStripeWebhookSecret(svc: SupabaseClient): Promise<string | null> {
   const { data } = await svc.rpc("get_platform_stripe_webhook_secret");

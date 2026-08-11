@@ -31,9 +31,20 @@ async function createStripeCheckout(
   plan?: { code: string; period: "monthly" | "yearly" },
 ): Promise<TopupResult> {
   const svc = createServiceClient();
-  const { getStripeSecretKey, createCheckoutSession } = await import("@/lib/stripe");
+  const { getStripeSecretKey, createCheckoutSession, isLiveStripeKey } = await import("@/lib/stripe");
   const secretKey = await getStripeSecretKey(svc);
   if (!secretKey) return { ok: false, error: "ระบบรับชำระเงินยังไม่เปิด — ติดต่อผู้ดูแลระบบ" };
+
+  // ⚠️ ด่านนี้ต้องอยู่ที่ server (กติกาข้อ 3: ห้ามพึ่งการซ่อนปุ่ม)
+  // Server Action คือ endpoint สาธารณะ — ใครยิงตรงก็ได้แม้ปุ่มจะถูกซ่อนไปแล้ว
+  // คีย์ทดสอบ + บัตรทดสอบ = ได้แพ็กเสียเงินฟรีไม่จำกัดครั้ง (ดู isLiveStripeKey)
+  // ยกเว้นแอดมินแพลตฟอร์ม เพื่อให้เจ้าของยังเดินเส้นจ่ายเงินทดสอบเองได้ก่อนเปิดจริง
+  if (!isLiveStripeKey(secretKey)) {
+    const { isPlatformAdmin } = await import("@/lib/shop");
+    if (!(await isPlatformAdmin())) {
+      return { ok: false, error: "ระบบรับชำระเงินยังไม่เปิดให้ใช้งานจริง — ผู้ดูแลกำลังตั้งค่าอยู่ ติดต่อเราได้เลยค่ะ" };
+    }
+  }
 
   const { data: topup, error } = await svc.from("topups").insert({
     shop_id: shopId, amount, method: "stripe", gateway: "stripe", status: "pending",

@@ -5,6 +5,7 @@ import { baht } from "@/lib/utils";
 import { redirect } from "next/navigation";
 import BillingSettingsForm from "./billing-settings-form";
 import PendingTopupsList from "./pending-topups-list";
+import StripeStatusCard from "./stripe-status-card";
 import type { PendingTopup } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +108,8 @@ export default async function AdminBillingPage() {
           <BillingSettingsForm pf={pf} slipUsed={slipMonth?.calls ?? 0} stored={stored} />
         </CardContent>
       </Card>
+      {/* วางไว้ใต้ฟอร์มใส่คีย์ — ใส่เสร็จแล้วเลื่อนลงมาดูได้ทันทีว่าพอหรือยัง */}
+      <StripeStatusCard />
     </div>
   );
 }
