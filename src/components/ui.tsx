@@ -199,6 +199,25 @@ export function Button({ className, variant = "primary", size = "md", ...props }
   );
 }
 
+/**
+ * ปุ่มสั่งงานขนาดเล็กที่อยู่ในพื้นที่ซึ่งมีสีพื้นของตัวเองอยู่แล้ว
+ * (แถบเตือน · การ์ดสี · กล่องจดหมายระบบ · แถบแนบไฟล์)
+ *
+ * ⚠️ ทำไมต้องมี (11 ส.ค. 2569 เจ้าของสั่ง: "ไม่มีตัวหนังสือเชย ๆ ให้กด"):
+ * ก่อนหน้านี้ปุ่มสั่งงานพวกนี้เป็น "ข้อความขีดเส้นใต้" ซึ่งมีปัญหา 3 อย่างพร้อมกัน
+ *   1. หน้าตาเหมือนคำอธิบาย ไม่ใช่ปุ่ม — ผู้ใช้ต้องเดาว่ากดได้ไหม
+ *   2. เป้ากดคือความกว้างของตัวอักษรเท่านั้น บนมือถือกดพลาดง่ายมาก
+ *   3. ขีดเส้นใต้เป็นภาษาของ "ลิงก์ไปหน้าอื่น" ใช้กับปุ่มที่ทำงานทันทีแล้วสื่อผิด
+ *
+ * ใช้คู่กับคลาสสีของบริบทนั้น เช่น `cn(ACTION_CHIP, "border-amber-300 text-amber-900")`
+ * ห้ามใช้แทนปุ่มหลักของหน้า — ปุ่มหลักต้องเป็น <Button> เต็มขนาด
+ */
+export const ACTION_CHIP = cn(
+  "inline-flex min-h-9 select-none items-center gap-1 rounded-lg border bg-white/70 px-2.5 py-1.5",
+  "text-xs font-semibold transition-all duration-100 hover:bg-white active:scale-[0.97]",
+  FOCUS, "disabled:pointer-events-none disabled:opacity-50",
+);
+
 const FIELD = cn(
   // text-base (16px) กัน iOS Safari auto-zoom ตอนโฟกัส input ที่ font-size < 16px
   "w-full rounded-xl border border-neutral-300 bg-white text-base text-neutral-900 outline-none transition-colors sm:text-sm",

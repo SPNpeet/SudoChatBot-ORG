@@ -1,7 +1,8 @@
 import { getCurrentShop } from "@/lib/shop";
 import { markNotificationRead } from "./actions";
 import { cn } from "@/lib/utils";
-import { X } from "lucide-react";
+import { X, ArrowRight } from "lucide-react";
+import { ACTION_CHIP } from "@/components/ui";
 
 /** แถบแจ้งเตือนของกิจการ (เครดิตใกล้หมด ฯลฯ) — แสดงเหนือเนื้อหาทุกหน้า dashboard */
 export default async function Notifications() {
@@ -31,11 +32,14 @@ export default async function Notifications() {
           <div>
             <p className="font-medium">{n.title}</p>
             {n.body && <p className="mt-0.5 text-xs opacity-80">{n.body}</p>}
-            {n.type === "order_paid" ? (
-              <a href="/dashboard/money" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าการเงิน →</a>
-            ) : (
-              <a href="/dashboard/billing" className="mt-1 inline-block text-xs font-medium underline">ไปหน้าเติมเงิน →</a>
-            )}
+            {/* ปุ่มจริง ไม่ใช่ข้อความขีดเส้นใต้ — เห็นขอบเขตกดชัดและกดแม่นบนมือถือ (ดู ACTION_CHIP) */}
+            <a
+              href={n.type === "order_paid" ? "/dashboard/money" : "/dashboard/billing"}
+              className={cn(ACTION_CHIP, "mt-2 border-current/25")}
+            >
+              {n.type === "order_paid" ? "ไปหน้าการเงิน" : "ไปหน้าเติมเงิน"}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </a>
           </div>
           <form action={dismiss}>
             <input type="hidden" name="id" value={n.id} />

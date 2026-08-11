@@ -17,6 +17,8 @@
 // ============================================================
 import Link from "next/link";
 import { TriangleAlert, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ACTION_CHIP } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 
 interface Health {
@@ -76,9 +78,9 @@ export default async function DataHealth({ shopId }: { shopId: string }) {
         {issues.map((i) => (
           <li key={i.cta} className="text-[12px] leading-relaxed text-amber-800">
             {i.text}
-            <Link href={i.href}
-              className="ml-1 inline-flex items-center gap-0.5 font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-950">
-              {i.cta}<ArrowRight className="h-3 w-3" />
+            {/* ปุ่มจริง — เรื่องที่กระทบภาษีต้องกดง่าย ไม่ใช่ข้อความขีดเส้นใต้กลางย่อหน้า */}
+            <Link href={i.href} className={cn(ACTION_CHIP, "ml-1.5 border-amber-300 text-amber-900 hover:text-amber-950")}>
+              {i.cta}<ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </li>
         ))}

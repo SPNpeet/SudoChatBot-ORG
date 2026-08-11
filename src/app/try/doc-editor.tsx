@@ -20,6 +20,7 @@ import { Printer, Plus, Trash2, ArrowRight, Check } from "lucide-react";
 import { calcDocTotals, bahtText, DOC_TYPE_TH } from "@/lib/finance";
 import { VAT_LABEL } from "@/lib/tax-th";
 import { bahtDoc, dateOnlyTH, cn } from "@/lib/utils";
+import { ACTION_CHIP } from "@/components/ui";
 import type { DocType, VatMode } from "@/lib/types/finance";
 
 const DRAFT_KEY = "sc_try_draft";
@@ -168,8 +169,9 @@ export default function TryDocEditor() {
         {restored && (
           <p className="border-t border-neutral-100 bg-emerald-50/60 px-3 py-1.5 text-center text-xs text-emerald-800">
             กู้ร่างที่ค้างไว้ในเครื่องนี้ให้แล้ว — ร่างเก็บเฉพาะในเบราว์เซอร์ ล้างประวัติแล้วหาย
+            {/* ปุ่มจริง — หน้าลองใช้คือด่านแรกที่คนยังไม่สมัครเจอ ปุ่มต้องดูเป็นปุ่ม */}
             <button onClick={() => { localStorage.removeItem(DRAFT_KEY); setD(EMPTY); setRestored(false); }}
-              className="ml-2 underline">เริ่มใหม่</button>
+              className={cn(ACTION_CHIP, "ml-2 border-emerald-300 text-emerald-800")}>เริ่มใหม่</button>
           </p>
         )}
       </div>

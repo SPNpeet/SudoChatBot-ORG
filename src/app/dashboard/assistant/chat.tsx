@@ -14,6 +14,7 @@ import {
   FileText, Receipt, BarChart3, Users, Landmark, Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ACTION_CHIP } from "@/components/ui";
 import { assistantReply, type AssistantTurn } from "./actions";
 
 /**
@@ -637,7 +638,11 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
           <div className="mb-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2">
             <div className="mb-1.5 flex items-center justify-between gap-2">
               <p className="text-xs font-semibold text-emerald-800">แนบไว้ {pendingFiles.length} ใบ — พิมพ์สั่งกำกับได้ เช่น &ldquo;ทั้งหมดยังไม่จ่าย&rdquo;</p>
-              <button type="button" onClick={() => setPendingFiles([])} className="shrink-0 text-xs text-emerald-700 underline">เอาออกทั้งหมด</button>
+              {/* ปุ่มจริง — ลบไฟล์ที่แนบไว้ทั้งหมดเป็นงานที่ย้อนไม่ได้ ต้องเห็นชัดว่าเป็นปุ่ม */}
+              <button type="button" onClick={() => setPendingFiles([])}
+                className={cn(ACTION_CHIP, "shrink-0 border-emerald-300 text-emerald-700 hover:text-emerald-800")}>
+                <Trash2 className="h-3.5 w-3.5" />เอาออกทั้งหมด
+              </button>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {pendingFiles.map((f, i) => (

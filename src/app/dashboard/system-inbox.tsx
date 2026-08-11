@@ -13,8 +13,9 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, X, AlertTriangle, Siren, Info, Check, Trash2, Undo2, Archive } from "lucide-react";
+import { Bell, X, AlertTriangle, Siren, Info, Check, Trash2, Undo2, Archive, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ACTION_CHIP } from "@/components/ui";
 import { useDismiss } from "@/components/use-dismiss";
 import { dismissNotice, loadNoticeHistory, deleteNotification, restoreNotice, clearReadNotifications } from "./actions";
 import type { Notice, NoticeTone, HistoryItem } from "@/lib/notices";
@@ -212,14 +213,16 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
                           <p className={cn("text-[13px] font-semibold leading-snug", t.text)}>{n.title}</p>
                           {n.body && <p className="mt-1 text-xs leading-relaxed text-neutral-600">{n.body}</p>}
                           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                            {/* ปุ่มจริงทั้งคู่ — เดิมเป็นข้อความขีดเส้นใต้ที่ดูไม่ออกว่ากดได้ (ดู ACTION_CHIP) */}
                             {n.href && (
                               <Link href={n.href} onClick={() => setOpen(false)}
-                                className={cn("inline-flex min-h-[44px] items-center text-xs font-semibold underline", t.text)}>
-                                {n.cta ?? "ไปดู"} →
+                                className={cn(ACTION_CHIP, "border-current/25", t.text)}>
+                                {n.cta ?? "ไปดู"}<ArrowRight className="h-3.5 w-3.5" />
                               </Link>
                             )}
                             <button onClick={() => read(n.key)} disabled={pending}
-                              className="inline-flex min-h-[44px] items-center text-xs text-neutral-500 underline hover:text-neutral-800 disabled:opacity-50">
+                              className={cn(ACTION_CHIP, "border-neutral-300 font-medium text-neutral-600 hover:text-neutral-900")}>
+                              <Check className="h-3.5 w-3.5" />
                               {pending ? "กำลังบันทึก..." : "อ่านแล้ว"}
                             </button>
                           </div>

@@ -21,6 +21,7 @@
 import { useId, useRef } from "react";
 import { CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ACTION_CHIP } from "@/components/ui";
 import { docDateTooFarFuture, docDateVeryOld } from "@/lib/tax-th";
 
 const TH_MONTHS = [
@@ -111,9 +112,10 @@ export default function DateField({
             {reading}
           </span>
         )}
+        {/* ปุ่มจริง — เป็นทางลัดที่คนกดบ่อยที่สุดในฟอร์ม ต้องกดง่ายไม่ใช่ข้อความเล็ก ๆ */}
         {!hideToday && value !== today && (
           <button type="button" onClick={() => onChange(today)}
-            className="text-xs text-emerald-700 underline underline-offset-2 hover:text-emerald-800">
+            className={cn(ACTION_CHIP, "border-emerald-300 text-emerald-700 hover:text-emerald-800")}>
             ใช้วันนี้
           </button>
         )}
