@@ -24,7 +24,10 @@
     "check:ready": "tsx scripts/check-ready.mjs",
     "check:ui:auth": "tsx scripts/check-logged-in-ui.mjs",
     "assistant-dryrun": "tsx scripts/assistant-dryrun.mjs",
-    "check:accountant": "tsx scripts/check-accountant-file.mjs"
+    "check:accountant": "tsx scripts/check-accountant-file.mjs",
+    "e2e": "playwright test",
+    "e2e:public": "playwright test e2e/public-journeys.spec.ts",
+    "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -44,6 +47,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.1.10",
     "@types/node": "^22.15.0",
     "@types/qrcode": "^1.5.5",

@@ -1,0 +1,90 @@
+// ============================================================
+//  เส้นทางหลังล็อกอิน — งานจริงที่ลูกค้าที่จ่ายเงินแล้วทำทุกวัน
+//
+//  ⚠️ ต้องมี TEST_EMAIL / TEST_PASSWORD ถึงจะรัน ไม่มีจะข้ามทั้งชุดพร้อมบอกเหตุผล
+//     (เจตนา: ไม่มีรหัสแล้ว "ผ่าน" เงียบ ๆ อันตรายกว่าไม่รัน — จะเข้าใจผิดว่าตรวจแล้ว)
+//
+//  ⚠️ ห้ามสร้าง/แก้/ลบเอกสารจริงบน production
+//     ทุกเทสต์ในไฟล์นี้ "เปิดดู" กับ "กดปุ่มที่ไม่บันทึกอะไร" เท่านั้น
+//     ปุ่มดูตัวอย่างเอกสารจึงเป็นเป้าหมายที่ดี — มันเปิดหน้าต่างอ่านอย่างเดียวโดยเจตนา
+//
+//  วิธีรัน:  TEST_EMAIL=... TEST_PASSWORD=... npm run e2e
+// ============================================================
+import { test, expect, type Page } from "@playwright/test";
+
+const EMAIL = process.env.TEST_EMAIL;
+const PASSWORD = process.env.TEST_PASSWORD;
+
+test.skip(!EMAIL || !PASSWORD,
+  "ข้ามทั้งชุด — ยังไม่ได้ตั้ง TEST_EMAIL/TEST_PASSWORD ⚠️ แปลว่าหน้าหลังล็อกอินยังไม่ถูกตรวจเลย");
+
+/** ล็อกอินด้วยอีเมล/รหัสผ่าน แล้วรอจนเข้าแดชบอร์ดจริง */
+async function login(page: Page) {
+  await page.goto("/login");
+  await page.locator('input[type="email"]').first().fill(EMAIL!);
+  await page.locator('input[type="password"]').first().fill(PASSWORD!);
+  await page.getByRole("button", { name: /เข้าสู่ระบบ|ลงชื่อ/ }).first().click();
+  await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
+}
+
+test.describe("เจ้าของกิจการ SME", () => {
+  test.beforeEach(async ({ page }) => { await login(page); });
+
+  test("หน้าภาพรวมเปิดได้ ไม่เจอจอ error", async ({ page }) => {
+    await expect(page.locator("h1").first()).toBeVisible();
+    // error boundary ของเราขึ้นข้อความนี้ — ถ้าเจอแปลว่าหน้าพัง
+    await expect(page.locator("body")).not.toContainText("หน้านี้โหลดไม่สำเร็จ");
+  });
+
+  test("ทุกเมนูหลักกดแล้วไปถึงจริง ไม่ค้าง ไม่พัง", async ({ page }) => {
+    // นี่คือเทสต์ที่ตอบคำถาม "กดหน้าไหนก็ต้องไป ไม่ใช่ค้างนาน" ได้ตรงที่สุด
+    const pages = [
+      "/dashboard", "/dashboard/sales", "/dashboard/expenses", "/dashboard/money",
+      "/dashboard/journal", "/dashboard/reports", "/dashboard/contacts",
+      "/dashboard/products", "/dashboard/assets", "/dashboard/billing",
+      "/dashboard/settings", "/dashboard/help", "/dashboard/assistant",
+    ];
+    for (const path of pages) {
+      const t0 = Date.now();
+      const res = await page.goto(path);
+      const ms = Date.now() - t0;
+      expect(res?.status(), `${path} ต้องตอบ 200`).toBe(200);
+      await expect(page.locator("h1, h2").first(), `${path} ต้องมีหัวข้อ`).toBeVisible();
+      await expect(page.locator("body"), `${path} เจอจอ error`).not.toContainText("หน้านี้โหลดไม่สำเร็จ");
+      expect(ms, `${path} ใช้เวลา ${ms}ms`).toBeLessThan(15_000);
+    }
+  });
+
+  test("ปุ่มดูตัวอย่างเอกสารเปิด popup ได้จริง และปิดแล้วกลับมาแก้ต่อได้", async ({ page }) => {
+    await page.goto("/dashboard/sales/new");
+
+    const preview = page.getByRole("button", { name: /ดูตัวอย่าง/ });
+    if ((await preview.count()) === 0) {
+      test.skip(true, "ไม่พบปุ่มดูตัวอย่าง — อาจยังไม่ได้ตั้งข้อมูลกิจการ (seller) ในกิจการทดสอบ");
+    }
+
+    await preview.first().click();
+    const dialog = page.getByRole("dialog", { name: /ตัวอย่างเอกสาร/ });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(/ตัวอย่างก่อนออกเอกสาร/);
+
+    // ปิดแล้วต้องกลับมาที่ฟอร์ม ไม่ใช่หลุดไปหน้าอื่นหรือบันทึกอะไรไป
+    await page.getByRole("button", { name: /กลับไปแก้ไข|ปิด/ }).first().click();
+    await expect(dialog).toBeHidden();
+    expect(page.url()).toContain("/dashboard/sales/new");
+  });
+});
+
+test.describe("มือถือหลังล็อกอิน", () => {
+  test("หน้าที่ใช้บ่อยไม่ล้นแนวนอนบนจอเล็ก", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "มือถือ", "ตรวจเฉพาะโปรเจกต์มือถือ");
+    await login(page);
+
+    for (const path of ["/dashboard", "/dashboard/sales", "/dashboard/money", "/dashboard/reports"]) {
+      await page.goto(path);
+      const overflow = await page.evaluate(() =>
+        document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, `${path} ล้นแนวนอน ${overflow}px`).toBeLessThanOrEqual(1);
+    }
+  });
+});

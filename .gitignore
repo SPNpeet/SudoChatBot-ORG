@@ -10,3 +10,7 @@ out/
 # ไฟล์สำรองมีข้อมูลลูกค้าจริง ห้ามขึ้นกิตเด็ดขาด
 backups/
 .restore-tmp.sql
+
+# Playwright
+test-results/
+playwright-report/
