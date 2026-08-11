@@ -179,3 +179,34 @@ export async function closeSystemAlert(id: string): Promise<{ ok: true } | { ok:
     return { ok: false, error: (e as Error).message };
   }
 }
+
+/**
+ * สำรองข้อมูลเดี๋ยวนี้ (แอดมินแพลตฟอร์มกดเอง)
+ *
+ * ⚠️ ทำไมต้องมีปุ่มนี้ทั้งที่มี cron อยู่แล้ว (11 ส.ค. 2569):
+ * cron รายวันถูกบล็อกด้วย CRON_SECRET ที่ยังไม่ได้ตั้งใน Vercel
+ * ผลคือระบบ **ไม่เคยมีไฟล์สำรองเลยสักไฟล์** ทั้งที่มีกิจการใช้จริงหลายสิบราย
+ * ถ้าปล่อยให้ทางเดียวที่สำรองได้ผูกกับ env ที่ยังไม่มีใครตั้ง มันก็จะไม่มีไฟล์สำรอง
+ * ต่อไปเรื่อย ๆ จนถึงวันที่ต้องกู้จริงแล้วสายเกินไป — ปุ่มนี้ตัดการพึ่งพานั้นออก
+ *
+ * ใช้ตรรกะเดียวกับ cron ทุกบรรทัด (lib/backup-run.ts) จึงไม่มีทางสองเส้นเพี้ยนจากกัน
+ */
+export async function backupNow(): Promise<{ ok: boolean; message: string }> {
+  try {
+    await assertPlatformAdmin();
+    const { runBackup } = await import("@/lib/backup-run");
+    const svc = createServiceClient();
+    const r = await runBackup(svc);
+    await svc.from("audit_logs").insert({
+      actor_type: "user", action: "backup_manual", resource_type: "storage",
+      details: { date: r.date, total_rows: r.total_rows, failed: r.failed.length },
+    });
+    revalidatePath("/dashboard/admin");
+    return r.ok
+      ? { ok: true, message: `สำรองสำเร็จ ${r.date} — ${r.total_rows.toLocaleString("th-TH")} แถว` }
+      : { ok: false, message: `สำรองเสร็จแต่มี ${r.failed.length} ตารางที่ล้ม: ${r.failed.map((f) => f.table).join(", ")}` };
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, message: m.includes("forbidden") ? "เฉพาะผู้ดูแลแพลตฟอร์ม" : `สำรองไม่สำเร็จ: ${m.slice(0, 200)}` };
+  }
+}

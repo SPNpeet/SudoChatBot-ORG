@@ -14,6 +14,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { DatabaseBackup, TriangleAlert, ShieldCheck } from "lucide-react";
+import BackupNowButton from "./backup-now-button";
 
 /** เกินกี่วันถือว่าค้าง — cron รายวัน จึงเผื่อพลาดได้ 1 รอบ */
 const STALE_DAYS = 2;
@@ -45,10 +46,13 @@ export default async function BackupCard() {
       </CardHeader>
       <CardContent>
         {!bad ? (
-          <p className="flex items-start gap-2 text-sm text-emerald-700">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-            <span>สำรองล่าสุด {latestDate} ({ageDays === 0 ? "วันนี้" : `${ageDays} วันที่แล้ว`}) · เก็บไว้ {files.length} ชุด</span>
-          </p>
+          <>
+            <p className="flex items-start gap-2 text-sm text-emerald-700">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>สำรองล่าสุด {latestDate} ({ageDays === 0 ? "วันนี้" : `${ageDays} วันที่แล้ว`}) · เก็บไว้ {files.length} ชุด</span>
+            </p>
+            <BackupNowButton />
+          </>
         ) : (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4">
             <p className="flex items-start gap-2 text-sm font-semibold text-red-800">
@@ -64,8 +68,12 @@ export default async function BackupCard() {
                 ? error.message
                 : "ระบบตั้งเวลาสำรองอัตโนมัติไว้ทุกวันแล้ว แต่ด่านความปลอดภัยปิดอยู่จึงยังไม่ทำงาน — ข้อมูลบัญชีของทุกกิจการตอนนี้ไม่มีชั้นสำรองเลย"}
             </p>
+            {/* ทางออกทันทีต้องมาก่อนวิธีตั้งค่าถาวร — กดปุ่มนี้ได้ไฟล์สำรองชุดแรกเดี๋ยวนี้เลย
+                ไม่ต้องรอใครไปตั้ง env ที่ Vercel ซึ่งเป็นเหตุที่ทำให้ไม่มีไฟล์สำรองมาตลอด */}
+            <BackupNowButton />
+
             <div className="mt-3 rounded-lg bg-white/70 p-3 text-xs text-red-800">
-              <p className="font-semibold">วิธีเปิด (ทำครั้งเดียว ~2 นาที)</p>
+              <p className="font-semibold">ตั้งให้สำรองเองทุกคืน (ทำครั้งเดียว ~2 นาที)</p>
               <ol className="mt-1 list-decimal space-y-0.5 pl-4">
                 <li>Vercel → โปรเจกต์ → Settings → Environment Variables</li>
                 <li>เพิ่ม <code className="rounded bg-red-100 px-1">CRON_SECRET</code> = ค่าสุ่มยาว ๆ (เช่นจาก <code className="rounded bg-red-100 px-1">openssl rand -hex 32</code>)</li>
