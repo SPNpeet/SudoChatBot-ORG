@@ -12,12 +12,13 @@
 // ============================================================
 import { calcDocTotals } from "../src/lib/finance.ts";
 import { quotaNotice } from "../src/lib/notice-rules.ts";
-import { verifyStripeSignature } from "../src/lib/stripe.ts";
+import { verifyStripeSignature, isLiveStripeKey } from "../src/lib/stripe.ts";
 import { promptPayPayload } from "../src/lib/promptpay.ts";
 import { bahtText } from "../src/lib/finance.ts";
 import { selectVatSalesDocs, vatSign } from "../src/lib/vat-docs.ts";
 import { dateOnlyTH, dateTH } from "../src/lib/utils.ts";
 import { createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 let failures = 0;
 const ok = (cond, name, detail = "") => {
@@ -285,6 +286,47 @@ section("ลายเซ็น webhook Stripe (กันคนปลอม event
   ok(verifyStripeSignature(body, "garbage", secret) === false, "header เพี้ยน = ปฏิเสธ");
   ok(verifyStripeSignature(body, `t=${now},v1=ab`, secret) === false, "ลายเซ็นสั้นกว่าจริง = ปฏิเสธ (ห้าม throw)");
   ok(verifyStripeSignature(body, `t=${now},v1=${sign(now)}`, "") === false, "ยังไม่ได้ตั้ง webhook secret = ปฏิเสธทุกกรณี (fail-closed)");
+
+  // ---- คีย์ทดสอบต้องไม่ถูกนับว่า "เปิดรับเงินได้" ----------------------
+  // เหตุ (11 ส.ค. 2569): เดิมระบบเช็คแค่ "มีคีย์ไหม" ซึ่งจริงเฉพาะคีย์ live
+  // ถ้าเปิดให้คนทั่วไปใช้ตอนคีย์เป็น sk_test: บัตรจริงถูกปฏิเสธเสมอ
+  // และคนที่รู้เลขบัตรทดสอบมาตรฐานจะกดรับแพ็กเสียเงินฟรีได้ไม่จำกัดครั้ง
+  ok(isLiveStripeKey("sk_live_abc123") === true, "คีย์ live = รับเงินจริงได้");
+  ok(isLiveStripeKey("sk_test_abc123") === false, "คีย์ทดสอบ = ยังไม่นับว่าเปิดรับเงิน");
+  ok(isLiveStripeKey("  sk_live_abc  ") === true, "ช่องว่างหัวท้ายไม่ทำให้คีย์ live กลายเป็นไม่พร้อม");
+  ok(isLiveStripeKey(null) === false && isLiveStripeKey("") === false && isLiveStripeKey(undefined) === false,
+    "ไม่มีคีย์ = ปฏิเสธ (fail-closed)");
+  ok(isLiveStripeKey("rk_live_abc") === false, "คีย์ชนิดอื่นที่ไม่ใช่ sk_live = ไม่รับ");
+}
+
+// ============================================================
+//  เว็บฮุคเงิน — ห้ามตอบ 200 ตอนล้มเหลวแบบชั่วคราว (ด่านกันแก้กลับ)
+// ============================================================
+{
+  console.log("\n== เว็บฮุค Stripe: ความล้มเหลวชั่วคราวต้องให้ Stripe ยิงซ้ำ ==");
+  const src = readFileSync(new URL("../src/app/api/billing/stripe/webhook/route.ts", import.meta.url), "utf8");
+
+  // เหตุที่ต้องมีด่านนี้ (11 ส.ค. 2569): ฟังก์ชัน done() ตอบ 200 เสมอ
+  // เดิม catch ก้อนล่างเรียก done() ซึ่งแปลว่า "ดึง session จาก Stripe ไม่สำเร็จ" (API ล่ม/เน็ตสะดุด)
+  // ถูกตอบกลับว่า 200 = Stripe ถือว่าส่งสำเร็จ ไม่ยิงซ้ำอีกเลย
+  // ผลจริง: ลูกค้าจ่ายเงินแล้ว เครดิตไม่เข้า ไม่มีร่องรอย ไม่มีใครรู้
+  const catchBlock = src.slice(src.lastIndexOf("} catch ("));
+  ok(!/return\s+done\(/.test(catchBlock),
+    "catch ก้อนท้ายต้องไม่เรียก done() (= 200) — ต้องใช้ retryLater ให้ Stripe ยิงซ้ำ");
+  ok(/retryLater/.test(catchBlock), "catch ก้อนท้ายต้องเรียก retryLater");
+
+  // retryLater ต้องตอบ 5xx จริง ๆ ไม่ใช่แค่ชื่อฟังก์ชันสวย
+  const retryDef = src.slice(src.indexOf("const retryLater"), src.indexOf("const retryLater") + 400);
+  ok(/status:\s*code/.test(retryDef) && /code\s*=\s*5\d\d/.test(retryDef),
+    "retryLater ต้องตอบสถานะ 5xx เป็นค่าเริ่มต้น");
+
+  // ไม่มี secret key = ยืนยันกับ Stripe ไม่ได้ แต่เงินอาจเข้าไปแล้ว -> ต้องยิงซ้ำ ไม่ใช่ทิ้ง
+  ok(/secret key not configured",\s*503\)/.test(src) || /retryLater\("stripe secret key not configured", 503\)/.test(src),
+    "ไม่มี secret key ต้องตอบ 503 ให้ยิงซ้ำ ไม่ใช่ 200");
+
+  // ยอด/สกุลเงินไม่ตรง = ยิงซ้ำไม่ช่วย แต่แปลว่ามีเงินลูกค้าค้าง ต้องปลุกคน
+  ok(/amount mismatch/.test(src) && /alertAdmins\(/.test(src),
+    "ยอดไม่ตรงต้องแจ้งแอดมิน ไม่ใช่เงียบ");
 }
 
 // ============================================================
