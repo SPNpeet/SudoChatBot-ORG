@@ -21,9 +21,13 @@ const STALE_DAYS = 2;
 
 export default async function BackupCard() {
   const svc = createServiceClient();
-  const { data, error } = await svc.storage.from("db-backups").list("", {
-    limit: 100, sortBy: { column: "name", order: "desc" },
-  });
+  const [{ data, error }, { data: snap }] = await Promise.all([
+    svc.storage.from("db-backups").list("", { limit: 100, sortBy: { column: "name", order: "desc" } }),
+    // ชั้นที่สอง: จุดกู้คืนในฐานข้อมูลเอง (migration 100) — ทำงานเองทุกคืนโดยไม่ต้องพึ่ง env ของ Vercel
+    svc.rpc("snapshot_status"),
+  ]);
+  const snapshot = (snap ?? null) as { latest: string | null; count: number; tables: number } | null;
+  const snapDate = snapshot?.latest?.replace("snapshot_", "").replaceAll("_", "-") ?? null;
 
   const files = (data ?? []).filter((f) => f.name && !f.name.startsWith("."));
   const latest = files[0]?.name ?? null;
@@ -45,6 +49,21 @@ export default async function BackupCard() {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {/* ชั้นที่ทำงานเองอยู่แล้ว — ขึ้นก่อนเสมอ เพื่อไม่ให้เข้าใจผิดว่าไม่มีชั้นสำรองเลย
+            ตอน bucket ยังว่าง (ซึ่งเป็นสภาพจริงตราบใดที่ยังไม่ได้ตั้ง CRON_SECRET) */}
+        {snapshot?.latest && (
+          <p className="mb-3 flex items-start gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              จุดกู้คืนในฐานข้อมูล: <b>{snapDate}</b> ({snapshot.tables} ตาราง · เก็บไว้ {snapshot.count} ชุด)
+              <span className="mt-0.5 block text-xs text-emerald-700">
+                ทำเองอัตโนมัติทุกคืน ตี 4 — กัน migration พลาด/ลบผิด/ตารางเสีย
+                แต่ไม่กันกรณีทั้งโปรเจกต์หาย จึงยังต้องมีไฟล์สำรองออกนอกเครื่องด้วย
+              </span>
+            </span>
+          </p>
+        )}
+
         {!bad ? (
           <>
             <p className="flex items-start gap-2 text-sm text-emerald-700">
@@ -66,7 +85,9 @@ export default async function BackupCard() {
             <p className="mt-2 text-xs leading-relaxed text-red-700">
               {error
                 ? error.message
-                : "ระบบตั้งเวลาสำรองอัตโนมัติไว้ทุกวันแล้ว แต่ด่านความปลอดภัยปิดอยู่จึงยังไม่ทำงาน — ข้อมูลบัญชีของทุกกิจการตอนนี้ไม่มีชั้นสำรองเลย"}
+                : snapshot?.latest
+                  ? "ไฟล์สำรองที่เอาออกนอกฐานข้อมูลได้ยังไม่มี — จุดกู้คืนด้านบนกันได้แค่ความผิดพลาดในฐานข้อมูล ถ้าโปรเจกต์หายทั้งก้อนจะกู้ไม่ได้เลย"
+                  : "ระบบตั้งเวลาสำรองอัตโนมัติไว้ทุกวันแล้ว แต่ด่านความปลอดภัยปิดอยู่จึงยังไม่ทำงาน — ข้อมูลบัญชีของทุกกิจการตอนนี้ไม่มีชั้นสำรองเลย"}
             </p>
             {/* ทางออกทันทีต้องมาก่อนวิธีตั้งค่าถาวร — กดปุ่มนี้ได้ไฟล์สำรองชุดแรกเดี๋ยวนี้เลย
                 ไม่ต้องรอใครไปตั้ง env ที่ Vercel ซึ่งเป็นเหตุที่ทำให้ไม่มีไฟล์สำรองมาตลอด */}
