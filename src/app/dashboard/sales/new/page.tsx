@@ -29,6 +29,10 @@ export default async function NewSalesDocPage({ searchParams }: { searchParams: 
         </p>
       </div>
       <DocForm shopId={shop.id} docType={docType}
+        seller={{
+          name: shop.billing_name || shop.name,
+          address: shop.billing_address, taxId: shop.tax_id, branch: shop.branch,
+        }}
         contacts={(contacts ?? []) as Contact[]}
         products={products ?? []} />
     </div>

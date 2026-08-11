@@ -11,6 +11,7 @@ import { Plus, Trash2, ScanLine, Paperclip, TriangleAlert } from "lucide-react";
 import { Button, Card, CardContent, Input, Label, Select, Textarea } from "@/components/ui";
 import { baht, bahtDoc, cn } from "@/lib/utils";
 import { calcDocTotals, DOC_TYPE_TH, WHT_RATES } from "@/lib/finance";
+import DocPreview, { type PreviewSeller } from "./doc-preview";
 import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME, WHT_MIN_PAYMENT, belowWhtThreshold, whtRateMismatch } from "@/lib/tax-th";
 import type { DocType, VatMode, ExpenseCategory, Contact, FinDoc } from "@/lib/types/finance";
 import { saveDoc, uploadFinFile, type SaveDocInput } from "./actions";
@@ -23,6 +24,8 @@ interface Row { name: string; qty: string; unit: string; unit_price: string; pro
 
 export interface DocFormProps {
   shopId: string;
+  /** ข้อมูลกิจการผู้ขาย — มีเมื่อไหร่ปุ่ม "ดูตัวอย่าง" จะโผล่ (ฝั่งขายเท่านั้น) */
+  seller?: PreviewSeller;
   docType: DocType;
   contacts: Contact[];
   products?: ProductLite[];
@@ -32,7 +35,7 @@ export interface DocFormProps {
 
 const emptyRow = (): Row => ({ name: "", qty: "1", unit: "", unit_price: "", product_id: null });
 
-export default function DocForm({ shopId, docType: initialDocType, contacts, products = [], categories = [], draft }: DocFormProps) {
+export default function DocForm({ shopId, seller, docType: initialDocType, contacts, products = [], categories = [], draft }: DocFormProps) {
   // ประเภทเอกสารสลับได้ในฟอร์ม (เฉพาะฝั่งขาย ไม่ใช่ตอนแก้ร่าง)
   // เดิมล็อกจาก ?type= ใน URL อย่างเดียว: เข้ามาแล้วไม่เห็นและเปลี่ยนไม่ได้ว่ากำลังออกใบอะไร
   // เจ้าของ + ลูกค้าจริงถามตรงกัน (2 ส.ค. 2569): "ใบเสนอราคากับใบแจ้งหนี้ทำไมต้องอันเดียวกัน"
@@ -48,6 +51,7 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
   // ตีกรอบแดงที่ช่องรายการที่ยังว่าง — โชว์หลังกดบันทึกครั้งแรกเท่านั้น
   // (ไม่ตีแดงตั้งแต่เปิดฟอร์ม ฟอร์มเปล่าที่แดงทั้งใบทำให้คนกลัวมากกว่าช่วย)
   const [showRowErrors, setShowRowErrors] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const rowsRef = useRef<HTMLDivElement>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiWarn, setAiWarn] = useState<string[]>([]);   // จุดที่ AI อ่านไม่ชัด/ยอดไม่ลงตัว — ให้คนตรวจก่อนบันทึก
@@ -595,6 +599,13 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
           {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            {/* ดูตัวอย่างก่อนออก — ปุ่มนี้ไม่แตะข้อมูลใด ๆ เปิดหน้าต่างอ่านอย่างเดียว
+                วางไว้ซ้ายสุดของแถวปุ่ม เพราะเป็นขั้นที่ควรทำ "ก่อน" บันทึกเสมอ */}
+            {seller && (
+              <Button type="button" variant="outline" onClick={() => setShowPreview(true)}>
+                ดูตัวอย่างเอกสาร
+              </Button>
+            )}
             <Button variant="outline" disabled={pending} onClick={() => submit("draft")}>บันทึกร่าง</Button>
             <Button disabled={pending} onClick={() => submit("awaiting")} className="min-w-40">
               {pending ? "กำลังบันทึก..." : `ออก${DOC_TYPE_TH[docType]}`}
@@ -605,6 +616,40 @@ export default function DocForm({ shopId, docType: initialDocType, contacts, pro
           </p>
         </CardContent>
       </Card>
+
+      {showPreview && seller && (
+        <DocPreview
+          docType={docType}
+          seller={seller}
+          buyer={{
+            // ผู้ติดต่อที่เลือกจากรายการมีที่อยู่/เลขภาษีครบ ส่วนที่พิมพ์ชื่อเองมีแค่ชื่อ
+            // ตรงนี้แหละที่ทำให้ใบกำกับภาษีไม่ครบโดยไม่มีใครรู้ตัว — พรีวิวจะฟ้องให้เห็น
+            name: contacts.find((c) => c.id === contactId)?.name ?? contactName,
+            address: contacts.find((c) => c.id === contactId)?.address ?? null,
+            taxId: contacts.find((c) => c.id === contactId)?.tax_id ?? null,
+          }}
+          rows={rows
+            .filter((r) => r.name.trim() || Number(r.unit_price) > 0)
+            .map((r) => ({
+              name: r.name.trim(), qty: Number(r.qty) || 0,
+              unit: r.unit ?? "", unitPrice: Number(r.unit_price) || 0,
+            }))}
+          totals={{
+            // DocTotals ไม่มี subtotal (มีแต่ base = หลังหักส่วนลดแล้ว)
+            // บวกกลับจาก base ไม่ได้ เพราะ base ถูก clamp ที่ 0 เมื่อส่วนลดมากกว่ายอด
+            subtotal: rows.reduce((a, r) => a + (Number(r.qty) || 0) * (Number(r.unit_price) || 0), 0),
+            discount: Number(discount) || 0,
+            exVat: totals.exVat, vat: totals.vat, total: totals.total,
+            wht: totals.wht, cashDue: totals.cashDue,
+          }}
+          issueDate={issueDate}
+          dueDate={dueDate}
+          vatMode={vatMode}
+          whtRate={Number(whtRate) || 0}
+          notes={notes}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   );
 }
