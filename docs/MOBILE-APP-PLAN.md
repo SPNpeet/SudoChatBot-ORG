@@ -20,11 +20,29 @@
 | ข้อความขอสิทธิ์ iOS | `ios/App/App/Info.plist` | ✅ 3 ข้อความภาษาไทยที่บอกว่าเอาไปทำอะไร |
 | ปลั๊กอิน | push-notifications · camera · share · filesystem · browser · app · status-bar | ✅ ติดตั้งแล้ว |
 
+### ✅ Android build เป็นไฟล์ติดตั้งจริงแล้ว (12 ส.ค. 2569)
+
+| | |
+|---|---|
+| ไฟล์ | `mobile/build/SudoChatBot-debug.apk` · **9.5 MB** |
+| package | `online.sudochatbot.app` · versionCode 1 · targetSdk 36 |
+| ชื่อที่ขึ้นบนเครื่อง | SudoChatBot |
+| สิทธิ์ในไฟล์จริง | INTERNET · CAMERA · POST_NOTIFICATIONS (+ ที่ปลั๊กอิน push เพิ่มให้: ACCESS_NETWORK_STATE · WAKE_LOCK · C2DM RECEIVE) |
+| build ด้วย | Gradle 8.14.3 · JDK 21 · Android SDK 35 — `BUILD SUCCESSFUL in 3m 59s` |
+
 ```bash
-npm run app:sync       # ซิงก์ config + ปลั๊กอินเข้าโปรเจกต์เนทีฟ (รันหลังแก้ config ทุกครั้ง)
-npm run app:android    # เปิดใน Android Studio
-npm run app:ios        # เปิดใน Xcode (ต้องรันบน macOS)
+npm run app:sync            # ซิงก์ config + ปลั๊กอินเข้าโปรเจกต์เนทีฟ (รันหลังแก้ config ทุกครั้ง)
+npm run app:build:android   # build APK ใหม่ -> mobile/build/SudoChatBot-debug.apk
+npm run app:android         # เปิดใน Android Studio (ถ้ามี)
+npm run app:ios             # เปิดใน Xcode (ต้องรันบน macOS)
 ```
+
+> ⚠️ APK นี้เป็น **debug build** — ติดตั้งบนเครื่องจริงเพื่อทดสอบได้เลย
+> (ต้องเปิด "ติดตั้งจากแหล่งที่ไม่รู้จัก") แต่**ขึ้น Play Store ไม่ได้**
+> ต้องเซ็นด้วย keystore ของเจ้าของและ build เป็น `assembleRelease` ก่อน
+>
+> ⚠️ `mobile/build/` และ `android/local.properties` ไม่ commit ขึ้น repo โดยตั้งใจ
+> (ไฟล์ใหญ่ · สร้างใหม่ได้เสมอ · `local.properties` ผูกกับ path เครื่องที่ build)
 
 ### การตัดสินใจที่สำคัญที่สุด: แอปชี้ไปเว็บจริง ไม่ bundle หน้าเว็บลงแอป
 
@@ -213,14 +231,17 @@ npm run app:sync && npm run app:ios
 | 2 | **ตั้ง `CRON_SECRET` ใน Vercel** (ยังไม่มีไฟล์สำรองออกนอกฐานข้อมูล) | ไม่มีสิทธิ์เข้า Vercel ของเจ้าของ |
 | 3 | **รัน UAT กับคนจริง 3 คน** ตาม `docs/UAT-PLAN.md` | ต้องมีมนุษย์นั่งทำ |
 | 4 | บัญชี Apple Developer ($99/ปี · ต้องมี D-U-N-S ถ้าใช้ชื่อบริษัท) + Google Play ($25) | ใช้ตัวตน/บัตรของเจ้าของ |
-| 5 | ทดสอบแอปบนเครื่องจริง (iOS ต้องใช้ Mac) | ไม่มีเครื่อง |
+| 5 | **ติดตั้ง APK ลงมือถือแล้วลองใช้จริง** (ไฟล์พร้อมแล้ว ดูข้อ 1) | ไม่มีเครื่อง Android จริง |
+| 6 | **สร้าง keystore + build release** เพื่อขึ้น Play Store | keystore เป็นความลับของเจ้าของ หายแล้วอัปเดตแอปเดิมไม่ได้ตลอดกาล |
+| 7 | build iOS เป็นไฟล์ติดตั้ง | ต้องใช้ macOS + Xcode ซึ่งไม่มีในเครื่องนี้ |
 
 ---
 
 ## 7. สิ่งที่เอกสารนี้ยังไม่ได้ยืนยัน (พูดตรง ๆ ตามกติกาข้อ 5)
 
-- **แอปยังไม่เคยถูก build เป็นไฟล์ติดตั้งจริง** — โปรเจกต์เนทีฟสร้างครบและ `cap sync` ผ่าน
-  แต่การ compile ต้องใช้ Android Studio / Xcode ซึ่งไม่มีในเครื่องนี้
+- **APK ยังไม่เคยถูกเปิดบนมือถือจริง** — build สำเร็จและตรวจเนื้อในไฟล์แล้ว (package · สิทธิ์ · ชื่อแอป)
+  แต่ไม่มีเครื่อง Android ในสภาพแวดล้อมนี้ให้ลองเปิด **จึงยังไม่ยืนยันว่าเปิดแล้วเห็นหน้าเว็บจริง**
+- **ฝั่ง iOS ยังไม่เคย build** — โปรเจกต์สร้างครบและ `cap sync` ผ่าน แต่ compile ต้องใช้ macOS + Xcode
 - **กฎ In-App Purchase ฉบับล่าสุด** — ข้อ 3 เขียนจากหลักการที่ใช้กันทั่วไป ต้องเปิดกฎจริงก่อนส่ง
 - **`public/sw.js` แคชอะไรบ้าง** — รู้ว่ามีไฟล์และมีโค้ดลงทะเบียน แต่ยังไม่ได้ไล่อ่านเนื้อใน
   เกี่ยวโดยตรงกับความเสี่ยงข้อ 5.2
