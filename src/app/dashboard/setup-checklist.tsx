@@ -1,5 +1,5 @@
 // ============================================================
-//  Setup checklist — พาธุรกิจใหม่เดินครบ 5 ก้าวจนระบบบัญชีทำงานเต็มตัว
+//  Setup checklist — พาธุรกิจใหม่เดินครบทุกก้าวจนระบบบัญชีทำงานเต็มตัว
 //  แสดงเฉพาะตอนยังทำไม่ครบ ครบแล้วหายไปเอง
 // ============================================================
 import Link from "next/link";
@@ -11,12 +11,15 @@ import { cn } from "@/lib/utils";
 export default async function SetupChecklist({ shop }: { shop: Shop }) {
   // ผู้เรียก (dashboard layout) ยืนยันสมาชิกผ่าน getCurrentShop แล้ว
   const svc = createServiceClient();
-  const [taxInfo, payment, contacts, docs, aiUse] = await Promise.all([
+  const [taxInfo, payment, contacts, docs, aiUse, push, line] = await Promise.all([
     svc.from("shops").select("billing_name,tax_id").eq("id", shop.id).maybeSingle(),
     svc.from("shop_payment_settings").select("promptpay_id").eq("shop_id", shop.id).maybeSingle(),
     svc.from("contacts").select("id", { count: "exact", head: true }).eq("shop_id", shop.id),
     svc.from("fin_docs").select("id", { count: "exact", head: true }).eq("shop_id", shop.id),
     svc.from("ai_usage_logs").select("id", { count: "exact", head: true }).eq("shop_id", shop.id).in("purpose", ["assistant", "ocr"]),
+    // ช่องทางแจ้งเตือน — ต้องเช็คทั้งสองทาง ทางใดทางหนึ่งก็ถือว่าถึงตัวเขาได้แล้ว
+    svc.from("push_subscriptions").select("id", { count: "exact", head: true }).eq("shop_id", shop.id),
+    svc.from("shop_notify_settings").select("line_to_id").eq("shop_id", shop.id).maybeSingle(),
   ]);
 
   const steps = [
@@ -50,6 +53,18 @@ export default async function SetupChecklist({ shop }: { shop: Shop }) {
       href: "/dashboard/assistant",
       done: (aiUse.count ?? 0) > 0,
     },
+    {
+      // ⚠️ เพิ่ม 12 ส.ค. 2569 หลังวัดจากฐานข้อมูลจริง: **0 กิจการ** เชื่อมช่องทางแจ้งเตือนไว้เลย
+      // แปลว่าสรุปประจำสัปดาห์ (ที่เขียนมาแก้ปัญหา 22 ใน 24 กิจการเข้ามาวันเดียวแล้วหายไป)
+      // ส่งถึงใครไม่ได้เลยแม้ระบบจะพร้อม — สวิตช์มีอยู่แล้วแต่ซ่อนอยู่ในแท็บย่อยของหน้าตั้งค่า
+      // ใส่ไว้ในรายการนี้เพราะเป็นที่เดียวที่ผู้ใช้ใหม่มองเห็นแน่ ๆ และหายเองเมื่อเปิดแล้ว
+      // (ห้ามทำเป็นแบนเนอร์ถาวร — คำเตือนที่เห็นทุกหน้าคือคำเตือนที่ตาชา)
+      title: "เปิดแจ้งเตือนงานค้าง",
+      hint: "เตือนยอดค้างรับและกำหนดยื่นภาษีให้ ไม่ต้องเปิดเว็บมาดูเอง",
+      // พารามิเตอร์ชื่อ `s` ไม่ใช่ `tab` (ดู settings/page.tsx) — ใส่ผิดจะเงียบ ๆ ไปโผล่แท็บข้อมูลกิจการ
+      href: "/dashboard/settings?s=notify",
+      done: (push.count ?? 0) > 0 || !!line.data?.line_to_id,
+    },
   ];
 
   const doneCount = steps.filter((s) => s.done).length;
@@ -63,7 +78,7 @@ export default async function SetupChecklist({ shop }: { shop: Shop }) {
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
         <div className="min-w-0">
           <h2 className="text-sm font-bold text-emerald-900">เริ่มต้นให้ระบบบัญชีทำงานเต็มตัว</h2>
-          <p className="mt-0.5 text-xs text-emerald-700">ทำครบ 5 ข้อ — เอกสาร บัญชี ภาษี พร้อมใช้จริงทั้งระบบ</p>
+          <p className="mt-0.5 text-xs text-emerald-700">ทำครบ {steps.length} ข้อ — เอกสาร บัญชี ภาษี พร้อมใช้จริงทั้งระบบ</p>
         </div>
         <span className="flex shrink-0 items-center gap-2">
           <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white">{doneCount}/{steps.length}</span>
