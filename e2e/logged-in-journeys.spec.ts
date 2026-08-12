@@ -88,3 +88,20 @@ test.describe("มือถือหลังล็อกอิน", () => {
     }
   });
 });
+
+test.describe("หน้าทดสอบกับผู้ใช้จริง (UAT)", () => {
+  test("เปิดได้ · เริ่มจับเวลาแล้วมีปุ่มบันทึกผลครบ 3 ทาง", async ({ page }) => {
+    await login(page);
+    await page.goto("/dashboard/uat");
+    await expect(page.getByRole("heading", { name: /ทดสอบกับผู้ใช้จริง/ })).toBeVisible();
+
+    const start = page.getByRole("button", { name: /เริ่มจับเวลา/ });
+    if ((await start.count()) === 0) test.skip(true, "บทบาทนี้จัดการทดสอบไม่ได้ (ต้องเป็น owner/admin)");
+
+    await start.click();
+    // สามทางเลือกต้องมีครบ — ถ้าขาด "ต้องช่วยบอก" ข้อมูลจะเพี้ยนเป็นผ่านหมด
+    await expect(page.getByRole("button", { name: /ทำได้เอง/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /ต้องช่วยบอก/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /ยอมแพ้/ })).toBeVisible();
+  });
+});
