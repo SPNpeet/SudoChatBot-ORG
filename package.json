@@ -27,7 +27,8 @@
     "check:accountant": "tsx scripts/check-accountant-file.mjs",
     "e2e": "playwright test",
     "e2e:public": "playwright test e2e/public-journeys.spec.ts",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "check:dupbuttons": "node scripts/find-duplicate-buttons.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

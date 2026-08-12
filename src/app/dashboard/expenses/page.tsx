@@ -53,8 +53,10 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         title="ค่าใช้จ่าย"
         lead={<>บิลที่เรายังไม่ได้จ่าย <b className="text-red-600">{baht(unpaidTotal)}</b></>}
         help="ทุกบาทที่จ่ายออกไปบันทึกที่นี่ — ถ่ายรูปบิลให้ AI อ่านให้ก็ได้ ไม่ต้องพิมพ์เอง · ระบบแยก VAT ภาษีซื้อ และหัก ณ ที่จ่ายให้อัตโนมัติ เอาไปใช้ลดภาษีตอนสิ้นเดือนได้เลย"
+        /* ซ่อนบนมือถือ — ปุ่ม + ลอยมี "ถ่ายรูปบิล" ที่พาไปหน้าเดียวกันนี้อยู่แล้ว
+           (เหตุผลเดียวกับหน้าเอกสารขาย ดูคอมเมนต์ที่นั่น) */
         action={canEdit && (
-          <Link href="/dashboard/expenses/new">
+          <Link href="/dashboard/expenses/new" className="hidden sm:inline-flex">
             <Button><Plus className="h-4 w-4" /> บันทึกค่าใช้จ่าย</Button>
           </Link>
         )}

@@ -48,8 +48,12 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
         title="เอกสารขาย"
         lead={<>ลูกค้ายังค้างเราอยู่ <b className="text-amber-600">{baht(outstandingTotal)}</b></>}
         help="ขายของ/บริการแล้วออกเอกสารที่นี่ — ได้เงินแล้วเลือก “ขายสด/ใบเสร็จ” · ให้เครดิตเลือก “ใบแจ้งหนี้” ระบบจะตามยอดค้างให้เอง · ยังไม่ตกลงราคาเลือก “ใบเสนอราคา” แล้วแปลงเป็นใบแจ้งหนี้ทีหลังได้ ไม่ต้องพิมพ์ใหม่"
+        /* ⚠️ ซ่อนบนมือถือโดยตั้งใจ (12 ส.ค. 2569 เจ้าของรายงาน "ปุ่มซ้ำกันเยอะเวลามองในมือถือ")
+           ปุ่ม + ลอยมุมขวาล่างมีทั้ง 3 อย่างนี้อยู่แล้วเป๊ะ ๆ (ดู quick-create.tsx)
+           บนจอมือถือจึงเห็นปุ่มชื่อเดียวกันสองชุดพร้อมกัน ต้องหยุดคิดว่าต่างกันยังไง
+           เก็บไว้บนเดสก์ท็อปเพราะที่นั่นมีที่ว่างพอ และเมาส์เอื้อมหัวหน้าง่ายกว่าปุ่มลอยมุมจอ */
         action={canEdit && (
-          <div className="flex flex-wrap gap-2">
+          <div className="hidden flex-wrap gap-2 sm:flex">
             <Link href="/dashboard/sales/new?type=quotation"><Button variant="outline" size="sm">ใบเสนอราคา</Button></Link>
             <Link href="/dashboard/sales/new?type=invoice"><Button variant="outline" size="sm">ใบแจ้งหนี้</Button></Link>
             <Link href="/dashboard/sales/new?type=receipt"><Button size="sm"><Plus className="h-4 w-4" /> ขายสด/ใบเสร็จ</Button></Link>
