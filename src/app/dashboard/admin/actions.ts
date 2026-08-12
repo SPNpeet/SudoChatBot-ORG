@@ -191,6 +191,42 @@ export async function closeSystemAlert(id: string): Promise<{ ok: true } | { ok:
  *
  * ใช้ตรรกะเดียวกับ cron ทุกบรรทัด (lib/backup-run.ts) จึงไม่มีทางสองเส้นเพี้ยนจากกัน
  */
+/**
+ * ส่งสรุปประจำสัปดาห์เดี๋ยวนี้ (แอดมินแพลตฟอร์มกดเอง)
+ *
+ * ⚠️ ทำไมต้องมีปุ่มนี้ (12 ส.ค. 2569) — เหตุผลเดียวกับปุ่มสำรองข้อมูล:
+ * `/api/cron/weekly-digest` เป็น fail-closed ด้วย `CRON_SECRET` ที่ยังไม่ได้ตั้งใน Vercel
+ * ผลคือฟีเจอร์นี้ **ยังไม่เคยส่งถึงใครเลยสักครั้ง** ทั้งที่มันถูกเขียนขึ้นมาแก้ปัญหาที่
+ * วัดได้จริง 5 ส.ค. 2569: 22 จาก 24 กิจการเข้ามาวันเดียวแล้วไม่กลับมาอีกเลย
+ *
+ * ใช้ตรรกะเดียวกับ cron ทุกบรรทัด (lib/weekly-digest-run.ts) จึงไม่มีทางสองเส้นเพี้ยนจากกัน
+ * และกุญแจกันส่งซ้ำผูกกับ "สัปดาห์" ไม่ใช่ "วันที่กด" — กดซ้ำวันไหนก็ไม่สแปมผู้ใช้
+ */
+export async function sendWeeklyDigestNow(): Promise<{ ok: boolean; message: string }> {
+  try {
+    await assertPlatformAdmin();
+    const { runWeeklyDigest } = await import("@/lib/weekly-digest-run");
+    const svc = createServiceClient();
+    // force: แอดมินกดเองแปลว่าตั้งใจส่งวันนี้ ไม่ต้องรอวันจันทร์
+    const r = await runWeeklyDigest(svc, { force: true });
+    await svc.from("audit_logs").insert({
+      actor_type: "user", action: "weekly_digest_manual", resource_type: "shops",
+      details: { week: r.week, sent: r.sent, targets: r.targets },
+    });
+    revalidatePath("/dashboard/admin");
+    if (r.targets === 0) {
+      return { ok: false, message: "ยังไม่มีกิจการที่เชื่อม LINE หรือเปิดแจ้งเตือนบนเบราว์เซอร์ — ไม่มีใครให้ส่งถึง" };
+    }
+    if (r.sent === 0) {
+      return { ok: true, message: `ไม่ได้ส่งถึงใคร (${r.skipped} รายถูกข้าม: ส่งไปแล้วสัปดาห์นี้ หรือไม่มีเรื่องต้องแจ้ง)` };
+    }
+    return { ok: true, message: `ส่งแล้ว ${r.sent} กิจการ (สัปดาห์ ${r.week}) · ข้าม ${r.skipped} ราย` };
+  } catch (e) {
+    const m = (e as Error).message;
+    return { ok: false, message: m.includes("forbidden") ? "เฉพาะผู้ดูแลแพลตฟอร์ม" : `ส่งไม่สำเร็จ: ${m.slice(0, 200)}` };
+  }
+}
+
 export async function backupNow(): Promise<{ ok: boolean; message: string }> {
   try {
     await assertPlatformAdmin();

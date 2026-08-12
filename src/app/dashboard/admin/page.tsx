@@ -9,6 +9,7 @@ import AiGuardCard, { type AiGuardStatus } from "./ai-guard-card";
 import LineOaCard from "./line-oa-card";
 import SystemAlertCard, { type AlertRow } from "./system-alert-card";
 import BackupCard from "./backup-card";
+import WeeklyDigestCard from "./weekly-digest-card";
 import { ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +67,8 @@ export default async function AdminPage() {
       {guard && <AiGuardCard status={guard as unknown as AiGuardStatus} />}
       {/* วางไว้บนสุดถัดจากเกราะ AI โดยตั้งใจ — "ไม่มีไฟล์สำรอง" คือความเสี่ยงที่แก้ไม่ได้ย้อนหลัง */}
       <BackupCard />
+      {/* ตามหลังการ์ดสำรองข้อมูลโดยตั้งใจ — ทั้งคู่คือของที่ตายเงียบเพราะ CRON_SECRET เดียวกัน */}
+      <WeeklyDigestCard />
       <SystemAlertCard active={(alerts ?? []) as AlertRow[]} />
       {/* ⚠️ ส่งสถานะ "มี/ไม่มี" รายช่อง ไม่ใช่ boolean ตัวเดียว
           เดิม configured = login_channel_id && oa_token เท่านั้น แต่การ์ดมี 4 ค่าความลับ
