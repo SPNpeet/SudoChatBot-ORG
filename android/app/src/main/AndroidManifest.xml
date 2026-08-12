@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+    </application>
+
+    <!-- Permissions
+         ⚠️ ขอเท่าที่ใช้จริงเท่านั้น — ทั้งสองสโตร์ตีตกแอปที่ขอสิทธิ์เกินความจำเป็น
+         และผู้ใช้ที่เห็นแอปบัญชีขอสิทธิ์แปลก ๆ จะไม่กล้าใส่ข้อมูลการเงิน -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ถ่ายรูปบิลให้ AI อ่านและลงบัญชีให้ — ฟีเจอร์ที่ใช้บ่อยที่สุดบนมือถือ -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- แจ้งเตือนกำหนดยื่นภาษี · บิลเกินกำหนด · เงินเข้า (Android 13 ขึ้นไปต้องขอ) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+</manifest>

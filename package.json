@@ -28,7 +28,10 @@
     "e2e": "playwright test",
     "e2e:public": "playwright test e2e/public-journeys.spec.ts",
     "e2e:ui": "playwright test --ui",
-    "check:dupbuttons": "node scripts/find-duplicate-buttons.mjs"
+    "check:dupbuttons": "node scripts/find-duplicate-buttons.mjs",
+    "app:sync": "cap sync",
+    "app:android": "cap open android",
+    "app:ios": "cap open ios"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
@@ -48,6 +51,17 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/camera": "^8.2.2",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/ios": "^8.5.0",
+    "@capacitor/push-notifications": "^8.1.2",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.3",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.1.10",
     "@types/node": "^22.15.0",
