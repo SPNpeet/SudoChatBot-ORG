@@ -263,7 +263,23 @@ npm run app:sync && npm run app:ios
   | สถาปัตยกรรมเครื่องที่รองรับ | arm64-v8a · armeabi-v7a · x86 · x86_64 (ครอบมือถือยุคนี้ทั้งหมด) ✅ |
 
   **ที่ยังพิสูจน์ไม่ได้เหลืออย่างเดียว: เปิดแล้วเห็นหน้าเว็บจริงไหม** ต้องมีคนติดตั้งลองเปิด
-- **ฝั่ง iOS ยังไม่เคย build** — โปรเจกต์สร้างครบและ `cap sync` ผ่าน แต่ compile ต้องใช้ macOS + Xcode
+- **ฝั่ง iOS ยังไม่เคย build** — compile ต้องใช้ macOS + Xcode ซึ่งไม่มีในเครื่องนี้
+
+  แต่**ตรวจโครงโปรเจกต์ครบแล้วเพื่อให้เปิดบน Mac แล้ว build ผ่านตั้งแต่ครั้งแรก**
+  (ดักปัญหาตอนนี้ ดีกว่าไปเจอตอนนั่งอยู่หน้าเครื่อง Mac):
+
+  | ตรวจอะไร | ผล |
+  |---|---|
+  | `Info.plist` เป็น plist ที่ถูกต้อง | อ่านผ่าน · 21 keys ✅ |
+  | ข้อความขอสิทธิ์ 3 ตัว | Camera · PhotoLibrary · PhotoLibraryAdd ครบ เป็นภาษาไทย ✅ |
+  | ชื่อ/หน้าเปิดแอป | `CFBundleDisplayName = SudoChatBot` · `UILaunchStoryboardName = LaunchScreen` ✅ |
+  | `capacitor.config.json` ที่ sync เข้า iOS | `server.url` ถูกต้อง ✅ |
+  | ปลั๊กอินผูกเข้า SPM | ครบทั้ง 7 ตัว (App · Browser · Camera · Filesystem · PushNotifications · Share · StatusBar) ✅ |
+  | หน้าสำรองตอนเน็ตหลุด | sync เข้า `ios/App/App/public/` แล้ว ✅ |
+
+  **เหลือแค่ขั้นตอนที่ต้องใช้เครื่อง Mac จริง:** เปิด `ios/App/App.xcodeproj` → เลือกทีมพัฒนา
+  (Signing & Capabilities) → กด Run · ถ้าจะส่ง Push ต้องเพิ่ม capability "Push Notifications"
+  และอัปโหลด APNs key ใน Apple Developer Console
 - **กฎ In-App Purchase ฉบับล่าสุด** — ข้อ 3 เขียนจากหลักการที่ใช้กันทั่วไป ต้องเปิดกฎจริงก่อนส่ง
 - **`public/sw.js` แคชอะไรบ้าง** — รู้ว่ามีไฟล์และมีโค้ดลงทะเบียน แต่ยังไม่ได้ไล่อ่านเนื้อใน
   เกี่ยวโดยตรงกับความเสี่ยงข้อ 5.2
