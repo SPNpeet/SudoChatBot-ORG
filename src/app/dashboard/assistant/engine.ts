@@ -1111,6 +1111,16 @@ export function buildSystemPrompt(ctx: AssistantCtx): string {
 // ---------- provider loops ----------
 interface LoopResult {
   text: string; inTok: number; outTok: number;
+  /**
+   * โทเคนที่ cache ติด — **นับรวมอยู่ใน `inTok` แล้ว** ไม่ใช่ยอดที่ต้องบวกเพิ่ม
+   *
+   * ⚠️ สามค่ายนิยามไม่เหมือนกัน ต้องแปลงให้ตรงกันตรงจุดที่อ่านค่า ไม่ใช่ตอนคิดเงิน:
+   *   · Gemini  : promptTokenCount **รวม** cachedContentTokenCount อยู่แล้ว -> ใช้ตรง ๆ
+   *   · OpenAI  : prompt_tokens **รวม** cached_tokens อยู่แล้ว              -> ใช้ตรง ๆ
+   *   · Anthropic: input_tokens **ไม่รวม** cache_read_input_tokens          -> ต้องบวกเข้า inTok เอง
+   * ถ้าไม่แปลงตรงนี้ ตัวเลขจะเพี้ยนคนละทางในแต่ละค่าย แล้วเพดานเงินต่อวันจะผิดตามไปด้วย
+   */
+  cachedTok: number;
   toolCalls: { name: string; label: string }[];
   artifacts: AssistantArtifact[]; choices: AssistantChoice[];
   /** คำถามจาก ask_user รอบล่าสุด — ใช้เป็นข้อความสำรองและเป็นสัญญาณให้หยุดลูป */
@@ -1119,7 +1129,7 @@ interface LoopResult {
 
 async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, system: string): Promise<LoopResult> {
   const messages: Record<string, unknown>[] = ctx.history.map((h) => ({ role: h.role, content: h.content }));
-  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [], choices: [] };
+  const r: LoopResult = { text: "", inTok: 0, outTok: 0, cachedTok: 0, toolCalls: [], artifacts: [], choices: [] };
   for (let i = 0; i < 10; i++) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -1128,7 +1138,10 @@ async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, sy
     });
     if (!res.ok) throw new Error(`anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
     const data = await res.json();
-    r.inTok += data.usage?.input_tokens ?? 0;
+    // Anthropic แยก cache read ออกจาก input_tokens — บวกกลับเข้าไปให้นิยาม inTok ตรงกับค่ายอื่น
+    const aCached = data.usage?.cache_read_input_tokens ?? 0;
+    r.inTok += (data.usage?.input_tokens ?? 0) + aCached;
+    r.cachedTok += aCached;
     r.outTok += data.usage?.output_tokens ?? 0;
     const toolUses = (data.content ?? []).filter((c: { type: string }) => c.type === "tool_use");
     const texts = (data.content ?? []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text);
@@ -1158,7 +1171,7 @@ async function runOpenAI(ctx: AssistantCtx, model: string, apiKey: string, syste
     ...ctx.history.map((h) => ({ role: h.role, content: h.content })),
   ];
   const tools = TOOLS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }));
-  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [], choices: [] };
+  const r: LoopResult = { text: "", inTok: 0, outTok: 0, cachedTok: 0, toolCalls: [], artifacts: [], choices: [] };
   const tokenParam = baseUrl ? { max_tokens: 4000 } : { max_completion_tokens: 4000 };
   for (let i = 0; i < 10; i++) {
     const res = await fetch(`${baseUrl ?? "https://api.openai.com/v1"}/chat/completions`, {
@@ -1169,6 +1182,7 @@ async function runOpenAI(ctx: AssistantCtx, model: string, apiKey: string, syste
     if (!res.ok) throw new Error(`openai ${res.status}: ${(await res.text()).slice(0, 300)}`);
     const data = await res.json();
     r.inTok += data.usage?.prompt_tokens ?? 0;
+    r.cachedTok += data.usage?.prompt_tokens_details?.cached_tokens ?? 0;
     r.outTok += data.usage?.completion_tokens ?? 0;
     const msg = data.choices?.[0]?.message;
     if (!msg) break;
@@ -1208,7 +1222,7 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
     parts: [{ text: h.content }],
   }));
   const tools = [{ functionDeclarations: TOOLS.map((t) => ({ name: t.name, description: t.description, parameters: t.input_schema })) }];
-  const r: LoopResult = { text: "", inTok: 0, outTok: 0, toolCalls: [], artifacts: [], choices: [] };
+  const r: LoopResult = { text: "", inTok: 0, outTok: 0, cachedTok: 0, toolCalls: [], artifacts: [], choices: [] };
   for (let i = 0; i < 10; i++) {
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -1235,6 +1249,7 @@ async function runGemini(ctx: AssistantCtx, model: string, apiKey: string, syste
     if (!res.ok) throw new Error(`gemini ${res.status}: ${(await res.text()).slice(0, 300)}`);
     const data = await res.json();
     r.inTok += data.usageMetadata?.promptTokenCount ?? 0;
+    r.cachedTok += data.usageMetadata?.cachedContentTokenCount ?? 0;
     r.outTok += data.usageMetadata?.candidatesTokenCount ?? 0;
     const parts = (data.candidates?.[0]?.content?.parts ?? []) as Record<string, unknown>[];
     const texts = parts.filter((p) => typeof p.text === "string").map((p) => p.text as string);
@@ -1329,7 +1344,7 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
     const r2 = await dispatch(nudged);
     r = {
       text: r2.text || r.text,
-      inTok: r.inTok + r2.inTok, outTok: r.outTok + r2.outTok,
+      inTok: r.inTok + r2.inTok, outTok: r.outTok + r2.outTok, cachedTok: r.cachedTok + r2.cachedTok,
       toolCalls: [...r.toolCalls, ...r2.toolCalls],
       artifacts: [...r.artifacts, ...r2.artifacts],
       choices: [...r.choices, ...r2.choices],
@@ -1358,6 +1373,7 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
       : await dispatch(ctx);
     r = {
       text: retry.text, inTok: r.inTok + retry.inTok, outTok: r.outTok + retry.outTok,
+      cachedTok: r.cachedTok + retry.cachedTok,
       toolCalls: retry.toolCalls, artifacts: retry.artifacts, choices: retry.choices, question: retry.question,
     };
   }
@@ -1400,8 +1416,10 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
 
   await ctx.svc.from("ai_usage_logs").insert({
     shop_id: ctx.shopId, purpose: "assistant", model: `${cfg.provider}/${cfg.model}`,
-    input_tokens: r.inTok, output_tokens: r.outTok,
-    cost_usd: estimateAiCost(cfg.model, r.inTok, r.outTok),
+    input_tokens: r.inTok, output_tokens: r.outTok, cached_tokens: r.cachedTok,
+    // ⚠️ ต้องส่ง "provider/model" ไม่ใช่ชื่อโมเดลล้วน — ส่วนลด cache แยกตามค่าย
+    // ส่งชื่อล้วนไปจะไม่รู้ว่าค่ายไหน แล้วตกไปคิดราคาเต็มเงียบ ๆ (เพดานดับเร็วกว่าที่ควร)
+    cost_usd: estimateAiCost(`${cfg.provider}/${cfg.model}`, r.inTok, r.outTok, r.cachedTok),
   });
 
   // ⚠️ เก็บบทสนทนาไว้ฝั่ง server (migration 094)

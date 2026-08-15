@@ -2,7 +2,7 @@
 // เกราะกันค่า AI รั่ว — เจ้าของแพลตฟอร์มเห็นค่าวันนี้ + ตั้งเพดาน + ปิดฉุกเฉิน
 import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Label } from "@/components/ui";
-import { ShieldAlert, Power, Gauge, TrendingUp } from "lucide-react";
+import { ShieldAlert, Power, Gauge, TrendingUp, Database } from "lucide-react";
 import { savePlatformAiGuard } from "./actions";
 
 interface TopShop { name: string; shop_id: string; cost_usd: number; calls: number }
@@ -12,6 +12,8 @@ export interface AiGuardStatus {
   cap_usd: number | null;
   kill_switch: boolean;
   top_shops_today: TopShop[];
+  /** cache ติดแค่ไหนใน 7 วัน — cached_tokens เป็นส่วนย่อยของ in_tokens */
+  cache_7d?: { in_tokens: number; cached_tokens: number };
 }
 
 // อัตราแลกโดยประมาณ แสดงเป็นบาทให้เห็นภาพ (USD ที่จ่ายค่าย AI จริง)
@@ -28,6 +30,12 @@ export default function AiGuardCard({ status }: { status: AiGuardStatus }) {
   const capNum = cap.trim() ? Number(cap) : null;
   const pct = capNum && capNum > 0 ? Math.min(100, (status.cost_usd_today / capNum) * 100) : 0;
   const over = capNum != null && status.cost_usd_today >= capNum;
+
+  // สัดส่วนโทเคนที่ cache ติดใน 7 วัน — ตัวเลขนี้คือคำตอบว่า "ที่ประหยัดได้เกิดขึ้นจริงไหม"
+  // ไม่ใช่การคาดการณ์ แต่เป็นค่าที่ผู้ให้บริการตอบกลับมาเองในทุกคำขอ
+  const cacheIn = status.cache_7d?.in_tokens ?? 0;
+  const cacheHit = status.cache_7d?.cached_tokens ?? 0;
+  const cachePct = cacheIn > 0 ? (cacheHit / cacheIn) * 100 : 0;
 
   function save(nextKill?: boolean) {
     const k = nextKill ?? kill;
@@ -62,6 +70,26 @@ export default function AiGuardCard({ status }: { status: AiGuardStatus }) {
             </div>
           )}
         </div>
+
+        {/* cache ติดแค่ไหน — ยิ่งสูงยิ่งจ่ายถูกลงโดยไม่ต้องเปลี่ยนอะไรเลย */}
+        {cacheIn > 0 && (
+          <div className="rounded-xl border border-neutral-200 p-4">
+            <p className="flex items-center gap-1.5 text-xs text-neutral-400">
+              <Database className="h-3.5 w-3.5" /> โทเคนที่ใช้ซ้ำได้ (cache) ใน 7 วัน
+            </p>
+            <p className="mt-1 text-2xl font-bold tracking-tight">
+              {cachePct.toFixed(0)}%
+              <span className="ml-2 text-sm font-normal text-neutral-400">
+                {cacheHit.toLocaleString()} จาก {cacheIn.toLocaleString()} โทเคน
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-neutral-500">
+              {cachePct >= 30
+                ? "cache ทำงานอยู่ — ส่วนที่ซ้ำถูกคิดราคาถูกลงแล้ว"
+                : "cache แทบไม่ติด — ปกติของระบบที่มีคนใช้ห่าง ๆ (cache ของผู้ให้บริการอยู่ได้ไม่กี่นาที) จะดีขึ้นเองเมื่อคนใช้ถี่ขึ้น"}
+            </p>
+          </div>
+        )}
 
         {/* ตั้งเพดาน */}
         <div>

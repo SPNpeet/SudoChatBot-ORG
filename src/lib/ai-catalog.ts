@@ -135,9 +135,39 @@ export function ocrCostUsd(engineLabel: string): number {
   return OCR_COST_BY_PROVIDER[provider] ?? OCR_EST_COST_USD;
 }
 
-export function estimateAiCost(model: string, inTok: number, outTok: number): number {
+/**
+ * สัดส่วนราคาของโทเคนที่ "cache ติด" เทียบกับราคาเต็ม แยกตามค่าย
+ *
+ * ⚠️ ตัวเลขชุดนี้เป็นของที่ผู้ให้บริการประกาศไว้และ **แก้ได้บ่อย**
+ * ถ้าจะแก้ให้แก้ที่นี่ที่เดียว และเลือกทางที่ "แพงกว่าความจริง" เสมอเมื่อไม่แน่ใจ
+ * เพราะเลขนี้ไปคุมเพดานเงินต่อวัน — ประมาณขาด = เพดานไม่ป้องกันอะไรเลย
+ *
+ * ค่ายที่ไม่รู้จัก -> 1 (คิดราคาเต็ม) = ปลอดภัยที่สุด ไม่ลดให้ใครฟรี ๆ
+ */
+const CACHED_TOKEN_RATE: Record<string, number> = {
+  google: 0.25,     // Gemini 2.5: cached prefix ลด 75%
+  anthropic: 0.1,   // cache read ลด 90%
+  openai: 0.5,      // cached input ลดครึ่ง
+};
+
+/**
+ * ประมาณต้นทุน USD — model รับได้ทั้ง "provider/model" หรือ "model" ล้วน
+ *
+ * `cachedTok` = ส่วนย่อย **ที่นับรวมอยู่ใน `inTok` แล้ว** ซึ่ง cache ติดจึงได้ราคาถูกลง
+ * (ไม่ใช่ยอดที่ต้องบวกเพิ่ม — ฝั่ง engine ปรับให้ทุกค่ายมีนิยามเดียวกันก่อนส่งเข้ามา)
+ * ไม่ส่งมา = 0 = คิดราคาเต็มเหมือนเดิมทุกประการ (ของเก่าไม่กระทบ)
+ */
+export function estimateAiCost(model: string, inTok: number, outTok: number, cachedTok = 0): number {
+  const provider = model.includes("/") ? model.split("/")[0] : "";
   const m = model.includes("/") ? model.split("/").pop()! : model;
   let price: [number, number] = [3, 15];
   for (const [p, v] of PRICE_TABLE) if (m.startsWith(p)) { price = v; break; }
-  return +(((inTok || 0) * price[0] + (outTok || 0) * price[1]) / 1_000_000).toFixed(6);
+
+  // กันค่าเพี้ยน: cache มากกว่า input ทั้งหมดไม่ได้ (ถ้าเจอแปลว่าฝั่งค่ายเปลี่ยนนิยาม -> คิดราคาเต็มไว้ก่อน)
+  const total = inTok || 0;
+  const cached = cachedTok > 0 && cachedTok <= total ? cachedTok : 0;
+  const rate = CACHED_TOKEN_RATE[provider] ?? 1;
+
+  const inCost = ((total - cached) * price[0] + cached * price[0] * rate) / 1_000_000;
+  return +(inCost + ((outTok || 0) * price[1]) / 1_000_000).toFixed(6);
 }
