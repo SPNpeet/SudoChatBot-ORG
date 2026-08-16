@@ -10,6 +10,7 @@ import LineOaCard from "./line-oa-card";
 import SystemAlertCard, { type AlertRow } from "./system-alert-card";
 import BackupCard from "./backup-card";
 import WeeklyDigestCard from "./weekly-digest-card";
+import TaxKbCard from "./tax-kb-card";
 import { ShieldAlert } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,9 @@ export default async function AdminPage() {
       <BackupCard />
       {/* ตามหลังการ์ดสำรองข้อมูลโดยตั้งใจ — ทั้งคู่คือของที่ตายเงียบเพราะ CRON_SECRET เดียวกัน */}
       <WeeklyDigestCard />
+      {/* คลังความรู้ภาษี — วางถัดจากของที่ "ตายเงียบได้" เหมือนกัน:
+          คลังว่าง/ไม่มีเวกเตอร์ ผู้ช่วยยังตอบได้ปกติ แค่ตอบว่าไม่รู้ ซึ่งไม่มีใครสังเกต */}
+      <TaxKbCard />
       <SystemAlertCard active={(alerts ?? []) as AlertRow[]} />
       {/* ⚠️ ส่งสถานะ "มี/ไม่มี" รายช่อง ไม่ใช่ boolean ตัวเดียว
           เดิม configured = login_channel_id && oa_token เท่านั้น แต่การ์ดมี 4 ค่าความลับ
