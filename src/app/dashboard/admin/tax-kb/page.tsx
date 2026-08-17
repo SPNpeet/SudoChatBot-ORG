@@ -32,7 +32,7 @@ export default async function TaxKbPage() {
 
   const svc = createServiceClient();
   const { data } = await svc.from("tax_knowledge")
-    .select("id,topic,content,citation,source_url,effective_from,effective_to,tags,embedding")
+    .select("id,topic,content,citation,source_url,effective_from,effective_to,tags,keywords,embedding")
     .order("topic");
 
   const rows: TaxKbRow[] = (data ?? []).map((r) => ({
@@ -44,6 +44,7 @@ export default async function TaxKbPage() {
     effective_from: r.effective_from as string,
     effective_to: (r.effective_to as string | null) ?? null,
     tags: (r.tags as string[] | null) ?? [],
+    keywords: (r.keywords as string | null) ?? "",
     has_vector: r.embedding != null,
     effective_label: effectiveLabel(r.effective_from as string, (r.effective_to as string | null) ?? null),
   }));

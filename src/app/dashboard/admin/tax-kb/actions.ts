@@ -41,6 +41,7 @@ export interface TaxKbInput {
   effectiveFrom: string;
   effectiveTo?: string;
   tags?: string;
+  keywords?: string;
 }
 
 export async function saveTaxKnowledge(input: TaxKbInput): Promise<Result> {
@@ -62,6 +63,8 @@ export async function saveTaxKnowledge(input: TaxKbInput): Promise<Result> {
     effective_from: input.effectiveFrom,
     effective_to: input.effectiveTo || null,
     tags: (input.tags ?? "").split(",").map((t) => t.trim()).filter(Boolean),
+    // คำที่ผู้ใช้พิมพ์จริง — วัดแล้วว่าเป็นตัวชี้ขาดว่าค้นเจอหรือไม่เจอ (ดู migration 103)
+    keywords: (input.keywords ?? "").trim(),
     updated_at: new Date().toISOString(),
     // เนื้อหาเปลี่ยน = เวกเตอร์เดิมใช้ไม่ได้แล้ว ต้องล้างทิ้งให้สร้างใหม่
     // (ถ้าปล่อยไว้ ระบบจะค้นเจอด้วยเนื้อหาเก่าแต่แสดงเนื้อหาใหม่ = ผิดแบบที่จับได้ยากมาก)
@@ -92,12 +95,14 @@ export async function buildTaxEmbeddings(): Promise<Result> {
   const svc = createServiceClient();
 
   const { data: pending } = await svc.from("tax_knowledge")
-    .select("id,topic,content").is("embedding", null).limit(20);
+    .select("id,topic,content,keywords").is("embedding", null).limit(20);
   if (!pending?.length) return { ok: true, message: "ทุกแถวมีเวกเตอร์ครบแล้ว" };
 
   let done = 0;
   for (const r of pending) {
-    const vec = await embedText(svc, `${r.topic}\n${r.content}`);
+    // ⚠️ ต้องใส่ keywords ลงในข้อความที่เอาไปทำเวกเตอร์ด้วย
+    // ไม่งั้นเวกเตอร์จะรู้จักแต่ภาษากฎหมาย แล้วคำเรียกชาวบ้านที่อุตส่าห์ใส่ไว้จะสูญเปล่า
+    const vec = await embedText(svc, `${r.topic}\n${r.keywords ?? ""}\n${r.content}`);
     if (!vec) break;   // คีย์ใช้ไม่ได้ = หยุดทั้งชุด ไม่ต้องยิงซ้ำให้เสียเงินฟรี
     const { error } = await svc.from("tax_knowledge")
       .update({ embedding: JSON.stringify(vec) }).eq("id", r.id);

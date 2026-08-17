@@ -88,7 +88,7 @@ returns table (
   topic text, content text, citation text, source_url text,
   effective_from date, effective_to date, similarity float, matched_by text
 )
-language plpgsql stable security definer set search_path to 'public' as $function$
+language plpgsql stable security definer set search_path to 'public', 'extensions' as $function$
 declare
   v_date date := coalesce(p_on_date, (now() at time zone 'Asia/Bangkok')::date);
   v_min float := case when p_embedding is null then p_min_text else p_min_vector end;

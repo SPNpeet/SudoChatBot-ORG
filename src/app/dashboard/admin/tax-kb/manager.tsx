@@ -15,13 +15,13 @@ import { saveTaxKnowledge, deleteTaxKnowledge, buildTaxEmbeddings, type TaxKbInp
 export interface TaxKbRow {
   id: string; topic: string; content: string; citation: string;
   source_url: string | null; effective_from: string; effective_to: string | null;
-  tags: string[]; has_vector: boolean; effective_label: string;
+  tags: string[]; keywords: string; has_vector: boolean; effective_label: string;
 }
 
 const EMPTY: TaxKbInput = {
   topic: "", content: "", citation: "", sourceUrl: "",
   effectiveFrom: new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10),
-  effectiveTo: "", tags: "",
+  effectiveTo: "", tags: "", keywords: "",
 };
 
 export default function TaxKbManager({ rows, missingVectors }: { rows: TaxKbRow[]; missingVectors: number }) {
@@ -124,6 +124,14 @@ export default function TaxKbManager({ rows, missingVectors }: { rows: TaxKbRow[
               </div>
             </div>
             <div>
+              <Label>คำที่ผู้ใช้พิมพ์จริง (คั่นด้วยเว้นวรรค) — สำคัญมาก</Label>
+              <Textarea className="min-h-20" value={form.keywords ?? ""} onChange={(e) => set("keywords", e.target.value)}
+                placeholder="เช่น โกดัง คลังสินค้า ออฟฟิศ ฟรีแลนซ์ กี่เปอร์เซ็นต์ ต้องหักไหม" />
+              <p className="mt-1 text-xs text-neutral-500">
+                เนื้อหาเขียนด้วยภาษากฎหมาย แต่ผู้ใช้พิมพ์ด้วยภาษาคน — วัดแล้วช่องนี้เปลี่ยนผลค้นจากถูก 1 ใน 6 เป็น 6 ใน 6
+              </p>
+            </div>
+            <div>
               <Label>ป้ายกำกับ (คั่นด้วยจุลภาค)</Label>
               <Input value={form.tags ?? ""} onChange={(e) => set("tags", e.target.value)} placeholder="vat, ใบกำกับภาษี" />
             </div>
@@ -165,6 +173,11 @@ export default function TaxKbManager({ rows, missingVectors }: { rows: TaxKbRow[
                   </>
                 )}
               </p>
+              {r.keywords ? (
+                <p className="text-xs text-neutral-400">คำค้น: {r.keywords}</p>
+              ) : (
+                <p className="text-xs font-medium text-amber-700">ยังไม่มีคำค้น — ผู้ใช้ที่พิมพ์ด้วยคำของตัวเองจะหาเรื่องนี้ไม่เจอ</p>
+              )}
               {r.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {r.tags.map((t) => (
@@ -178,7 +191,7 @@ export default function TaxKbManager({ rows, missingVectors }: { rows: TaxKbRow[
                   setForm({
                     id: r.id, topic: r.topic, content: r.content, citation: r.citation,
                     sourceUrl: r.source_url ?? "", effectiveFrom: r.effective_from,
-                    effectiveTo: r.effective_to ?? "", tags: r.tags.join(", "),
+                    effectiveTo: r.effective_to ?? "", tags: r.tags.join(", "), keywords: r.keywords,
                   });
                 }}>
                   <Pencil className="h-4 w-4" /> แก้ไข
