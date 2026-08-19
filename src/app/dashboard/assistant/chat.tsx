@@ -127,6 +127,40 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState("");                    // ข้อความความคืบหน้าตอนอ่านบิล
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);  // แนบค้างไว้หลายใบ พิมพ์สั่งกำกับก่อนส่ง
+  const [dragOver, setDragOver] = useState(false);               // ลากไฟล์มาวางเหนือกล่องพิมพ์
+
+  /**
+   * ทางเข้าไฟล์ทางเดียวสำหรับทั้งสามวิธี: กดคลิปหนีบ · วางจากคลิปบอร์ด (Ctrl+V) · ลากมาวาง
+   *
+   * ⚠️ ทำไมต้องรวมเป็นตัวเดียว: เดิมตรรกะอยู่ใน onChange ของ input file บรรทัดเดียว
+   * ถ้าก๊อปมาแปะอีกสองที่ วันหนึ่งจะแก้เพดานจำนวนไฟล์ตกไปทางใดทางหนึ่งแล้วไม่มีใครรู้
+   *
+   * ⚠️ รูปที่วางจากคลิปบอร์ดไม่มีชื่อไฟล์ (Windows/macOS ให้มาเป็น "image.png" หรือว่างเลย)
+   * ต้องตั้งชื่อให้เอง ไม่งั้นชื่อบนการ์ดไฟล์ว่างเปล่าและผู้ใช้แยกไม่ออกว่าวางไปกี่รูป
+   */
+  const OK_TYPES = ["image/png", "image/jpeg", "image/webp", "application/pdf"];
+  function addFiles(incoming: File[], source: "pick" | "paste" | "drop") {
+    const good: File[] = [];
+    let rejected = 0;
+    for (const f of incoming) {
+      if (!OK_TYPES.includes(f.type)) { rejected++; continue; }
+      // ตั้งชื่อให้รูปที่วางมาแบบไม่มีชื่อ เพื่อให้เห็นบนการ์ดไฟล์ว่าคือรูปที่วางเมื่อไหร่
+      if (source !== "pick" && (!f.name || f.name === "image.png" || f.name === "blob")) {
+        const ext = f.type === "application/pdf" ? "pdf" : f.type.split("/")[1] ?? "png";
+        const stamp = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        good.push(new File([f], `รูปที่วาง ${stamp}.${ext}`, { type: f.type }));
+        continue;
+      }
+      good.push(f);
+    }
+    if (good.length) {
+      setPendingFiles((prev) => [...prev, ...good].slice(0, MAX_FILES));
+      setError(null);
+    }
+    if (rejected > 0 && !good.length) {
+      setError("วางได้เฉพาะรูป (PNG/JPG/WebP) หรือไฟล์ PDF — ถ้าก๊อปมาจากหน้าจอ ให้แคปเป็นรูปก่อน");
+    }
+  }
   const [error, setError] = useState<string | null>(null);
   const [quotaWall, setQuotaWall] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -663,16 +697,36 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
             </div>
           </div>
         )}
-        <form className="flex gap-2" onSubmit={submitForm}>
+        <form
+          className={`flex gap-2 rounded-2xl transition-colors ${dragOver ? "ring-2 ring-emerald-500 ring-offset-2" : ""}`}
+          onSubmit={submitForm}
+          onDragOver={(e) => { e.preventDefault(); if (!dragOver) setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault(); setDragOver(false);
+            const fs = [...(e.dataTransfer?.files ?? [])];
+            if (fs.length) addFiles(fs, "drop");
+          }}
+        >
           <input ref={fileRef} type="file" multiple accept="image/png,image/jpeg,image/webp,application/pdf" className="hidden"
-            onChange={(e) => { const fs = [...(e.target.files ?? [])]; if (fs.length) { setPendingFiles((prev) => [...prev, ...fs].slice(0, MAX_FILES)); setError(null); } e.target.value = ""; }} />
+            onChange={(e) => { addFiles([...(e.target.files ?? [])], "pick"); e.target.value = ""; }} />
           <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || !!reading}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-neutral-300 text-neutral-500 hover:border-emerald-400 hover:text-emerald-600 disabled:opacity-40"
             title="แนบรูปบิล/เอกสาร เลือกได้หลายใบพร้อมกัน">
             <Paperclip className="h-4 w-4" />
           </button>
           <input value={input} onChange={(e) => setInput(e.target.value)}
-            placeholder={pendingFiles.length ? "สั่งกำกับบิล (ไม่พิมพ์ก็ได้) เช่น ค่าเช่า ยังไม่จ่าย" : "สั่งงานบัญชี เช่น ออกใบแจ้งหนี้ 5,000 ให้คุณสมชาย..."}
+            // ⚠️ ต้องอ่านจาก clipboardData.items ไม่ใช่ .files เท่านั้น
+            // รูปที่ "ก๊อปมาจากหน้าจอ/เว็บ" มาในรูป item ชนิด file ซึ่ง .files บางเบราว์เซอร์ให้ว่าง
+            // ถ้าอ่านผิดทาง ผู้ใช้จะกด Ctrl+V แล้วไม่เกิดอะไรขึ้นเลยโดยไม่มีข้อความบอก
+            onPaste={(e) => {
+              const items = [...(e.clipboardData?.items ?? [])];
+              const files = items.filter((it) => it.kind === "file").map((it) => it.getAsFile()).filter((f): f is File => !!f);
+              const fromList = [...(e.clipboardData?.files ?? [])];
+              const all = files.length ? files : fromList;
+              if (all.length) { e.preventDefault(); addFiles(all, "paste"); }
+            }}
+            placeholder={pendingFiles.length ? "สั่งกำกับบิล (ไม่พิมพ์ก็ได้) เช่น ค่าเช่า ยังไม่จ่าย" : "สั่งงานบัญชี หรือวางรูปบิลด้วย Ctrl+V ได้เลย"}
             className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
           <button disabled={busy || !!reading || (!input.trim() && !pendingFiles.length)}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
