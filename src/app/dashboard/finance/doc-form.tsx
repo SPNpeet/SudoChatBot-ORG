@@ -11,7 +11,7 @@ import { Plus, Trash2, ScanLine, Paperclip, TriangleAlert } from "lucide-react";
 import { Button, Card, CardContent, Input, Label, Select, Textarea } from "@/components/ui";
 import { baht, bahtDoc, cn } from "@/lib/utils";
 import { calcDocTotals, DOC_TYPE_TH, WHT_RATES } from "@/lib/finance";
-import DocPreview, { type PreviewSeller } from "./doc-preview";
+import DocPreview, { type PreviewSeller, type PreviewEdit } from "./doc-preview";
 import { WHT_INCOME_TYPES, WHT_PRESETS, DEFAULT_WHT_INCOME, WHT_MIN_PAYMENT, belowWhtThreshold, whtRateMismatch } from "@/lib/tax-th";
 import type { DocType, VatMode, ExpenseCategory, Contact, FinDoc } from "@/lib/types/finance";
 import { saveDoc, uploadFinFile, type SaveDocInput } from "./actions";
@@ -648,6 +648,32 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
           whtRate={Number(whtRate) || 0}
           notes={notes}
           onClose={() => setShowPreview(false)}
+          edit={{
+            // ⚠️ ทุกตัวชี้กลับมาที่ state ของฟอร์ม — พรีวิวไม่เก็บ state เอง
+            // ปิดป๊อปอัปแล้วสิ่งที่แก้ยังอยู่ในฟอร์มครบ และยอดคำนวณด้วย calcDocTotals ตัวเดียวกัน
+            setRow: (i, patch) => setRow(i, {
+              ...(patch.name !== undefined ? { name: patch.name } : {}),
+              ...(patch.qty !== undefined ? { qty: String(patch.qty) } : {}),
+              ...(patch.unitPrice !== undefined ? { unit_price: String(patch.unitPrice) } : {}),
+            }),
+            addRow: () => setRows((rs) => [...rs, { name: "", qty: "1", unit: "", unit_price: "", product_id: null }]),
+            removeRow: (i) => setRows((rs) => (rs.length > 1 ? rs.filter((_, j) => j !== i) : rs)),
+            setBuyerName: (v) => { setContactId(""); setContactName(v); },
+            setDiscount: (v) => setDiscount(v ? String(v) : ""),
+            setVatMode: (v) => setVatMode(v),
+            setWhtRate: (v) => setWhtRate(String(v)),
+            setIssueDate: (v) => setIssueDate(v),
+            setDueDate: (v) => setDueDate(v),
+            setNotes: (v) => setNotes(v),
+            // ออกเอกสารจากในป๊อปอัปได้เลย — เส้นทางเดียวกับปุ่มข้างนอกทุกประการ
+            // (ไม่ปิดป๊อปอัปเอง เพราะถ้า submit ตีกลับเพราะข้อมูลไม่ครบ ผู้ใช้ต้องเห็น error บนใบที่กำลังดูอยู่)
+            onIssue: () => submit("awaiting"),
+            issuing: pending,
+            issueLabel: `ออก${DOC_TYPE_TH[docType]}`,
+            // เลือกลูกค้าจากรายชื่อแล้ว = ชื่อมาจากผู้ติดต่อ แก้บนใบไม่ได้ ต้องไปแก้ที่ผู้ติดต่อ
+            // ไม่งั้นชื่อบนใบกับที่อยู่/เลขภาษีจะเป็นคนละคนโดยที่ไม่มีใครรู้
+            buyerLocked: !!contactId,
+          } satisfies PreviewEdit}
         />
       )}
     </div>

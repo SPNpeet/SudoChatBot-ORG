@@ -14,8 +14,18 @@
 //  คุณค่าที่มากกว่า "เห็นหน้าตา": ตรวจครบถ้วนตาม ม.86/4 ให้ตั้งแต่ยังไม่ออกใบ
 //  เพราะใบกำกับภาษีที่ออกแล้วแก้ไม่ได้ ต้องยกเลิก+ออกใหม่ หรือออกใบลดหนี้เท่านั้น
 //  จุดที่หายบ่อยสุดคือ "ที่อยู่/เลขผู้เสียภาษีผู้ซื้อ" ซึ่งฟอร์มเดิมไม่ได้บอกอะไรเลย
+//
+//  === แก้ได้สดบนใบ (19 ส.ค. 2569) ===
+//  เดิมพรีวิวเป็นหน้าต่างอ่านอย่างเดียว เห็นว่าผิดแล้วต้องปิด -> เลื่อนหาช่องในฟอร์ม -> แก้ -> เปิดดูใหม่
+//  วนแบบนี้ทุกครั้งที่แก้ตัวเลขหนึ่งตัว ซึ่งเป็นสิ่งที่คู่แข่งทำได้ดีกว่าเราชัดเจน
+//
+//  ⚠️ สถาปัตยกรรมที่ห้ามเปลี่ยน: ไฟล์นี้ **ไม่ถือ state และไม่คำนวณเอง**
+//  ทุกการแก้ยิงกลับไปที่ฟอร์มผ่าน `edit.*` แล้วฟอร์มคำนวณด้วย calcDocTotals ตัวเดิม
+//  แล้วส่ง props ชุดใหม่ลงมา -> ตัวเลขบนใบขยับตามทันที
+//  ถ้าวันหนึ่งมีคนย้ายการคำนวณเข้ามาไว้ในนี้ จะได้สองสูตรที่เพี้ยนจากกันเมื่อไหร่ก็ได้
+//  และสูตรที่ผิดจะไปโผล่บน "ใบที่ลูกค้าเห็น" ซึ่งแก้ย้อนหลังไม่ได้
 // ============================================================
-import { X, Printer, TriangleAlert, CheckCircle2 } from "lucide-react";
+import { X, TriangleAlert, CheckCircle2, Plus, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui";
 import { baht } from "@/lib/utils";
 import { DOC_TYPE_TH } from "@/lib/finance";
@@ -33,6 +43,29 @@ export interface PreviewTotals {
   subtotal: number; discount: number; exVat: number; vat: number; total: number; wht: number; cashDue: number;
 }
 
+/**
+ * ชุดคำสั่งแก้ที่ฟอร์มส่งลงมา — ไม่ส่ง = พรีวิวเป็นแบบอ่านอย่างเดียวเหมือนเดิมทุกประการ
+ * (หน้า /try ของคนที่ยังไม่สมัครยังใช้แบบอ่านอย่างเดียวอยู่ ห้ามบังคับให้ทุกที่แก้ได้)
+ */
+export interface PreviewEdit {
+  setRow: (i: number, patch: { name?: string; qty?: number; unitPrice?: number }) => void;
+  addRow: () => void;
+  removeRow: (i: number) => void;
+  setBuyerName: (v: string) => void;
+  setDiscount: (v: number) => void;
+  setVatMode: (v: VatMode) => void;
+  setWhtRate: (v: number) => void;
+  setIssueDate: (v: string) => void;
+  setDueDate: (v: string) => void;
+  setNotes: (v: string) => void;
+  /** ออกเอกสารจากในป๊อปอัปเลย ไม่ต้องปิดไปกดข้างนอก */
+  onIssue: () => void;
+  issuing: boolean;
+  issueLabel: string;
+  /** แก้ชื่อลูกค้าไม่ได้เมื่อเลือกจากรายชื่อ (ต้องไปแก้ที่ผู้ติดต่อ) */
+  buyerLocked: boolean;
+}
+
 /** วันที่แบบไทยบนเอกสาร (พ.ศ.) — ตรงกับหน้าพิมพ์จริง */
 function thaiDate(iso: string): string {
   if (!iso) return "-";
@@ -41,8 +74,14 @@ function thaiDate(iso: string): string {
   return d.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
 }
 
+/** ช่องกรอกที่ "อยู่บนใบ" — ไม่มีกรอบจนกว่าจะโฟกัส เพื่อให้ใบยังดูเหมือนเอกสารจริง */
+const CELL =
+  "w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 outline-none " +
+  "hover:border-neutral-200 hover:bg-neutral-50 " +
+  "focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15";
+
 export default function DocPreview({
-  docType, seller, buyer, rows, totals, issueDate, dueDate, vatMode, whtRate, notes, onClose,
+  docType, seller, buyer, rows, totals, issueDate, dueDate, vatMode, whtRate, notes, onClose, edit,
 }: {
   docType: DocType;
   seller: PreviewSeller;
@@ -55,6 +94,7 @@ export default function DocPreview({
   whtRate: number;
   notes: string;
   onClose: () => void;
+  edit?: PreviewEdit;
 }) {
   // ใบกำกับภาษีเกิดขึ้นเมื่อมี VAT เท่านั้น — ใบเสนอราคาไม่ใช่ใบกำกับภาษีไม่ว่ากรณีใด
   const isTaxInvoice = vatMode !== "none" && docType !== "quotation";
@@ -76,8 +116,12 @@ export default function DocPreview({
 
         <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3">
           <div>
-            <h2 className="font-semibold">ตัวอย่างก่อนออกเอกสาร</h2>
-            <p className="text-xs text-neutral-500">ยังไม่ได้บันทึก — ปิดหน้าต่างนี้แล้วแก้ต่อได้</p>
+            <h2 className="font-semibold">{edit ? "ตัวอย่างเอกสาร — แก้ได้บนใบเลย" : "ตัวอย่างก่อนออกเอกสาร"}</h2>
+            <p className="flex items-center gap-1 text-xs text-neutral-500">
+              {edit
+                ? <><Pencil className="h-3 w-3" /> คลิกที่ตัวเลขหรือข้อความบนใบเพื่อแก้ ยอดคำนวณใหม่ทันที · ยังไม่บันทึกจนกว่าจะกดออกเอกสาร</>
+                : "ยังไม่ได้บันทึก — ปิดหน้าต่างนี้แล้วแก้ต่อได้"}
+            </p>
           </div>
           <button onClick={onClose} aria-label="ปิด"
             className="-m-2 rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900">
@@ -129,14 +173,39 @@ export default function DocPreview({
               <div className="shrink-0 text-right">
                 <p className="text-lg font-bold">{title}</p>
                 <p className="mt-1 text-xs text-neutral-500">เลขที่ — ระบบออกให้ตอนบันทึก</p>
-                <p className="text-xs text-neutral-500">วันที่ {thaiDate(issueDate)}</p>
-                {dueDate && <p className="text-xs text-neutral-500">ครบกำหนด {thaiDate(dueDate)}</p>}
+                {edit ? (
+                  <div className="mt-1 space-y-1">
+                    <label className="flex items-center justify-end gap-1 text-xs text-neutral-500">
+                      วันที่
+                      <input type="date" value={issueDate} onChange={(e) => edit.setIssueDate(e.target.value)}
+                        aria-label="วันที่ออกเอกสาร" className={`${CELL} max-w-[9.5rem] text-right`} />
+                    </label>
+                    {docType !== "receipt" && (
+                      <label className="flex items-center justify-end gap-1 text-xs text-neutral-500">
+                        ครบกำหนด
+                        <input type="date" value={dueDate} onChange={(e) => edit.setDueDate(e.target.value)}
+                          aria-label="วันครบกำหนดชำระ" className={`${CELL} max-w-[9.5rem] text-right`} />
+                      </label>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs text-neutral-500">วันที่ {thaiDate(issueDate)}</p>
+                    {dueDate && <p className="text-xs text-neutral-500">ครบกำหนด {thaiDate(dueDate)}</p>}
+                  </>
+                )}
               </div>
             </div>
 
             <div className="border-b border-neutral-200 py-3 text-sm">
               <p className="text-xs text-neutral-400">{docType === "quotation" ? "เสนอราคาให้" : "ลูกค้า"}</p>
-              <p className="font-medium">{buyer.name || "(ยังไม่ได้เลือกลูกค้า)"}</p>
+              {edit && !edit.buyerLocked ? (
+                <input value={buyer.name} onChange={(e) => edit.setBuyerName(e.target.value)}
+                  placeholder="ชื่อลูกค้า" aria-label="ชื่อลูกค้า"
+                  className={`${CELL} font-medium`} />
+              ) : (
+                <p className="font-medium">{buyer.name || "(ยังไม่ได้เลือกลูกค้า)"}</p>
+              )}
               {buyer.address && <p className="whitespace-pre-wrap text-neutral-600">{buyer.address}</p>}
               {buyer.taxId && <p className="text-neutral-600">เลขประจำตัวผู้เสียภาษี {formatTaxId(buyer.taxId)}</p>}
             </div>
@@ -151,24 +220,78 @@ export default function DocPreview({
                 </tr>
               </thead>
               <tbody>
-                {rows.length === 0 ? (
+                {rows.length === 0 && !edit ? (
                   <tr><td colSpan={4} className="py-6 text-center text-neutral-400">ยังไม่ได้ใส่รายการ</td></tr>
                 ) : rows.map((r, i) => (
-                  <tr key={i} className="border-b border-neutral-100">
-                    <td className="py-2 pr-3">{r.name || <span className="text-neutral-400">(ยังไม่ได้ใส่ชื่อรายการ)</span>}</td>
-                    <td className="py-2 text-right tabular-nums">{r.qty.toLocaleString("th-TH")}{r.unit ? ` ${r.unit}` : ""}</td>
-                    <td className="py-2 text-right tabular-nums">{baht(r.unitPrice)}</td>
-                    <td className="py-2 text-right tabular-nums">{baht(r.qty * r.unitPrice)}</td>
+                  <tr key={i} className="group border-b border-neutral-100">
+                    <td className="py-1.5 pr-3">
+                      {edit ? (
+                        <input value={r.name} onChange={(e) => edit.setRow(i, { name: e.target.value })}
+                          placeholder="ชื่อรายการ" aria-label={`ชื่อรายการบรรทัดที่ ${i + 1}`} className={CELL} />
+                      ) : (r.name || <span className="text-neutral-400">(ยังไม่ได้ใส่ชื่อรายการ)</span>)}
+                    </td>
+                    <td className="py-1.5 text-right tabular-nums">
+                      {edit ? (
+                        <input type="number" inputMode="decimal" min="0" step="any" value={r.qty || ""}
+                          onChange={(e) => edit.setRow(i, { qty: Number(e.target.value) || 0 })}
+                          aria-label={`จำนวนบรรทัดที่ ${i + 1}`} className={`${CELL} text-right`} />
+                      ) : <>{r.qty.toLocaleString("th-TH")}{r.unit ? ` ${r.unit}` : ""}</>}
+                    </td>
+                    <td className="py-1.5 text-right tabular-nums">
+                      {edit ? (
+                        <input type="number" inputMode="decimal" min="0" step="any" value={r.unitPrice || ""}
+                          onChange={(e) => edit.setRow(i, { unitPrice: Number(e.target.value) || 0 })}
+                          aria-label={`ราคาต่อหน่วยบรรทัดที่ ${i + 1}`} className={`${CELL} text-right`} />
+                      ) : baht(r.unitPrice)}
+                    </td>
+                    <td className="py-1.5 text-right tabular-nums">
+                      <span className="inline-flex items-center gap-1">
+                        {baht(r.qty * r.unitPrice)}
+                        {edit && rows.length > 1 && (
+                          <button type="button" onClick={() => edit.removeRow(i)} aria-label={`ลบบรรทัดที่ ${i + 1}`}
+                            className="rounded p-1 text-neutral-300 hover:bg-red-50 hover:text-red-600 focus:opacity-100 group-hover:text-neutral-400">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
+            {edit && (
+              <button type="button" onClick={edit.addRow}
+                className="mt-2 inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-sm text-emerald-700 hover:bg-emerald-50">
+                <Plus className="h-4 w-4" /> เพิ่มรายการ
+              </button>
+            )}
+
             <div className="mt-4 flex justify-end">
               <div className="w-full max-w-xs space-y-1 text-sm">
                 <div className="flex justify-between"><span className="text-neutral-500">รวมเป็นเงิน</span><span className="tabular-nums">{baht(totals.subtotal)}</span></div>
-                {totals.discount > 0 && (
+                {edit ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-neutral-500">ส่วนลด</span>
+                    <input type="number" inputMode="decimal" min="0" step="any" value={totals.discount || ""}
+                      onChange={(e) => edit.setDiscount(Number(e.target.value) || 0)}
+                      placeholder="0" aria-label="ส่วนลด"
+                      className={`${CELL} max-w-[7rem] text-right tabular-nums`} />
+                  </div>
+                ) : totals.discount > 0 && (
                   <div className="flex justify-between"><span className="text-neutral-500">ส่วนลด</span><span className="tabular-nums">-{baht(totals.discount)}</span></div>
+                )}
+                {edit && (
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="text-neutral-500">ภาษีมูลค่าเพิ่ม</span>
+                    <select value={vatMode} onChange={(e) => edit.setVatMode(e.target.value as VatMode)}
+                      aria-label="รูปแบบภาษีมูลค่าเพิ่ม"
+                      className={`${CELL} max-w-[9rem] cursor-pointer text-right`}>
+                      <option value="none">ไม่คิด VAT</option>
+                      <option value="exclusive">VAT แยกนอก</option>
+                      <option value="inclusive">VAT รวมใน</option>
+                    </select>
+                  </div>
                 )}
                 {vatMode !== "none" && (
                   <>
@@ -179,6 +302,20 @@ export default function DocPreview({
                 <div className="flex justify-between border-t border-neutral-300 pt-1 text-base font-bold">
                   <span>ยอดรวมทั้งสิ้น</span><span className="tabular-nums">{baht(totals.total)}</span>
                 </div>
+                {edit && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-neutral-500">หัก ณ ที่จ่าย</span>
+                    <select value={String(whtRate)} onChange={(e) => edit.setWhtRate(Number(e.target.value) || 0)}
+                      aria-label="อัตราหักภาษี ณ ที่จ่าย"
+                      className={`${CELL} max-w-[9rem] cursor-pointer text-right`}>
+                      <option value="0">ไม่หัก</option>
+                      <option value="1">1% ค่าขนส่ง</option>
+                      <option value="2">2% ค่าโฆษณา</option>
+                      <option value="3">3% ค่าบริการ/จ้างทำของ</option>
+                      <option value="5">5% ค่าเช่า</option>
+                    </select>
+                  </div>
+                )}
                 {totals.wht > 0 && (
                   <>
                     <div className="flex justify-between text-neutral-500"><span>หัก ณ ที่จ่าย {whtRate}%</span><span className="tabular-nums">-{baht(totals.wht)}</span></div>
@@ -188,12 +325,19 @@ export default function DocPreview({
               </div>
             </div>
 
-            {notes && (
+            {edit ? (
+              <div className="mt-4 border-t border-neutral-200 pt-3 text-xs text-neutral-600">
+                <p className="text-neutral-400">หมายเหตุ</p>
+                <textarea value={notes} onChange={(e) => edit.setNotes(e.target.value)}
+                  rows={2} placeholder="เช่น เงื่อนไขการชำระเงิน หรือข้อความถึงลูกค้า" aria-label="หมายเหตุ"
+                  className={`${CELL} mt-0.5 resize-y`} />
+              </div>
+            ) : notes ? (
               <div className="mt-4 border-t border-neutral-200 pt-3 text-xs text-neutral-600">
                 <p className="text-neutral-400">หมายเหตุ</p>
                 <p className="whitespace-pre-wrap">{notes}</p>
               </div>
-            )}
+            ) : null}
 
             <p className="mt-6 text-center text-[11px] text-neutral-400">
               นี่คือตัวอย่างบนหน้าจอ — เอกสารจริงจะมีเลขที่ ลายเซ็น และ QR รับชำระเงิน หลังกดออกเอกสาร
@@ -201,10 +345,18 @@ export default function DocPreview({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 rounded-2xl bg-white px-4 py-3 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={onClose}>
-            <Printer className="mr-1.5 h-4 w-4" /> กลับไปแก้ไข
-          </Button>
+        <div className="sticky bottom-0 flex flex-col gap-2 rounded-2xl bg-white px-4 py-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-neutral-500">
+            {edit ? <>ยอดที่ลูกค้าต้องจ่าย <b className="text-neutral-900 tabular-nums">{baht(totals.wht > 0 ? totals.cashDue : totals.total)}</b></> : "ปิดหน้าต่างเพื่อกลับไปแก้ในฟอร์ม"}
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button variant="outline" onClick={onClose}>ปิด</Button>
+            {edit && (
+              <Button variant="brand" onClick={edit.onIssue} disabled={edit.issuing}>
+                {edit.issuing ? "กำลังบันทึก..." : edit.issueLabel}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
