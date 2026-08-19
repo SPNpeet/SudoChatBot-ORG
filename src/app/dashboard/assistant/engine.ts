@@ -277,18 +277,24 @@ export const TOOLS = [
   },
   {
     name: "update_shop_info",
-    description: "แก้ข้อมูลกิจการที่ขึ้นบนหัวเอกสาร: ชื่อจดทะเบียน ที่อยู่ เลขผู้เสียภาษี",
+    description: "แก้ข้อมูล **ของกิจการผู้ใช้เอง** ที่ขึ้นบนหัวเอกสารทุกใบ (ชื่อจดทะเบียน ที่อยู่ เลขผู้เสียภาษีของผู้ขาย) — ⚠️ ห้ามใช้กับข้อมูลลูกค้าเด็ดขาด ข้อมูลลูกค้าให้ใส่ในช่องลูกค้าของ create_sales_doc หรือ create_contact",
     input_schema: {
       type: "object",
-      properties: { billing_name: { type: "string" }, billing_address: { type: "string" }, tax_id: { type: "string" } },
+      properties: {
+        billing_name: { type: "string" }, billing_address: { type: "string" }, tax_id: { type: "string" },
+        confirmed: { type: "boolean", description: "ใส่ true เฉพาะหลังผู้ใช้ยืนยันผ่าน ask_user แล้วว่านี่คือข้อมูลกิจการของเขาเอง ห้ามใส่เองรอบแรกเด็ดขาด" },
+      },
     },
   },
   {
     name: "update_payment_settings",
-    description: "ตั้งค่ารับเงิน: พร้อมเพย์ (ขึ้น QR บนใบแจ้งหนี้) ชื่อบัญชี ธนาคาร",
+    description: "ตั้งค่าบัญชีรับเงิน **ของกิจการผู้ใช้เอง**: พร้อมเพย์ (ขึ้น QR บนใบแจ้งหนี้) ชื่อบัญชี ธนาคาร — ⚠️ ห้ามใช้กับข้อมูลลูกค้าเด็ดขาด",
     input_schema: {
       type: "object",
-      properties: { promptpay_id: { type: "string" }, account_name: { type: "string" }, bank_name: { type: "string" } },
+      properties: {
+        promptpay_id: { type: "string" }, account_name: { type: "string" }, bank_name: { type: "string" },
+        confirmed: { type: "boolean", description: "ใส่ true เฉพาะหลังผู้ใช้ยืนยันผ่าน ask_user แล้ว ห้ามใส่เองรอบแรกเด็ดขาด" },
+      },
     },
   },
   {
@@ -877,15 +883,42 @@ export async function executeTool(ctx: AssistantCtx, name: string, input: Record
       }
       // ================= ตั้งค่า =================
       case "update_shop_info": {
+        // ⚠️ ด่านยืนยันก่อนเปลี่ยน "ตัวตนของกิจการ" — เกิดเหตุจริง 18 ส.ค. 2569 14:19:15
+        //
+        // ลูกค้าจริงพิมพ์ว่า "สร้างใบเสร็จรับเงิน ลูกค้าคือ <ชื่อบริษัทลูกค้า> <ที่อยู่ลูกค้า>"
+        // (วางมาจากตาราง มีแท็บและเลขลำดับติดมาด้วย) โมเดลตีความว่าเป็นข้อมูล "ของเราเอง"
+        // แล้วเรียก update_shop_info + update_payment_settings + create_sales_doc ในวินาทีเดียวกัน
+        // ผลจริงตาม audit_logs: billing_name / billing_address / tax_id ของกิจการถูกทับด้วยข้อมูลลูกค้า
+        //
+        // ความเสียหาย: เอกสารทุกใบหลังจากนั้นขึ้นชื่อและเลขผู้เสียภาษีของ "คนอื่น" บนหัวใบ
+        // = ใบกำกับภาษีไม่ถูกต้องตาม ม.86/4 และผู้ใช้ไม่มีทางรู้จนกว่าจะมีคนทัก
+        //
+        // กติกาข้อ 3: ห้ามแก้ด้วยการเขียน prompt ขอให้โมเดลระวัง — ต้องกันที่โค้ด
+        // ด่านนี้ไม่เขียนอะไรจนกว่าจะได้ confirmed:true และ ask_user จะตัดลูปให้คนตอบก่อนเสมอ
+        const cur = (await s.from("shops").select("billing_name,billing_address,tax_id").eq("id", ctx.shopId).maybeSingle()).data ?? {};
         const patch: Record<string, unknown> = {};
         if (typeof input.billing_name === "string") patch.billing_name = input.billing_name.trim().slice(0, 200) || null;
         if (typeof input.billing_address === "string") patch.billing_address = input.billing_address.trim().slice(0, 500) || null;
         if (typeof input.tax_id === "string") patch.tax_id = input.tax_id.replace(/[^0-9]/g, "") || null;
         if (!Object.keys(patch).length) return JSON.stringify({ error: "ไม่มีช่องที่จะแก้" });
+
+        const LABEL: Record<string, string> = { billing_name: "ชื่อกิจการบนเอกสาร", billing_address: "ที่อยู่กิจการ", tax_id: "เลขผู้เสียภาษีของเรา" };
+        const diff = Object.entries(patch)
+          .filter(([k, v]) => String((cur as Record<string, unknown>)[k] ?? "") !== String(v ?? ""))
+          .map(([k, v]) => ({ ช่อง: LABEL[k] ?? k, เดิม: (cur as Record<string, unknown>)[k] ?? "(ว่าง)", ใหม่: v ?? "(ว่าง)" }));
+        if (!diff.length) return JSON.stringify({ ok: true, note: "ข้อมูลตรงกับที่มีอยู่แล้ว ไม่ได้เปลี่ยนอะไร" });
+
+        if (input.confirmed !== true) {
+          return JSON.stringify({
+            needs_confirmation: true,
+            changes: diff,
+            instruction: "นี่คือการเปลี่ยน **ข้อมูลของกิจการผู้ใช้เอง** (ชื่อ/ที่อยู่/เลขผู้เสียภาษีที่ขึ้นบนหัวเอกสารทุกใบ) ไม่ใช่ข้อมูลลูกค้า ห้ามเขียนเองเด็ดขาด — ให้ใช้ ask_user ทวนให้เห็นชัดว่าจะเปลี่ยนจากอะไรเป็นอะไร พร้อม 2 ตัวเลือก: 'ใช่ นี่คือข้อมูลกิจการของฉัน เปลี่ยนเลย' กับ 'ไม่ใช่ นี่เป็นข้อมูลลูกค้า' — ถ้าผู้ใช้กำลังจะออกเอกสารให้ลูกค้า ข้อมูลลูกค้าต้องใส่ในช่องลูกค้าของ create_sales_doc ไม่ใช่มาแก้ข้อมูลกิจการ",
+          });
+        }
         const { error } = await s.from("shops").update(patch).eq("id", ctx.shopId);
         if (error) return JSON.stringify({ error: error.message });
         await audit(ctx, "shop_info_updated", "shop", ctx.shopId, { changed: Object.keys(patch) });
-        return JSON.stringify({ ok: true, note: "อัปเดตข้อมูลกิจการแล้ว — ขึ้นบนหัวเอกสารใบต่อไปทันที" });
+        return JSON.stringify({ ok: true, changed: diff, note: "อัปเดตข้อมูลกิจการแล้ว — ขึ้นบนหัวเอกสารใบต่อไปทันที" });
       }
       case "update_payment_settings": {
         const patch: Record<string, unknown> = {};
@@ -906,10 +939,28 @@ export async function executeTool(ctx: AssistantCtx, name: string, input: Record
         if (typeof input.account_name === "string") patch.account_name = input.account_name.trim().slice(0, 100) || null;
         if (typeof input.bank_name === "string") patch.bank_name = input.bank_name.trim().slice(0, 60) || null;
         if (!Object.keys(patch).length) return JSON.stringify({ error: "ไม่มีช่องที่จะแก้" });
+
+        // ⚠️ ด่านเดียวกับ update_shop_info — นี่คือ "เงินเข้าบัญชีใคร"
+        // เหตุจริง 18 ส.ค. 2569: account_name/bank_name ถูกเปลี่ยนเป็นชื่อลูกค้าพร้อมกับข้อมูลกิจการ
+        // ถ้าเลขพร้อมเพย์โดนเปลี่ยนด้วย = ลูกค้าสแกนจ่ายแล้วเงินเข้าบัญชีคนอื่น
+        const curP = (await s.from("shop_payment_settings").select("promptpay_id,account_name,bank_name").eq("shop_id", ctx.shopId).maybeSingle()).data ?? {};
+        const LABEL_P: Record<string, string> = { promptpay_id: "เลขพร้อมเพย์ (เงินเข้าบัญชีนี้)", account_name: "ชื่อบัญชี", bank_name: "ธนาคาร" };
+        const diffP = Object.entries(patch)
+          .filter(([k, v]) => String((curP as Record<string, unknown>)[k] ?? "") !== String(v ?? ""))
+          .map(([k, v]) => ({ ช่อง: LABEL_P[k] ?? k, เดิม: (curP as Record<string, unknown>)[k] ?? "(ว่าง)", ใหม่: v ?? "(ว่าง)" }));
+        if (!diffP.length) return JSON.stringify({ ok: true, note: "ค่าตรงกับที่ตั้งไว้อยู่แล้ว ไม่ได้เปลี่ยนอะไร" });
+
+        if (input.confirmed !== true) {
+          return JSON.stringify({
+            needs_confirmation: true,
+            changes: diffP,
+            instruction: "นี่คือการเปลี่ยน **บัญชีรับเงินของกิจการผู้ใช้เอง** ไม่ใช่ข้อมูลลูกค้า ห้ามเขียนเองเด็ดขาด — ให้ใช้ ask_user ทวนให้เห็นว่าจะเปลี่ยนจากอะไรเป็นอะไร พร้อม 2 ตัวเลือก: 'ใช่ นี่บัญชีรับเงินของฉัน' กับ 'ไม่ใช่ อย่าเปลี่ยน'",
+          });
+        }
         const { error } = await s.from("shop_payment_settings").upsert({ shop_id: ctx.shopId, ...patch }, { onConflict: "shop_id" });
         if (error) return JSON.stringify({ error: error.message });
         await audit(ctx, "payment_settings_updated", "shop_payment_settings", ctx.shopId, { changed: Object.keys(patch) });
-        return JSON.stringify({ ok: true, note: "บันทึกแล้ว — QR ขึ้นบนใบแจ้งหนี้/ลิงก์ลูกค้าทันที" });
+        return JSON.stringify({ ok: true, changed: diffP, note: "บันทึกแล้ว — QR ขึ้นบนใบแจ้งหนี้/ลิงก์ลูกค้าทันที" });
       }
       case "get_billing_status": {
         const [{ data: wallet }, { data: shopPlan }, { data: txns }] = await Promise.all([
