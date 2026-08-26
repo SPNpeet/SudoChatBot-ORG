@@ -12,9 +12,10 @@
 // ============================================================
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
+import type { HomeCopy } from "@/lib/i18n";
 
 // ตัวอย่างคำสั่งจริงที่ระบบทำได้ — วนให้เห็นขอบเขตงานโดยไม่ต้องเขียนบรรยายยาว
-const SAMPLES = [
+const TH_SAMPLES = [
   "ออกใบแจ้งหนี้ค่าออกแบบเว็บ 25,000 ให้บริษัท สยามเทรด บวก VAT",
   "ถ่ายรูปบิลค่าไฟใบนี้ ลงบัญชีให้หน่อย",
   "เดือนนี้ต้องยื่นภาษีอะไรบ้าง",
@@ -24,7 +25,11 @@ const SAMPLES = [
 /** ส่งข้อความไปให้กล่องทดลองด้านล่างแล้วเลื่อนไปหา */
 export const HERO_ASK_EVENT = "sudo:hero-ask";
 
-export default function HeroCommand() {
+// ⚠️ ฉบับอังกฤษส่งมาทาง prop ไม่ใช่ให้ component อ่าน cookie เอง
+// เพราะ component นี้เป็น "use client" อ่าน cookies() ของ next/headers ไม่ได้
+// และถ้าอ่าน document.cookie ฝั่ง client จะเห็นภาษาไม่ตรงกับที่เซิร์ฟเวอร์ render มา = ข้อความกระพริบ
+export default function HeroCommand({ cmd }: { cmd?: HomeCopy["heroCmd"] }) {
+  const SAMPLES = cmd?.examples ?? TH_SAMPLES;
   const [text, setText] = useState("");
   const [ph, setPh] = useState("");
   const [focused, setFocused] = useState(false);
@@ -48,7 +53,7 @@ export default function HeroCommand() {
     };
     timer = setTimeout(tick, 700);
     return () => clearTimeout(timer);
-  }, [focused, text]);
+  }, [focused, text, SAMPLES]);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,17 +77,17 @@ export default function HeroCommand() {
         <input
           ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-          maxLength={150} aria-label="พิมพ์สั่งงานบัญชี"
-          placeholder={focused ? "พิมพ์สั่งได้เลย เช่น ออกใบแจ้งหนี้ 5,000 ให้คุณสมชาย" : ph || " "}
+          maxLength={150} aria-label={cmd?.label ?? "พิมพ์สั่งงานบัญชี"}
+          placeholder={focused ? (cmd?.placeholder ?? "พิมพ์สั่งได้เลย เช่น ออกใบแจ้งหนี้ 5,000 ให้คุณสมชาย") : ph || " "}
           className="min-w-0 flex-1 bg-transparent py-3 text-[15px] text-neutral-900 outline-none placeholder:text-neutral-400"
         />
         <button type="submit"
           className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#0B6B4A] px-4 py-3 text-sm font-semibold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.97] sm:px-5">
-          ลองสั่ง <ArrowRight className="h-4 w-4" />
+          {cmd?.send ?? "ลองสั่ง"} <ArrowRight className="h-4 w-4" />
         </button>
       </div>
       <p className="mt-2.5 text-[12px] text-neutral-500">
-        ลองฟรี 3 ครั้ง ไม่ต้องสมัคร ไม่ต้องใช้บัตร
+        {cmd?.note ?? "ลองฟรี 3 ครั้ง ไม่ต้องสมัคร ไม่ต้องใช้บัตร"}
       </p>
     </form>
   );

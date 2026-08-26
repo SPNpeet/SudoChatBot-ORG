@@ -180,7 +180,7 @@ export default async function Landing() {
             </p>
 
             {/* พระเอกของหน้า: ลองสั่งได้ตั้งแต่วินาทีแรก ไม่ต้องสมัคร */}
-            <HeroCommand />
+            <HeroCommand cmd={c?.heroCmd} />
 
             {/* ⚠️ 2 ปุ่ม ไม่ใช่ 3 — ของเดิมมีปุ่มระดับเดียวกันสามอันเรียงกัน
                 (เริ่มใช้ฟรี / ลองออกเอกสารก่อน / ดูราคา) ทางเลือกที่มากเกินทำให้ไม่เลือกอะไรเลย
@@ -210,7 +210,7 @@ export default async function Landing() {
               เดิมมีการ์ดแชทตัวอย่างแบบภาพนิ่งวางทับกล่องลองแชทจริง = โชว์เรื่องเดียวกันสองรอบ
               เมื่อให้ลองของจริงได้ฟรีอยู่แล้ว ภาพนิ่งไม่ได้เพิ่มความเชื่อ มีแต่เพิ่มความรก */}
           <div className="lg:pt-2">
-            <LandingSandboxChat />
+            <LandingSandboxChat copy={c?.guestChat} />
           </div>
         </div>
       </section>
@@ -219,10 +219,10 @@ export default async function Landing() {
       <section className="border-t border-neutral-100 bg-neutral-50/70 py-16">
         <div className="mx-auto max-w-6xl px-6">
           <h2 className="max-w-2xl text-[26px] font-bold leading-tight tracking-tight text-neutral-900">
-            สิ่งที่คุณพิมพ์ กับสิ่งที่ได้กลับมา
+            {c?.flowIntro.title ?? "สิ่งที่คุณพิมพ์ กับสิ่งที่ได้กลับมา"}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-500">
-            คอลัมน์กลางคืองานที่โปรแกรมบัญชีทั่วไปให้คุณทำเอง — ที่นี่ระบบทำให้ตั้งแต่ประโยคแรก
+            {c?.flowIntro.lead ?? "คอลัมน์กลางคืองานที่โปรแกรมบัญชีทั่วไปให้คุณทำเอง — ที่นี่ระบบทำให้ตั้งแต่ประโยคแรก"}
           </p>
 
           <div className="mt-8 grid gap-8 lg:grid-cols-[1.6fr_1fr] lg:items-start">
@@ -282,7 +282,7 @@ export default async function Landing() {
                 </div>
                 <p className="mt-4 flex items-start gap-2 border-t border-neutral-100 pt-3 text-xs leading-relaxed text-neutral-500">
                   <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: BRAND }} />
-                  ยกเลิกเอกสารได้แบบกลับรายการ ตรวจย้อนหลังได้ตลอด ไม่มีการแก้ตัวเลขทิ้งร่องรอย
+                  {c?.audienceNote ?? "ยกเลิกเอกสารได้แบบกลับรายการ ตรวจย้อนหลังได้ตลอด ไม่มีการแก้ตัวเลขทิ้งร่องรอย"}
                 </p>
               </div>
             </HeroTilt>
@@ -319,15 +319,19 @@ export default async function Landing() {
       <section id="pricing" className="scroll-mt-16 border-t border-neutral-100 bg-neutral-50/70 py-16">
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-center text-[26px] font-bold leading-tight tracking-tight text-neutral-900">
-            เริ่มที่เดือนละ <span style={{ color: BRAND }} className="tabular-nums">{cheapest ? cheapest.toLocaleString("th-TH") : "83"}</span> บาท
+            {/* ⚠️ อังกฤษสลับลำดับคำ (Starting at 83 THB per month) แปลทีละคำแล้วจะได้ประโยคที่คนอังกฤษไม่พูด */}
+            {c ? (
+              <>{c.pricing.from} <span style={{ color: BRAND }} className="tabular-nums">{cheapest ? cheapest.toLocaleString("en-US") : "83"}</span> {c.pricing.baht} {c.pricing.perMonth}</>
+            ) : (
+              <>เริ่มที่เดือนละ <span style={{ color: BRAND }} className="tabular-nums">{cheapest ? cheapest.toLocaleString("th-TH") : "83"}</span> บาท</>
+            )}
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-center text-sm leading-relaxed text-neutral-500">
-            ไม่มีค่าติดตั้ง ไม่มีค่าแรกเข้า ไม่มีสัญญาผูกมัด — และไม่คิดค่าหัวพนักงาน
-            จะเชิญทีมขาย แอดมิน หรือนักบัญชีเข้ามากี่คนก็ได้ทุกแพ็ก
+            {c?.pricing.note ?? "ไม่มีค่าติดตั้ง ไม่มีค่าแรกเข้า ไม่มีสัญญาผูกมัด — และไม่คิดค่าหัวพนักงาน จะเชิญทีมขาย แอดมิน หรือนักบัญชีเข้ามากี่คนก็ได้ทุกแพ็ก"}
           </p>
-          <PricingCards plans={plans} />
+          <PricingCards plans={plans} t={c?.pricing} pc={c?.plans} />
           <p className="mt-6 text-center text-xs leading-relaxed text-neutral-400">
-            คีย์เอกสารเองไม่จำกัดทุกแพ็ก แม้โควตา AI หมด · ที่จำกัดคืองาน AI (ผู้ช่วย + อ่านบิล) เท่านั้น · ราคายังไม่รวม VAT
+            {c?.pricing.footnote ?? "คีย์เอกสารเองไม่จำกัดทุกแพ็ก แม้โควตา AI หมด · ที่จำกัดคืองาน AI (ผู้ช่วย + อ่านบิล) เท่านั้น · ราคายังไม่รวม VAT"}
           </p>
         </div>
       </section>
@@ -360,17 +364,17 @@ export default async function Landing() {
           <FileText className="mx-auto h-8 w-8" style={{ color: BRAND }} />
           <h2 className="mt-4 text-[26px] font-bold leading-tight tracking-tight text-neutral-900">{c?.finalCta ?? "ออกเอกสารใบแรกได้ใน 3 นาที"}</h2>
           <p className="mt-2 text-sm leading-relaxed text-neutral-500">
-            สมัครฟรี ไม่ต้องใช้บัตร — สั่งผู้ช่วยเป็นภาษาคนได้ทันทีตั้งแต่ใบแรก
+            {c?.finalCtaLead ?? "สมัครฟรี ไม่ต้องใช้บัตร — สั่งผู้ช่วยเป็นภาษาคนได้ทันทีตั้งแต่ใบแรก"}
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/signup"
               className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: BRAND }}>
-              เริ่มใช้ฟรี <ArrowRight className="h-4 w-4" />
+              {c?.hero.ctaPrimary ?? "เริ่มใช้ฟรี"} <ArrowRight className="h-4 w-4" />
             </Link>
             <Link href="/try"
               className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-neutral-300 bg-white px-6 text-[15px] font-semibold text-neutral-800 transition-colors hover:border-neutral-400">
-              ลองออกเอกสารก่อน
+              {c?.hero.ctaSecondary ?? "ลองออกเอกสารก่อน"}
             </Link>
           </div>
         </div>
@@ -380,7 +384,7 @@ export default async function Landing() {
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur sm:hidden">
         <Link href="/signup" className="flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-white active:scale-[0.99]"
           style={{ backgroundColor: BRAND }}>
-          เริ่มใช้ฟรี ไม่ต้องใช้บัตร <ArrowRight className="h-4 w-4" />
+          {c?.stickyCta ?? "เริ่มใช้ฟรี ไม่ต้องใช้บัตร"} <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
@@ -393,7 +397,7 @@ export default async function Landing() {
           <div className="flex flex-wrap justify-center gap-x-4">
             <Link href="/features" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.features ?? "ฟีเจอร์ทั้งหมด"}</Link>
             <Link href="/guide" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.articles ?? "บทความบัญชี-ภาษี"}</Link>
-            <Link href="/pricing" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">ราคา</Link>
+            <Link href="/pricing" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.pricing ?? "ราคา"}</Link>
           </div>
           <div className="flex flex-wrap justify-center gap-x-4">
             <Link href="/privacy" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.privacy ?? "นโยบายความเป็นส่วนตัว"}</Link>
@@ -401,7 +405,7 @@ export default async function Landing() {
             <Link href="/data-deletion" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.deletion ?? "การลบข้อมูล"}</Link>
             <a href="mailto:support@sudochatbot.online" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.contact ?? "ติดต่อเรา"}</a>
           </div>
-          <p>© {new Date().getFullYear()} SudoChatBot — ระบบบัญชีออนไลน์ + ผู้ช่วยบัญชี AI สำหรับ SME ไทย</p>
+          <p>© {new Date().getFullYear()} {c?.tagline ?? "SudoChatBot — ระบบบัญชีออนไลน์ + ผู้ช่วยบัญชี AI สำหรับ SME ไทย"}</p>
         </div>
       </footer>
     </main>

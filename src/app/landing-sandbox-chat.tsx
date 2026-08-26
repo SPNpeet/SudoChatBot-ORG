@@ -8,13 +8,16 @@ import { useEffect, useRef, useState } from "react";
 import { HERO_ASK_EVENT } from "./hero-command";
 import Link from "next/link";
 import { Send, Calculator, Loader2, ArrowRight } from "lucide-react";
+import type { HomeCopy } from "@/lib/i18n";
 
 const MAX_LEN = 150;
-const STARTERS = ["ระบบนี้ทำอะไรได้บ้าง", "ช่วยเรื่องภาษียังไง", "เหมาะกับสำนักงานบัญชีไหม"];
+const TH_STARTERS = ["ระบบนี้ทำอะไรได้บ้าง", "ช่วยเรื่องภาษียังไง", "เหมาะกับสำนักงานบัญชีไหม"];
 
 interface Msg { role: "user" | "ai"; text: string }
 
-export default function LandingSandboxChat() {
+// ⚠️ ฉบับอังกฤษส่งมาทาง prop — เหตุผลเดียวกับ hero-command.tsx (client component อ่าน cookie ฝั่งเซิร์ฟเวอร์ไม่ได้)
+export default function LandingSandboxChat({ copy }: { copy?: HomeCopy["guestChat"] }) {
+  const STARTERS = copy?.chips ?? TH_STARTERS;
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -71,10 +74,12 @@ export default function LandingSandboxChat() {
         if (left !== null && left <= 0) setLocked(true);
       } else {
         if (j.quotaExceeded) setLocked(true);
-        setError(j.error ?? "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
+        // ⚠️ j.error มาจากเซิร์ฟเวอร์เป็นภาษาไทยเสมอ — ฉบับอังกฤษจึงต้องใช้ข้อความของตัวเอง
+        // ไม่งั้นคนที่อ่านไทยไม่ออกจะเจอข้อความไทยโผล่มาในหน้าอังกฤษ
+        setError(copy ? copy.error : (j.error ?? "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง"));
       }
     } catch {
-      setError("เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง");
+      setError(copy?.offline ?? "เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง");
     } finally {
       setBusy(false);
     }
@@ -88,8 +93,11 @@ export default function LandingSandboxChat() {
       <div className="mb-3 flex items-center gap-2 border-b border-neutral-200 pb-3">
         <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-emerald-600 text-white"><Calculator className="h-4 w-4" /></div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold">ลองคุยกับผู้ช่วยบัญชี AI ได้เลย</p>
-          <p className="text-xs text-neutral-400">ไม่ต้องสมัคร · ฟรี 3 ครั้ง{triesLeft != null && !locked ? ` · เหลือ ${triesLeft} ครั้ง` : ""}</p>
+          <p className="text-xs font-semibold">{copy?.title ?? "ลองคุยกับผู้ช่วยบัญชี AI ได้เลย"}</p>
+          <p className="text-xs text-neutral-400">
+            {copy?.sub ?? "ไม่ต้องสมัคร · ฟรี 3 ครั้ง"}
+            {triesLeft != null && !locked ? (copy ? ` · ${triesLeft} left` : ` · เหลือ ${triesLeft} ครั้ง`) : ""}
+          </p>
         </div>
       </div>
 
@@ -113,24 +121,24 @@ export default function LandingSandboxChat() {
             }>{m.text}</p>
           </div>
         ))}
-        {busy && <p className="text-xs text-neutral-400"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> กำลังตอบ...</p>}
+        {busy && <p className="text-xs text-neutral-400"><Loader2 className="mr-1 inline h-3 w-3 animate-spin" /> {copy ? "Thinking..." : "กำลังตอบ..."}</p>}
         <div ref={bottomRef} />
       </div>
 
       {locked ? (
         <Link href="/signup" className="mt-3 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">
-          สมัครใช้ฟรี เพื่อคุยต่อไม่จำกัด <ArrowRight className="h-4 w-4" />
+          {copy ? "Sign up free to keep chatting" : "สมัครใช้ฟรี เพื่อคุยต่อไม่จำกัด"} <ArrowRight className="h-4 w-4" />
         </Link>
       ) : (
         <form onSubmit={(e) => { e.preventDefault(); send(input); }} className="mt-3 flex gap-2">
           <div className="relative flex-1">
             <input value={input} maxLength={MAX_LEN} onChange={(e) => setInput(e.target.value)}
-              placeholder="พิมพ์คำถามสั้นๆ..." disabled={busy}
+              placeholder={copy?.placeholder ?? "พิมพ์คำถามสั้นๆ..."} disabled={busy}
               className="h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 pr-11 text-base outline-none focus:border-emerald-500 sm:text-sm" />
             <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-300">{input.length}/{MAX_LEN}</span>
           </div>
           {/* ปุ่มไอคอนล้วนต้องมีชื่อ ไม่งั้นโปรแกรมอ่านหน้าจอจะอ่านได้แค่คำว่า "ปุ่ม" */}
-          <button aria-label="ส่งคำถาม" disabled={busy || !input.trim()}
+          <button aria-label={copy?.send ?? "ส่งคำถาม"} disabled={busy || !input.trim()}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
             <Send className="h-4 w-4" />
           </button>

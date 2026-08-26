@@ -36,7 +36,7 @@ export async function getLang(): Promise<Lang> {
   }
 }
 
-interface HomeCopy {
+export interface HomeCopy {
   nav: { pricing: string; login: string };
   hero: {
     line1: string; line2: string; lead: string;
@@ -54,6 +54,28 @@ interface HomeCopy {
   outputs: { label: string; sub: string }[];
   audience: { title: string; lead: string; points: string[] }[];
   faqs: { q: string; a: string }[];
+  heroCmd: { label: string; placeholder: string; send: string; note: string; examples: string[] };
+  guestChat: { title: string; sub: string; chips: string[]; placeholder: string; send: string; error: string; offline: string };
+  flowIntro: { title: string; lead: string };
+  audienceNote: string;
+  finalCtaLead: string;
+  stickyCta: string;
+  tagline: string;
+  pricing: {
+    from: string; baht: string; monthly: string; yearly: string; save2: string; perMonth: string;
+    whenYearly: string; billedYearly: string; save: string; choose: string; popular: string; start: string;
+    note: string;
+    /** บรรทัดใต้การ์ดราคา — ต้องบอกให้ชัดว่าโควตาที่จำกัดคืองาน AI ไม่ใช่การคีย์เอกสาร */
+    footnote: string;
+    monthToMonth: string;
+    billedOnce: string;
+    freeNoCard: string;
+    startFree: string;
+    periodLabel: string;
+    planGroupLabel: string;
+  };
+  /** ชื่อ+ฟีเจอร์ของแพ็ก จับจาก code เพราะชื่อในฐานข้อมูลเป็นไทยและเปลี่ยนได้ */
+  plans: Record<string, { name: string; items: string[] }>;
 }
 
 const EN: HomeCopy = {
@@ -103,6 +125,55 @@ const EN: HomeCopy = {
       gets: ["ภ.พ.30 · ภ.ง.ด.3/53 · 50 ทวิ", "Upload files for the Revenue Department program"],
     },
   ],
+  heroCmd: {
+    label: "Type an accounting command",
+    placeholder: "Just type it, e.g. issue an invoice for 5,000 to Mr Somchai",
+    send: "Try it",
+    note: "3 free tries. No sign-up. No card.",
+    examples: [
+      "Photograph this electricity bill and book it for me",
+      "Issue an invoice for web design, 25,000 baht, to Siam Trade, add VAT",
+      "What do I have to file this month?",
+      "Who has owed us money for more than 30 days?",
+    ],
+  },
+  guestChat: {
+    title: "Try talking to the AI accounting assistant",
+    sub: "No sign-up · 3 free tries",
+    chips: ["What can this system do?", "How does it help with tax?", "Is it suitable for an accounting firm?"],
+    placeholder: "Ask a short question...",
+    send: "Send question",
+    error: "Something went wrong. Please try again.",
+    offline: "Could not connect. Please try again.",
+  },
+  flowIntro: {
+    title: "What you type, and what you get back",
+    lead: "The middle column is the work ordinary accounting software leaves to you — here the system does it from the first sentence.",
+  },
+  audienceNote: "Documents are cancelled by reversal, auditable forever. Numbers are never edited without a trace.",
+  finalCtaLead: "Sign up free, no card needed — you can command the assistant in plain language from the very first document.",
+  stickyCta: "Start free, no card needed",
+  tagline: "SudoChatBot — online accounting with an AI accounting assistant, for Thai SMEs",
+  pricing: {
+    from: "Starting at", baht: "THB", monthly: "Monthly", yearly: "Yearly", save2: "2 months free",
+    perMonth: "per month", whenYearly: "· when paid yearly", billedYearly: "billed once a year",
+    save: "Save", choose: "Choose this plan", popular: "Most popular", start: "Start with",
+    note: "No setup fee, no joining fee, no lock-in contract — and no per-user charge. Invite your whole sales and admin team at no extra cost.",
+    footnote: "Unlimited manual document entry on every plan, even when the AI quota runs out · only AI work (assistant + bill reading) is metered · prices exclude VAT.",
+    monthToMonth: "Pay month to month, cancel any time",
+    billedOnce: "Billed once a year",
+    freeNoCard: "Free, no card needed",
+    startFree: "Start free",
+    periodLabel: "Billing period",
+    planGroupLabel: "Choose a plan",
+  },
+  plans: {
+    free: { name: "Free trial", items: ["1 business", "Unlimited manual documents and bookkeeping", "15 AI commands/month", "10 automatic slip checks/month", "Unlimited staff"] },
+    starter: { name: "Starter", items: ["1 business", "Full documents, bookkeeping and tax, unlimited manual entry", "100 AI commands/month", "100 automatic slip checks/month", "Unlimited staff"] },
+    professional: { name: "Business", items: ["Up to 3 businesses (shared quota)", "Journal + 50 ทวิ + AI bill reading", "400 AI commands/month", "200 automatic slip checks/month", "Cheaper than the market leader, with an AI assistant they do not have"] },
+    executive: { name: "Accounting firm", items: ["Up to 10 businesses", "Revenue Department filing files ภ.พ.30 / ภ.ง.ด. (.txt)", "1,000 AI commands/month", "500 automatic slip checks/month", "Full-period Excel pack for your accountant"] },
+    agency: { name: "Large accounting firm", items: ["Unlimited businesses", "Everything in Accounting firm", "3,000 AI commands/month", "Unlimited automatic slip checks", "Audit log + strict client data isolation (RLS)"] },
+  },
   outputs: [
     { label: "ใบกำกับภาษี (tax invoice)", sub: "Complete under Section 86/4" },
     { label: "Journal", sub: "Debit–credit posted automatically" },

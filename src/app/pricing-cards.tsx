@@ -21,6 +21,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import type { HomeCopy } from "@/lib/i18n";
 
 export interface Plan {
   code: string; name: string; price: string;
@@ -29,10 +30,20 @@ export interface Plan {
 }
 
 const BRAND = "#0B6B4A";
-const num = (n: number) => n.toLocaleString("th-TH");
+const num = (n: number, en = false) => n.toLocaleString(en ? "en-US" : "th-TH");
 const toNum = (s: string) => Number(String(s).replace(/,/g, "")) || 0;
 
-export default function PricingCards({ plans }: { plans: Plan[] }) {
+// ⚠️ ฉบับอังกฤษส่งมาทาง prop สองก้อน:
+//   t  = คำทั่วไปบนการ์ด (บาท/ต่อเดือน/ยอดนิยม)
+//   pc = ชื่อแพ็กและรายการฟีเจอร์ ซึ่งอยู่ในฐานข้อมูลเป็นภาษาไทย
+// จับคู่ด้วย p.code ไม่ใช่ p.name เพราะชื่อไทยเปลี่ยนได้จากหน้าแอดมิน แล้วฉบับอังกฤษจะหลุดเงียบ ๆ
+export default function PricingCards({ plans, t, pc }: {
+  plans: Plan[];
+  t?: HomeCopy["pricing"];
+  pc?: HomeCopy["plans"];
+}) {
+  const nameOf = (p: Plan) => pc?.[p.code]?.name ?? p.name;
+  const itemsOf = (p: Plan) => pc?.[p.code]?.items ?? p.items;
   const paid = plans.filter((p) => !p.free);
   const free = plans.find((p) => p.free);
   const [period, setPeriod] = useState<"monthly" | "yearly">("yearly");
@@ -42,9 +53,9 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
     <>
       {/* ---- สวิตช์งวดชำระ — ค่าเริ่มต้นคือรายปี เพราะเป็นราคาที่ดีที่สุดของเรา ---- */}
       <div className="mt-8 flex justify-center">
-        <div role="radiogroup" aria-label="งวดชำระ"
+        <div role="radiogroup" aria-label={t?.periodLabel ?? "งวดชำระ"}
           className="inline-flex items-center gap-1 rounded-2xl border border-neutral-200 bg-white p-1">
-          {([["monthly", "รายเดือน"], ["yearly", "รายปี"]] as const).map(([v, label]) => {
+          {([["monthly", t?.monthly ?? "รายเดือน"], ["yearly", t?.yearly ?? "รายปี"]] as const).map(([v, label]) => {
             const on = period === v;
             return (
               <button key={v} type="button" role="radio" aria-checked={on} onClick={() => setPeriod(v)}
@@ -56,7 +67,7 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
                 {label}
                 {v === "yearly" && (
                   <span className={["rounded-full px-2 py-0.5 text-xs font-semibold", on ? "bg-white/20 text-white" : "bg-emerald-50 text-emerald-700"].join(" ")}>
-                    ประหยัด 2 เดือน
+                    {t?.save2 ?? "ประหยัด 2 เดือน"}
                   </span>
                 )}
               </button>
@@ -65,7 +76,7 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
         </div>
       </div>
 
-      <div role="radiogroup" aria-label="เลือกแพ็กเกจ" className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div role="radiogroup" aria-label={t?.planGroupLabel ?? "เลือกแพ็กเกจ"} className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {paid.map((p, i) => {
           const on = picked === p.code;
           const monthly = toNum(p.price);
@@ -80,7 +91,9 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
               key={p.code}
               role="radio"
               aria-checked={on}
-              aria-label={`แพ็กเกจ ${p.name} ${num(show)} บาทต่อเดือน${period === "yearly" ? " เมื่อชำระรายปี" : ""}`}
+              aria-label={t
+                ? `${nameOf(p)} plan, ${num(show, true)} ${t.baht} ${t.perMonth}${period === "yearly" ? ` ${t.whenYearly}` : ""}`
+                : `แพ็กเกจ ${p.name} ${num(show)} บาทต่อเดือน${period === "yearly" ? " เมื่อชำระรายปี" : ""}`}
               tabIndex={on || (!picked && i === 0) ? 0 : -1}
               onClick={() => setPicked(p.code)}
               onKeyDown={(e) => {
@@ -104,12 +117,12 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
               {p.hot && (
                 <span className="absolute -top-2.5 left-5 rounded-full px-2.5 py-0.5 text-xs font-semibold text-white"
                   style={{ backgroundColor: BRAND }}>
-                  ยอดนิยม
+                  {t?.popular ?? "ยอดนิยม"}
                 </span>
               )}
 
               <div className="flex items-start justify-between gap-2 pt-1">
-                <p className="text-base font-semibold text-neutral-900">{p.name}</p>
+                <p className="text-base font-semibold text-neutral-900">{nameOf(p)}</p>
                 <span aria-hidden className={[
                   "mt-1 grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border-2 transition-colors",
                   on ? "" : "border-neutral-300 bg-white",
@@ -122,10 +135,10 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
               {/* ---- บล็อกราคา ---- */}
               <div className="mt-4">
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-[40px] font-bold leading-none tracking-tight tabular-nums text-neutral-900">{num(show)}</span>
-                  <span className="text-sm font-medium text-neutral-500">บาท</span>
+                  <span className="text-[40px] font-bold leading-none tracking-tight tabular-nums text-neutral-900">{num(show, !!t)}</span>
+                  <span className="text-sm font-medium text-neutral-500">{t?.baht ?? "บาท"}</span>
                 </div>
-                <p className="mt-1.5 text-xs text-neutral-400">ต่อเดือน{period === "yearly" ? " · เมื่อชำระรายปี" : ""}</p>
+                <p className="mt-1.5 text-xs text-neutral-400">{t?.perMonth ?? "ต่อเดือน"}{period === "yearly" ? (t ? ` ${t.whenYearly}` : " · เมื่อชำระรายปี") : ""}</p>
               </div>
 
               {/* บรรทัดรอง: ยอดที่เรียกเก็บจริง + ส่วนที่ประหยัด (โชว์เฉพาะตอนรายปี) */}
@@ -133,17 +146,17 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
                 {period === "yearly" && yearTotal > 0 ? (
                   <div className="rounded-xl bg-emerald-50/70 px-3 py-2">
                     <p className="text-xs leading-relaxed text-neutral-600">
-                      เรียกเก็บปีละครั้ง <span className="font-semibold tabular-nums text-neutral-900">{num(yearTotal)}</span> บาท
-                      <span className="ml-1 font-semibold" style={{ color: BRAND }}>ประหยัด {num(save)} บาท</span>
+                      {t?.billedYearly ?? "เรียกเก็บปีละครั้ง"} <span className="font-semibold tabular-nums text-neutral-900">{num(yearTotal, !!t)}</span> {t?.baht ?? "บาท"}
+                      <span className="ml-1 font-semibold" style={{ color: BRAND }}>{t?.save ?? "ประหยัด"} {num(save, !!t)} {t?.baht ?? "บาท"}</span>
                     </p>
                   </div>
                 ) : (
-                  <p className="px-3 text-xs leading-relaxed text-neutral-400">จ่ายเดือนต่อเดือน ยกเลิกได้ทุกเมื่อ</p>
+                  <p className="px-3 text-xs leading-relaxed text-neutral-400">{t?.monthToMonth ?? "จ่ายเดือนต่อเดือน ยกเลิกได้ทุกเมื่อ"}</p>
                 )}
               </div>
 
               <ul className="mt-4 flex-1 space-y-2 border-t border-neutral-100 pt-4">
-                {p.items.map((it) => (
+                {itemsOf(p).map((it) => (
                   <li key={it} className="flex items-start gap-2 text-[13px] leading-relaxed text-neutral-600">
                     <Check className="mt-[3px] h-3.5 w-3.5 shrink-0" style={{ color: BRAND }} /> {it}
                   </li>
@@ -159,7 +172,7 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
                 ].join(" ")}
                 style={on ? { backgroundColor: BRAND } : undefined}
               >
-                {on ? `เริ่มใช้ ${p.name}` : "เลือกแพ็กนี้"}
+                {on ? `${t?.start ?? "เริ่มใช้"} ${nameOf(p)}` : (t?.choose ?? "เลือกแพ็กนี้")}
               </Link>
             </div>
           );
@@ -171,14 +184,14 @@ export default function PricingCards({ plans }: { plans: Plan[] }) {
         <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-dashed border-neutral-300 bg-white/60 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral-900">
-              {free.name}
-              <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-500">ฟรี ไม่ต้องใช้บัตร</span>
+              {nameOf(free)}
+              <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-500">{t?.freeNoCard ?? "ฟรี ไม่ต้องใช้บัตร"}</span>
             </p>
-            <p className="mt-1 text-[13px] leading-relaxed text-neutral-500">{free.items.join(" · ")}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-neutral-500">{itemsOf(free).join(" · ")}</p>
           </div>
           <Link href="/signup"
             className="inline-flex min-h-[44px] shrink-0 items-center justify-center rounded-xl border border-neutral-300 bg-white px-5 text-sm font-semibold text-neutral-800 hover:border-neutral-400">
-            เริ่มใช้ฟรี
+            {t?.startFree ?? "เริ่มใช้ฟรี"}
           </Link>
         </div>
       )}
