@@ -120,7 +120,7 @@ function writeThreads(shopId: string, list: Thread[]) {
 /** ตัดให้เหลือ 20 ล่าสุดเสมอ (ทั้งบนจอและที่เก็บไว้) */
 const keepLast = <T,>(list: T[]) => (list.length > MAX_KEEP ? list.slice(-MAX_KEEP) : list);
 
-export default function AssistantChat({ shopId }: { shopId: string }) {
+export default function AssistantChat({ shopId, initialMessage }: { shopId: string; initialMessage?: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [restored, setRestored] = useState(false);
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -286,6 +286,30 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
       return next;
     });
   }, [msgs, shopId, restored, threadId]);
+
+  // ---- ข้อความที่ถูกส่งมาจากช่องสั่งงานบนหน้าแรก (?q=) ----
+  //
+  // ⚠️ ต้องรอ restored ก่อน ห้ามยิงตอน mount
+  // เอฟเฟกต์กู้ประวัติเรียก setMsgs(ของเก่า) ทับสเตตทั้งก้อน
+  // ถ้ายิงคำถามไปก่อน ข้อความของผู้ใช้จะถูกประวัติเก่าทับหายไปต่อหน้าต่อตา
+  //
+  // ⚠️ ต้องยิงผ่าน ref ไม่ใช่ใส่ send ใน deps
+  // send ถูกสร้างใหม่ทุก render ถ้าใส่ใน deps เอฟเฟกต์จะวิ่งซ้ำและส่งคำถามเดิมรัว ๆ
+  // (กติกาข้อ 3: อยากให้หยุดต้องบังคับด้วยโค้ด — firedRef คือด่านนั้น)
+  const sendRef = useRef<(t: string) => void>(() => {});
+  sendRef.current = send;
+  const firedRef = useRef(false);
+  useEffect(() => {
+    const q = initialMessage?.trim();
+    if (!restored || firedRef.current || !q) return;
+    firedRef.current = true;
+    // ⚠️ ต้องล้าง ?q= ออกจาก URL ทันทีที่ยิงไปแล้ว ห้ามปล่อยค้าง
+    // ถ้าปล่อยไว้ แล้วผู้ใช้กดรีเฟรช (หรือกดย้อนกลับมาหน้านี้) คำสั่งเดิมจะถูกส่งซ้ำ
+    // ซึ่งกับคำสั่งอย่าง "ออกใบแจ้งหนี้ 15,000" = ออกเอกสารซ้ำใบที่สองโดยไม่มีใครสั่ง
+    // firedRef กันได้แค่ภายในคอมโพเนนต์ตัวเดิม รีเฟรชแล้วมันเริ่มใหม่หมด
+    router.replace("/dashboard/assistant", { scroll: false });
+    sendRef.current(q);
+  }, [restored, initialMessage, router]);
 
   // ข้อความใหม่เข้ามา — ตามให้เฉพาะตอนที่ผู้ใช้ยังจอดอยู่ล่างสุด
   // ถ้าเขากำลังอ่านของเก่าอยู่ ไม่แตะจอเขา แค่ขึ้นปุ่มบอกว่ามีของใหม่
@@ -463,7 +487,11 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    // ⚠️ สองคอลัมน์เฉพาะจอกว้าง (lg ขึ้นไป) — มือถือยังเป็นหน้าต่างทับจอเหมือนเดิม
+    // ใบเอกสารกว้างประมาณ 26rem ถ้าบีบลงจอ 375px พร้อมกับแชท จะเหลือช่องละ ~180px
+    // ซึ่งอ่านไม่ได้ทั้งคู่ — แผงค้างข้างขวาเป็นของดีเฉพาะตอนมีที่ให้ค้างจริง
+    <div className="flex h-full min-h-0">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
       {/* แถบห้องแชท — โผล่เมื่อเริ่มคุยแล้วเท่านั้น
           ผู้ใช้เปิดหน้ามาครั้งแรกเจอห้องว่างห้องเดียว การโชว์แถบตั้งแต่ยังไม่มีอะไร
           คือเพิ่มของรกโดยไม่ตอบคำถามอะไรของเขาเลย */}
@@ -761,21 +789,46 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
       </div>
 
       {/* ใบเอกสารจริงคาแชท — อ่านอย่างเดียว (แก้ตัวเลขบนใบที่ออกไปแล้วไม่ได้ตามกฎหมาย
-          ต้องยกเลิกแล้วออกใหม่ หรือออกใบลดหนี้ ซึ่งสั่งจากแชทได้อยู่แล้ว) */}
+          ต้องยกเลิกแล้วออกใหม่ หรือออกใบลดหนี้ ซึ่งสั่งจากแชทได้อยู่แล้ว)
+          จอแคบ = หน้าต่างทับจอ · จอกว้าง = แผงค้างข้างขวา (ดูด้านล่าง) */}
       {preview && (
-        <DocPreview
-          docType={preview.docType as DocType}
-          seller={preview.seller}
-          buyer={preview.buyer}
-          rows={preview.rows}
-          totals={preview.totals}
-          issueDate={preview.issueDate}
-          dueDate={preview.dueDate}
-          vatMode={preview.vatMode as VatMode}
-          whtRate={preview.whtRate}
-          notes={preview.notes}
-          onClose={() => setPreview(null)}
-        />
+        <div className="lg:hidden">
+          <DocPreview
+            docType={preview.docType as DocType}
+            seller={preview.seller}
+            buyer={preview.buyer}
+            rows={preview.rows}
+            totals={preview.totals}
+            issueDate={preview.issueDate}
+            dueDate={preview.dueDate}
+            vatMode={preview.vatMode as VatMode}
+            whtRate={preview.whtRate}
+            notes={preview.notes}
+            onClose={() => setPreview(null)}
+          />
+        </div>
+      )}
+      </div>
+
+      {/* แผงตัวอย่างเอกสารค้างข้างขวา — เห็นใบจริงพร้อมกับที่ยังคุยกับ AI ต่อได้
+          ไม่ต้องปิดหน้าต่างก่อนถึงจะพิมพ์สั่งแก้ได้ ซึ่งเป็นจังหวะที่คนเลิกกลางคันบ่อยที่สุด */}
+      {preview && (
+        <aside className="hidden w-[26rem] shrink-0 overflow-y-auto border-l border-neutral-200 bg-neutral-50 p-3 lg:block">
+          <DocPreview
+            docType={preview.docType as DocType}
+            seller={preview.seller}
+            buyer={preview.buyer}
+            rows={preview.rows}
+            totals={preview.totals}
+            issueDate={preview.issueDate}
+            dueDate={preview.dueDate}
+            vatMode={preview.vatMode as VatMode}
+            whtRate={preview.whtRate}
+            notes={preview.notes}
+            onClose={() => setPreview(null)}
+            variant="panel"
+          />
+        </aside>
       )}
     </div>
   );

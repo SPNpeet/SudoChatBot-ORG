@@ -18,8 +18,11 @@ const CAPABILITIES = [
   { icon: BarChart3, text: "สรุป: กำไร-ขาดทุน กระแสเงินสด — ตัวเลขจริงจากสมุดรายวัน" },
 ];
 
-export default async function AssistantPage() {
+export default async function AssistantPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { shop, role } = await getCurrentShop();
+  // คำสั่งที่พิมพ์มาจากช่องสั่งงานบนหน้าแรก — ตัดความยาวฝั่งเซิร์ฟเวอร์ด้วย
+  // ห้ามเชื่อความยาวที่ฝั่งหน้าเว็บตัดมา เพราะใครก็พิมพ์ ?q= ยาวเท่าไหร่ก็ได้ใน URL เอง
+  const initialMessage = String((await searchParams).q ?? "").trim().slice(0, 300) || undefined;
   const canManage = ["owner", "admin", "agent"].includes(role);
   // ชื่อที่ลูกค้าตั้งให้ผู้ช่วย — คำขอเจ้าของ 4 ส.ค. 2569: อยากให้ "น้อง" มีชื่อเหมือนเลขาจริง
   const assistantName = String((((shop as { settings?: Record<string, unknown> | null }).settings ?? {}) as Record<string, unknown>).assistant_name ?? "").trim() || null;
@@ -76,7 +79,7 @@ export default async function AssistantPage() {
 
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <CardContent className="min-h-0 flex-1 p-0">
-          <AssistantChat shopId={shop.id} />
+          <AssistantChat shopId={shop.id} initialMessage={initialMessage} />
         </CardContent>
       </Card>
     </FitViewport>

@@ -81,7 +81,7 @@ const CELL =
   "focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15";
 
 export default function DocPreview({
-  docType, seller, buyer, rows, totals, issueDate, dueDate, vatMode, whtRate, notes, onClose, edit,
+  docType, seller, buyer, rows, totals, issueDate, dueDate, vatMode, whtRate, notes, onClose, edit, variant = "modal",
 }: {
   docType: DocType;
   seller: PreviewSeller;
@@ -95,6 +95,15 @@ export default function DocPreview({
   notes: string;
   onClose: () => void;
   edit?: PreviewEdit;
+  /**
+   * "modal" = ทับทั้งจอ (ค่าเริ่มต้น ใช้ในหน้าฟอร์มออกเอกสาร)
+   * "panel" = ฝังในคอลัมน์ ไม่มีฉากดำ ไม่ดักคลิกนอกกรอบ (แผงค้างข้างขวาในหน้าแชท)
+   *
+   * ⚠️ ต้องเป็น prop ไม่ใช่ก๊อปคอมโพเนนต์ไปทำอีกตัว
+   * ตัวนี้มีทั้งด่านตรวจใบกำกับภาษีตาม ม.86/4 และสูตรยอดที่ต้องตรงกับฟอร์ม
+   * แยกร่างเมื่อไหร่ วันหนึ่งจะแก้กฎภาษีที่ร่างเดียวแล้วอีกร่างเงียบ ๆ ผิดต่อไป
+   */
+  variant?: "modal" | "panel";
 }) {
   // ใบกำกับภาษีเกิดขึ้นเมื่อมี VAT เท่านั้น — ใบเสนอราคาไม่ใช่ใบกำกับภาษีไม่ว่ากรณีใด
   const isTaxInvoice = vatMode !== "none" && docType !== "quotation";
@@ -109,10 +118,11 @@ export default function DocPreview({
 
   const title = isTaxInvoice ? `${DOC_TYPE_TH[docType]} / ใบกำกับภาษี` : DOC_TYPE_TH[docType];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-3 pb-10 pt-6 sm:items-start sm:px-4"
-      onClick={onClose} role="dialog" aria-modal="true" aria-label="ตัวอย่างเอกสาร">
-      <div className="w-full max-w-3xl space-y-3" onClick={(e) => e.stopPropagation()}>
+  const panel = variant === "panel";
+
+  const body = (
+    <div className={panel ? "space-y-3" : "w-full max-w-3xl space-y-3"}
+      onClick={panel ? undefined : (e) => e.stopPropagation()}>
 
         <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3">
           <div>
@@ -359,6 +369,14 @@ export default function DocPreview({
           </div>
         </div>
       </div>
+  );
+
+  if (panel) return body;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-3 pb-10 pt-6 sm:items-start sm:px-4"
+      onClick={onClose} role="dialog" aria-modal="true" aria-label="ตัวอย่างเอกสาร">
+      {body}
     </div>
   );
 }

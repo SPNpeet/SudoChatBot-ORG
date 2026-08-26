@@ -45,7 +45,7 @@ export function SidebarHead({ companies, currentId, shopId, notices }: {
           {collapsed
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src="/logo-mark.png" alt="SudoChatBot" width={28} height={28} className="h-7 w-7 rounded-lg object-cover" />
-            : <Logo />}
+            : <Logo subtitle="ผู้ช่วยบัญชี AI" />}
         </Link>
         <SystemInbox shopId={shopId} notices={notices} variant="icon" place="sidebar-top" />
       </div>

@@ -12,7 +12,9 @@ import CashflowChart from "./cashflow-chart";
 import SetupChecklist from "./setup-checklist";
 import SampleDataCard from "./sample-data-card";
 import TodayPanel, { type TodoDoc } from "./today-panel";
-import { TrendingUp, TrendingDown, Users, Receipt, ArrowUpRight, ArrowDownRight, LineChart, FileText } from "lucide-react";
+import CommandBar from "./command-bar";
+import DocTemplates from "./doc-templates";
+import { TrendingUp, TrendingDown, Users, Receipt, ArrowUpRight, ArrowDownRight, LineChart, FileText, Wallet } from "lucide-react";
 import Link from "next/link";
 import RowLink from "@/components/row-link";
 
@@ -36,6 +38,8 @@ function delta(now: number, prev: number) {
 
 export default async function Overview() {
   const { supabase, shop } = await getCurrentShop();
+  // ชื่อที่ลูกค้าตั้งให้ผู้ช่วย (ตั้งได้ที่หน้าผู้ช่วย) — ใช้ทักทายบนช่องสั่งงาน
+  const assistantName = String((((shop as { settings?: Record<string, unknown> | null }).settings ?? {}) as Record<string, unknown>).assistant_name ?? "").trim() || null;
   const bkkNow = new Date(Date.now() + 7 * 3600_000);
   const monthStart = bkkNow.toISOString().slice(0, 7) + "-01";
   const prevMonthStart = new Date(Date.UTC(bkkNow.getUTCFullYear(), bkkNow.getUTCMonth() - 1, 1)).toISOString().slice(0, 10);
@@ -45,7 +49,7 @@ export default async function Overview() {
   const [
     { data: pays }, { data: openDocs }, { data: recentDocs }, { data: overdue },
     { count: sampleCount }, { count: docCount }, { count: pendingApproval }, { count: unmatchedSlips },
-    { count: draftDocs },
+    { count: draftDocs }, { data: cashBalanceRaw },
   ] = await Promise.all([
     // กันรายการของเอกสารที่ยกเลิกแล้ว (กรองในโค้ดด้านล่าง) — ห้ามใช้ !inner เพราะจะตัดเงินที่ยังไม่ผูกเอกสารทิ้ง
     supabase.from("fin_payments").select("direction,amount,paid_at,fin_docs(status)")
@@ -59,6 +63,9 @@ export default async function Overview() {
     supabase.from("fin_docs").select("id", { count: "exact", head: true }).eq("shop_id", shop.id).eq("approval_status", "pending"),
     supabase.from("fin_payments").select("id", { count: "exact", head: true }).eq("shop_id", shop.id).is("doc_id", null),
     supabase.from("fin_docs").select("id", { count: "exact", head: true }).eq("shop_id", shop.id).eq("status", "draft"),
+    // ยอดเงินสด+เงินฝากตามสมุดบัญชี — รวมทุกแถวตั้งแต่แถวแรก จึงคิดฝั่งฐานข้อมูล
+    // ดูเหตุผลและข้อจำกัด (ไม่ใช่ยอดธนาคารจริง) ใน migration 105
+    supabase.rpc("shop_cash_balance", { p_shop_id: shop.id }),
   ]);
 
   // เอกสารที่ยกเลิกแล้ว = สมุดรายวันกลับรายการไปแล้ว ตัวเลขบนแดชบอร์ดต้องไม่นับต่อ
@@ -107,6 +114,7 @@ export default async function Overview() {
   };
 
   const netFlow = monthIn - monthOut;
+  const cashBalance = Number(cashBalanceRaw ?? 0);
 
   return (
     <div className="space-y-6">
@@ -140,6 +148,11 @@ export default async function Overview() {
         </p>
       </div>
 
+      {/* ⚠️ ต้องอยู่เหนือทุกอย่างที่เป็นตัวเลข
+          จุดขายของระบบคือสั่งงานด้วยการพิมพ์ ถ้าวางไว้ท้ายหน้าคนจะเลื่อนไม่ถึง
+          และกลับไปคีย์มือเหมือนโปรแกรมบัญชีทั่วไป = จ่ายค่า AI แล้วไม่ได้ใช้ */}
+      <CommandBar assistantName={assistantName} />
+
       <SampleDataCard shopId={shop.id} hasSample={(sampleCount ?? 0) > 0} isEmpty={(docCount ?? 0) === 0} />
 
       {(docCount ?? 0) > 0 && (
@@ -153,7 +166,15 @@ export default async function Overview() {
 
       <SetupChecklist shop={shop} />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {/* ⚠️ ป้ายต้องเขียนว่า "เงินสด + เงินฝาก" และกำกับว่า "ตามสมุดบัญชี" เสมอ
+            ห้ามเปลี่ยนเป็น "เงินคงเหลือในบัญชี" หรือคำที่ทำให้เข้าใจว่าเป็นยอดในธนาคารจริง
+            ระบบไม่ได้ต่อกับธนาคาร ตัวเลขนี้ยังไม่ผ่านการกระทบยอด — เหตุผลเต็มอยู่ใน migration 105 */}
+        <StatCard label="เงินสด + เงินฝาก" value={baht(cashBalance)} icon={<Wallet className="h-4 w-4" />}
+          tone={cashBalance < 0 ? "red" : "green"} href="/dashboard/journal"
+          hint={cashBalance < 0
+            ? "ติดลบ — แปลว่ามีรายจ่ายที่จ่ายออกมากกว่าเงินที่บันทึกรับเข้า"
+            : "ตามสมุดบัญชี · ยังไม่กระทบยอดธนาคาร"} />
         {/* ทุกใบกดได้ทั้งใบ ไม่ใช่กดได้แค่ตัวหนังสือเล็กๆ ข้างล่าง */}
         <StatCard label="เงินเข้าเดือนนี้" value={baht(monthIn)} icon={<TrendingUp className="h-4 w-4" />} tone="green"
           hint={trend(dIn, true)} href="/dashboard/money" />
@@ -191,6 +212,8 @@ export default async function Overview() {
         hasVat={!!shop.tax_id}
       />
 
+      <DocTemplates />
+
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
           <CardTitle>เอกสารล่าสุด</CardTitle>
@@ -206,6 +229,37 @@ export default async function Overview() {
               action={{ href: "/dashboard/assistant", label: "สั่งผู้ช่วย AI เป็นภาษาคน" }}
               secondary={{ href: "/dashboard/sales/new?type=invoice", label: "คีย์เอกสารเอง" }} />
           ) : (
+            <>
+            {/* ⚠️ มือถือ = การ์ด · เดสก์ท็อป = ตาราง และห้ามยุบเหลืออย่างเดียว
+                ตารางบนจอ 375px ต้องเลื่อนแนวนอนถึงจะเห็นครบ 6 คอลัมน์ ซึ่งไม่มีใครเลื่อน
+                คนบนมือถือจึงเห็นแค่ "เลขที่กับประเภท" แล้วเดาเอาว่าใบไหนจ่ายแล้ว
+                ส่วนบนเดสก์ท็อปการ์ดแย่กว่าตาราง เพราะคนที่เปิดดูวันละหลายรอบ
+                กวาดสายตาลงคอลัมน์เดียวได้เร็วกว่าอ่านการ์ดทีละใบ — คนละสถานการณ์ ไม่ใช่รสนิยม */}
+            <div className="space-y-2 px-4 pb-4 sm:hidden">
+              {((recentDocs ?? []) as FinDoc[]).map((d) => (
+                <Link key={d.id} href={d.doc_type === "expense" ? `/dashboard/expenses/${d.id}` : `/dashboard/sales/${d.id}`}
+                  className="flex min-h-[44px] items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 transition-colors active:bg-neutral-50">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-neutral-100 text-neutral-500">
+                    <FileText className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-[13px] font-semibold text-neutral-900">{d.doc_number}</span>
+                      <Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge>
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                      {DOC_TYPE_TH[d.doc_type as DocType]} · {d.contact_name ?? "-"}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className="block text-[13px] font-semibold tabular-nums text-neutral-900">{baht(d.total)}</span>
+                    <span className="block text-xs text-neutral-400">{dateOnlyTH(d.issue_date)}</span>
+                  </span>
+                </Link>
+              ))}
+            </div>
+
+            <div className="hidden sm:block">
             <Table>
               <thead><tr><Th>เลขที่</Th><Th>ประเภท</Th><Th>คู่ค้า</Th><Th className="text-right">ยอด</Th><Th>สถานะ</Th><Th>วันที่</Th></tr></thead>
               <tbody>
@@ -224,6 +278,8 @@ export default async function Overview() {
                 ))}
               </tbody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
