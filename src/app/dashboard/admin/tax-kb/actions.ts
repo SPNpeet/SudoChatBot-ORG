@@ -71,13 +71,40 @@ export async function saveTaxKnowledge(input: TaxKbInput): Promise<Result> {
     embedding: null as string | null,
   };
 
-  const { error } = input.id
-    ? await svc.from("tax_knowledge").update(row).eq("id", input.id)
-    : await svc.from("tax_knowledge").insert(row);
-  if (error) return { ok: false, error: error.message.slice(0, 200) };
+  const saved = input.id
+    ? await svc.from("tax_knowledge").update(row).eq("id", input.id).select("id").single()
+    : await svc.from("tax_knowledge").insert(row).select("id").single();
+  if (saved.error) return { ok: false, error: saved.error.message.slice(0, 200) };
+
+  // ============================================================
+  //  สร้างเวกเตอร์ให้ทันทีในคำสั่งเดียวกัน — ห้ามกลับไปเขียนว่า "อย่าลืมกดสร้างเวกเตอร์"
+  //
+  //  ⚠️ ของเดิมบันทึกแล้วขึ้นข้อความเตือนให้คนไปกดปุ่มเอง ซึ่งคือการ "ขอร้องให้จำ"
+  //  ผลจริง: คลังมี 11 เรื่อง และ **ทั้ง 11 เรื่องไม่มีเวกเตอร์เลยสักเรื่อง**
+  //  ค้างแบบนั้นข้ามหลายวันจนเจ้าของเปิดหน้ามาเจอเอง (26 ส.ค. 2569)
+  //  กติกาข้อ 3 ของโปรเจกต์: อยากให้เกิดต้องเขียนโค้ดให้เกิด ไม่ใช่เขียนข้อความขอ
+  //
+  //  ⚠️ เวกเตอร์ล้มเหลวต้องไม่ทำให้การบันทึกล้มตาม
+  //  เนื้อหาถูกบันทึกไปแล้วและใช้งานได้จริงด้วยการค้นแบบเทียบข้อความ (migration 103)
+  //  การคืน error ตรงนี้จะทำให้แอดมินคิดว่าบันทึกไม่สำเร็จแล้วกดซ้ำจนเกิดแถวซ้ำ
+  // ============================================================
+  let vectorNote = "";
+  try {
+    // keywords ต้องอยู่ในข้อความที่เอาไปทำเวกเตอร์ ไม่งั้นเวกเตอร์รู้จักแต่ภาษากฎหมาย
+    const vec = await embedText(svc, `${topic}\n${row.keywords}\n${content}`);
+    if (vec) {
+      const up = await svc.from("tax_knowledge")
+        .update({ embedding: JSON.stringify(vec) }).eq("id", saved.data.id);
+      vectorNote = up.error ? " (เก็บเวกเตอร์ไม่สำเร็จ กดปุ่มสร้างเวกเตอร์อีกครั้งได้)" : " พร้อมเวกเตอร์";
+    } else {
+      vectorNote = " — ยังไม่มีเวกเตอร์ (ไม่มีคีย์ Google/OpenAI ที่ใช้ได้) ระหว่างนี้ค้นด้วยการเทียบข้อความ";
+    }
+  } catch {
+    vectorNote = " — สร้างเวกเตอร์ไม่สำเร็จ กดปุ่มสร้างเวกเตอร์อีกครั้งได้";
+  }
 
   revalidatePath(PATH);
-  return { ok: true, message: input.id ? "แก้ไขแล้ว — อย่าลืมกดสร้างเวกเตอร์ใหม่" : "เพิ่มแล้ว — อย่าลืมกดสร้างเวกเตอร์" };
+  return { ok: true, message: (input.id ? "แก้ไขแล้ว" : "เพิ่มแล้ว") + vectorNote };
 }
 
 export async function deleteTaxKnowledge(id: string): Promise<Result> {

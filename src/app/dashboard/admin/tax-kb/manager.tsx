@@ -6,7 +6,8 @@
 //     ด้วยการเทียบข้อความ แต่จะเจอเฉพาะเมื่อผู้ใช้พิมพ์คำใกล้เคียงของจริง
 //     คำถามที่ใช้คำต่างออกไป (เช่น "โกดัง" กับ "อสังหาริมทรัพย์") จะหาไม่เจอ
 // ============================================================
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Label, Textarea } from "@/components/ui";
 import { Plus, Pencil, Trash2, Sparkles, X, ExternalLink, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,8 @@ export default function TaxKbManager({ rows, missingVectors }: { rows: TaxKbRow[
   const [form, setForm] = useState<TaxKbInput | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [autoBuilding, setAutoBuilding] = useState(false);
+  const router = useRouter();
   const [pending, start] = useTransition();
 
   const set = (k: keyof TaxKbInput, v: string) => setForm((f) => (f ? { ...f, [k]: v } : f));
@@ -51,13 +54,57 @@ export default function TaxKbManager({ rows, missingVectors }: { rows: TaxKbRow[
     });
   }
 
+  /**
+   * ไล่สร้างเวกเตอร์จนหมด — ฝั่งเซิร์ฟเวอร์ทำได้ครั้งละ 20 แถว จึงต้องวนเรียก
+   *
+   * ⚠️ ต้องมีเพดานรอบ ห้ามวน while จนกว่าจะหมด
+   * ถ้าคีย์ค่ายใช้ไม่ได้ ฝั่งเซิร์ฟเวอร์จะคืน ok:false ทุกครั้ง — ไม่มีเพดาน = วนยิงไม่จบ
+   * และแต่ละรอบคือการยิง API ที่เสียเงินจริง (กติกาข้อ 3: อยากให้หยุดต้องเขียนให้หยุด)
+   */
+  async function runBuild(): Promise<{ ok: boolean; text: string }> {
+    let total = 0;
+    for (let pass = 0; pass < 10; pass++) {
+      const r = await buildTaxEmbeddings();
+      if (!r.ok) return total > 0
+        ? { ok: false, text: `สร้างได้ ${total} แถวแล้วหยุด — ${r.error}` }
+        : { ok: false, text: r.error };
+      const n = Number(r.message.match(/(\d+)\s*แถว/)?.[1] ?? 0);
+      total += n;
+      if (n === 0) break;                       // ไม่มีอะไรเหลือให้ทำแล้ว
+    }
+    router.refresh();
+    return { ok: true, text: total > 0 ? `สร้างเวกเตอร์แล้ว ${total} เรื่อง` : "ทุกเรื่องมีเวกเตอร์ครบแล้ว" };
+  }
+
   function buildVectors() {
     setMsg(null);
-    start(async () => {
-      const r = await buildTaxEmbeddings();
-      setMsg(r.ok ? { ok: true, text: r.message } : { ok: false, text: r.error });
-    });
+    start(async () => setMsg(await runBuild()));
   }
+
+  // ============================================================
+  //  เปิดหน้ามาแล้วยังมีเรื่องที่ไม่มีเวกเตอร์ = สร้างให้เลย ไม่ต้องรอใครกดปุ่ม
+  //
+  //  ⚠️ ทำไมต้องอัตโนมัติ ทั้งที่มีปุ่มอยู่แล้ว
+  //  ปุ่มนี้มีมาตั้งแต่วันแรก แต่คลังทั้ง 11 เรื่อง **ไม่มีเวกเตอร์เลยสักเรื่อง**
+  //  ค้างข้ามหลายวันจนเจ้าของเปิดมาเจอเอง (26 ส.ค. 2569) — ปุ่มที่ต้องจำไปกด
+  //  ในหน้าที่แทบไม่มีใครเปิด มีค่าเท่ากับไม่มี (กติกาข้อ 3)
+  //
+  //  ⚠️ ยิงครั้งเดียวต่อการเปิดหน้า (didAuto) และเฉพาะตอนมีของค้างจริง
+  //  ฝั่งเซิร์ฟเวอร์ยังตรวจ assertPlatformAdmin เหมือนเดิม การยิงจากตรงนี้ไม่ได้ข้ามด่านใด
+  // ============================================================
+  const didAuto = useRef(false);
+  useEffect(() => {
+    if (didAuto.current || missingVectors <= 0) return;
+    didAuto.current = true;
+    setAutoBuilding(true);
+    (async () => {
+      const r = await runBuild();
+      setAutoBuilding(false);
+      setMsg(r);
+    })();
+    // runBuild ถูกสร้างใหม่ทุก render — ใส่ใน deps จะทำให้เอฟเฟกต์วิ่งซ้ำและยิง API รัว
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missingVectors]);
 
   return (
     <div className="space-y-4">
@@ -66,11 +113,12 @@ export default function TaxKbManager({ rows, missingVectors }: { rows: TaxKbRow[
           <CardContent className="flex flex-wrap items-center gap-3 pt-6">
             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
             <p className="min-w-0 flex-1 text-sm">
-              <b>{missingVectors} เรื่องยังไม่มีเวกเตอร์</b> — ระบบยังค้นให้ได้ด้วยการเทียบข้อความ
-              แต่จะเจอเฉพาะเมื่อผู้ใช้พิมพ์คำใกล้เคียงของจริง คำถามที่ใช้คำต่างออกไปจะหาไม่เจอ
+              <b>{missingVectors} เรื่องยังไม่มีเวกเตอร์</b> — {autoBuilding
+                ? "กำลังสร้างให้อัตโนมัติ ไม่ต้องกดอะไร"
+                : "ระหว่างนี้ระบบค้นให้ด้วยการเทียบข้อความ ซึ่งเจอเฉพาะเมื่อผู้ใช้พิมพ์คำใกล้เคียงของจริง"}
             </p>
-            <Button variant="brand" disabled={pending} onClick={buildVectors}>
-              <Sparkles className="h-4 w-4" /> สร้างเวกเตอร์
+            <Button variant="brand" disabled={pending || autoBuilding} onClick={buildVectors}>
+              <Sparkles className="h-4 w-4" /> {autoBuilding ? "กำลังสร้างเวกเตอร์..." : "สร้างเวกเตอร์"}
             </Button>
           </CardContent>
         </Card>
