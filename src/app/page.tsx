@@ -29,6 +29,9 @@ import { getPublicPlans } from "@/lib/plans";
 //  สีเน้นสีเดียว (#0B6B4A) ใช้เท่าที่จำเป็น ไม่มี gradient ไม่มีป้ายแคปซูลลอย
 // ============================================================
 
+import { getLang, homeCopy } from "@/lib/i18n";
+import LangToggle from "@/components/lang-toggle";
+
 const BRAND = "#0B6B4A";
 
 // เส้นทางจริงของงาน 1 รอบ — คอลัมน์กลางคือสิ่งที่คู่แข่งให้คนทำเอง
@@ -129,6 +132,11 @@ const faqJsonLd = {
 };
 
 export default async function Landing() {
+  // ⚠️ ฉบับไทยคือข้อความเดิมในไฟล์นี้ (c เป็น null) — ห้ามย้ายข้อความไทยไป i18n
+  // เพื่อไม่ให้หน้าที่ลูกค้าปัจจุบันใช้อยู่เปลี่ยนไปแม้แต่ตัวอักษรเดียว
+  const lang = await getLang();
+  const c = homeCopy(lang);
+
   const plans = await getPublicPlans();
   // ราคาเริ่มต้นที่ถูกที่สุดหลังลด — ใช้พาดหัวส่วนราคา ห้ามพิมพ์เลขตายตัว
   const cheapest = plans
@@ -146,10 +154,11 @@ export default async function Landing() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <Logo />
           <div className="flex items-center gap-2">
-            <a href="#pricing" className="hidden min-h-[44px] items-center px-3 text-sm text-neutral-500 hover:text-neutral-900 sm:inline-flex">ราคา</a>
+            <a href="#pricing" className="hidden min-h-[44px] items-center px-3 text-sm text-neutral-500 hover:text-neutral-900 sm:inline-flex">{c?.nav.pricing ?? "ราคา"}</a>
+            <LangToggle lang={lang} />
             <Link href="/login" className="inline-flex h-11 items-center rounded-xl px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
               style={{ backgroundColor: BRAND }}>
-              เข้าสู่ระบบ
+              {c?.nav.login ?? "เข้าสู่ระบบ"}
             </Link>
           </div>
         </div>
@@ -160,15 +169,14 @@ export default async function Landing() {
         <div className="grid items-start gap-10 lg:grid-cols-[1.05fr_.95fr] lg:gap-14">
           <div>
             <h1 className="text-[34px] font-bold leading-[1.1] tracking-[-.03em] text-neutral-900 sm:text-[50px]">
-              พิมพ์สั่งประโยคเดียว<br />
-              <span className="relative whitespace-nowrap" style={{ color: BRAND }}>
-                บัญชีเสร็จทั้งบริษัท
+              {c?.hero.line1 ?? "พิมพ์สั่งประโยคเดียว"}<br />
+              <span className={c ? "relative" : "relative whitespace-nowrap"} style={{ color: BRAND }}>
+                {c?.hero.line2 ?? "บัญชีเสร็จทั้งบริษัท"}
                 <span aria-hidden className="absolute inset-x-0 bottom-[.08em] -z-10 h-[.16em] rounded" style={{ backgroundColor: "rgba(11,107,74,.15)" }} />
               </span>
             </h1>
             <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-neutral-600">
-              ใบกำกับภาษีที่ถูกตามกฎหมาย สมุดรายวันเดบิต–เครดิต และรายงานยื่นสรรพากร
-              เกิดขึ้นพร้อมกันจากคำสั่งเดียว ไม่ต้องคีย์ซ้ำที่ไหนอีก
+              {c?.hero.lead ?? "ใบกำกับภาษีที่ถูกตามกฎหมาย สมุดรายวันเดบิต–เครดิต และรายงานยื่นสรรพากร เกิดขึ้นพร้อมกันจากคำสั่งเดียว ไม่ต้องคีย์ซ้ำที่ไหนอีก"}
             </p>
 
             {/* พระเอกของหน้า: ลองสั่งได้ตั้งแต่วินาทีแรก ไม่ต้องสมัคร */}
@@ -181,16 +189,16 @@ export default async function Landing() {
               <Link href="/signup"
                 className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-90"
                 style={{ backgroundColor: BRAND }}>
-                เริ่มใช้ฟรี <ArrowRight className="h-4 w-4" />
+                {c?.hero.ctaPrimary ?? "เริ่มใช้ฟรี"} <ArrowRight className="h-4 w-4" />
               </Link>
               <Link href="/try"
                 className="inline-flex min-h-[48px] items-center justify-center rounded-xl border border-neutral-300 bg-white px-6 text-[15px] font-semibold text-neutral-800 transition-colors hover:border-neutral-400">
-                ลองออกเอกสารก่อน
+                {c?.hero.ctaSecondary ?? "ลองออกเอกสารก่อน"}
               </Link>
             </div>
 
             <p className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-500">
-              {["ไม่ต้องใช้บัตรเครดิต", "ตั้งค่าเสร็จใน 3 นาที", "เงินเข้าบัญชีคุณโดยตรง"].map((t) => (
+              {(c?.hero.trust ?? ["ไม่ต้องใช้บัตรเครดิต", "ตั้งค่าเสร็จใน 3 นาที", "เงินเข้าบัญชีคุณโดยตรง"]).map((t) => (
                 <span key={t} className="inline-flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5" style={{ color: BRAND }} /> {t}
                 </span>
@@ -198,7 +206,7 @@ export default async function Landing() {
             </p>
           </div>
 
-          {/* ⚠️ คอลัมน์นี้เหลือ "ของจริง" อันเดียว
+          {/* ⚠️ คอลัมน์นี้เหลือ (c?.flowHead.real ?? "ของจริง") อันเดียว
               เดิมมีการ์ดแชทตัวอย่างแบบภาพนิ่งวางทับกล่องลองแชทจริง = โชว์เรื่องเดียวกันสองรอบ
               เมื่อให้ลองของจริงได้ฟรีอยู่แล้ว ภาพนิ่งไม่ได้เพิ่มความเชื่อ มีแต่เพิ่มความรก */}
           <div className="lg:pt-2">
@@ -222,26 +230,26 @@ export default async function Landing() {
             <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
               <div className="hidden grid-cols-[auto_1.1fr_1fr_1fr] gap-4 border-b border-neutral-200 bg-neutral-50 px-5 py-2.5 text-xs font-semibold text-neutral-500 sm:grid">
                 <span className="w-7" />
-                <span>คุณพิมพ์</span>
-                <span>ระบบทำให้</span>
-                <span style={{ color: BRAND }}>ได้กลับมา</span>
+                <span>{c?.flowHead.say ?? "คุณพิมพ์"}</span>
+                <span>{c?.flowHead.does ?? "ระบบทำให้"}</span>
+                <span style={{ color: BRAND }}>{c?.flowHead.gets ?? "ได้กลับมา"}</span>
               </div>
-              {FLOW.map((f) => (
+              {(c?.flow ?? FLOW).map((f) => (
                 // ⚠️ บนมือถือกริดยุบเหลือคอลัมน์เดียวและหัวตารางถูกซ่อน
                 // ถ้าไม่ติดป้ายกำกับไว้ ผู้ใช้จะเห็นข้อความสามย่อหน้าเรียงกันโดยไม่รู้ว่าอันไหนคืออะไร
                 // ป้ายจึงต้องโผล่เฉพาะจอเล็ก (sm:hidden) ไม่ใช่ซ้ำกับหัวตารางบนจอกว้าง
                 <div key={f.n} className="grid gap-3 border-b border-neutral-100 px-5 py-4 last:border-0 sm:grid-cols-[auto_1.1fr_1fr_1fr] sm:gap-4">
                   <span className="text-sm font-bold tabular-nums text-neutral-300 sm:w-7">{f.n}</span>
                   <div>
-                    <p className="mb-1 text-xs font-semibold text-neutral-400 sm:hidden">คุณพิมพ์</p>
+                    <p className="mb-1 text-xs font-semibold text-neutral-400 sm:hidden">{c?.flowHead.say ?? "คุณพิมพ์"}</p>
                     <p className="text-[13px] font-medium leading-relaxed text-neutral-900">&ldquo;{f.say}&rdquo;</p>
                   </div>
                   <div>
-                    <p className="mb-1 text-xs font-semibold text-neutral-400 sm:hidden">ระบบทำให้</p>
+                    <p className="mb-1 text-xs font-semibold text-neutral-400 sm:hidden">{c?.flowHead.does ?? "ระบบทำให้"}</p>
                     <p className="text-[13px] leading-relaxed text-neutral-500">{f.does}</p>
                   </div>
                   <ul className="space-y-1">
-                    <li className="mb-1 list-none text-xs font-semibold sm:hidden" style={{ color: BRAND }}>ได้กลับมา</li>
+                    <li className="mb-1 list-none text-xs font-semibold sm:hidden" style={{ color: BRAND }}>{c?.flowHead.gets ?? "ได้กลับมา"}</li>
                     {f.gets.map((g) => (
                       <li key={g} className="flex items-start gap-1.5 text-[13px] font-medium leading-relaxed text-neutral-800">
                         <Check className="mt-[3px] h-3.5 w-3.5 shrink-0" style={{ color: BRAND }} /> {g}
@@ -252,11 +260,11 @@ export default async function Landing() {
               ))}
             </div>
 
-            {/* เอกสารที่ได้จริง — ใช้เอฟเฟกต์ 3 มิติกับ "ผลลัพธ์" ไม่ใช่กับของตกแต่ง
+            {/* เอกสารที่ได้จริง — ใช้เอฟเฟกต์ 3 มิติกับ (c?.outputsHead.result ?? "ผลลัพธ์") ไม่ใช่กับของตกแต่ง
                 (เดิมเอียงการ์ดแชทปลอม ซึ่งเอียงแล้วก็ยังเป็นของปลอมอยู่ดี) */}
             <HeroTilt>
               <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">ทุกรอบจบด้วย</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">{c?.outputsHead.every ?? "ทุกรอบจบด้วย"}</p>
                 <div className="mt-4 space-y-3">
                   {OUTPUTS.map((o, i) => (
                     <div key={o.label}
@@ -266,8 +274,8 @@ export default async function Landing() {
                         <o.icon className="h-4 w-4" style={{ color: BRAND }} />
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-neutral-900">{o.label}</span>
-                        <span className="block text-xs text-neutral-500">{o.sub}</span>
+                        <span className="block text-sm font-semibold text-neutral-900">{c?.outputs[i]?.label ?? o.label}</span>
+                        <span className="block text-xs text-neutral-500">{c?.outputs[i]?.sub ?? o.sub}</span>
                       </span>
                     </div>
                   ))}
@@ -285,9 +293,9 @@ export default async function Landing() {
       {/* ================= 3. เหมาะกับใคร ================= */}
       <section className="py-16">
         <div className="mx-auto max-w-5xl px-6">
-          <h2 className="text-[26px] font-bold leading-tight tracking-tight text-neutral-900">ใช้ได้ทั้งสองฝั่งของโต๊ะ</h2>
+          <h2 className="text-[26px] font-bold leading-tight tracking-tight text-neutral-900">{c?.audienceHead ?? "ใช้ได้ทั้งสองฝั่งของโต๊ะ"}</h2>
           <div className="mt-8 grid gap-4 md:grid-cols-2">
-            {AUDIENCE.map((a) => (
+            {(c?.audience ?? AUDIENCE).map((a) => (
               <div key={a.title} className="rounded-2xl border border-neutral-200 p-6">
                 <p className="text-base font-bold text-neutral-900">{a.title}</p>
                 <p className="mt-0.5 text-sm font-medium" style={{ color: BRAND }}>{a.lead}</p>
@@ -305,8 +313,8 @@ export default async function Landing() {
       </section>
 
       {/* ================= 4. ราคา ================= */}
-      {/* ⚠️ พาดหัวต้องพูดเรื่อง "ถูกแค่ไหน" ไม่ใช่ "เราตรงไปตรงมา"
-          ของเดิมเขียนว่า "ราคาตรงไปตรงมา" ซึ่งเป็นคำที่ทุกเจ้าเขียนเหมือนกันหมด
+      {/* ⚠️ พาดหัวต้องพูดเรื่อง (c?.pricingHead.cheap ?? "ถูกแค่ไหน") ไม่ใช่ (c?.pricingHead.straight ?? "เราตรงไปตรงมา")
+          ของเดิมเขียนว่า (c?.pricingHead.title ?? "ราคาตรงไปตรงมา") ซึ่งเป็นคำที่ทุกเจ้าเขียนเหมือนกันหมด
           และไม่ได้ให้เหตุผลว่าทำไมต้องซื้อ — ตัวเลขที่ถูกที่สุดต้องอยู่ในพาดหัวเลย */}
       <section id="pricing" className="scroll-mt-16 border-t border-neutral-100 bg-neutral-50/70 py-16">
         <div className="mx-auto max-w-5xl px-6">
@@ -327,9 +335,9 @@ export default async function Landing() {
       {/* ================= 5. คำถามที่เจอบ่อย ================= */}
       <section className="py-16">
         <div className="mx-auto max-w-3xl px-6">
-          <h2 className="mb-6 text-[26px] font-bold leading-tight tracking-tight text-neutral-900">คำถามที่เจอบ่อย</h2>
+          <h2 className="mb-6 text-[26px] font-bold leading-tight tracking-tight text-neutral-900">{c?.faqHead ?? "คำถามที่เจอบ่อย"}</h2>
           <div className="divide-y divide-neutral-100 overflow-hidden rounded-2xl border border-neutral-200">
-            {faqs.map((f) => (
+            {(c?.faqs ?? faqs).map((f) => (
               // ⚠️ วัดบนมือถือจริง 6 ส.ค. 2569: หัวข้อคำถามสูงแค่ 20px (เกณฑ์โปรเจกต์คือ 44px)
               // และไม่มีสัญญาณอะไรบอกว่ากดกางได้เลย เพราะ marker ถูกซ่อนไว้
               <details key={f.q} className="group px-5">
@@ -350,7 +358,7 @@ export default async function Landing() {
       <section className="border-t border-neutral-100 py-16">
         <div className="mx-auto max-w-2xl px-6 text-center">
           <FileText className="mx-auto h-8 w-8" style={{ color: BRAND }} />
-          <h2 className="mt-4 text-[26px] font-bold leading-tight tracking-tight text-neutral-900">ออกเอกสารใบแรกได้ใน 3 นาที</h2>
+          <h2 className="mt-4 text-[26px] font-bold leading-tight tracking-tight text-neutral-900">{c?.finalCta ?? "ออกเอกสารใบแรกได้ใน 3 นาที"}</h2>
           <p className="mt-2 text-sm leading-relaxed text-neutral-500">
             สมัครฟรี ไม่ต้องใช้บัตร — สั่งผู้ช่วยเป็นภาษาคนได้ทันทีตั้งแต่ใบแรก
           </p>
@@ -383,15 +391,15 @@ export default async function Landing() {
               ถ้าไม่มีลิงก์จากหน้าแรกเลย มันจะเป็นหน้าที่ลอยอยู่โดดๆ ซึ่งถูกเก็บเข้าดัชนีช้ากว่ามาก
               และคนที่เข้ามาหน้าแรกก็ไม่มีทางรู้ว่ามีหน้าพวกนี้อยู่ */}
           <div className="flex flex-wrap justify-center gap-x-4">
-            <Link href="/features" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">ฟีเจอร์ทั้งหมด</Link>
-            <Link href="/guide" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">บทความบัญชี-ภาษี</Link>
+            <Link href="/features" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.features ?? "ฟีเจอร์ทั้งหมด"}</Link>
+            <Link href="/guide" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.articles ?? "บทความบัญชี-ภาษี"}</Link>
             <Link href="/pricing" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">ราคา</Link>
           </div>
           <div className="flex flex-wrap justify-center gap-x-4">
-            <Link href="/privacy" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
-            <Link href="/terms" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">เงื่อนไขการใช้งาน</Link>
-            <Link href="/data-deletion" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">การลบข้อมูล</Link>
-            <a href="mailto:support@sudochatbot.online" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">ติดต่อเรา</a>
+            <Link href="/privacy" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.privacy ?? "นโยบายความเป็นส่วนตัว"}</Link>
+            <Link href="/terms" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.terms ?? "เงื่อนไขการใช้งาน"}</Link>
+            <Link href="/data-deletion" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.deletion ?? "การลบข้อมูล"}</Link>
+            <a href="mailto:support@sudochatbot.online" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.contact ?? "ติดต่อเรา"}</a>
           </div>
           <p>© {new Date().getFullYear()} SudoChatBot — ระบบบัญชีออนไลน์ + ผู้ช่วยบัญชี AI สำหรับ SME ไทย</p>
         </div>
