@@ -93,6 +93,7 @@ https://sudochatbot.online/try — ออกใบเสนอราคา ใ�
 - สมัครใช้ฟรี: https://sudochatbot.online/signup
 - นโยบายความเป็นส่วนตัว: https://sudochatbot.online/privacy
 - ข้อกำหนดการใช้งาน: https://sudochatbot.online/terms
+- English version of this file: https://sudochatbot.online/llms-en.txt
 `;
 
   return new Response(body, {
