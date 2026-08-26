@@ -41,6 +41,9 @@ export interface HomeCopy {
   hero: {
     line1: string; line2: string; lead: string;
     ctaPrimary: string; ctaSecondary: string;
+    /** ⚠️ ราคาในแถบนี้ห้ามพิมพ์เป็นตัวเลขตายตัว — ประกอบจากตาราง plans ที่ page.tsx
+     *  ขึ้นราคาแล้วลืมแก้โฆษณา = โฆษณาราคาที่ไม่มีจริง ซึ่งผิดกฎหมายคุ้มครองผู้บริโภค */
+    pricePrefix: string; priceSuffix: string;
     trust: string[];
   };
   flowHead: { real: string; say: string; does: string; gets: string };
@@ -81,13 +84,14 @@ export interface HomeCopy {
 const EN: HomeCopy = {
   nav: { pricing: "Pricing", login: "Log in" },
   hero: {
-    line1: "One typed command,",
-    line2: "your whole company's books are done",
+    line1: "AI does your books —",
+    line2: "no second AI subscription",
     lead:
-      "A legally valid tax invoice, the debit–credit journal entries, and the Thai Revenue Department reports all come out of a single command. Nothing to re-key anywhere else.",
+      "The AI accounting assistant lives inside this site. Open it and type. You do not need a ChatGPT or Claude account of your own — and the tax invoice, the debit\u2013credit journal entries and the Thai Revenue Department reports all come out of that one command.",
     ctaPrimary: "Start free",
     ctaSecondary: "Try issuing a document first",
-    trust: ["No credit card", "Set up in 3 minutes", "Money goes straight to your own account"],
+    pricePrefix: "From", priceSuffix: "THB/month",
+    trust: ["No credit card", "Money goes straight to your own account"],
   },
   flowHead: { real: "the real thing", say: "You type", does: "The system does", gets: "You get back" },
   outputsHead: { result: "the result", every: "Every round ends with" },

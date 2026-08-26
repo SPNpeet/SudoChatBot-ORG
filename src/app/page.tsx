@@ -138,6 +138,15 @@ export default async function Landing() {
   const c = homeCopy(lang);
 
   const plans = await getPublicPlans();
+  // ⚠️ หัวหน้าแรกใช้ "ราคารายเดือนที่ถูกที่สุด" ไม่ใช่ราคาเฉลี่ยรายปี
+  // เพราะเป็นคำโฆษณาที่คนอ่านผ่าน ๆ ตัวเลขที่มีเงื่อนไขซ่อน ("ถ้าจ่ายทั้งปีก่อน")
+  // ในตำแหน่งนี้คือการโฆษณาราคาที่ผู้อ่านจ่ายจริงไม่ได้ — ส่วนราคาด้านล่างมีสวิตช์งวดให้เห็นเงื่อนไขอยู่แล้ว
+  const cheapestMonthly = plans
+    .filter((p) => !p.free)
+    .map((p) => Number(p.price.replace(/,/g, "")))
+    .filter((n) => n > 0)
+    .sort((a, b) => a - b)[0];
+
   // ราคาเริ่มต้นที่ถูกที่สุดหลังลด — ใช้พาดหัวส่วนราคา ห้ามพิมพ์เลขตายตัว
   const cheapest = plans
     .filter((p) => !p.free && p.yearly)
@@ -169,14 +178,17 @@ export default async function Landing() {
         <div className="grid items-start gap-10 lg:grid-cols-[1.05fr_.95fr] lg:gap-14">
           <div>
             <h1 className="text-[34px] font-bold leading-[1.1] tracking-[-.03em] text-neutral-900 sm:text-[50px]">
-              {c?.hero.line1 ?? "พิมพ์สั่งประโยคเดียว"}<br />
-              <span className={c ? "relative" : "relative whitespace-nowrap"} style={{ color: BRAND }}>
-                {c?.hero.line2 ?? "บัญชีเสร็จทั้งบริษัท"}
+              {c?.hero.line1 ?? "AI ทำบัญชีให้"}<br />
+              {/* ⚠️ ห้ามใส่ whitespace-nowrap กลับมาที่บรรทัดนี้
+                  ข้อความเดิม ("บัญชีเสร็จทั้งบริษัท") สั้นพอจะไม่ล้นตอน nowrap
+                  ของใหม่ยาวกว่าเกือบเท่าตัว ใส่ nowrap แล้วจะดันจอล้นแนวนอนบนมือถือทันที */}
+              <span className="relative" style={{ color: BRAND }}>
+                {c?.hero.line2 ?? "ไม่ต้องไปสมัคร AI ที่ไหนเพิ่ม"}
                 <span aria-hidden className="absolute inset-x-0 bottom-[.08em] -z-10 h-[.16em] rounded" style={{ backgroundColor: "rgba(11,107,74,.15)" }} />
               </span>
             </h1>
             <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-neutral-600">
-              {c?.hero.lead ?? "ใบกำกับภาษีที่ถูกตามกฎหมาย สมุดรายวันเดบิต–เครดิต และรายงานยื่นสรรพากร เกิดขึ้นพร้อมกันจากคำสั่งเดียว ไม่ต้องคีย์ซ้ำที่ไหนอีก"}
+              {c?.hero.lead ?? "ผู้ช่วยบัญชี AI อยู่ในเว็บนี้เลย เปิดแล้วพิมพ์สั่งได้ทันที ไม่ต้องมีบัญชี ChatGPT หรือ Claude ของตัวเอง — และใบกำกับภาษี สมุดรายวันเดบิต–เครดิต กับรายงานยื่นสรรพากร เกิดขึ้นพร้อมกันจากคำสั่งเดียวนั้น"}
             </p>
 
             {/* พระเอกของหน้า: ลองสั่งได้ตั้งแต่วินาทีแรก ไม่ต้องสมัคร */}
@@ -198,7 +210,15 @@ export default async function Landing() {
             </div>
 
             <p className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-neutral-500">
-              {(c?.hero.trust ?? ["ไม่ต้องใช้บัตรเครดิต", "ตั้งค่าเสร็จใน 3 นาที", "เงินเข้าบัญชีคุณโดยตรง"]).map((t) => (
+              {[
+                c
+                  ? `${c.hero.pricePrefix} ${(cheapestMonthly ?? 99).toLocaleString("en-US")} ${c.hero.priceSuffix}`
+                  : `เดือนละ ${(cheapestMonthly ?? 99).toLocaleString("th-TH")} บาท`,
+                // ⚠️ ตัด "ลองฟรี 3 ครั้ง ไม่ต้องสมัคร" ออกจากแถบนี้โดยตั้งใจ
+                // ช่องสั่งงาน (HeroCommand) ที่อยู่เหนือขึ้นไป 1 นิ้วเขียนประโยคนี้อยู่แล้ว
+                // เขียนซ้ำในระยะสายตาเดียวกันทำให้หน้ารก และเป็นปัญหาเดียวกับที่รื้อหน้าแรกไปแล้วรอบหนึ่ง
+                ...(c?.hero.trust ?? ["ไม่ต้องใช้บัตรเครดิต", "เงินเข้าบัญชีคุณโดยตรง"]),
+              ].map((t) => (
                 <span key={t} className="inline-flex items-center gap-1.5">
                   <Check className="h-3.5 w-3.5" style={{ color: BRAND }} /> {t}
                 </span>
