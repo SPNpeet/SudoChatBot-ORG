@@ -24,8 +24,23 @@ export async function GET() {
 
   // ⚠️ ใช้รูปร่างเดียวกับฉบับไทยเป๊ะ (price/yearly เป็นสตริงที่ lib จัดรูปมาแล้ว)
   // ห้ามอ่านคอลัมน์ดิบเอง ไม่งั้นสูตรราคารายปีจะเพี้ยนจาก apply_plan_purchase
+  //
+  // ⚠️ ชื่อแพ็กในฐานข้อมูลเป็นภาษาไทย ซึ่งคนอ่านอังกฤษแปลไม่ออก
+  // จึงใส่คำอธิบายอังกฤษกำกับ โดยจับจาก `code` ที่นิ่งกว่าชื่อ (ชื่อเปลี่ยนได้ code ไม่เปลี่ยน)
+  // code ที่ไม่รู้จัก -> แสดงชื่อไทยอย่างเดียว ดีกว่าเดาแล้วอธิบายผิด
+  const EN_NAME: Record<string, string> = {
+    free: "Free trial",
+    starter: "Starter — 1 business",
+    professional: "Business — up to 3 businesses",
+    executive: "Accounting firm — up to 10 businesses",
+    agency: "Large accounting firm — unlimited businesses",
+  };
   const priceLines = plans.length
-    ? plans.map((p) => `- ${p.name}: ${p.free ? "Free" : `THB ${p.price}/month${p.yearly ? ` (THB ${p.yearly}/year)` : ""}`}`).join("\n")
+    ? plans.map((p) => {
+        const en = EN_NAME[p.code];
+        const label = en ? `${en} (${p.name})` : p.name;
+        return `- ${label}: ${p.free ? "Free" : `THB ${p.price}/month${p.yearly ? ` (THB ${p.yearly}/year)` : ""}`}`;
+      }).join("\n")
     : "- See https://sudochatbot.online/pricing for current pricing";
 
   const body = `# SudoChatBot
