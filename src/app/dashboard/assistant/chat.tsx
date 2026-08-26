@@ -15,7 +15,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ACTION_CHIP } from "@/components/ui";
-import { assistantReply, type AssistantTurn } from "./actions";
+import { assistantReply, getDocPreview, type AssistantTurn, type DocPreviewData } from "./actions";
+import DocPreview from "@/app/dashboard/finance/doc-preview";
+import type { DocType, VatMode } from "@/lib/types/finance";
 
 /**
  * งานเริ่มต้นที่คนใช้บ่อย — โชว์เป็นการ์ดบนหน้าต้อนรับ
@@ -128,6 +130,8 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
   const [reading, setReading] = useState("");                    // ข้อความความคืบหน้าตอนอ่านบิล
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);  // แนบค้างไว้หลายใบ พิมพ์สั่งกำกับก่อนส่ง
   const [dragOver, setDragOver] = useState(false);               // ลากไฟล์มาวางเหนือกล่องพิมพ์
+  const [preview, setPreview] = useState<DocPreviewData | null>(null);   // ใบเอกสารที่กำลังดูคาแชท
+  const [previewBusy, setPreviewBusy] = useState<string | null>(null);   // href ที่กำลังโหลด
 
   /**
    * ทางเข้าไฟล์ทางเดียวสำหรับทั้งสามวิธี: กดคลิปหนีบ · วางจากคลิปบอร์ด (Ctrl+V) · ลากมาวาง
@@ -601,6 +605,27 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
               </p>
               {m.artifacts && m.artifacts.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
+                  {/* ⚠️ ปุ่ม "ดูใบจริง" มาก่อนปุ่มที่พาออกจากแชทเสมอ
+                      เพราะสิ่งที่ผู้ใช้อยากรู้ทันทีหลังสั่งคือ "ที่บอกว่าทำให้แล้ว หน้าตาถูกไหม"
+                      ถ้าให้กดออกไปอีกหน้าก่อน เขาจะเสียบริบทที่กำลังคุยอยู่ */}
+                  {m.artifacts.map((a, j) => {
+                    const id = a.label.startsWith("เปิด ") ? (a.href.match(/[0-9a-f-]{36}/i)?.[0] ?? null) : null;
+                    if (!id) return null;
+                    return (
+                      <button key={`p${j}`} type="button" disabled={previewBusy === a.href}
+                        onClick={async () => {
+                          setPreviewBusy(a.href);
+                          const r = await getDocPreview(shopId, id);
+                          setPreviewBusy(null);
+                          if (r.ok) setPreview(r.data); else setError(r.error);
+                        }}
+                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50">
+                        {previewBusy === a.href
+                          ? <><Loader2 className="h-3 w-3 animate-spin" /> กำลังเปิด</>
+                          : <><FileText className="h-3 w-3" /> ดูใบจริง</>}
+                      </button>
+                    );
+                  })}
                   {m.artifacts.map((a, j) => (
                     <a key={j} href={a.href} target={a.href.startsWith("/doc/") || a.href.includes("/print/") ? "_blank" : undefined}
                       className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
@@ -734,6 +759,24 @@ export default function AssistantChat({ shopId }: { shopId: string }) {
           </button>
         </form>
       </div>
+
+      {/* ใบเอกสารจริงคาแชท — อ่านอย่างเดียว (แก้ตัวเลขบนใบที่ออกไปแล้วไม่ได้ตามกฎหมาย
+          ต้องยกเลิกแล้วออกใหม่ หรือออกใบลดหนี้ ซึ่งสั่งจากแชทได้อยู่แล้ว) */}
+      {preview && (
+        <DocPreview
+          docType={preview.docType as DocType}
+          seller={preview.seller}
+          buyer={preview.buyer}
+          rows={preview.rows}
+          totals={preview.totals}
+          issueDate={preview.issueDate}
+          dueDate={preview.dueDate}
+          vatMode={preview.vatMode as VatMode}
+          whtRate={preview.whtRate}
+          notes={preview.notes}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </div>
   );
 }
