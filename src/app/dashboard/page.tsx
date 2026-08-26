@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, Badge, Table, Th, Td, EmptySt
 import { baht, dateOnlyTH } from "@/lib/utils";
 import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding } from "@/lib/finance";
 import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
+import TodoCard from "./todo-card";
 import CashflowChart from "./cashflow-chart";
 import SetupChecklist from "./setup-checklist";
 import SampleDataCard from "./sample-data-card";
@@ -44,6 +45,7 @@ export default async function Overview() {
   const [
     { data: pays }, { data: openDocs }, { data: recentDocs }, { data: overdue },
     { count: sampleCount }, { count: docCount }, { count: pendingApproval }, { count: unmatchedSlips },
+    { count: draftDocs },
   ] = await Promise.all([
     // กันรายการของเอกสารที่ยกเลิกแล้ว (กรองในโค้ดด้านล่าง) — ห้ามใช้ !inner เพราะจะตัดเงินที่ยังไม่ผูกเอกสารทิ้ง
     supabase.from("fin_payments").select("direction,amount,paid_at,fin_docs(status)")
@@ -56,6 +58,7 @@ export default async function Overview() {
     supabase.from("fin_docs").select("id", { count: "exact", head: true }).eq("shop_id", shop.id),
     supabase.from("fin_docs").select("id", { count: "exact", head: true }).eq("shop_id", shop.id).eq("approval_status", "pending"),
     supabase.from("fin_payments").select("id", { count: "exact", head: true }).eq("shop_id", shop.id).is("doc_id", null),
+    supabase.from("fin_docs").select("id", { count: "exact", head: true }).eq("shop_id", shop.id).eq("status", "draft"),
   ]);
 
   // เอกสารที่ยกเลิกแล้ว = สมุดรายวันกลับรายการไปแล้ว ตัวเลขบนแดชบอร์ดต้องไม่นับต่อ
@@ -176,6 +179,17 @@ export default async function Overview() {
           <CardContent><CashflowChart data={chartData} /></CardContent>
         </Card>
       )}
+
+      {/* ⚠️ วางก่อน "เอกสารล่าสุด" โดยตั้งใจ — สิ่งที่ยังต้องทำสำคัญกว่าสิ่งที่ทำไปแล้ว
+          และเป็นเหตุผลเดียวที่ทำให้คนเปิดระบบซ้ำในวันถัดไป (ดูคอมเมนต์ใน todo-card.tsx) */}
+      <TodoCard
+        today={today}
+        overdue={(overdue ?? []) as never}
+        pendingApproval={pendingApproval ?? 0}
+        unmatchedSlips={unmatchedSlips ?? 0}
+        draftDocs={draftDocs ?? 0}
+        hasVat={!!shop.tax_id}
+      />
 
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
