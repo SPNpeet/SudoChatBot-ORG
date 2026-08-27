@@ -45,6 +45,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [agree, setAgree] = useState(false);
   const mismatch = pw2.length > 0 && pw !== pw2;
   const match = pw2.length > 0 && pw === pw2;
 
@@ -54,7 +55,7 @@ export default function SignupPage() {
     if (pw !== pw2) { setError("รหัสผ่านสองช่องไม่ตรงกัน"); return; }
     setLoading(true);
     try {
-      const r = await signUpDirect(name, email, pw);
+      const r = await signUpDirect(name, email, pw, agree);
       if (!r.ok) { setError(r.error ?? "สมัครไม่สำเร็จ ลองใหม่อีกครั้ง"); return; }
       // สมัครสำเร็จ -> ล็อกอินต่อทันที ไม่ต้องรอเมลยืนยัน
       const supabase = createClient();
@@ -125,7 +126,18 @@ export default function SignupPage() {
               {mismatch && <p className="mt-1 text-xs text-red-500">รหัสผ่านยังไม่ตรงกัน</p>}
               {match && <p className="mt-1 flex items-center gap-1 text-xs text-emerald-600"><Check className="h-3 w-3" /> รหัสผ่านตรงกัน</p>}
             </div>
-            <button type="submit" disabled={loading || mismatch}
+            {/* consent ต้องติ๊กเอง ไม่ใช่ "การสมัครถือว่ายอมรับ" (แก้ 28 ส.ค. 2569 ตามผลตรวจ PDPA)
+                implied consent พิสูจน์ไม่ได้ว่าใครเห็นเมื่อไร — ฝั่ง server บังคับซ้ำอีกชั้น
+                และบันทึกหลักฐานลง consent_logs พร้อมเวลา */}
+            <label className="flex items-start gap-2.5 rounded-xl bg-neutral-50 px-3 py-2.5 text-xs leading-relaxed text-neutral-600">
+              <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600" />
+              <span>
+                ฉันได้อ่านและยอมรับ<Link href="/terms" target="_blank" className="px-0.5 font-semibold underline">เงื่อนไขการใช้งาน</Link>
+                และ<Link href="/privacy" target="_blank" className="px-0.5 font-semibold underline">นโยบายความเป็นส่วนตัว</Link>
+              </span>
+            </label>
+            <button type="submit" disabled={loading || mismatch || !agree}
               className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-60">
               <ArrowRight className="h-4 w-4" /> {loading ? "กำลังสร้างบัญชี..." : "สมัครและเริ่มใช้เลย"}
             </button>
@@ -137,9 +149,6 @@ export default function SignupPage() {
             มีบัญชีอยู่แล้ว? <Link href="/login" className="inline-flex min-h-[44px] items-center font-semibold text-emerald-600 hover:underline">เข้าสู่ระบบ</Link>
           </p>
         </div>
-        <p className="mt-4 text-center text-xs leading-relaxed text-neutral-400">
-          การสมัครถือว่ายอมรับ<Link href="/terms" className="inline-flex min-h-[44px] items-center px-0.5 underline">เงื่อนไขการใช้งาน</Link>และ<Link href="/privacy" className="inline-flex min-h-[44px] items-center px-0.5 underline">นโยบายความเป็นส่วนตัว</Link>
-        </p>
       </div>
     </main>
   );

@@ -526,6 +526,15 @@ export async function GET(req: Request) {
       oddFooter: "&Lออกจากระบบ SudoChatBot&Rหน้า &P/&N",
     };
   }
+  // หลักฐานการส่งออกข้อมูล — ผลตรวจ 28 ส.ค. 2569: "export ต้องมี log"
+  // เก็บฝั่ง server เพราะ log ฝั่ง client ปลอมและหายได้
+  try {
+    const { data: u } = await supabase.auth.getUser();
+    await (await import("@/lib/supabase/server")).createServiceClient().from("consent_logs").insert({
+      user_id: u.user?.id ?? null, shop_id: shop.id, kind: "accountant_export",
+      detail: { period: p.label, sheets: sheets.map((x) => ({ name: x.name, rows: x.rows.length })) },
+    });
+  } catch { /* log พังต้องไม่ขวางไฟล์ */ }
   const buf = await wb.xlsx.writeBuffer();
   const fileName = `ชุดส่งสำนักงานบัญชี ${shop.billing_name || shop.name} ${p.label}.xlsx`;
   return new NextResponse(buf as ArrayBuffer, {

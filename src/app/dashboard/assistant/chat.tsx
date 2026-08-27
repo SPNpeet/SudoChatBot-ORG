@@ -607,9 +607,14 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
             <div className={cn(
               "text-sm",
               m.role === "user"
-                ? "max-w-[85%] rounded-2xl rounded-br-md bg-neutral-900 px-3.5 py-2 text-white"
+                ? "max-w-[85%] cursor-pointer rounded-2xl rounded-br-md bg-neutral-900 px-3.5 py-2 text-white active:opacity-80"
                 : "w-full border-l-2 border-emerald-100 pl-3.5 text-neutral-800 sm:pl-4",
-            )}>
+            )}
+              // ใช้คำสั่งเดิมซ้ำ (ผลตรวจ 28 ส.ค. 2569: "คนที่สั่งผิดหรืออยากทำซ้ำ
+              // ควรกดใช้ซ้ำได้ทันที") — แตะฟองของตัวเองแล้วข้อความกลับลงช่องพิมพ์
+              // ให้แก้ก่อนส่ง ไม่ยิงซ้ำทันทีเพราะคำสั่งเขียนเงินซ้ำสองรอบอันตรายกว่า
+              onClick={m.role === "user" && (m.display ?? m.content) ? () => setInput(m.display ?? m.content ?? "") : undefined}
+              title={m.role === "user" ? "แตะเพื่อนำคำสั่งนี้กลับไปแก้และส่งใหม่" : undefined}>
               {/* รูปบิลที่แนบ — โชว์เป็นรูปจริง ไม่ใช่ path */}
               {m.images && m.images.length > 0 && (
                 <div className="mb-1.5 flex flex-wrap gap-1.5">

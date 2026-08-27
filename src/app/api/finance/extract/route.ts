@@ -30,6 +30,8 @@ export interface ExtractedBill {
   wht_rate?: number;
   total?: number;
   category?: string;           // หมวดค่าใช้จ่ายที่เดา
+  category_reason?: string;    // เหตุผลสั้น ๆ ว่าทำไมจัดหมวดนี้ — ผลตรวจ 28 ส.ค. 2569: AI ต้องอธิบายการตัดสินใจ ไม่ใช่บอกแค่ผล
+  confidence?: number;         // 0-100 ความมั่นใจรวมของการอ่านใบนี้ — ให้ผู้ใช้รู้ว่าควรตรวจแค่ไหน
   unclear?: string[];          // จุดที่ AI อ่านไม่ชัด — ต้องถามเจ้าของก่อนบันทึก
   issues?: string[];           // ผลตรวจเลขฝั่งเรา (ยอดไม่ลงตัว/ขาดข้อมูล)
   needs_confirm?: boolean;     // true = ห้ามบันทึกทันที ต้องให้คนยืนยันก่อน
@@ -61,7 +63,11 @@ function reconcile(b: ExtractedBill): ExtractedBill {
   if (vat > 0 && !b.vat_mode) issues.push("มี VAT แต่ระบุไม่ได้ว่าราคารวม VAT แล้วหรือบวกเพิ่ม");
 
   const all = [...(b.unclear ?? []), ...issues];
-  return { ...b, issues: issues.length ? issues : undefined, needs_confirm: all.length > 0 };
+  // ความมั่นใจที่โมเดลรายงาน ห้ามสวนทางกับปัญหาที่เราตรวจเจอจริง
+  // เจอ issue ฝั่งเรา = กดเพดานลง ไม่ให้ขึ้น "มั่นใจ 98%" ทั้งที่เลขบวกไม่ลงตัว
+  const modelConf = typeof b.confidence === "number" ? Math.max(0, Math.min(100, Math.round(b.confidence))) : undefined;
+  const capped = all.length > 0 ? Math.min(modelConf ?? 70, 70 - Math.min(30, all.length * 10)) : modelConf;
+  return { ...b, confidence: capped, issues: issues.length ? issues : undefined, needs_confirm: all.length > 0 };
 }
 
 const MAX_BYTES = 4 * 1024 * 1024;
@@ -72,7 +78,7 @@ const OK_TYPES: Record<string, string> = {
 
 const EXTRACT_PROMPT = `คุณคือระบบอ่านเอกสารการเงินไทย (บิล ใบเสร็จ ใบกำกับภาษี ใบแจ้งหนี้ สลิปโอนเงิน) ตอบเป็น JSON เท่านั้น (ไม่มีข้อความอื่น ไม่มี markdown fence)
 อ่านเอกสารแล้วตอบตาม schema:
-{"doc_kind": "expense_bill|invoice|receipt|slip|unknown", "vendor_name": "ชื่อผู้ขาย/ร้านที่ออกบิล", "vendor_tax_id": "เลขผู้เสียภาษี 13 หลักถ้ามี", "date": "วันที่เอกสาร YYYY-MM-DD", "doc_ref": "เลขที่เอกสารถ้ามี", "items": [{"name": "รายการ", "qty": จำนวน, "unit_price": ราคาต่อหน่วย}], "subtotal": มูลค่าสินค้ารวมก่อน VAT, "discount": ส่วนลด (0 ถ้าไม่มี), "vat_mode": "none|exclusive|inclusive", "vat_amount": ยอด VAT (0 ถ้าไม่มี), "wht_rate": อัตราหัก ณ ที่จ่าย % (0 ถ้าไม่มี), "total": ยอดรวมสุทธิที่ต้องจ่ายตามบิล, "category": "หมวดค่าใช้จ่ายที่เหมาะสุด เลือกจาก: ซื้อสินค้า/วัตถุดิบ, เงินเดือน/ค่าจ้าง, ค่าเช่า, ค่าน้ำ/ค่าไฟ/อินเทอร์เน็ต, ค่าขนส่ง/เดินทาง, การตลาด/โฆษณา, ค่าธรรมเนียม/บริการ, วัสดุ/อุปกรณ์สำนักงาน, ภาษี/ประกันสังคม, อื่น ๆ", "unclear": ["สิ่งที่อ่านไม่ชัด/ไม่แน่ใจ เป็นข้อความสั้นๆ ภาษาไทย"]}
+{"doc_kind": "expense_bill|invoice|receipt|slip|unknown", "vendor_name": "ชื่อผู้ขาย/ร้านที่ออกบิล", "vendor_tax_id": "เลขผู้เสียภาษี 13 หลักถ้ามี", "date": "วันที่เอกสาร YYYY-MM-DD", "doc_ref": "เลขที่เอกสารถ้ามี", "items": [{"name": "รายการ", "qty": จำนวน, "unit_price": ราคาต่อหน่วย}], "subtotal": มูลค่าสินค้ารวมก่อน VAT, "discount": ส่วนลด (0 ถ้าไม่มี), "vat_mode": "none|exclusive|inclusive", "vat_amount": ยอด VAT (0 ถ้าไม่มี), "wht_rate": อัตราหัก ณ ที่จ่าย % (0 ถ้าไม่มี), "total": ยอดรวมสุทธิที่ต้องจ่ายตามบิล, "category": "หมวดค่าใช้จ่ายที่เหมาะสุด เลือกจาก: ซื้อสินค้า/วัตถุดิบ, เงินเดือน/ค่าจ้าง, ค่าเช่า, ค่าน้ำ/ค่าไฟ/อินเทอร์เน็ต, ค่าขนส่ง/เดินทาง, การตลาด/โฆษณา, ค่าธรรมเนียม/บริการ, วัสดุ/อุปกรณ์สำนักงาน, ภาษี/ประกันสังคม, อื่น ๆ", "category_reason": "เหตุผลสั้นๆ ว่าทำไมจัดหมวดนี้ เช่น มีคำว่าค่าไฟฟ้าบนหัวบิล", "confidence": ความมั่นใจรวม 0-100 (ต่ำกว่า 80 เมื่อมีตัวเลขเบลอหรือเดา), "unclear": ["สิ่งที่อ่านไม่ชัด/ไม่แน่ใจ เป็นข้อความสั้นๆ ภาษาไทย"]}
 กติกาสำคัญ (ตัวเลขผิด = ลูกค้าเสียหาย ต้องระวังสูงสุด):
 - ตัวเลขตัดสัญลักษณ์สกุลเงิน/คอมมาให้เหลือตัวเลข เช่น "1,290.50 บาท" -> 1290.5
 - วันที่ไทย พ.ศ. ให้แปลงเป็น ค.ศ. (เช่น 2569 -> 2026)

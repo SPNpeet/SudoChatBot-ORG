@@ -13,6 +13,10 @@ export default function AccountantPackage({ period }: { period: string }) {
 
   async function download() {
     if (busy) return;                       // กันกดรัวจนได้ไฟล์ซ้ำ
+    // ⚠️ ขั้นยืนยันก่อนส่งข้อมูลทั้งงวดออกนอกระบบ (เพิ่ม 28 ส.ค. 2569 ตามผลตรวจ PDPA)
+    // ไฟล์นี้รวมข้อมูลการเงินทั้งงวดและปลายทางคือบุคคลภายนอก (สำนักงานบัญชี)
+    // การกดยืนยันถูกบันทึกเป็นหลักฐานที่ฝั่ง server (consent_logs) ไม่ใช่แค่ป๊อปอัป
+    if (!window.confirm("ไฟล์นี้รวมข้อมูลบัญชีทั้งงวดสำหรับส่งต่อสำนักงานบัญชี — ยืนยันการดาวน์โหลดเพื่อส่งต่อบุคคลภายนอก?")) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/sheet/accountant?period=${encodeURIComponent(period)}`);

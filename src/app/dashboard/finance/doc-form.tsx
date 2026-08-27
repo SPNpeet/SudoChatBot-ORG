@@ -54,7 +54,10 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
   const [showPreview, setShowPreview] = useState(false);
   const rowsRef = useRef<HTMLDivElement>(null);
   const [aiBusy, setAiBusy] = useState(false);
-  const [aiWarn, setAiWarn] = useState<string[]>([]);   // จุดที่ AI อ่านไม่ชัด/ยอดไม่ลงตัว — ให้คนตรวจก่อนบันทึก
+  const [aiWarn, setAiWarn] = useState<string[]>([]);
+  // ความมั่นใจ + เหตุผลของ AI — ผลตรวจ 28 ส.ค. 2569: บอกแค่ผลไม่พอ ต้องบอกว่ามั่นใจแค่ไหน
+  // และตัดสินใจจากอะไร ผู้ใช้ถึงจะกล้ากด "บันทึก" กับเงินจริง
+  const [aiMeta, setAiMeta] = useState<{ confidence?: number; reason?: string } | null>(null);   // จุดที่ AI อ่านไม่ชัด/ยอดไม่ลงตัว — ให้คนตรวจก่อนบันทึก
   const [ocrTotal, setOcrTotal] = useState<number | null>(null); // ยอดรวมที่ AI อ่านได้จากท้ายบิล
 
   const [rows, setRows] = useState<Row[]>(
@@ -145,9 +148,11 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
           vendor_name?: string; date?: string; items?: { name: string; qty?: number; unit_price?: number }[];
           subtotal?: number; discount?: number; vat_mode?: "none" | "exclusive" | "inclusive";
           vat_amount?: number; total?: number; wht_rate?: number; category?: string;
+          category_reason?: string; confidence?: number;
           unclear?: string[]; issues?: string[];
         };
         setAiWarn([...(d.issues ?? []), ...(d.unclear ?? [])]);
+        setAiMeta({ confidence: d.confidence, reason: d.category_reason });
         // ยอดที่ AI อ่านจากท้ายบิล เอาไว้ทานกับผลรวมที่ฟอร์มคำนวณเอง (ดู useEffect ด้านล่าง)
         setOcrTotal(typeof d.total === "number" && d.total > 0 ? d.total : null);
         if (j.file_path) setFiles((prev) => (prev.some((x) => x.path === j.file_path) ? prev : [...prev, { path: j.file_path as string, name: f.name }]));
@@ -272,6 +277,8 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
             <Button type="button" variant="outline" onClick={() => fileRef.current?.click()} disabled={aiBusy}>
               <ScanLine className="h-4 w-4 text-emerald-600" /> {aiBusy ? "AI กำลังอ่านบิล..." : "ถ่ายรูป/อัปโหลดบิล ให้ AI กรอกให้"}
             </Button>
+            {/* ยืนยันสิทธิ์ ณ จุดอัปโหลด — ผลตรวจ PDPA 28 ส.ค. 2569 */}
+            <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-400">การอัปโหลดถือเป็นการยืนยันว่าคุณมีสิทธิ์ในเอกสารนี้ และอนุญาตให้ระบบประมวลผลตามนโยบายความเป็นส่วนตัว</p>
             <p className="text-xs text-neutral-400">เลือกได้หลายใบพร้อมกัน (บิลหลายหน้า/บิล+สลิป) — AI อ่านใบล่าสุดมากรอกฟอร์มให้ ตรวจก่อนบันทึกได้</p>
             {files.length > 0 && (
               <div className="w-full space-y-1">
@@ -295,6 +302,16 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
                   ท้ายบิลเขียนว่า <b>{baht(ocrMismatch.ocrTotal)}</b> แต่รวมจากรายการด้านล่างได้ <b>{baht(totals.total)}</b>
                   {" "}(ต่างกัน {baht(ocrMismatch.diff)}) — เทียบกับบิลจริงแล้วแก้ราคา/จำนวนให้ตรงก่อนบันทึก
                 </p>
+              </div>
+            )}
+            {/* แถบความมั่นใจของ AI — สีตามระดับ เขียว >=90 เหลือง >=70 แดงต่ำกว่านั้น */}
+            {aiMeta?.confidence != null && (
+              <div className={cn("flex flex-wrap items-center gap-2 rounded-xl px-3 py-2 text-xs",
+                aiMeta.confidence >= 90 ? "bg-emerald-50 text-emerald-800"
+                  : aiMeta.confidence >= 70 ? "bg-amber-50 text-amber-800" : "bg-red-50 text-red-700")}>
+                <span className="font-semibold">AI อ่านบิลนี้ด้วยความมั่นใจ {aiMeta.confidence}%</span>
+                {aiMeta.confidence < 90 && <span>— ตรวจตัวเลขเทียบบิลจริงก่อนบันทึก</span>}
+                {aiMeta.reason && <span className="basis-full text-[11px] opacity-80">เหตุผลการจัดหมวด: {aiMeta.reason} (แก้ได้ที่ช่องหมวดด้านล่าง)</span>}
               </div>
             )}
             {aiWarn.length > 0 && (

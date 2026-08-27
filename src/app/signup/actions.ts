@@ -20,7 +20,14 @@ async function ipHash(): Promise<string> {
   return createHmac("sha256", secret).update(norm).digest("hex");
 }
 
-export async function signUpDirect(name: string, email: string, password: string): Promise<SignUpResult> {
+/**
+ * ⚠️ consent เป็นพารามิเตอร์บังคับ (เพิ่ม 28 ส.ค. 2569 ตามผลตรวจ PDPA)
+ * เดิมหน้าเว็บเขียนว่า "การสมัครถือว่ายอมรับ" ซึ่งเป็น implied consent
+ * ที่พิสูจน์ไม่ได้ว่าใครเห็นเมื่อไร — ตอนนี้ต้องติ๊กเองและเก็บหลักฐานลง consent_logs
+ * บังคับที่ server ไม่ใช่แค่ disable ปุ่ม เพราะปุ่มปลอมได้ ด่านจริงต้องอยู่ฝั่งนี้
+ */
+export async function signUpDirect(name: string, email: string, password: string, consent?: boolean): Promise<SignUpResult> {
+  if (consent !== true) return { ok: false, error: "ต้องยอมรับเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัวก่อนสมัคร" };
   const n = String(name ?? "").trim().slice(0, 100);
   const em = String(email ?? "").trim().toLowerCase();
   const pw = String(password ?? "");
@@ -42,7 +49,7 @@ export async function signUpDirect(name: string, email: string, password: string
   if ((rate as { allowed?: boolean } | null)?.allowed !== true) {
     return { ok: false, error: "สมัครถี่เกินไปจากเครือข่ายนี้ — รอสักครู่แล้วลองใหม่ หรือถ้ามีบัญชีแล้วให้กดเข้าสู่ระบบ" };
   }
-  const { error } = await svc.auth.admin.createUser({
+  const { data: createdData, error } = await svc.auth.admin.createUser({
     email: em, password: pw, email_confirm: true,
     user_metadata: { full_name: n },
   });
@@ -57,5 +64,14 @@ export async function signUpDirect(name: string, email: string, password: string
     }
     return { ok: false, error: `สมัครไม่สำเร็จ: ${m.slice(0, 200)}` };
   }
+  // หลักฐานการยินยอม (PDPA) — ผูกกับ user id จริงหลังสร้างบัญชีสำเร็จ
+  // เก็บเวอร์ชันเอกสารที่ยอมรับไว้ด้วย วันหน้าแก้ terms จะได้รู้ว่าใครยอมรับฉบับไหน
+  try {
+    await svc.from("consent_logs").insert({
+      user_id: createdData?.user?.id ?? null,
+      kind: "signup_terms",
+      detail: { email: em, terms: "/terms", privacy: "/privacy", accepted_at: new Date().toISOString() },
+    });
+  } catch { /* log ไม่ได้ไม่ควรขวางการสมัคร — แต่ต้องไม่เงียบใน dev */ }
   return { ok: true };
 }

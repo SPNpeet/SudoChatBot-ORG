@@ -45,6 +45,8 @@ export default function PublicSlipUpload({ docKey, autoVerify }: { docKey: strin
         className="mt-2 w-full rounded-xl bg-neutral-900 py-3 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50">
         {busy ? (autoVerify ? "กำลังตรวจสลิป..." : "กำลังส่งสลิป...") : autoVerify ? "อัปโหลดสลิป" : "ส่งสลิปให้ร้าน"}
       </button>
+      {/* ยืนยันสิทธิ์ ณ จุดอัปโหลด — ผลตรวจ PDPA 28 ส.ค. 2569 */}
+      <p className="mt-1.5 text-[11px] leading-relaxed text-neutral-400">การอัปโหลดถือเป็นการยืนยันว่าคุณมีสิทธิ์ในเอกสารนี้ และอนุญาตให้ระบบประมวลผลตามนโยบายความเป็นส่วนตัว</p>
       <p className="mt-1.5 text-xs text-neutral-400">
         {autoVerify
           ? "ระบบตรวจสลิปอัตโนมัติ — ผ่านแล้วสถานะเปลี่ยนเป็นชำระแล้วทันที"
