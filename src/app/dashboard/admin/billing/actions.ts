@@ -133,9 +133,29 @@ export async function savePlatformBilling(formData: FormData): Promise<SaveBilli
       if (!stripeKey.startsWith("sk_") && !stripeKey.startsWith("rk_")) {
         return { ok: false, error: "Secret key ต้องขึ้นต้นด้วย sk_ (หรือ rk_) — ค่าที่กรอกมาน่าจะสลับช่องกับ webhook secret" };
       }
+      // ⚠️ ยิงทดสอบกับ Stripe จริงก่อนเก็บ (เพิ่ม 28 ส.ค. 2569)
+      // รูปแบบถูกแต่คีย์ถูกเพิกถอน/พิมพ์ตก = ระบบบอก "บันทึกสำเร็จ" แล้วลูกค้าจ่ายไม่ผ่านเงียบ ๆ
+      // ตรวจตรงนี้ครั้งเดียวตอนเซฟ แล้วบอกให้จบว่าคีย์นี้ "รับเงินจริงได้ไหม"
+      let stripeNote = "";
+      try {
+        const r = await fetch("https://api.stripe.com/v1/account", {
+          headers: { Authorization: `Bearer ${stripeKey}` },
+        });
+        if (r.status === 401) {
+          return { ok: false, error: "Stripe ปฏิเสธคีย์นี้ (401) — คีย์ผิดหรือถูกเพิกถอนแล้ว คัดลอกใหม่จาก Stripe Dashboard" };
+        }
+        if (r.ok) {
+          const a = (await r.json()) as { charges_enabled?: boolean; livemode?: boolean };
+          stripeNote = !stripeKey.startsWith("sk_live") && !stripeKey.startsWith("rk_live")
+            ? " (คีย์ทดสอบ — ลูกค้าจริงยังจ่ายไม่ได้)"
+            : a.charges_enabled === true
+              ? " (คีย์ live พร้อมรับเงินจริงแล้ว)"
+              : " (คีย์ live แต่บัญชียังไม่ผ่านยืนยันตัวตน — Stripe ยังไม่ให้รับเงิน)";
+        }
+      } catch { /* Stripe ล่ม/เน็ตสะดุด — อย่าขวางการเซฟ ด่านรันไทม์ (isLiveStripeKey) ยังกันอยู่ */ }
       const { error: e4 } = await supabase.rpc("store_platform_stripe_key", { p_key: stripeKey });
       if (e4) return { ok: false, error: `บันทึก Stripe secret key ไม่สำเร็จ: ${e4.message}` };
-      savedKeys.push("Stripe secret key");
+      savedKeys.push(`Stripe secret key${stripeNote}`);
     }
     const stripeWh = String(formData.get("stripe_webhook_secret") ?? "").trim();
     if (stripeWh) {
