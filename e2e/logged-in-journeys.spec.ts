@@ -23,7 +23,13 @@ async function login(page: Page) {
   await page.goto("/login");
   await page.locator('input[type="email"]').first().fill(EMAIL!);
   await page.locator('input[type="password"]').first().fill(PASSWORD!);
-  await page.getByRole("button", { name: /เข้าสู่ระบบ|ลงชื่อ/ }).first().click();
+  // ⚠️ ต้องเจาะจงปุ่มส่งฟอร์ม ห้ามจับด้วยชื่อปุ่ม (แก้ 27 ส.ค. 2569)
+  // OAuthButtons ถูกวางไว้ "เหนือ" ฟอร์มในหน้า /login และปุ่มของมันชื่อ
+  // "เข้าสู่ระบบด้วย Google" ซึ่งเข้าเงื่อนไข /เข้าสู่ระบบ/ ด้วย
+  // .first() จึงไปกดปุ่ม Google แล้วเบราว์เซอร์เด้งออกไป accounts.google.com
+  // ผลคือชุดทดสอบนี้ไม่เคยทดสอบการล็อกอินด้วยรหัสผ่านเลยสักครั้ง
+  // และล้มทั้ง 11 เคสด้วยข้อความ timeout ที่ชี้ไปผิดที่
+  await page.locator('form button[type="submit"]').first().click();
   await page.waitForURL(/\/dashboard/, { timeout: 30_000 });
 }
 
@@ -66,10 +72,19 @@ test.describe("เจ้าของกิจการ SME", () => {
     await preview.first().click();
     const dialog = page.getByRole("dialog", { name: /ตัวอย่างเอกสาร/ });
     await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText(/ตัวอย่างก่อนออกเอกสาร/);
+    // ⚠️ ห้ามผูกกับพาดหัวของป๊อปอัป (แก้ 27 ส.ค. 2569)
+    // เดิมตรวจคำว่า "ตัวอย่างก่อนออกเอกสาร" ซึ่งถูกเปลี่ยนข้อความไปแล้วตอนเพิ่มฟีเจอร์
+    // แก้สดบนใบ เทสต์เลยล้มทั้งที่ป๊อปอัปทำงานถูกต้องทุกอย่าง
+    // สิ่งที่ควรตรวจคือ "คำสัญญา" ของหน้านี้ คือดูตัวอย่างแล้วต้องยังไม่บันทึกอะไร
+    // ซึ่งเป็นพฤติกรรมที่ห้ามเปลี่ยน ไม่ใช่ถ้อยคำที่เปลี่ยนได้ตลอด
+    await expect(dialog).toContainText(/ยังไม่บันทึกจนกว่าจะกดออกเอกสาร/);
 
     // ปิดแล้วต้องกลับมาที่ฟอร์ม ไม่ใช่หลุดไปหน้าอื่นหรือบันทึกอะไรไป
-    await page.getByRole("button", { name: /กลับไปแก้ไข|ปิด/ }).first().click();
+    // ⚠️ กับดักภาษาไทย: regex /ปิด/ ไปแมตช์ปุ่ม "เปิดปฏิทิน" ในฟอร์มที่อยู่ "หลัง" ป๊อปอัป
+    // (คำว่า "เ-ปิด-ปฏิทิน" มี "ปิด" อยู่ข้างใน) ป๊อปอัปจึงบังการคลิกไว้ แล้ว timeout 45 วินาที
+    // โดยที่ข้อความ error ชี้ไปที่ "กดปุ่มปิดไม่ได้" ซึ่งทำให้ไล่ผิดทาง (แก้ 27 ส.ค. 2569)
+    // ต้องหาปุ่มภายในป๊อปอัปเท่านั้น และเทียบชื่อแบบตรงตัว ห้ามใช้ regex กว้าง ๆ
+    await dialog.getByRole("button", { name: "ปิด", exact: true }).first().click();
     await expect(dialog).toBeHidden();
     expect(page.url()).toContain("/dashboard/sales/new");
   });

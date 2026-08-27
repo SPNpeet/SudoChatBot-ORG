@@ -20,6 +20,19 @@
 // ============================================================
 import { createClient } from "@supabase/supabase-js";
 
+import { readFileSync, existsSync } from "node:fs";
+
+// ⚠️ ต้องอ่าน .env.local เอง (แก้ 27 ส.ค. 2569)
+// เดิมด่านนี้ขึ้นว่า "ข้าม ไม่มี SUPABASE_URL" ทุกครั้ง ทั้งที่คีย์อยู่ใน .env.local ครบ
+// เพราะสคริปต์นี้รันนอก Next.js จึงไม่มีใครโหลดไฟล์นั้นให้
+// ผลคือคลังความรู้ภาษีไม่เคยถูกตรวจเลย แต่ผลที่ออกมาอ่านเหมือนไม่มีอะไรผิด
+if (existsSync(".env.local")) {
+  for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
+    const m = line.match(/^([A-Z_]+)=(.*)$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+  }
+}
+
 const URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

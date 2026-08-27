@@ -11,11 +11,25 @@
 //  รัน: node scripts/find-duplicate-buttons.mjs [baseUrl]
 //  ต้องมี TEST_EMAIL/TEST_PASSWORD ถึงจะตรวจหน้าหลังล็อกอินได้
 // ============================================================
+import { readFileSync, existsSync } from "node:fs";
 import { chromium } from "@playwright/test";
 
-const BASE = process.argv[2] ?? process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000";
+// ⚠️ อ่าน .env.local เอง และยิงใส่ production เป็นค่าเริ่มต้น (แก้ 27 ส.ค. 2569)
+// เดิมตั้งต้นที่ 127.0.0.1:3000 ซึ่งไม่มีอะไรรันอยู่ หน้าจึงว่างทุกหน้า
+// แล้วด่านนี้รายงานว่า "ถูก" ทุกบรรทัดพร้อมเลข "ปุ่มที่มองเห็น 0"
+// ด่านที่ผ่านเพราะวัดไม่ติด อันตรายกว่าไม่มีด่าน เพราะทำให้เชื่อว่าตรวจแล้ว
+if (existsSync(".env.local")) {
+  for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
+    const m = line.match(/^([A-Z_]+)=(.*)$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+  }
+}
+const BASE = process.argv[2] ?? process.env.E2E_BASE_URL ?? process.env.CHECK_BASE_URL ?? "https://sudochatbot.online";
 const PROXY = process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY ?? "";
-const CHROME = process.env.E2E_CHROME ?? "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
+// ⚠️ ห้าม hardcode ที่อยู่เบราว์เซอร์ (แก้ 27 ส.ค. 2569)
+// เดิมชี้ไปที่ /opt/pw-browsers/... ซึ่งมีเฉพาะบน Linux ด่านนี้จึงรันบน Windows ไม่ได้เลย
+// ไม่ใส่ค่า = ให้ Playwright หาเบราว์เซอร์ของตัวเอง ซึ่งถูกต้องทุกเครื่อง
+const CHROME = process.env.E2E_CHROME || undefined;
 
 const PUBLIC_PAGES = ["/", "/try", "/pricing", "/login", "/signup"];
 const PRIVATE_PAGES = [
@@ -107,7 +121,9 @@ if (process.env.TEST_EMAIL && process.env.TEST_PASSWORD) {
   await page.goto(BASE + "/login");
   await page.locator('input[type="email"]').first().fill(process.env.TEST_EMAIL);
   await page.locator('input[type="password"]').first().fill(process.env.TEST_PASSWORD);
-  await page.getByRole("button", { name: /เข้าสู่ระบบ|ลงชื่อ/ }).first().click();
+  // ปุ่ม "เข้าสู่ระบบด้วย Google" อยู่เหนือฟอร์มและเข้าเงื่อนไขเดียวกัน
+  // จับด้วยชื่อจึงเด้งออกไป accounts.google.com (เจอจริง 27 ส.ค. 2569 ในชุด e2e)
+  await page.locator('form button[type="submit"]').first().click();
   await page.waitForURL(/\/dashboard/, { timeout: 30000 }).catch(() => null);
   pages.push(...PRIVATE_PAGES);
 } else {
@@ -117,9 +133,14 @@ if (process.env.TEST_EMAIL && process.env.TEST_PASSWORD) {
 
 console.log(`\n== ปุ่มซ้ำบนจอมือถือ 390px (${BASE}) ==\n`);
 let totalDup = 0;
+let broken = 0;
 for (const p of pages) {
   const r = await scan(page, p);
-  if (r.dups.length === 0) {
+  if (r.total === 0) {
+    // 0 ปุ่มบนหน้าจริงเป็นไปไม่ได้ แปลว่าโหลดหน้าไม่สำเร็จ ไม่ใช่ว่าไม่มีปุ่มซ้ำ
+    broken++;
+    console.log(`  วัดไม่ติด  ${r.path}  (โหลดหน้าไม่สำเร็จ หรือหน้าว่าง)`);
+  } else if (r.dups.length === 0) {
     console.log(`  ถูก  ${r.path}  (ปุ่มที่มองเห็น ${r.total})`);
   } else {
     totalDup += r.dups.length;
@@ -129,4 +150,5 @@ for (const p of pages) {
 }
 console.log(`\nสรุป: พบชื่อปุ่มที่ซ้ำ ${totalDup} รายการ\n`);
 await b.close();
-process.exit(0);
+// ต้องคืนรหัสผิดเมื่อเจอปัญหา ไม่งั้นเรียกจากด่านรวมแล้วผ่านตลอด
+process.exit(totalDup || broken ? 1 : 0);

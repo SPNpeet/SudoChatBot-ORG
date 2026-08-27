@@ -14,7 +14,24 @@
 //  ⚠️ ทุกเทสต์ในชุดนี้ต้อง "อ่านอย่างเดียว" กับ production — ห้ามสร้าง/แก้/ลบข้อมูลจริง
 //     เส้นทางที่ต้องเขียนข้อมูลให้ทดสอบบนกิจการทดสอบเท่านั้น และต้องล้างหลังเสร็จ
 // ============================================================
+import { readFileSync, existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+
+/**
+ * อ่าน .env.local เอง — Playwright ไม่ได้โหลดให้เหมือน Next.js
+ *
+ * ⚠️ ทำไมต้องมี (27 ส.ค. 2569): ชุดหลังล็อกอินข้ามทั้ง 12 เคสเงียบ ๆ
+ * เพราะไม่เห็น TEST_EMAIL/TEST_PASSWORD ทั้งที่มีอยู่ใน .env.local เรียบร้อยแล้ว
+ * ผลลัพธ์ที่ออกมาคือ "skipped" ซึ่งอ่านผ่าน ๆ เหมือนไม่มีอะไรผิด
+ * แต่ความจริงคือหน้าหลังล็อกอินไม่ถูกตรวจเลยสักหน้า — อันตรายกว่าเทสต์ล้ม
+ * ค่าที่ตั้งมาจาก shell อยู่แล้วมีสิทธิ์เหนือกว่าเสมอ (ไม่เขียนทับ)
+ */
+if (existsSync(".env.local")) {
+  for (const line of readFileSync(".env.local", "utf8").split(/\r?\n/)) {
+    const m = line.match(/^([A-Z_]+)=(.*)$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim();
+  }
+}
 
 const BASE = process.env.E2E_BASE_URL ?? "https://sudochatbot.online";
 

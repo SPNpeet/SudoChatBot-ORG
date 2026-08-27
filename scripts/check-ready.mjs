@@ -72,11 +72,28 @@ const add = (name, ready, impact, howto) => items.push({ name, ready, impact, ho
 {
   const res = await fetch(`${BASE}/api/cron/backup`).catch(() => null);
   // 503 = ยังไม่ตั้ง CRON_SECRET (fail-closed ถูกต้อง) · 401 = ตั้งแล้วแต่เรียกโดยไม่มีสิทธิ์ = พร้อม
-  const ready = !!res && res.status !== 503;
+  const cronReady = !!res && res.status !== 503;
+
+  // ⚠️ ต้องนับชั้นกู้คืนในฐานข้อมูลด้วย (แก้ 27 ส.ค. 2569)
+  // migration 100 เพิ่ม snapshot รายวันในฐานข้อมูลเอง ซึ่งทำงานอยู่จริงและตรวจได้
+  // แต่ด่านนี้ยังดูแค่ endpoint ของ Vercel แล้วรายงานว่า "ไม่มีไฟล์สำรองอัตโนมัติเลย"
+  // ซึ่งไม่จริงอีกต่อไป — ด่านที่พูดไม่ตรงความจริงทำให้เจ้าของเลิกเชื่อทั้งกระดาน
+  let snapNote = "";
+  try {
+    const { data } = await svc.rpc("snapshot_status");
+    const latest = String(data?.latest ?? "").replace("snapshot_", "").replace(/_/g, "-");
+    if (latest) {
+      const ageDays = Math.floor((Date.now() - Date.parse(latest)) / 86_400_000);
+      snapNote = ageDays <= 2
+        ? ` · มีจุดกู้คืนในฐานข้อมูลอยู่แล้ว ${data.count} วัน (ล่าสุด ${latest})`
+        : ` · จุดกู้คืนในฐานข้อมูลค้างมา ${ageDays} วัน (ล่าสุด ${latest}) — ต้องเช็คว่างานตามเวลาในฐานข้อมูลยังทำงานไหม`;
+    }
+  } catch { /* ยังไม่มีฟังก์ชันนี้ = ยังไม่ได้ apply migration 100 */ }
+
   add(
-    "สำรองข้อมูลรายวัน + สรุปรายสัปดาห์",
-    ready,
-    "ไม่มีไฟล์สำรองอัตโนมัติเลย — ข้อมูลหายแล้วกู้ได้แค่เท่าที่สำรองมือไว้",
+    "สำรองข้อมูลออกนอกฐาน + สรุปรายสัปดาห์",
+    cronReady,
+    `ยังไม่มีไฟล์สำรองที่เก็บออกนอกฐานข้อมูล และยังไม่ส่งสรุปรายสัปดาห์${snapNote}`,
     "ตั้ง CRON_SECRET ใน Vercel (Settings > Environment Variables) แล้ว redeploy",
   );
 }
