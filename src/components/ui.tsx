@@ -166,11 +166,23 @@ export function PageHeader({ title, lead, help, action, back }: {
         </div>
         {action && <div className="w-full sm:w-auto [&_a]:w-full [&_button]:w-full sm:[&_a]:w-auto sm:[&_button]:w-auto">{action}</div>}
       </div>
+      {/* ⚠️ คำอธิบายหน้าต้องพับเก็บได้บนมือถือ (แก้ 27 ส.ค. 2569)
+          เจ้าของแจ้งว่า "ใช้ยาก รก" — วัดจากหน้าจอจริง 390px พบว่าหน้าจอแรก
+          หมดไปกับหัวเรื่อง + กล่องคำอธิบายตัวเล็ก 3-4 บรรทัด + แถบเครื่องมือ
+          กว่าจะเห็นตัวเลขสักตัวต้องเลื่อนลง ทั้งที่ตัวเลขคือเหตุผลเดียวที่คนเปิดหน้านี้
+          คำอธิบายมีประโยชน์ตอนใช้ครั้งแรก แต่กลายเป็นสิ่งกีดขวางตั้งแต่ครั้งที่สองเป็นต้นไป
+          จึงพับบนมือถือ (แตะเปิดได้) และกางเองบนจอใหญ่ที่มีที่ว่างพอ — ดู .pagehelp ใน globals.css */}
       {help && (
-        <p className="flex items-start gap-2 rounded-xl border border-neutral-200/70 bg-neutral-50/70 px-3 py-2.5 text-[12px] leading-relaxed text-neutral-500">
-          <Lightbulb aria-hidden className="mt-[1px] h-3.5 w-3.5 shrink-0 text-neutral-400" />
-          <span>{help}</span>
-        </p>
+        <details className="pagehelp">
+          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[12px] font-medium text-neutral-500">
+            <Lightbulb aria-hidden className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            หน้านี้ใช้ยังไง
+          </summary>
+          <p className="pagehelp-body flex items-start gap-2 rounded-xl border border-neutral-200/70 bg-neutral-50/70 px-3 py-2.5 text-[12px] leading-relaxed text-neutral-500">
+            <Lightbulb aria-hidden className="mt-[1px] h-3.5 w-3.5 shrink-0 text-neutral-400" />
+            <span>{help}</span>
+          </p>
+        </details>
       )}
     </div>
   );

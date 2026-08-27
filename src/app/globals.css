@@ -177,3 +177,27 @@ html { scroll-behavior: smooth; }
 .chev-open { display: none; }
 details[open] .chev-open { display: block; }
 details[open] .chev-closed { display: none; }
+
+/* ==== คำอธิบายหัวหน้า: พับบนมือถือ กางบนจอใหญ่ ====
+   เหตุผลอยู่ที่ PageHeader ใน src/components/ui.tsx
+   มือถือ = แตะที่ "หน้านี้ใช้ยังไง" ถึงจะกาง · จอใหญ่ = กางอยู่แล้วและซ่อนหัวข้อที่ให้กด
+   ใช้ CSS ล้วนเพราะแอตทริบิวต์ open ของ <details> ตอบสนองต่อขนาดจอไม่ได้ */
+.pagehelp > summary::-webkit-details-marker { display: none; }
+.pagehelp > .pagehelp-body { margin-top: 8px; }
+@media (min-width: 640px) {
+  .pagehelp > summary { display: none; }
+  .pagehelp > .pagehelp-body { display: flex !important; margin-top: 0; }
+}
+
+/* ==== แถบแท็บที่เลื่อนได้แทนการตกบรรทัด ====
+   แท็บ 5 อันบนจอ 375px ตกลงมา 3 แถว กินพื้นที่หน้าจอแรกไปเปล่า ๆ
+   แถวเดียวเลื่อนซ้ายขวาคือรูปแบบที่คนใช้มือถือคุ้นอยู่แล้ว */
+.tabstrip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.tabstrip::-webkit-scrollbar { display: none; }
+.tabstrip > * { flex: none; }

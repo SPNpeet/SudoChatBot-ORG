@@ -90,20 +90,20 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
           // ⚠️ ปุ่มโหลดต้องอยู่คู่กับตัวเลือกงวด (8 ส.ค. 2569)
           // สิ่งที่คนมาหน้านี้มาทำคือ "เลือกงวด แล้วโหลดไฟล์" — สองอย่างนี้ต้องอยู่ติดกัน
           // เดิมปุ่มโหลดเป็นการ์ดเขียวเต็มแถวคนละที่กับตัวเลือกงวด ต้องเลื่อนหาและดูรก
-          <div className="flex flex-wrap items-center gap-2">
+          // ⚠️ ทับกฎ "ปุ่มเต็มแถวบนมือถือ" ของ PageHeader เฉพาะหน้านี้ (27 ส.ค. 2569)
+          // หน้านี้มีปุ่ม 2 ตัวติดกัน พอบังคับเต็มแถวทั้งคู่ = กินหน้าจอแรกไปสองแถบใหญ่
+          // ก่อนที่ผู้ใช้จะได้เห็นตัวเลขสักตัว ซึ่งเป็นเหตุผลเดียวที่เขาเปิดหน้านี้
+          <div className="flex w-full flex-wrap items-center gap-2 [&_a]:!w-auto [&_button]:!w-auto">
             <PeriodPicker tab={t} period={period.key} />
             <AccountantPackage period={period.key} />
           </div>
         }
       />
 
-      {/* ยามเฝ้าความถูกต้องทางบัญชี — รันสดทุกครั้งที่เปิดหน้า
-          ผ่านหมด = แสดงแค่บรรทัดเดียว · มีปัญหาจริงค่อยกางเป็นการ์ดเต็มพร้อมวิธีแก้
-          เดิมการตรวจ 11 ข้อนี้ทำด้วยมือครั้งเดียวตอนออดิต ซึ่งเป็นภาพนิ่ง
-          ลูกค้าบันทึกข้อมูลทุกวัน ถ้าวันไหนเพี้ยนต้องรู้ทันที ไม่ใช่รู้ตอนใกล้ยื่นภาษี */}
-      <IntegrityCard shopId={shop.id} />
-
-      <div className="flex flex-wrap gap-2">
+      {/* ⚠️ แท็บต้องเป็นแถวเดียวที่เลื่อนได้ ห้ามปล่อยให้ตกบรรทัด (แก้ 27 ส.ค. 2569)
+          แท็บ 5 อันบนจอ 390px ตกลงมา 3 แถว กินหน้าจอแรกไปเกือบครึ่ง
+          ทั้งที่คนเปิดหน้านี้มาเพื่อดูตัวเลข ไม่ใช่มาดูรายชื่อแท็บ */}
+      <div className="tabstrip">
         {TABS.map((x) => (
           <Link key={x.id} href={`/dashboard/reports?t=${x.id}&period=${period.key}`}
             className={cn(
@@ -120,6 +120,14 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       {t === "vat" && <VatTab shopId={shop.id} supabase={supabase} period={period} shopName={shop.billing_name || shop.name} shopTaxId={shop.tax_id ?? ""} rdAllowed={rdAllowed} />}
       {t === "wht" && <WhtTab shopId={shop.id} supabase={supabase} period={period} shopName={shop.billing_name || shop.name} shopTaxId={shop.tax_id ?? ""} rdAllowed={rdAllowed} />}
       {t === "trial" && <TrialTab shopId={shop.id} supabase={supabase} period={period} />}
+
+      {/* ยามเฝ้าความถูกต้องทางบัญชี — รันสดทุกครั้งที่เปิดหน้า
+          ผ่านหมด = แสดงแค่บรรทัดเดียว · มีปัญหาจริงค่อยกางเป็นการ์ดเต็มพร้อมวิธีแก้
+
+          ⚠️ ย้ายลงมาไว้ใต้ตัวเลข 27 ส.ค. 2569 — ตอนผ่านหมดมันคือคำยืนยัน ไม่ใช่ข่าว
+          วางไว้บนสุดเท่ากับยกหน้าจอแรกของมือถือให้ข้อความที่อ่านครั้งเดียวก็พอ
+          ถ้ามีปัญหาจริงการ์ดจะกางเองอยู่แล้ว และหน้าอื่นมีแบนเนอร์เตือนให้ ไม่ได้หายไปไหน */}
+      <IntegrityCard shopId={shop.id} />
     </div>
   );
 }
@@ -167,7 +175,9 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* 2 คอลัมน์ตั้งแต่จอเล็ก — 4 ตัวเลขจบใน 2 แถว แทนที่จะไล่ลงมา 4 แถว
+          ตัวเลขคือสิ่งเดียวที่คนเปิดหน้านี้มาดู ต้องเห็นครบตั้งแต่ยังไม่เลื่อนจอ */}
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
         {/* การ์ดพวกนี้หน้าตาเหมือน StatCard บนแดชบอร์ดที่กดได้ ผู้ใช้จึงคาดหวังว่ากดได้ด้วย — ใส่ปลายทางให้ทุกใบ */}
         {[
           { label: `รายได้ ${period.label}`, value: baht(periodIncome), tone: "text-emerald-700", href: "/dashboard/sales" },
