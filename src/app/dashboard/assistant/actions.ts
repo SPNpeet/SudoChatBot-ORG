@@ -25,7 +25,20 @@ export interface AssistantReply {
 const MAX_HISTORY = 20;
 const MAX_LEN = 2000;
 
-export async function assistantReply(shopId: string, history: AssistantTurn[]): Promise<AssistantReply> {
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** อ่านป้ายขั้นตอนล่าสุดของคำขอที่กำลังรัน — ฝั่งแชท poll ระหว่างรอ (สมาชิกกิจการเท่านั้น) */
+export async function assistantProgress(shopId: string, rid: string): Promise<string | null> {
+  try {
+    if (!UUID_RE.test(rid)) return null;
+    await assertMember(shopId, ["owner", "admin", "agent"]);
+    const { data } = await createServiceClient().from("assistant_progress")
+      .select("label").eq("rid", rid).eq("shop_id", shopId).maybeSingle();
+    return data?.label ?? null;
+  } catch { return null; }
+}
+
+export async function assistantReply(shopId: string, history: AssistantTurn[], progressId?: string): Promise<AssistantReply> {
   try {
     // เก็บ role ไว้ส่งต่อให้ engine — เครื่องมือที่แก้ค่าตั้งค่าบังคับ owner/admin ในโค้ด (OWNER_ONLY_TOOLS)
     const { user, role } = await assertMember(shopId, ["owner", "admin", "agent"]);
@@ -54,9 +67,17 @@ export async function assistantReply(shopId: string, history: AssistantTurn[]): 
 
     const ctx: AssistantCtx = {
       svc, shopId, shopName: shop.name, role, userId: user.id, history: trimmed,
+      progressId: progressId && UUID_RE.test(progressId) ? progressId : undefined,
       assistantName: String(((shop.settings ?? {}) as Record<string, unknown>).assistant_name ?? "").trim() || undefined,
     };
     const r = await runAssistant(ctx);
+    // เก็บกวาดป้าย progress ของคำขอนี้ + ป้ายเก่าที่ค้างเกิน 10 นาที — ล้มได้เงียบ ๆ
+    if (ctx.progressId) {
+      try {
+        await svc.from("assistant_progress").delete().eq("rid", ctx.progressId);
+        await svc.from("assistant_progress").delete().lt("updated_at", new Date(Date.now() - 600_000).toISOString());
+      } catch { /* ตารางนี้เป็นของเสริม */ }
+    }
     return { ok: true, text: r.text, toolCalls: r.toolCalls, artifacts: r.artifacts, choices: r.choices };
   } catch (e) {
     const m = (e as Error).message;

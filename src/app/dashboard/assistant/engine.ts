@@ -24,6 +24,8 @@ export interface AssistantCtx {
   /** ชื่อที่ลูกค้าตั้งให้ผู้ช่วย (shops.settings.assistant_name) — ไม่ตั้ง = ชื่อมาตรฐาน */
   assistantName?: string;
   userId: string;
+  /** id สำหรับรายงานขั้นตอนที่กำลังทำ (ตาราง assistant_progress) — ไม่มี = ไม่รายงาน */
+  progressId?: string;
   history: { role: "user" | "assistant"; content: string }[];
 }
 
@@ -465,6 +467,17 @@ const OWNER_ONLY_TOOLS = new Set(["update_shop_info", "update_payment_settings",
 // export เพื่อให้ scripts/assistant-readonly-e2e.mjs รัน tool ฝั่ง "อ่านอย่างเดียว"
 // กับข้อมูลจริงได้ — พิสูจน์ว่าลิงก์/ไฟล์ที่ผู้ช่วยส่งให้ผู้ใช้ใช้ได้จริง ไม่ใช่แค่คอมไพล์ผ่าน
 // ⚠️ สคริปต์นั้นห้ามเรียก tool ฝั่งเขียนเด็ดขาด (เขียนจะไปโดนบัญชีลูกค้าจริง)
+
+/** เขียนป้าย "กำลังทำอะไรอยู่" ให้ฝั่งแชท poll อ่าน — พังได้เงียบ ๆ ห้ามกระทบงานหลัก */
+async function reportProgress(ctx: AssistantCtx, label: string) {
+  if (!ctx.progressId) return;
+  try {
+    await ctx.svc.from("assistant_progress").upsert({
+      rid: ctx.progressId, shop_id: ctx.shopId, label: label.slice(0, 120), updated_at: new Date().toISOString(),
+    });
+  } catch { /* ป้ายหาย ยังดีกว่างานพัง */ }
+}
+
 export async function executeTool(ctx: AssistantCtx, name: string, input: Record<string, unknown>): Promise<string> {
   const s = ctx.svc;
   if (OWNER_ONLY_TOOLS.has(name) && ctx.role !== "owner" && ctx.role !== "admin") {
@@ -1266,6 +1279,7 @@ async function runAnthropic(ctx: AssistantCtx, model: string, apiKey: string, sy
     const results: Record<string, unknown>[] = [];
     for (const tu of toolUses) {
       r.toolCalls.push({ name: tu.name, label: ASSISTANT_TOOL_LABEL_TH[tu.name] ?? tu.name });
+      await reportProgress(ctx, ASSISTANT_TOOL_LABEL_TH[tu.name] ?? tu.name);
       const out = await executeTool(ctx, tu.name, tu.input ?? {});
       collectArtifacts(r, out);
       collectChoices(r, out);
@@ -1310,6 +1324,7 @@ async function runOpenAI(ctx: AssistantCtx, model: string, apiKey: string, syste
       try { input = JSON.parse(tc.function?.arguments || "{}"); } catch { /* ignore */ }
       const name = tc.function?.name ?? "";
       r.toolCalls.push({ name, label: ASSISTANT_TOOL_LABEL_TH[name] ?? name });
+      await reportProgress(ctx, ASSISTANT_TOOL_LABEL_TH[name] ?? name);
       const out = await executeTool(ctx, name, input);
       collectArtifacts(r, out);
       collectChoices(r, out);

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ACTION_CHIP } from "@/components/ui";
-import { assistantReply, getDocPreview, type AssistantTurn, type DocPreviewData } from "./actions";
+import { assistantProgress, assistantReply, getDocPreview, type AssistantTurn, type DocPreviewData } from "./actions";
 import DocPreview from "@/app/dashboard/finance/doc-preview";
 import type { DocType, VatMode } from "@/lib/types/finance";
 
@@ -130,6 +130,7 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
   const [reading, setReading] = useState("");                    // ข้อความความคืบหน้าตอนอ่านบิล
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);  // แนบค้างไว้หลายใบ พิมพ์สั่งกำกับก่อนส่ง
   const [dragOver, setDragOver] = useState(false);               // ลากไฟล์มาวางเหนือกล่องพิมพ์
+  const [stepLabel, setStepLabel] = useState<string | null>(null);  // ขั้นตอนจริงที่ AI กำลังทำ (จาก server)
   const [preview, setPreview] = useState<DocPreviewData | null>(null);   // ใบเอกสารที่กำลังดูคาแชท
   const [previewBusy, setPreviewBusy] = useState<string | null>(null);   // href ที่กำลังโหลด
 
@@ -332,8 +333,18 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
   /** ยิงข้อความให้ AI แล้วต่อคำตอบเข้าแชท — userMsg ต้องถูกใส่ใน msgs มาก่อนแล้ว */
   async function askAi(history: Msg[]) {
     setBusy(true);
+    // ป้ายบอกขั้นตอนจริงระหว่างรอ (ผลตรวจ 28 ส.ค. 2569) — engine เขียนขั้นที่กำลังทำ
+    // ลงตาราง assistant_progress แล้วฝั่งนี้ poll ทุก 1.2 วิ · เป็นของจริงจาก server
+    // ไม่ใช่ข้อความหมุนตามเวลา และพังได้เงียบ ๆ โดยไม่กระทบคำตอบ
+    const rid = crypto.randomUUID();
+    const poll = setInterval(async () => {
+      try {
+        const label = await assistantProgress(shopId, rid);
+        if (label) setStepLabel(label);
+      } catch { /* ป้ายหายไม่เป็นไร */ }
+    }, 1200);
     try {
-      const r = await assistantReply(shopId, history.map(({ role, content }) => ({ role, content })));
+      const r = await assistantReply(shopId, history.map(({ role, content }) => ({ role, content })), rid);
       if (r.ok && r.text) {
         setMsgs(keepLast([...history, { role: "assistant", content: r.text, toolCalls: r.toolCalls, artifacts: r.artifacts, choices: r.choices }]));
         if (r.toolCalls?.some((c) => !c.name.startsWith("get_") && !c.name.startsWith("search_") && !c.name.startsWith("list_"))) {
@@ -347,6 +358,8 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
     } catch {
       setError("เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง");
     } finally {
+      clearInterval(poll);
+      setStepLabel(null);
       setBusy(false);
     }
   }
@@ -696,7 +709,7 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
         )}
         {busy && !reading && (
           <p className="flex items-center gap-1.5 text-xs text-neutral-400">
-            <Loader2 className="h-3 w-3 animate-spin" /> ผู้ช่วยบัญชีกำลังจัดการให้...
+            <Loader2 className="h-3 w-3 animate-spin" /> {stepLabel ? `${stepLabel}...` : "ผู้ช่วยบัญชีกำลังจัดการให้..."}
           </p>
         )}
         {error && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-600">{error}</p>}
