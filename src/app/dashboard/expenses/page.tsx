@@ -2,7 +2,7 @@
 //  ค่าใช้จ่าย/รายจ่าย (AP) — ตั้งหนี้ · ทำจ่าย · แนบบิล · AI อ่านบิลให้
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
-import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader, buttonClass } from "@/components/ui";
 import { baht, dateOnlyTH, cn } from "@/lib/utils";
 import { DOC_STATUS_TH, docStatusTone, docOutstanding } from "@/lib/finance";
 import type { DocStatus, FinDoc } from "@/lib/types/finance";
@@ -56,8 +56,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
         /* ซ่อนบนมือถือ — ปุ่ม + ลอยมี "ถ่ายรูปบิล" ที่พาไปหน้าเดียวกันนี้อยู่แล้ว
            (เหตุผลเดียวกับหน้าเอกสารขาย ดูคอมเมนต์ที่นั่น) */
         action={canEdit && (
-          <Link href="/dashboard/expenses/new" className="hidden sm:inline-flex">
-            <Button><Plus className="h-4 w-4" /> บันทึกค่าใช้จ่าย</Button>
+          <Link href="/dashboard/expenses/new" className={cn(buttonClass(), "hidden sm:inline-flex")}>
+            <Plus className="h-4 w-4" /> บันทึกค่าใช้จ่าย
           </Link>
         )}
       />

@@ -6,7 +6,7 @@
 // ============================================================
 import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Button, Card, CardContent, Input, Select } from "@/components/ui";
+import { Button, Card, CardContent, Input, Select, buttonClass } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { bulkImportProducts, type BulkRow } from "./actions";
 import { FileSpreadsheet, FileText, Upload, CheckCircle2, X, ArrowLeft } from "lucide-react";
@@ -147,7 +147,7 @@ export default function ImportClient({ shopId }: { shopId: string }) {
           <p className="mt-3 text-lg font-bold">นำเข้าสำเร็จ {result.imported} รายการ</p>
           {result.skipped > 0 && <p className="mt-1 text-sm text-neutral-400">ข้ามชื่อซ้ำ {result.skipped} รายการ</p>}
           <div className="mt-5 flex gap-2">
-            <Link href="/dashboard/products"><Button>ดูสินค้าทั้งหมด</Button></Link>
+            <Link href="/dashboard/products" className={buttonClass()}>ดูสินค้าทั้งหมด</Link>
             <Button variant="outline" onClick={() => { setStep("pick"); setRows([]); setResult(null); }}>นำเข้าไฟล์อื่นต่อ</Button>
           </div>
         </CardContent>

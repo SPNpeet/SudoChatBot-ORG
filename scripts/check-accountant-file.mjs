@@ -75,6 +75,7 @@ await wb.xlsx.load(buf);
 
 const CELL_TYPE = { 0: "ว่าง", 2: "ตัวเลข", 3: "ข้อความ", 4: "วันที่", 6: "สูตร" };
 let bad = 0;
+const skipped = [];
 const ok = (m) => console.log(`  ถูก  ${m}`);
 const no = (m) => { bad++; console.log(`  ผิด  ${m}`); };
 
@@ -118,6 +119,169 @@ for (const ws of wb.worksheets) {
   }
 }
 
+// ============================================================
+//  ตรวจว่า "ค่าไม่สลับคอลัมน์" — ข้อที่เจ้าของเน้นที่สุด
+//
+//  ⚠️ การสลับคอลัมน์เป็นความผิดพลาดที่มองด้วยตาไม่เห็น เพราะไฟล์ยังดูสวยเหมือนเดิม
+//  แต่ปลายทางเอาไปยื่นภาษีผิดทั้งเดือน วิธีจับคือใช้ความสัมพันธ์ทางบัญชี
+//  ที่ต้องเป็นจริงเสมอ ถ้าค่าสลับที่เมื่อไหร่ ความสัมพันธ์จะพังทันที
+// ============================================================
+const money = (v) => (typeof v === "number" ? v : Number(String(v ?? "").replace(/,/g, "")) || 0);
+const near = (a, b, tol = 0.02) => Math.abs(a - b) <= tol;
+
+function colIndex(headers, name) { return headers.indexOf(name) + 1; }
+
+function eachDataRow(ws, fn) {
+  // แถวสุดท้ายที่ขึ้นต้นด้วย "รวม" คือแถวรวม ไม่ใช่ข้อมูล
+  const last = ws.rowCount;
+  const hasTotal = String(ws.getRow(last).getCell(1).value ?? "") === "รวม";
+  for (let r = 2; r <= (hasTotal ? last - 1 : last); r++) fn(ws.getRow(r), r);
+}
+
+for (const ws of wb.worksheets) {
+  if (ws.rowCount < 2 || ws.columnCount < 2) continue;
+  const head = ws.getRow(1);
+  const headers = [];
+  for (let c = 1; c <= ws.columnCount; c++) headers.push(String(head.getCell(c).value ?? ""));
+
+  // เลขผู้เสียภาษีต้องเป็นเลข 13 หลักเสมอ ถ้าเจอชื่อคนแปลว่าสลับกับคอลัมน์ชื่อ
+  const taxCol = colIndex(headers, "เลขผู้เสียภาษี");
+  if (taxCol > 0) {
+    let wrong = 0;
+    eachDataRow(ws, (row) => {
+      const raw = String(row.getCell(taxCol).value ?? "").replace(/\D/g, "");
+      const shown = String(row.getCell(taxCol).value ?? "").trim();
+      if (shown && shown !== "-" && raw.length !== 13) wrong++;
+    });
+    wrong ? no(`${ws.name}/เลขผู้เสียภาษี มี ${wrong} แถวที่ไม่ใช่เลข 13 หลัก — สงสัยสลับคอลัมน์`)
+          : ok(`${ws.name}/เลขผู้เสียภาษี เป็นเลข 13 หลักทุกแถว`);
+  }
+
+  // ภาษีขาย/ภาษีซื้อ: มูลค่า + ภาษี ต้องเท่ากับยอดรวมเสมอ
+  const baseCol = colIndex(headers, "มูลค่าสินค้า/บริการ");
+  const totalCol = colIndex(headers, "ยอดรวม");
+  const vatCol = colIndex(headers, "ภาษีขาย") || colIndex(headers, "ภาษีซื้อ");
+  if (baseCol > 0 && vatCol > 0 && totalCol > 0) {
+    let wrong = 0, n = 0;
+    eachDataRow(ws, (row) => {
+      n++;
+      const b = money(row.getCell(baseCol).value), v = money(row.getCell(vatCol).value), t = money(row.getCell(totalCol).value);
+      if (!near(b + v, t)) wrong++;
+    });
+    wrong ? no(`${ws.name} มี ${wrong}/${n} แถวที่ มูลค่า + ภาษี ไม่เท่ายอดรวม — ค่าอาจสลับคอลัมน์`)
+          : ok(`${ws.name} มูลค่า + ภาษี = ยอดรวม ครบทั้ง ${n} แถว`);
+  }
+
+  // หัก ณ ที่จ่าย: ยอดเงินที่จ่าย x อัตรา = ภาษีที่หัก · จับทั้งการสลับฐานกับยอดรวม และสลับอัตรากับจำนวนเงิน
+  const payCol = colIndex(headers, "ยอดเงินที่จ่าย");
+  const rateCol = colIndex(headers, "อัตรา (%)");
+  const whtCol = colIndex(headers, "ภาษีที่หัก");
+  if (payCol > 0 && rateCol > 0 && whtCol > 0) {
+    let wrong = 0, badRate = 0, n = 0;
+    eachDataRow(ws, (row) => {
+      n++;
+      const pay = money(row.getCell(payCol).value), rate = money(row.getCell(rateCol).value), wht = money(row.getCell(whtCol).value);
+      if (rate < 0 || rate > 100) badRate++;
+      if (!near(Math.round(pay * rate) / 100, wht, 0.02)) wrong++;
+    });
+    if (badRate) no(`${ws.name} มี ${badRate} แถวที่อัตราอยู่นอกช่วง 0-100 — สงสัยสลับกับคอลัมน์จำนวนเงิน`);
+    wrong ? no(`${ws.name} มี ${wrong}/${n} แถวที่ ยอดจ่าย x อัตรา ไม่เท่าภาษีที่หัก`)
+          : ok(`${ws.name} ยอดจ่าย x อัตรา = ภาษีที่หัก ครบทั้ง ${n} แถว`);
+  }
+
+  // แบบยื่นต้องเป็นแบบที่มีอยู่จริงเท่านั้น
+  const formCol = colIndex(headers, "แบบที่ยื่น");
+  if (formCol > 0) {
+    const bad = new Set();
+    eachDataRow(ws, (row) => {
+      const v = String(row.getCell(formCol).value ?? "").trim();
+      if (v && !["ภ.ง.ด.1", "ภ.ง.ด.2", "ภ.ง.ด.3", "ภ.ง.ด.53"].includes(v)) bad.add(v);
+    });
+    bad.size ? no(`${ws.name}/แบบที่ยื่น มีค่าที่ไม่ใช่แบบจริง: ${[...bad].join(", ")}`)
+             : ok(`${ws.name}/แบบที่ยื่น เป็นแบบที่มีอยู่จริงทุกแถว`);
+  }
+
+  // เดบิตรวมต้องเท่าเครดิตรวมตามหลักบัญชีคู่
+  const drCol = colIndex(headers, "เดบิต"), crCol = colIndex(headers, "เครดิต");
+  if (drCol > 0 && crCol > 0) {
+    let dr = 0, cr = 0, both = 0;
+    eachDataRow(ws, (row) => {
+      const d = money(row.getCell(drCol).value), c = money(row.getCell(crCol).value);
+      dr += d; cr += c;
+      if (d > 0 && c > 0) both++;
+    });
+    if (both) no(`${ws.name} มี ${both} แถวที่ลงทั้งเดบิตและเครดิตในบรรทัดเดียว`);
+    near(Math.round(dr * 100) / 100, Math.round(cr * 100) / 100, 0.02)
+      ? ok(`${ws.name} เดบิตรวม = เครดิตรวม (${dr.toLocaleString("th-TH")})`)
+      : no(`${ws.name} เดบิตรวม ${dr.toLocaleString("th-TH")} ไม่เท่าเครดิตรวม ${cr.toLocaleString("th-TH")}`);
+  }
+
+  // ค้างอยู่ต้องไม่เกินยอดเอกสาร
+  const docAmtCol = colIndex(headers, "ยอดเอกสาร"), openCol = colIndex(headers, "ค้างอยู่");
+  if (docAmtCol > 0 && openCol > 0) {
+    let wrong = 0, n = 0;
+    eachDataRow(ws, (row) => {
+      n++;
+      if (money(row.getCell(openCol).value) > money(row.getCell(docAmtCol).value) + 0.02) wrong++;
+    });
+    wrong ? no(`${ws.name} มี ${wrong}/${n} แถวที่ยอดค้างมากกว่ายอดเอกสาร — สงสัยสลับคอลัมน์`)
+          : ok(`${ws.name} ยอดค้างไม่เกินยอดเอกสาร ครบทั้ง ${n} แถว`);
+  }
+}
+
+// ตัวเลขบนหน้าปกต้องตรงกับผลรวมในแผ่นจริง ถ้าสลับกันจะจับได้ตรงนี้
+{
+  const cover = wb.worksheets[0];
+  const cov = {};
+  cover.eachRow((row) => {
+    const a = String(row.getCell(1).value ?? "").trim();
+    const b = row.getCell(2).value;
+    if (typeof b === "number") cov[a] = b;
+  });
+  const sheetTotal = (name, header) => {
+    const ws = wb.getWorksheet(name);
+    if (!ws || ws.rowCount < 2 || ws.columnCount < 2) return 0;
+    const head = ws.getRow(1);
+    const headers = [];
+    for (let c = 1; c <= ws.columnCount; c++) headers.push(String(head.getCell(c).value ?? ""));
+    const col = headers.indexOf(header) + 1;
+    if (!col) return 0;
+    let sum = 0;
+    eachDataRow(ws, (row) => { sum += money(row.getCell(col).value); });
+    return Math.round(sum * 100) / 100;
+  };
+  const pairs = [
+    ["ภาษีขาย (VAT ขาย)", sheetTotal("ภาษีขาย", "ภาษีขาย")],
+    ["ภาษีซื้อ (VAT ซื้อ)", sheetTotal("ภาษีซื้อ", "ภาษีซื้อ")],
+    ["ภาษีหัก ณ ที่จ่ายที่ต้องนำส่ง", sheetTotal("หัก ณ ที่จ่าย", "ภาษีที่หัก")],
+  ];
+  for (const [label, fromSheet] of pairs) {
+    if (!(label in cov)) continue;
+    near(cov[label], fromSheet, 0.02)
+      ? ok(`หน้าปก "${label}" ตรงกับผลรวมในแผ่น (${fromSheet.toLocaleString("th-TH")})`)
+      : no(`หน้าปก "${label}" = ${cov[label].toLocaleString("th-TH")} แต่ผลรวมในแผ่นได้ ${fromSheet.toLocaleString("th-TH")} — ตัวเลขสองที่ไม่ตรงกัน`);
+  }
+  // ⚠️ หัวข้อบรรทัดสรุปเปลี่ยนตามเครื่องหมาย: ภาษีขายมากกว่า = "ต้องชำระ"
+  // ภาษีซื้อมากกว่า = "ขอคืน/ยกไปงวดหน้า" เดิมด่านนี้มองหาแต่หัวข้อแรก
+  // พอเจองวดที่ภาษีซื้อเกิน จึงข้ามไปเงียบ ๆ โดยไม่มีใครรู้ (แก้ 27 ส.ค. 2569)
+  // และหัวข้อที่ขึ้นต้องตรงกับเครื่องหมายด้วย ถ้าสลับขาย/ซื้อกันเมื่อไหร่ หัวข้อจะกลับด้านทันที
+  const sale = cov["ภาษีขาย (VAT ขาย)"], buy = cov["ภาษีซื้อ (VAT ซื้อ)"];
+  const netLabel = Object.keys(cov).find((k) => k.includes("ภาษีที่ต้องชำระ") || k.includes("ขอคืน"));
+  if (typeof sale === "number" && typeof buy === "number" && netLabel) {
+    const net = cov[netLabel];
+    const shouldPay = sale - buy >= 0;
+    if (!near(Math.abs(sale - buy), Math.abs(net), 0.02)) {
+      no(`หน้าปก ภาษีขาย ${sale} - ภาษีซื้อ ${buy} ไม่ตรงกับบรรทัดสรุป ${net} — สงสัยสลับขาย/ซื้อ`);
+    } else if (shouldPay !== netLabel.includes("ภาษีที่ต้องชำระ")) {
+      no(`หน้าปกขึ้นหัวข้อ "${netLabel}" ทั้งที่ ขาย ${sale} - ซื้อ ${buy} บอกตรงข้าม — สงสัยสลับขาย/ซื้อ`);
+    } else {
+      ok(`หน้าปก "${netLabel}" ตรงทั้งตัวเลขและเครื่องหมาย (${Math.abs(sale - buy).toLocaleString("th-TH")})`);
+    }
+  } else if (!netLabel) {
+    no("หน้าปกไม่มีบรรทัดสรุป ภ.พ.30 เลย");
+  }
+}
+
 // 4. ไม่มีเลขผู้เสียภาษี = ปลายทางยื่นต่อไม่ได้ ต้องเตือนบนหน้าปก ห้ามปล่อยไฟล์ออกไปเงียบ ๆ
 const cover = wb.worksheets[0];
 let taxLine = "", warned = false;
@@ -133,5 +297,16 @@ if (taxLine === "ยังไม่ได้กรอก") {
   else no("ไม่มีเลขผู้เสียภาษี แต่หน้าปกไม่เตือนอะไรเลย");
 } else ok(`หน้าปกมีเลขผู้เสียภาษี (${taxLine})`);
 
-console.log(bad ? `\n  พบปัญหา ${bad} ข้อ\n` : "\n  ผ่านทุกข้อ\n");
+// ⚠️ แผ่นที่ไม่มีข้อมูลในงวด = กฎกันสลับคอลัมน์ของแผ่นนั้นไม่ได้ถูกใช้เลย
+// ต้องพูดออกมาตรง ๆ ไม่งั้นอ่านผลแล้วเข้าใจว่าตรวจครบ
+for (const name of ["ภาษีขาย", "ภาษีซื้อ", "หัก ณ ที่จ่าย", "ลูกหนี้-เจ้าหนี้ค้าง"]) {
+  const ws = wb.getWorksheet(name);
+  if (!ws || ws.rowCount < 2 || ws.columnCount < 2) skipped.push(name);
+}
+if (skipped.length) {
+  console.log("");
+  console.log("  ยังไม่ได้ตรวจ: " + skipped.join(" · ") + " — งวดนี้ไม่มีรายการ กฎกันสลับคอลัมน์ของแผ่นเหล่านี้จึงไม่ถูกใช้");
+  console.log("  รันซ้ำกับงวดที่มีข้อมูลครบถึงจะพูดได้ว่าตรวจครบ");
+}
+console.log(bad ? `\n  พบปัญหา ${bad} ข้อ\n` : "\n  ผ่านเท่าที่ตรวจได้\n");
 process.exit(bad ? 1 : 0);

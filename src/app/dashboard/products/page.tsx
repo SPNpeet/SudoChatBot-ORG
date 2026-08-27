@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentShop } from "@/lib/shop";
-import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader, buttonClass } from "@/components/ui";
 import { FileUp, Package } from "lucide-react";
 import { baht, dateTH } from "@/lib/utils";
 import { upsertProduct } from "../actions";
@@ -37,8 +37,8 @@ export default async function ProductsPage() {
         help="ใส่ของที่ขายประจำไว้ที่นี่ — ตอนออกเอกสารแค่เลือกชื่อ ราคาขึ้นเอง ไม่ต้องพิมพ์ซ้ำทุกครั้ง · ถ้าใส่ต้นทุนไว้ด้วย ระบบจะคำนวณกำไรและตัดสต๊อกให้อัตโนมัติเมื่อขาย"
         action={canEdit && (
           <div className="flex flex-wrap items-center gap-2">
-            <Link href="/dashboard/products/import">
-              <Button variant="outline"><FileUp className="h-4 w-4" /> นำเข้าไฟล์</Button>
+            <Link href="/dashboard/products/import" className={buttonClass("outline")}>
+              <FileUp className="h-4 w-4" /> นำเข้าไฟล์
             </Link>
             <ProductForm shopId={shop.id} action={save} />
           </div>

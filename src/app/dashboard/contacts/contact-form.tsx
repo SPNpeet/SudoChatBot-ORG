@@ -48,7 +48,12 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
   return (
     <>
       {contact ? (
-        <button onClick={() => setOpen(true)} className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-700">
+        // ⚠️ ปุ่มในแถวต้องบอกด้วยว่าแก้ไข "ใคร" (แก้ 27 ส.ค. 2569)
+        // หน้ารายชื่อมีปุ่มชื่อ "แก้ไข" เท่ากับจำนวนแถว ด่าน check:dupbuttons จับได้ว่า
+        // บนจอ 390px มีปุ่มชื่อซ้ำกันหลายปุ่มในหน้าเดียว และโปรแกรมอ่านหน้าจอ
+        // จะอ่านว่า "แก้ไข" ซ้ำ ๆ โดยไม่มีอะไรบอกว่าเป็นของผู้ติดต่อรายไหน
+        <button onClick={() => setOpen(true)} aria-label={`แก้ไข ${contact.name}`}
+          className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-700">
           <Pencil className="h-3 w-3" /> แก้ไข
         </button>
       ) : (

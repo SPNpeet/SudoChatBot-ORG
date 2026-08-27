@@ -192,6 +192,29 @@ type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "brand" | "outline" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
 };
+/**
+ * คลาสหน้าตาของปุ่ม — แยกออกมาเพื่อให้ <Link> ใช้ได้โดยไม่ต้องซ้อน <button> ข้างใน
+ *
+ * ⚠️ ทำไมต้องมี (27 ส.ค. 2569): มี 6 จุดที่เขียน <Link><Button>...</Button></Link>
+ * ซึ่งได้ HTML ที่มี element กดได้ซ้อนกันสองชั้น ผลจริงที่วัดได้บนจอ 390px คือ
+ * ปุ่มชื่อเดียวกันโผล่สองครั้งในหน้าเดียว (ด่าน check:dupbuttons จับได้)
+ * และเป็นโครงที่ผิดมาตรฐาน HTML ซึ่งโปรแกรมอ่านหน้าจอจะอ่านซ้ำสองรอบ
+ * ทางที่ถูกคือให้ลิงก์เป็นตัวกดเอง แล้วยืมคลาสหน้าตาของปุ่มมาใช้
+ */
+export function buttonClass(variant: BtnProps["variant"] = "primary", size: BtnProps["size"] = "md", className?: string) {
+  return cn(
+    "inline-flex select-none items-center justify-center gap-1.5 rounded-xl font-medium transition-all duration-100",
+    "active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50", FOCUS,
+    size === "sm" ? "h-8 px-3 text-xs" : size === "lg" ? "h-12 px-6 text-[15px]" : "h-10 px-4 text-sm",
+    variant === "primary" && "bg-neutral-900 text-white shadow-sm hover:bg-neutral-700",
+    variant === "brand" && "bg-emerald-600 text-white shadow-sm hover:bg-emerald-500",
+    variant === "outline" && "border border-neutral-300 bg-white text-neutral-800 hover:border-neutral-400 hover:bg-neutral-50",
+    variant === "ghost" && "text-neutral-600 hover:bg-neutral-100",
+    variant === "danger" && "bg-red-600 text-white shadow-sm hover:bg-red-500",
+    className,
+  );
+}
+
 export function Button({ className, variant = "primary", size = "md", ...props }: BtnProps) {
   return (
     <button

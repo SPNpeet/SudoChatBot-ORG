@@ -2,7 +2,7 @@
 //  เอกสารขาย (AR) — ใบเสนอราคา / ใบแจ้งหนี้ / ใบเสร็จรับเงิน
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
-import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader } from "@/components/ui";
+import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader, buttonClass } from "@/components/ui";
 import { baht, dateOnlyTH, cn } from "@/lib/utils";
 import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding } from "@/lib/finance";
 import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
@@ -54,9 +54,9 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
            เก็บไว้บนเดสก์ท็อปเพราะที่นั่นมีที่ว่างพอ และเมาส์เอื้อมหัวหน้าง่ายกว่าปุ่มลอยมุมจอ */
         action={canEdit && (
           <div className="hidden flex-wrap gap-2 sm:flex">
-            <Link href="/dashboard/sales/new?type=quotation"><Button variant="outline" size="sm">ใบเสนอราคา</Button></Link>
-            <Link href="/dashboard/sales/new?type=invoice"><Button variant="outline" size="sm">ใบแจ้งหนี้</Button></Link>
-            <Link href="/dashboard/sales/new?type=receipt"><Button size="sm"><Plus className="h-4 w-4" /> ขายสด/ใบเสร็จ</Button></Link>
+            <Link href="/dashboard/sales/new?type=quotation" className={buttonClass("outline", "sm")}>ใบเสนอราคา</Link>
+            <Link href="/dashboard/sales/new?type=invoice" className={buttonClass("outline", "sm")}>ใบแจ้งหนี้</Link>
+            <Link href="/dashboard/sales/new?type=receipt" className={buttonClass("primary", "sm")}><Plus className="h-4 w-4" /> ขายสด/ใบเสร็จ</Link>
           </div>
         )}
       />
