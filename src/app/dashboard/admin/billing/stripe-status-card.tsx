@@ -11,6 +11,7 @@
 //  ⚠️ ห้ามส่งค่าคีย์ลงไปฝั่ง client — ทุกอย่างในนี้คำนวณฝั่ง server แล้วส่งแต่ผลสรุป
 // ============================================================
 import { createServiceClient } from "@/lib/supabase/server";
+import { STRIPE_WEBHOOK_EVENTS } from "@/lib/stripe";
 import { getStripeSecretKey, isLiveStripeKey } from "@/lib/stripe";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { CheckCircle2, TriangleAlert, CircleAlert, ExternalLink } from "lucide-react";
@@ -136,6 +137,17 @@ export default async function StripeStatusCard() {
               <li>สลับหน้า Stripe เป็น <b>โหมด live</b> แล้วสร้าง <b>webhook endpoint ใหม่</b> ชี้มาที่ <code className="rounded bg-neutral-200 px-1">/api/billing/stripe/webhook</code> (4 events)</li>
               <li>เอา <b>sk_live</b> + <b>whsec ของ endpoint live</b> มาใส่ในช่องด้านบน</li>
             </ol>
+            {/* ⚠️ ต้องบอกชื่อ event ให้ครบ (เพิ่ม 28 ส.ค. 2569)
+                เดิมบอกแค่ว่า "สร้าง webhook" แต่ไม่บอกว่าติ๊ก event ไหน
+                ถ้าติ๊กขาด async_payment_succeeded ลูกค้าจ่ายด้วยพร้อมเพย์สำเร็จ
+                แต่เครดิตจะไม่เข้าเลยและไม่มีอะไรฟ้อง เพราะฝั่งเราไม่เคยได้รับ event
+                รายชื่อดึงจากตัวรับ event จริง ห้ามพิมพ์ซ้ำ มีด่านใน check ตรวจว่าตรงกัน */}
+            <p className="mt-2 font-semibold">ตอนสร้าง webhook ต้องติ๊ก {STRIPE_WEBHOOK_EVENTS.length} event นี้ให้ครบ</p>
+            <ul className="mt-1 space-y-0.5">
+              {STRIPE_WEBHOOK_EVENTS.map((e) => (
+                <li key={e} className="font-mono text-[11px] text-neutral-800">{e}</li>
+              ))}
+            </ul>
             <p className="mt-2 text-amber-700">
               ⚠️ ข้อ 3 พลาดบ่อยที่สุด — whsec ของโหมดทดสอบใช้กับโหมด live ไม่ได้
               ถ้าลืมเปลี่ยน ลูกค้าจ่ายเงินสำเร็จแต่ระบบจะปฏิเสธทุก event (ลายเซ็นไม่ผ่าน)

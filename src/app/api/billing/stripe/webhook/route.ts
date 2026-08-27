@@ -11,11 +11,12 @@
 // ============================================================
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
-import { getStripeSecretKey, getStripeWebhookSecret, retrieveCheckoutSession, verifyStripeSignature } from "@/lib/stripe";
+import { getStripeSecretKey, getStripeWebhookSecret, retrieveCheckoutSession, verifyStripeSignature,
+  STRIPE_PAID_EVENTS, STRIPE_DEAD_EVENTS } from "@/lib/stripe";
 
 /** event ที่แปลว่า "อาจได้เงินแล้ว" — ต้องไปเช็คสถานะจริงจาก API ต่อ */
-const PAID_EVENTS = new Set(["checkout.session.completed", "checkout.session.async_payment_succeeded"]);
-const DEAD_EVENTS = new Set(["checkout.session.expired", "checkout.session.async_payment_failed"]);
+const PAID_EVENTS = new Set<string>(STRIPE_PAID_EVENTS);
+const DEAD_EVENTS = new Set<string>(STRIPE_DEAD_EVENTS);
 
 export async function POST(request: Request) {
   // ยังไม่ได้ตั้ง service key -> ตอบ 503 ให้ Stripe retry ภายหลัง (กัน event หายเงียบ)

@@ -511,6 +511,31 @@ section("เขตเวลาไทยกับขอบเดือนภา�
   console.log("  ถูก  ทั้งสองเส้นใช้ด่านกลางเดียวกัน และปฏิเสธเมื่อไม่มีความลับ");
 }
 
+// ============================================================
+//  ด่านถาวร: หน้าตั้งค่าต้องบอก event ครบเท่าที่ตัวรับใช้จริง
+//
+//  ⚠️ 28 ส.ค. 2569 พบว่าการ์ดตั้งค่า Stripe บอกทุกอย่างครบ ยกเว้นชื่อ event
+//  ถ้าเจ้าของติ๊กขาด async_payment_succeeded ลูกค้าจ่ายด้วยพร้อมเพย์สำเร็จ
+//  แต่เครดิตไม่เข้าเลยและไม่มีอะไรฟ้อง เพราะฝั่งเราไม่เคยได้รับ event
+//  เป็นบั๊กเรื่องเงินที่เงียบที่สุดเท่าที่จะเป็นไปได้
+//  ด่านนี้ตรึงไว้ว่ารายชื่อในหน้าจอกับในตัวรับต้องมาจากที่เดียวกันเสมอ
+// ============================================================
+{
+  console.log("\n== หน้าตั้งค่า Stripe ต้องบอก event ครบ ==");
+  const lib = readFileSync("src/lib/stripe.ts", "utf8");
+  const hook = readFileSync("src/app/api/billing/stripe/webhook/route.ts", "utf8");
+  const card = readFileSync("src/app/dashboard/admin/billing/stripe-status-card.tsx", "utf8");
+  const events = [...lib.matchAll(/"(checkout\.session\.[a-z_]+)"/g)].map((m) => m[1]);
+  ok(events.length === 4, "lib/stripe.ts ประกาศ event ครบ 4 ตัว", `พบ ${events.length}`);
+  ok(!/["']checkout\.session\.[a-z_]+["']/.test(hook.replace(/from "@\/lib\/stripe"/g, "")),
+    "ตัวรับ event ไม่พิมพ์ชื่อ event ซ้ำเอง ใช้จาก lib ที่เดียว");
+  ok(card.includes("STRIPE_WEBHOOK_EVENTS"),
+    "การ์ดตั้งค่าดึงรายชื่อ event จาก lib ไม่ได้พิมพ์เอง");
+  ok(!/["']checkout\.session\.[a-z_]+["']/.test(card),
+    "การ์ดตั้งค่าไม่พิมพ์ชื่อ event ซ้ำ (กันรายชื่อสองที่ไม่ตรงกัน)");
+  console.log("  ถูก  รายชื่อ event มาจากที่เดียวทั้งตัวรับและหน้าตั้งค่า");
+}
+
 console.log(failures === 0
   ? "\nสรุป: ผ่านทั้งหมด\n"
   : `\nสรุป: ไม่ผ่าน ${failures} ข้อ — ห้าม deploy จนกว่าจะแก้\n`);

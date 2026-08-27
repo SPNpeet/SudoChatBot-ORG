@@ -13,6 +13,22 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 const STRIPE_API = "https://api.stripe.com";
 
+/**
+ * event ของ Stripe ที่เส้นทางเงินของเรารับจริง — แหล่งความจริงเดียว
+ *
+ * ⚠️ ทำไมต้องอยู่ที่นี่ (28 ส.ค. 2569)
+ * การ์ดตั้งค่าในหน้าแอดมินบอกทุกอย่างครบ ยกเว้น "ต้องติ๊ก event ไหนบ้าง"
+ * ถ้าเจ้าของติ๊กขาด async_payment_succeeded ลูกค้าจ่ายด้วยพร้อมเพย์สำเร็จ
+ * แต่เครดิตจะไม่เข้าเลย และไม่มีอะไรฟ้อง เพราะฝั่งเราไม่เคยได้รับ event
+ * เป็นบั๊กเรื่องเงินที่เงียบที่สุดเท่าที่จะเป็นไปได้
+ *
+ * รายชื่อจึงต้องมาจากที่เดียวกับที่ตัวรับ event ใช้จริง ห้ามพิมพ์ซ้ำในหน้าจอ
+ * และมีด่านใน npm run check คอยตรวจว่าการ์ดตั้งค่ากับตัวรับตรงกันเสมอ
+ */
+export const STRIPE_PAID_EVENTS = ["checkout.session.completed", "checkout.session.async_payment_succeeded"] as const;
+export const STRIPE_DEAD_EVENTS = ["checkout.session.expired", "checkout.session.async_payment_failed"] as const;
+export const STRIPE_WEBHOOK_EVENTS = [...STRIPE_PAID_EVENTS, ...STRIPE_DEAD_EVENTS];
+
 export interface StripeCheckoutSession {
   id: string;
   object: string;
