@@ -9,6 +9,16 @@ import { RECIPIENT_KINDS, guessRecipientKind, isValidTaxId, type RecipientKind }
 import type { Contact } from "@/lib/types/finance";
 import { useDismiss } from "@/components/use-dismiss";
 
+/**
+ * ชื่อประเภทผู้ติดต่อ — ใช้ในป้ายกำกับปุ่มแก้ไข
+ *
+ * ⚠️ ทำไมต้องมี (27 ส.ค. 2569): ผู้ติดต่อชื่อซ้ำกันได้จริง และในข้อมูลจริงเจอสองรายชื่อ
+ * เหมือนกันเป๊ะ ต่างกันแค่เป็นลูกค้ากับเป็นผู้ขาย คนตาดีแยกออกจากป้ายในแถว
+ * แต่โปรแกรมอ่านหน้าจอได้ยินว่า "แก้ไข ชื่อเดียวกัน" สองครั้งโดยไม่มีอะไรต่างกันเลย
+ * ประเภทคือตัวแยกที่มีอยู่จริงในข้อมูล ไม่ใช่การเติมรหัสมั่ว ๆ เข้าไปให้ไม่ซ้ำ
+ */
+const KIND_TH: Record<string, string> = { customer: "ลูกค้า", vendor: "ผู้ขาย", both: "ลูกค้า+ผู้ขาย" };
+
 export default function ContactForm({ shopId, contact }: { shopId: string; contact?: Contact }) {
   const [open, setOpen] = useState(false);
   useDismiss(open, () => setOpen(false));
@@ -52,7 +62,7 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
         // หน้ารายชื่อมีปุ่มชื่อ "แก้ไข" เท่ากับจำนวนแถว ด่าน check:dupbuttons จับได้ว่า
         // บนจอ 390px มีปุ่มชื่อซ้ำกันหลายปุ่มในหน้าเดียว และโปรแกรมอ่านหน้าจอ
         // จะอ่านว่า "แก้ไข" ซ้ำ ๆ โดยไม่มีอะไรบอกว่าเป็นของผู้ติดต่อรายไหน
-        <button onClick={() => setOpen(true)} aria-label={`แก้ไข ${contact.name}${contact.tax_id ? ` เลขผู้เสียภาษี ${contact.tax_id}` : contact.phone ? ` โทร ${contact.phone}` : ""}`}
+        <button onClick={() => setOpen(true)} aria-label={`แก้ไข ${KIND_TH[contact.kind] ?? ""} ${contact.name}${contact.tax_id ? ` เลขผู้เสียภาษี ${contact.tax_id}` : contact.phone ? ` โทร ${contact.phone}` : ""}`.replace(/\s+/g, " ").trim()}
           className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-700">
           <Pencil className="h-3 w-3" /> แก้ไข
         </button>
