@@ -125,6 +125,27 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
         </a>
       )}
 
+      {/* "แล้วไงต่อ" ของฝั่งรายจ่าย — บอกขั้นถัดไปตามสถานะจริง (ผลตรวจ 28 ส.ค. 2569) */}
+      {doc.status !== "void" && doc.approval_status !== "pending" && doc.approval_status !== "rejected" && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+          {["awaiting", "partial"].includes(doc.status) ? (
+            <>
+              <p className="text-sm font-semibold text-emerald-900">ค้างจ่าย {baht(outstanding)} — จ่ายแล้วอย่าลืมกด “บันทึกจ่ายเงิน”</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-emerald-800/80">
+                กดปุ่มด้านบนได้เลย ระบบตัดเจ้าหนี้และลงบัญชีให้ · ถ้ามีหัก ณ ที่จ่าย ระบบออก 50 ทวิ ให้พิมพ์ส่งคู่ค้าได้
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-emerald-900">เรียบร้อย — บิลนี้จบแล้ว</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-emerald-800/80">
+                ระบบลงบัญชีและเก็บภาษีซื้อเข้ารายงานให้แล้ว{Number(doc.wht_amount) > 0 ? " · อย่าลืมพิมพ์ 50 ทวิ ส่งให้คู่ค้าจากปุ่มด้านบน" : ""}
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
       <Card>
         <CardContent className="px-0 pb-0 pt-1">
           <Table>

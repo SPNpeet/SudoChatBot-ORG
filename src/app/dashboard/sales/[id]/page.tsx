@@ -140,6 +140,22 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
         </p>
       )}
 
+      {/* "แล้วไงต่อ" — ทุกหน้าที่จบงานต้องบอกขั้นถัดไป ไม่ปล่อยให้ไปหาเมนูเอง (ผลตรวจ 28 ส.ค. 2569)
+          เดิมคำนวณ nextStep ไว้แล้วแต่ไม่เคยถูกวาดเลย — โค้ดตายที่ทำให้เข้าใจผิดว่ามีแล้ว */}
+      {doc.status !== "void" && nextStep && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-emerald-900">{nextStep.title}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-emerald-800/80">{nextStep.hint}</p>
+          </div>
+          {nextStep.href && nextStep.cta && (
+            <Link href={nextStep.href} className="shrink-0 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50">
+              {nextStep.cta} →
+            </Link>
+          )}
+        </div>
+      )}
+
       <Card>
         <CardContent className="px-0 pb-0 pt-1">
           <Table>
