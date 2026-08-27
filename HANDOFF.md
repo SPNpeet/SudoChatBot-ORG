@@ -342,7 +342,10 @@ typecheck · บัญชี-ภาษี (`check`) · UI (`check:ui`) · ลำ
    → เปิด PromptPay โหมด live → webhook live ไป `/api/billing/stripe/webhook` (4 events)
    → ใส่ `sk_live` + `whsec` ที่ `/dashboard/admin/billing` · หน้านั้นจะเตือนเองถ้าคีย์เป็น test
 3. 🟡 **Search Console** — ส่ง sitemap.xml ให้ Google (ไม่ส่งก็ติดเอง แค่ช้ากว่า)
-4. 🟡 **LINE Login** — สร้าง LINE Login channel → ใส่ 2 env ใน Vercel (โค้ดพร้อมแล้ว ปุ่มโผล่เอง)
+4. ✅ **LINE Login — ใช้งานได้แล้ว ไม่ต้องทำอะไรเพิ่ม** (28 ส.ค. 2569)
+   คีย์ถูกตั้งไว้ในหน้าแอดมิน (การ์ด LINE OA) อยู่แล้ว และ callback ใช้เส้น
+   `/api/line/callback` ที่ลงทะเบียนในคอนโซล LINE ไว้แล้ว แยกงานล็อกอินกับผูก OA ด้วย state
+   วัดแล้ว: ปุ่มโผล่จริง กดแล้วไปถึงหน้าล็อกอินของ LINE (เดิมเส้น /api/auth/line/callback ตอบ 400)
 
 > **อย่าไปหาสวิตช์ Leaked Password Protection** — เอกสารฉบับนี้เคยสั่งให้ไปเปิดเองใน
 > Supabase → Authentication ซึ่งผิด สวิตช์นั้นมีให้เฉพาะแพ็ก **Pro ขึ้นไป** เท่านั้น
