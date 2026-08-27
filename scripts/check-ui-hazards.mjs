@@ -245,6 +245,42 @@ console.log("\n== คลาสจัดเลย์เอาต์ซ้ำต�
   if (!found) console.log("  ถูก  ไม่มีคลาสจัดเลย์เอาต์ที่ซ้ำตัวเองในสตริงเดียว");
 }
 
+// ============================================================
+//  ช่องตารางทุกช่องต้องมีชื่อฟิลด์กำกับ เว้นช่องที่ CSS ซ่อนป้ายอยู่แล้ว
+//
+//  ⚠️ ทำไมต้องมี (28 ส.ค. 2569)
+//  มือถือแสดงตารางเป็นการ์ดใบละแถว (.rtable ใน globals.css) และชื่อฟิลด์
+//  มาจาก data-label ของ <Td label="..."> ช่องที่ไม่มี label จะกลายเป็นค่าลอย ๆ
+//  ไม่มีอะไรบอกว่าคืออะไร ซึ่งเจ้าของแจ้งมาเองว่าอ่านไม่รู้เรื่อง
+//
+//  ช่องที่ไม่ต้องมีมีสามแบบเท่านั้น และเป็นเหตุผลทางการแสดงผลจริง:
+//    1. ช่องแรกของแถว — CSS ใช้เป็นหัวการ์ดและซ่อนป้ายอยู่แล้ว
+//    2. ช่องที่มี colSpan — แถวรวมหรือแถวข้อความ ไม่ใช่ช่องข้อมูล
+//    3. ช่องว่างที่ปิดตัวเอง — td:empty ซ่อนให้อยู่แล้ว
+//  นอกจากสามแบบนี้ถือว่าลืมใส่ ห้ามปล่อยผ่าน
+// ============================================================
+{
+  console.log("\n== ช่องตารางที่ไม่มีชื่อฟิลด์กำกับบนมือถือ ==");
+  let missing = 0, exempt = 0, labelled = 0;
+  for (const f of files) {
+    if (!f.endsWith(".tsx")) continue;
+    const src = readFileSync(f, "utf8");
+    if (!src.includes("<Td")) continue;
+    for (const rowMatch of src.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)) {
+      const cells = [...rowMatch[1].matchAll(/<Td\b([^>]*)>/g)];
+      cells.forEach((c, i) => {
+        const attrs = c[1];
+        if (/\blabel=/.test(attrs)) { labelled++; return; }
+        if (i === 0 || /\bcolSpan=/.test(attrs) || attrs.trim().endsWith("/")) { exempt++; return; }
+        missing++;
+        const line = src.slice(0, rowMatch.index + c.index).split("\n").length;
+        fail(rel(f) + ":" + line + " — <Td> ที่ไม่ใช่ช่องแรกของแถวแต่ไม่มี label — บนมือถือจะเป็นค่าลอย ๆ");
+      });
+    }
+  }
+  if (!missing) console.log("  ถูก  ช่องข้อมูลมีชื่อฟิลด์ครบ " + labelled + " ช่อง · ยกเว้นโดยตั้งใจ " + exempt + " ช่อง (หัวการ์ด/colSpan/ช่องว่าง)");
+}
+
 console.log(failures === 0
   ? "\nสรุปด่าน UI: ผ่านทั้งหมด\n"
   : `\nสรุปด่าน UI: ไม่ผ่าน ${failures} ข้อ — ห้าม deploy จนกว่าจะแก้\n`);

@@ -87,7 +87,9 @@ export default async function ProductsPage() {
                     <Td label="สถานะ"><Badge tone={p.status === "active" ? "green" : "neutral"}>{p.status === "active" ? "ใช้งาน" : "พัก"}</Badge></Td>
                     <Td label="เพิ่มเมื่อ" className="text-neutral-400">{dateTH(p.created_at)}</Td>
                     {canEdit && (
-                      <Td>
+                      // หัวคอลัมน์นี้ว่างโดยตั้งใจ (เป็นคอลัมน์ปุ่ม) แต่บนมือถือ
+                      // การ์ดต้องมีคำกำกับ ไม่งั้นได้ปุ่มลอยมาโดยไม่รู้ว่าของอะไร
+                      <Td label="จัดการ">
                         <div className="flex items-center justify-end gap-2">
                           <ProductForm shopId={shop.id} action={save} product={p} />
                           <ArchiveButton productId={p.id} shopId={shop.id} />
