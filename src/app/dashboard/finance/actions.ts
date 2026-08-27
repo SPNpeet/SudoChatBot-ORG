@@ -17,7 +17,8 @@ import type { DocType, VatMode, FinDoc } from "@/lib/types/finance";
 import { WHT_INCOME_TYPES, DEFAULT_WHT_INCOME, guessRecipientKind, docDateTooFarFuture } from "@/lib/tax-th";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
-export type DocResult = { ok: true; docId: string; docNumber: string; approvalPending?: boolean } | { ok: false; error: string };
+export type DocResult = { ok: true; docId: string; docNumber: string; approvalPending?: boolean }
+  | { ok: false; error: string; duplicate?: { doc_number: string; issue_date: string } };
 
 function friendly(e: unknown, fallback: string): string {
   const m = (e as Error).message ?? String(e);
@@ -131,6 +132,8 @@ export interface SaveDocInput {
   pay_method?: string;           // cash/transfer/promptpay/card/other
   source?: "manual" | "ai" | "import";
   ref_doc_id?: string | null;
+  force_duplicate?: boolean;     // ผู้ใช้ยืนยันแล้วว่าตั้งใจออกซ้ำ (ดูด่านกันออกซ้ำใน saveDoc)
+
 }
 
 /** ตัดสต๊อก + ลง COGS สำหรับเอกสารขายที่มีสินค้าผูก (invoice/receipt ที่ไม่อ้างใบแจ้งหนี้เดิม) */
@@ -241,6 +244,30 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
         contactBranch = c.branch || null;
         // snapshot ไว้กับเอกสาร ถ้าคู่ค้าเปลี่ยนประเภททีหลัง เอกสารเก่าที่ยื่นไปแล้วต้องไม่เปลี่ยนตาม
         recipientKind = c.recipient_kind || guessRecipientKind(c.tax_id);
+      }
+    }
+
+    // ⚠️ ด่านเตือนออกเอกสารซ้ำ (เพิ่ม 28 ส.ค. 2569 ตามผลตรวจภายนอก)
+    // เคสจริงที่กันคือกดบันทึกสองรอบ/สั่ง AI ซ้ำ แล้วได้ใบกำกับภาษีสองใบยอดเดียวกัน
+    // ซึ่งทำให้ยอดขายและ ภ.พ.30 เกินจริง — เทียบ ประเภท+คู่ค้า+ยอดรวม+วันที่ใกล้กัน (3 วัน)
+    // เตือนเฉพาะตอนสร้างใหม่แบบไม่ใช่ร่าง และผู้ใช้ยืนยัน (force_duplicate) แล้วออกซ้ำได้
+    // ห้ามเปลี่ยนเป็นบล็อกถาวร — ธุรกิจขายของราคาเดียวให้ลูกค้าเดิมซ้ำจริงมีอยู่จริง
+    if (!input.id && status !== "draft" && !input.force_duplicate && contactName) {
+      const base = new Date(`${input.issue_date ?? new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10)}T00:00:00Z`);
+      const d = (off: number) => new Date(base.getTime() + off * 864e5).toISOString().slice(0, 10);
+      const { data: dup } = await svc.from("fin_docs")
+        .select("doc_number,issue_date")
+        .eq("shop_id", shopId).eq("doc_type", input.doc_type)
+        .neq("status", "void").eq("total", t.total)
+        .ilike("contact_name", contactName)
+        .gte("issue_date", d(-3)).lte("issue_date", d(3))
+        .order("created_at", { ascending: false }).limit(1);
+      if (dup?.length) {
+        return {
+          ok: false,
+          error: `มีเอกสารคล้ายกันอยู่แล้ว: ${dup[0].doc_number} (ยอดเท่ากัน คู่ค้าเดียวกัน วันที่ใกล้กัน) — ถ้าตั้งใจออกซ้ำจริง กดบันทึกอีกครั้งเพื่อยืนยัน`,
+          duplicate: { doc_number: dup[0].doc_number, issue_date: dup[0].issue_date },
+        };
       }
     }
 

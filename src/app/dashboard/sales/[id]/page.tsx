@@ -46,6 +46,20 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
     }
   }
 
+
+  // แก้ไขล่าสุดเมื่อไรโดยใคร — ผลตรวจ 28 ส.ค. 2569: ความน่าเชื่อถือของเอกสารการเงิน
+  // อยู่ที่ตอบได้ว่า "ใครแตะล่าสุด" โดยไม่ต้องไปขุดหน้า log ผู้ดูแล
+  let lastEdit: { by: string; at: string } | null = null;
+  {
+    const { data: log } = await svc.from("audit_logs")
+      .select("actor_id, created_at").eq("shop_id", shop.id).eq("resource_id", id)
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (log?.actor_id) {
+      const { data: prof } = await svc.from("profiles").select("display_name,email").eq("id", log.actor_id).maybeSingle();
+      lastEdit = { by: prof?.display_name || prof?.email || "ผู้ใช้ในกิจการ", at: log.created_at };
+    }
+  }
+
   // สลิปแนบ — ลิงก์ชั่วคราว
   const slipPaths = (payments ?? []).map((p) => p.slip_storage_path).filter(Boolean) as string[];
   const urlMap = new Map<string, string>();
@@ -105,6 +119,13 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
             {doc.contact_name ?? "ไม่ระบุลูกค้า"} · ออกเมื่อ {dateOnlyTH(doc.issue_date)}
             {doc.due_date && ` · ครบกำหนด ${dateOnlyTH(doc.due_date)}`}
           </p>
+          {/* ที่มา + ร่องรอยการแก้ — ให้เห็นบนหน้าเอกสารเลยว่าใครแตะล่าสุด และ AI สร้างจากอะไร */}
+          {(doc.source === "ai" || lastEdit) && (
+            <p className="mt-0.5 text-xs text-neutral-400">
+              {doc.source === "ai" && <>สร้างโดยผู้ช่วย AI{doc.file_path ? " จากไฟล์ที่แนบไว้ในเอกสารนี้" : " ตามคำสั่งในแชท"} · </>}
+              {lastEdit && <>อัปเดตล่าสุด {dateTH(lastEdit.at)} โดย {lastEdit.by}</>}
+            </p>
+          )}
         </div>
         {canEdit && <DocActions doc={{
           id: doc.id, shopId: shop.id, docType: doc.doc_type as DocType, docNumber: doc.doc_number,

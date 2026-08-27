@@ -6,9 +6,9 @@ import type { Contact, DocType } from "@/lib/types/finance";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-export default async function NewSalesDocPage({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
+export default async function NewSalesDocPage({ searchParams }: { searchParams: Promise<{ type?: string; contact?: string }> }) {
   const { supabase, shop } = await getCurrentShop();
-  const { type } = await searchParams;
+  const { type, contact } = await searchParams;
   const docType: DocType = type === "quotation" || type === "receipt" ? type : "invoice";
 
   const [{ data: contacts }, { data: products }] = await Promise.all([
@@ -34,6 +34,7 @@ export default async function NewSalesDocPage({ searchParams }: { searchParams: 
           address: shop.billing_address, taxId: shop.tax_id, branch: shop.branch,
         }}
         contacts={(contacts ?? []) as Contact[]}
+        initialContactId={contact}
         products={products ?? []} />
     </div>
   );

@@ -5,9 +5,9 @@ import { compressImage } from "@/lib/compress-image";
 //  คำนวณ VAT (แยกนอก/รวมใน) + หัก ณ ที่จ่าย สดทุกครั้งที่พิมพ์
 //  ค่าใช้จ่าย: แนบรูปบิลแล้วให้ AI อ่านกรอกให้ทั้งฟอร์มได้
 // ============================================================
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ScanLine, Paperclip, TriangleAlert } from "lucide-react";
+import { Plus, Trash2, ScanLine, Paperclip, TriangleAlert, History } from "lucide-react";
 import { Button, Card, CardContent, Input, Label, Select, Textarea } from "@/components/ui";
 import { baht, bahtDoc, cn } from "@/lib/utils";
 import { calcDocTotals, DOC_TYPE_TH, WHT_RATES } from "@/lib/finance";
@@ -31,11 +31,12 @@ export interface DocFormProps {
   products?: ProductLite[];
   categories?: ExpenseCategory[];
   draft?: FinDoc;                 // แก้ไขร่าง
+  initialContactId?: string;      // มาจากหน้าผู้ติดต่อ (ปุ่ม "ออกเอกสารให้รายนี้") — เติมคู่ค้าให้เลย
 }
 
 const emptyRow = (): Row => ({ name: "", qty: "1", unit: "", unit_price: "", product_id: null });
 
-export default function DocForm({ shopId, seller, docType: initialDocType, contacts, products = [], categories = [], draft }: DocFormProps) {
+export default function DocForm({ shopId, seller, docType: initialDocType, contacts, products = [], categories = [], draft, initialContactId }: DocFormProps) {
   // ประเภทเอกสารสลับได้ในฟอร์ม (เฉพาะฝั่งขาย ไม่ใช่ตอนแก้ร่าง)
   // เดิมล็อกจาก ?type= ใน URL อย่างเดียว: เข้ามาแล้วไม่เห็นและเปลี่ยนไม่ได้ว่ากำลังออกใบอะไร
   // เจ้าของ + ลูกค้าจริงถามตรงกัน (2 ส.ค. 2569): "ใบเสนอราคากับใบแจ้งหนี้ทำไมต้องอันเดียวกัน"
@@ -65,7 +66,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
       ? draft.fin_doc_items.map((it) => ({ name: it.name, qty: String(it.qty), unit: it.unit ?? "", unit_price: String(it.unit_price), product_id: it.product_id ?? null }))
       : [emptyRow()],
   );
-  const [contactId, setContactId] = useState(draft?.contact_id ?? "");
+  const [contactId, setContactId] = useState(draft?.contact_id ?? initialContactId ?? "");
   const [contactName, setContactName] = useState(draft?.contact_name ?? "");
   const [discount, setDiscount] = useState(draft ? String(draft.discount || "") : "");
   const [vatMode, setVatMode] = useState<VatMode>(draft?.vat_mode ?? "none");
@@ -86,6 +87,50 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
     draft?.file_path ? [{ path: draft.file_path, name: "ไฟล์แนบเดิม" }] : [],
   );
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // ---- กู้งานที่พิมพ์ค้าง (draft recovery) ----------------------------------
+  // ผลตรวจ 28 ส.ค. 2569: "ปิดแอปกลางคันกลับมาแล้วยังอยู่ที่เดิม" — ฟอร์มนี้คือจุดที่
+  // คนพิมพ์นานที่สุด (หลายรายการ + เลขภาษี) ปิดแท็บทีเดียวหายหมดคือเหตุให้เลิกใช้จริง
+  // เก็บใน localStorage ของเครื่องผู้ใช้เท่านั้น ไม่แตะ server และล้างทันทีที่บันทึกสำเร็จ
+  // ใช้เฉพาะตอนสร้างใหม่ — แก้ร่างเดิมมีข้อมูลใน DB อยู่แล้ว ไม่ต้องซ้อน
+  const draftKey = draft?.id ? null : `docdraft:${shopId}:${initialDocType}`;
+  interface SavedDraft {
+    docType: DocType; rows: Row[]; contactId: string; contactName: string; discount: string;
+    vatMode: VatMode; whtRate: string; incomeType: string; issueDate: string; dueDate: string;
+    categoryId: string; notes: string;
+  }
+  const [restoreOffer, setRestoreOffer] = useState<SavedDraft | null>(null);
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const sv = JSON.parse(raw) as SavedDraft;
+      if (sv && Array.isArray(sv.rows) && (sv.rows.some((r) => r.name?.trim()) || sv.contactName)) setRestoreOffer(sv);
+      else localStorage.removeItem(draftKey);
+    } catch { /* อ่านไม่ได้ = ไม่มีอะไรให้กู้ ห้ามทำฟอร์มพัง */ }
+    // ตั้งใจอ่านครั้งเดียวตอนเปิดฟอร์ม
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    // หยุดเซฟระหว่างแถบกู้ยังเปิดอยู่ — ไม่งั้นการพิมพ์ใหม่จะทับของที่รอกู้ก่อนผู้ใช้ตัดสินใจ
+    if (!draftKey || restoreOffer) return;
+    const has = rows.some((r) => r.name.trim() || r.unit_price) || contactName.trim() || notes.trim();
+    try {
+      if (has) localStorage.setItem(draftKey, JSON.stringify({
+        docType, rows, contactId, contactName, discount, vatMode, whtRate, incomeType,
+        issueDate, dueDate, categoryId, notes,
+      } satisfies SavedDraft));
+      else localStorage.removeItem(draftKey);
+    } catch { /* พื้นที่เต็ม/โหมดส่วนตัว — ยอมไม่เซฟ ดีกว่าโยน error ใส่ผู้ใช้ */ }
+  }, [draftKey, restoreOffer, docType, rows, contactId, contactName, discount, vatMode, whtRate, incomeType, issueDate, dueDate, categoryId, notes]);
+  function applyRestore(sv: SavedDraft) {
+    setDocType(sv.docType); setRows(sv.rows.length ? sv.rows : [emptyRow()]);
+    setContactId(sv.contactId); setContactName(sv.contactName); setDiscount(sv.discount);
+    setVatMode(sv.vatMode); setWhtRate(sv.whtRate); setIncomeType(sv.incomeType);
+    setIssueDate(sv.issueDate); setDueDate(sv.dueDate); setCategoryId(sv.categoryId); setNotes(sv.notes);
+    setRestoreOffer(null);
+  }
 
   const totals = useMemo(() => calcDocTotals(
     rows.map((r) => ({ qty: Number(r.qty) || 0, unit_price: Number(r.unit_price) || 0 })),
@@ -189,7 +234,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
     }
   }
 
-  function submit(status: "draft" | "awaiting") {
+  function submit(status: "draft" | "awaiting", forceDuplicate = false) {
     setError(null);
     setShowRowErrors(false);
     const items = rows
@@ -233,6 +278,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
       paid_now: isExpense ? paidNow : undefined,
       tax_point: taxPoint,
       pay_method: payMethod,
+      force_duplicate: forceDuplicate,
     };
     start(async () => {
       const r = await saveDoc(shopId, input);
@@ -240,13 +286,36 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
         // บอกให้ชัดว่าสำเร็จก่อนพาไปหน้าใหม่ — หน้าใหม่โหลดช้าบนมือถือ
         // ช่วงรอยต่อนั้นถ้าไม่มีอะไรบอก ผู้ใช้เข้าใจว่ากดแล้วไม่เกิดอะไร (เกิดจริง 2 ส.ค. 2569)
         toast({ text: `บันทึก ${r.docNumber} แล้ว`, tone: "success" });
+        // บันทึกสำเร็จ = งานค้างในเครื่องหมดหน้าที่ ต้องล้าง ไม่งั้นเปิดฟอร์มรอบหน้าจะเจอแถบกู้ผี
+        if (draftKey) try { localStorage.removeItem(draftKey); } catch { /* ล้างไม่ได้ไม่เป็นไร */ }
         router.push(isExpense ? `/dashboard/expenses` : `/dashboard/sales/${r.docId}`);
+      } else if (r.duplicate) {
+        // ด่านกันออกซ้ำจากฝั่ง server — ให้ผู้ใช้ตัดสินใจเอง ไม่บล็อกถาวร
+        if (window.confirm(`${r.error}
+
+ยืนยันออกเอกสารซ้ำอีกใบ?`)) submit(status, true);
+        else setError(r.error);
       } else setError(r.error);
     });
   }
 
   return (
     <div className="max-w-3xl space-y-4">
+      {restoreOffer && (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
+          <History className="h-4 w-4 shrink-0" />
+          <span className="min-w-0 flex-1">พบงานที่พิมพ์ค้างไว้จากครั้งก่อน — เอากลับมาพิมพ์ต่อได้เลย</span>
+          <button type="button" onClick={() => applyRestore(restoreOffer)}
+            className="min-h-[36px] rounded-lg bg-amber-600 px-3 text-xs font-semibold text-white hover:bg-amber-700">
+            พิมพ์ต่อจากเดิม
+          </button>
+          <button type="button"
+            onClick={() => { setRestoreOffer(null); if (draftKey) try { localStorage.removeItem(draftKey); } catch { /* noop */ } }}
+            className="min-h-[36px] rounded-lg border border-amber-300 px-3 text-xs text-amber-800 hover:bg-amber-100">
+            เริ่มใหม่
+          </button>
+        </div>
+      )}
       {/* แถบสลับประเภท — โชว์เฉพาะเอกสารขายและไม่ใช่ตอนแก้ร่าง (ร่างต้องคงประเภทเดิม) */}
       {!isExpense && !draft && (
         <div role="tablist" aria-label="ประเภทเอกสาร" className="flex gap-1 rounded-xl border border-neutral-200 bg-neutral-100/70 p-1">

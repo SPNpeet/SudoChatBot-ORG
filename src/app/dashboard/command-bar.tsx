@@ -17,7 +17,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUp, ImagePlus, Sparkles } from "lucide-react";
+import { ArrowUp, ImagePlus, Bot } from "lucide-react";
 
 /** ยาวสุดที่ส่งผ่าน URL ได้อย่างปลอดภัย — ยาวกว่านี้ให้ไปพิมพ์ต่อในหน้าแชท */
 const MAX_LEN = 300;
@@ -28,7 +28,9 @@ const EXAMPLES = [
   "บันทึกค่าใช้จ่ายค่าน้ำมัน 800 บาท",
 ];
 
-export default function CommandBar({ assistantName }: { assistantName?: string | null }) {
+export interface ProactiveNudge { text: string; command: string }
+
+export default function CommandBar({ assistantName, proactive }: { assistantName?: string | null; proactive?: ProactiveNudge | null }) {
   const [text, setText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -42,9 +44,20 @@ export default function CommandBar({ assistantName }: { assistantName?: string |
   return (
     <section className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)] sm:p-5">
       <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
-        <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+        <Bot className="h-3.5 w-3.5 text-emerald-600" />
         สั่งงานบัญชีได้เลย {assistantName ? `— ${assistantName} รออยู่` : "— พิมพ์เป็นภาษาคน"}
       </p>
+
+      {/* AI ทักก่อน — ผลตรวจ 28 ส.ค. 2569: ผู้ช่วยที่ดีไม่รอให้ถาม เห็นงานค้างแล้วชวนทำเลย
+          กดแล้วส่งคำสั่งสำเร็จรูปไปหน้าผู้ช่วยทันที ไม่ต้องคิดเองว่าจะพิมพ์ยังไง */}
+      {proactive && (
+        <button type="button" onClick={() => go(proactive.command)}
+          className="mt-2.5 flex w-full items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 text-left text-[13px] text-emerald-900 transition-colors hover:bg-emerald-100/70">
+          <Bot className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+          <span className="min-w-0 flex-1">{proactive.text}</span>
+          <span className="shrink-0 text-xs font-semibold text-emerald-700">ให้ช่วยเลย →</span>
+        </button>
+      )}
 
       <form
         onSubmit={(e) => { e.preventDefault(); go(text); }}

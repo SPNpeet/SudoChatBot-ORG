@@ -5,7 +5,8 @@ import type { Contact, ExpenseCategory } from "@/lib/types/finance";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120; // AI อ่านบิลอาจใช้เวลา
 
-export default async function NewExpensePage() {
+export default async function NewExpensePage({ searchParams }: { searchParams: Promise<{ contact?: string }> }) {
+  const { contact } = await searchParams;
   const { supabase, shop } = await getCurrentShop();
   const [{ data: contacts }, { data: categories }] = await Promise.all([
     supabase.from("contacts").select("*").eq("shop_id", shop.id).eq("status", "active").order("name"),
@@ -20,6 +21,7 @@ export default async function NewExpensePage() {
       </div>
       <DocForm shopId={shop.id} docType="expense"
         contacts={(contacts ?? []) as Contact[]}
+        initialContactId={contact}
         categories={(categories ?? []) as ExpenseCategory[]} />
     </div>
   );

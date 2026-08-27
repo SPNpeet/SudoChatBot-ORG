@@ -9,7 +9,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Label, Textarea } from "@/components/ui";
-import { Plus, Pencil, Trash2, Sparkles, X, ExternalLink, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Bot, X, ExternalLink, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveTaxKnowledge, deleteTaxKnowledge, buildTaxEmbeddings, type TaxKbInput } from "./actions";
 
@@ -118,7 +118,7 @@ export default function TaxKbManager({ rows, missingVectors }: { rows: TaxKbRow[
                 : "ระหว่างนี้ระบบค้นให้ด้วยการเทียบข้อความ ซึ่งเจอเฉพาะเมื่อผู้ใช้พิมพ์คำใกล้เคียงของจริง"}
             </p>
             <Button variant="brand" disabled={pending || autoBuilding} onClick={buildVectors}>
-              <Sparkles className="h-4 w-4" /> {autoBuilding ? "กำลังสร้างเวกเตอร์..." : "สร้างเวกเตอร์"}
+              <Bot className="h-4 w-4" /> {autoBuilding ? "กำลังสร้างเวกเตอร์..." : "สร้างเวกเตอร์"}
             </Button>
           </CardContent>
         </Card>

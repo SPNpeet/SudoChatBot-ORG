@@ -2,12 +2,12 @@
 //  เอกสารขาย (AR) — ใบเสนอราคา / ใบแจ้งหนี้ / ใบเสร็จรับเงิน
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
-import { Badge, Button, Card, CardContent, EmptyState, Table, Th, Td, PageHeader, buttonClass } from "@/components/ui";
-import { baht, dateOnlyTH, cn } from "@/lib/utils";
-import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding } from "@/lib/finance";
-import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
+import { Card, CardContent, EmptyState, PageHeader, buttonClass } from "@/components/ui";
+import { baht, cn } from "@/lib/utils";
+import { docOutstanding } from "@/lib/finance";
+import SalesTable, { type SalesRow } from "./sales-table";
+import type { FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
-import RowLink from "@/components/row-link";
 import { Plus, FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -89,27 +89,12 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
               action={{ href: "/dashboard/sales/new?type=invoice", label: "ออกเอกสารใบแรก" }}
               secondary={{ href: "/dashboard/assistant", label: "สั่ง AI เป็นภาษาคน" }} />
           ) : (
-            <Table>
-              <thead><tr><Th>เลขที่</Th><Th>ประเภท</Th><Th>ลูกค้า</Th><Th>วันที่</Th><Th className="text-right">ยอด</Th><Th className="text-right">ค้างรับ</Th><Th>สถานะ</Th></tr></thead>
-              <tbody>
-                {rows.map((d) => (
-                  <RowLink key={d.id} href={`/dashboard/sales/${d.id}`} className={cn(d.status === "void" && "opacity-50")}>
-                    {/* คง Link ไว้บนเลขที่เอกสาร — RowLink ทำให้กดได้ทั้งแถวก็จริง แต่คีย์บอร์ด/
-                        โปรแกรมอ่านหน้าจอต้องมีของที่ focus ได้จริงอย่างน้อย 1 จุดต่อแถว */}
-                    <Td><Link href={`/dashboard/sales/${d.id}`}
-                      className={cn("font-medium text-emerald-700 hover:underline", d.status === "void" && "text-neutral-400 line-through")}>
-                      {d.doc_number}
-                    </Link></Td>
-                    <Td label="ประเภท">{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
-                    <Td label="ลูกค้า">{d.contact_name ?? "-"}</Td>
-                    <Td label="วันที่" className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
-                    <Td label="ยอด" className="text-right">{baht(d.total)}</Td>
-                    <Td label="ค้างรับ" className="text-right">{d.doc_type === "invoice" && ["awaiting", "partial"].includes(d.status) ? <span className="font-medium text-amber-600">{baht(docOutstanding(d))}</span> : "-"}</Td>
-                    <Td label="สถานะ"><Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge></Td>
-                  </RowLink>
-                ))}
-              </tbody>
-            </Table>
+            <SalesTable rows={rows.map((d): SalesRow => ({
+              id: d.id, doc_number: d.doc_number, doc_type: d.doc_type, contact_name: d.contact_name,
+              issue_date: d.issue_date, total: Number(d.total),
+              outstanding: d.doc_type === "invoice" && ["awaiting", "partial"].includes(d.status) ? docOutstanding(d) : 0,
+              status: d.status, share_key: d.share_key ?? null,
+            }))} />
           )}
         </CardContent>
       </Card>
