@@ -485,6 +485,32 @@ section("เขตเวลาไทยกับขอบเดือนภา�
     "เวลาเกิดรายการจริงต้องโชว์เวลา", dateTH("2026-08-06T06:15:00Z"));
 }
 
+// ============================================================
+//  ด่านถาวร: งานตามเวลาต้อง fail-closed เสมอ
+//
+//  ⚠️ 28 ส.ค. 2569 ย้ายด่านสิทธิ์ของ /api/cron/* ไปไว้ที่ src/lib/cron-auth.ts
+//  เพื่อให้มีที่เก็บความลับสำรองใน Vault (ไม่ต้องรอ env ของ Vercel)
+//  ความเสี่ยงของการย้ายคือวันหนึ่งมีคนเขียนให้ "ผ่านไปก่อน" ตอนหาความลับไม่เจอ
+//  ซึ่งจะเปิดให้คนนอกสั่งสำรองข้อมูลและส่งอีเมลรัว ๆ ได้ทันที
+//  ด่านนี้จึงตรึงไว้ว่าเส้นทางนั้นต้องปฏิเสธเสมอเมื่อไม่มีความลับ
+// ============================================================
+{
+  console.log("\n== งานตามเวลาต้องปฏิเสธเมื่อไม่มีความลับ ==");
+  const auth = readFileSync("src/lib/cron-auth.ts", "utf8");
+  ok(/return false;/.test(auth) && !/return true;\s*\/\/\s*ผ่าน/.test(auth),
+    "cron-auth มีทางปฏิเสธ");
+  ok(/catch\s*\{\s*return false;/.test(auth.replace(/\s+/g, " ").replace(/ /g, " ")) || /catch \{\s*return false;/.test(auth),
+    "อ่านความลับไม่ได้ = ปฏิเสธ ไม่ใช่ปล่อยผ่าน");
+  for (const f of ["src/app/api/cron/backup/route.ts", "src/app/api/cron/weekly-digest/route.ts"]) {
+    const src = readFileSync(f, "utf8");
+    ok(src.includes("cronRequestAllowed(request)") && src.includes("status: 503"),
+      `${f.split("/").slice(-2)[0]} ใช้ด่านกลางและตอบ 503 เมื่อไม่ผ่าน`);
+    ok(!/process\.env\.CRON_SECRET/.test(src),
+      `${f.split("/").slice(-2)[0]} ไม่ตรวจ env เองซ้ำอีกที่`);
+  }
+  console.log("  ถูก  ทั้งสองเส้นใช้ด่านกลางเดียวกัน และปฏิเสธเมื่อไม่มีความลับ");
+}
+
 console.log(failures === 0
   ? "\nสรุป: ผ่านทั้งหมด\n"
   : `\nสรุป: ไม่ผ่าน ${failures} ข้อ — ห้าม deploy จนกว่าจะแก้\n`);

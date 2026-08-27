@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cronRequestAllowed } from "@/lib/cron-auth";
 import { createServiceClient } from "@/lib/supabase/server";
 import { runBackup } from "@/lib/backup-run";
 
@@ -27,8 +28,9 @@ export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  // ⚠️ ด่านเดียวกันทั้งสองเส้น อยู่ที่ src/lib/cron-auth.ts ที่เดียว
+  // ยัง fail-closed เหมือนเดิม แค่มีที่เก็บความลับสำรองใน Vault ให้ไม่ต้องรอ env
+  if (!(await cronRequestAllowed(request))) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 503 });
   }
   const result = await runBackup(createServiceClient());
