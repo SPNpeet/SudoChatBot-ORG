@@ -323,7 +323,7 @@ fin_docs 102=102 · shops 32=32) · `authenticated` เข้าไม่ถึ�
 | โมเดล AI | ✅ | ยิงจริงทุกตัวที่ตั้งไว้ ตอบได้หมด (`npm run check:models`) |
 | กู้ระบบจากศูนย์ | ✅ | rebuild 81 migration + restore สมดุล (`sh scripts/migration-dryrun.sh`) |
 | รับเงินค่าแพ็กเกจ | ⏳ รอเจ้าของ | คีย์เป็น sk_test + บัญชี Stripe ยังไม่ยืนยันตัวตน (`charges_enabled=false`) |
-| สำรองข้อมูลอัตโนมัติ | ⏳ รอเจ้าของ | ยังไม่ตั้ง `CRON_SECRET` ใน Vercel |
+| สำรองข้อมูลอัตโนมัติ | ✅ | ไม่ต้องรอ `CRON_SECRET` แล้ว — migration 106 เก็บความลับใน Vault และตั้งงานในฐานข้อมูล ยิงจริงแล้วได้ `{ok:true, total_rows:3189}` · ยังรับ env ก่อนเสมอถ้าวันหนึ่งเจ้าของตั้ง |
 | กันรหัสผ่านรั่ว | ⛔ ตัดสินใจแล้วว่าไม่ทำ | Leaked Password Protection เป็นฟีเจอร์เฉพาะแพ็ก Pro ขึ้นไป (ยืนยันกับเอกสาร Supabase 9 ส.ค. 2569) — ใช้ความยาวรหัสผ่านขั้นต่ำ 8 แทน |
 
 ## ด่านตรวจอัตโนมัติ (ของที่ส่งมอบพร้อมระบบ)
@@ -341,7 +341,6 @@ typecheck · บัญชี-ภาษี (`check`) · UI (`check:ui`) · ลำ
 1. 🔴 **Stripe บัญชีจริง** — dashboard.stripe.com → Create account → ยืนยันตัวตน (1-3 วัน)
    → เปิด PromptPay โหมด live → webhook live ไป `/api/billing/stripe/webhook` (4 events)
    → ใส่ `sk_live` + `whsec` ที่ `/dashboard/admin/billing` · หน้านั้นจะเตือนเองถ้าคีย์เป็น test
-2. 🔴 **`CRON_SECRET`** — Vercel → Environment Variables → redeploy (ค่าสุ่ม 32 byte)
 3. 🟡 **Search Console** — ส่ง sitemap.xml ให้ Google (ไม่ส่งก็ติดเอง แค่ช้ากว่า)
 4. 🟡 **LINE Login** — สร้าง LINE Login channel → ใส่ 2 env ใน Vercel (โค้ดพร้อมแล้ว ปุ่มโผล่เอง)
 

@@ -70,9 +70,24 @@ const add = (name, ready, impact, howto) => items.push({ name, ready, impact, ho
 
 // ---- 2. งานตามเวลา (สำรองข้อมูล + สรุปรายสัปดาห์) ----
 {
-  const res = await fetch(`${BASE}/api/cron/backup`).catch(() => null);
-  // 503 = ยังไม่ตั้ง CRON_SECRET (fail-closed ถูกต้อง) · 401 = ตั้งแล้วแต่เรียกโดยไม่มีสิทธิ์ = พร้อม
-  const cronReady = !!res && res.status !== 503;
+  // ⚠️ ยิง HTTP เปล่า ๆ แยกไม่ออกอีกแล้ว (แก้ 28 ส.ค. 2569)
+  // ตั้งแต่ migration 106 ความลับเก็บได้ทั้งใน env และใน Vault
+  // คำขอที่ไม่มีความลับต้องได้ 503 เสมอ ซึ่งถูกต้องแล้ว แต่แปลว่า 503
+  // ไม่ได้บอกว่า "ยังไม่ได้ตั้ง" อีกต่อไป ถ้ายังวัดแบบเดิมกระดานจะขึ้นแดงค้าง
+  // ทั้งที่งานเดินอยู่จริง — ด่านที่พูดไม่ตรงความจริงทำให้เจ้าของเลิกเชื่อทั้งกระดาน
+  let cronReady = false;
+  let cronNote = "";
+  try {
+    const { data: dbSecret } = await svc.rpc("get_cron_secret");
+    if (typeof dbSecret === "string" && dbSecret.trim()) {
+      cronReady = true;
+      cronNote = " · ความลับเก็บใน Vault และงานตั้งเวลาอยู่ในฐานข้อมูล ไม่ต้องพึ่ง env";
+    }
+  } catch { /* ยังไม่ได้ apply migration 106 */ }
+  if (!cronReady) {
+    const res = await fetch(`${BASE}/api/cron/backup`).catch(() => null);
+    cronReady = !!res && res.status !== 503;
+  }
 
   // ⚠️ ต้องนับชั้นกู้คืนในฐานข้อมูลด้วย (แก้ 27 ส.ค. 2569)
   // migration 100 เพิ่ม snapshot รายวันในฐานข้อมูลเอง ซึ่งทำงานอยู่จริงและตรวจได้
@@ -91,7 +106,7 @@ const add = (name, ready, impact, howto) => items.push({ name, ready, impact, ho
   } catch { /* ยังไม่มีฟังก์ชันนี้ = ยังไม่ได้ apply migration 100 */ }
 
   add(
-    "สำรองข้อมูลออกนอกฐาน + สรุปรายสัปดาห์",
+    `สำรองข้อมูลออกนอกฐาน + สรุปรายสัปดาห์${cronReady ? cronNote : ""}`,
     cronReady,
     `ยังไม่มีไฟล์สำรองที่เก็บออกนอกฐานข้อมูล และยังไม่ส่งสรุปรายสัปดาห์${snapNote}`,
     "ตั้ง CRON_SECRET ใน Vercel (Settings > Environment Variables) แล้ว redeploy",
