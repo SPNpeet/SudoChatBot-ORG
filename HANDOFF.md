@@ -11,9 +11,37 @@
 # 🚀 SudoChatBot (ระบบบัญชี AI) — เอกสารส่งต่อ
 
 > เปิด repo นี้ใน Claude Code แล้วสั่ง "อ่าน HANDOFF.md แล้วทำงานที่ค้างต่อ" ได้เลย
-> อัปเดตล่าสุด: 2026-08-09 — **เอกสารส่งมอบงานฉบับเต็ม (UAT ครบทั้งระบบแล้ว)**
 
 ---
+
+## 📣 28 ส.ค. 2569 — สถานะล่าสุด: ซอฟต์แวร์ครบแล้ว เหลือประตูเดียวคือ Stripe live (งานเจ้าของ)
+
+**วัดจริงบน production (commit `05a33da`):** ด่านทั้ง 14 ตัวผ่านหมด (บัญชี · UI · e2e 29 ตัว ·
+SEO · โมเดล AI ยิงจริง · สิทธิ์ 79 server actions · ไฟล์นักบัญชี 27 เช็ค · migrations · dupbuttons 0) ·
+หน้าหลังล็อกอิน 18 เส้นทางตอบปกติ · ฟังก์ชัน SECURITY DEFINER อ่อนไหวทั้ง 17 ตัวพิสูจน์แล้วว่ามีด่านแอดมินข้างใน
+
+คำวิจารภายนอก (ส.ค. 2569) implement ครบใน 8 commits `25e10b6`..`05a33da` — สถานะเอกสารตามชนิด ·
+ทศนิยม 2 ตำแหน่ง · PDPA consent + consent_logs · AI บอกความมั่นใจ+เหตุผล · draft recovery ·
+ด่านกันออกเอกสารซ้ำ · หน้า "แล้วไงต่อ" · object-centric ผู้ติดต่อ · multi-select · แยกแจ้งเตือน ·
+sticky CTA หน้า ราคา (รายละเอียด: memory `sudochatbot-critique-implementation`)
+
+### เช็คลิสต์เจ้าของ — เปิดรับเงินจริง (ทำครั้งเดียวจบ ~30 นาที + รอ Stripe ตรวจ)
+
+1. เข้า dashboard.stripe.com → **Activate account**: กรอกข้อมูลธุรกิจ + บัญชีธนาคารรับเงิน
+2. รอ Stripe อนุมัติ (ดูสถานะที่ Settings → Account status ต้องเป็น charges enabled)
+3. Settings → Payment methods → เปิด **PromptPay** (โหมด live)
+4. Developers → Webhooks → Add endpoint: `https://sudochatbot.online/api/stripe/webhook`
+   ติ๊ก event ตามที่การ์ด Stripe ในหน้าแอดมินบอก (รายการอยู่บนหน้านั้นแล้ว)
+5. คัดลอก `sk_live...` + `whsec...` มาวางที่ `/dashboard/admin/billing`
+   — ระบบจะยิงทดสอบกับ Stripe ทันทีและบอกว่า "พร้อมรับเงินจริง" หรือยังติดอะไร
+6. ทดสอบซื้อแพ็กจริง 1 ครั้งด้วยบัตร/พร้อมเพย์ของตัวเอง แล้วดูว่าเครดิตเข้า + ใบเสร็จออก
+
+งานเจ้าของอื่นที่ค้าง (ไม่ขวางการขาย): ซื้อโดเมน .com · Search Console Request Review ·
+เปิด Leaked password protection ใน Supabase Auth · SlipOK (ถ้าอยากให้ตรวจสลิปอัตโนมัติ) ·
+พิจารณาราคาแพ็กใหม่ตามที่ปรึกษาเสนอ (300-500/1,000-1,500/3,000)
+
+---
+
 
 ## 📣 12 ส.ค. 2569 (รอบสอง) — สรุปรายสัปดาห์ที่ไม่เคยส่งถึงใครเลย
 
