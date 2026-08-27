@@ -325,6 +325,6 @@ export async function POST(request: Request) {
   } catch (e) {
     const m = (e as Error).message;
     if (m.includes("forbidden")) return NextResponse.json({ ok: false, error: "คุณไม่มีสิทธิ์ใช้งานส่วนนี้" }, { status: 403 });
-    return NextResponse.json({ ok: false, error: `เกิดข้อผิดพลาด: ${m.slice(0, 200)}` }, { status: 500 });
+    return NextResponse.json({ ok: false, error: `อ่านบิลไม่สำเร็จ — ลองถ่ายใหม่ให้ชัดขึ้น หรือกรอกเองได้เลย (รายละเอียด: ${m.slice(0, 160)})` }, { status: 500 });
   }
 }

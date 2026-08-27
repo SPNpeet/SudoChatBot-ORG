@@ -791,6 +791,10 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
             {busy || reading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </form>
+        {/* คำเตือนตามผลตรวจ 28 ส.ค. 2569 — ความเชื่อใจมาจากความตรง ไม่ใช่จากการอวดว่าไม่พลาด */}
+        <p className="mt-1.5 text-center text-[11px] leading-snug text-neutral-400">
+          AI อาจอ่านบิลหรือสรุปผิดได้ — ตรวจตัวเลขก่อนใช้ยื่นภาษีเสมอ · แตะข้อความเดิมของคุณเพื่อสั่งซ้ำ
+        </p>
       </div>
 
       {/* ใบเอกสารจริงคาแชท — อ่านอย่างเดียว (แก้ตัวเลขบนใบที่ออกไปแล้วไม่ได้ตามกฎหมาย

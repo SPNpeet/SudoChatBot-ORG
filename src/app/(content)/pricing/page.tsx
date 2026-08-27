@@ -115,6 +115,14 @@ export default async function PricingPage() {
                 </li>
               ))}
             </ul>
+            {/* ปุ่มบนการ์ดขาย "ผลลัพธ์" ไม่ใช่คำว่า "สมัครสมาชิก" — ผลตรวจ 28 ส.ค. 2569
+                ทุกแพ็กเริ่มที่ทางเดียวกัน (สมัครฟรีก่อน ค่อยอัปเกรดในระบบ) จึงชี้ /signup ทั้งหมด */}
+            <Link href="/signup"
+              className={p.hot
+                ? "mt-4 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-800"
+                : "mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-100"}>
+              {p.free ? "เริ่มใช้ฟรีวันนี้" : `เริ่มแพ็ก ${p.name}`}{p.hot && <ArrowRight className="h-4 w-4" />}
+            </Link>
           </div>
         ))}
       </div>
@@ -141,6 +149,16 @@ export default async function PricingPage() {
           ))}
         </div>
       </section>
+
+      {/* แถบ CTA ติดจอมือถือ — หน้า ราคายาว เลื่อนถึงท้ายแล้วปุ่มหลักต้องยังอยู่ในมือเสมอ
+          โชว์เฉพาะจอเล็ก เดสก์ท็อปเห็นปุ่มบนการ์ดครบอยู่แล้ว */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/95 p-3 backdrop-blur sm:hidden">
+        <Link href="/signup"
+          className="flex min-h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-700 text-sm font-semibold text-white">
+          เริ่มทดลองใช้ฟรี — ไม่ต้องใช้บัตร <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+      <div className="h-16 sm:hidden" aria-hidden="true" />
     </div>
   );
 }

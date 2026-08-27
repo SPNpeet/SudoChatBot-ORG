@@ -203,10 +203,21 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
               </div>
             ) : (
               <ul className="max-h-[min(26rem,60vh)] divide-y divide-neutral-100 overflow-y-auto">
-                {notices.map((n) => {
+                {/* แยก "งานสำคัญ" กับ "ข่าวสาร" คนละกลุ่ม — ผลตรวจ 28 ส.ค. 2569:
+                    ปนกันเมื่อไหร่คนจะชินกับการเลื่อนผ่าน แล้วพลาดของที่เป็นเงิน/ภาษีจริง
+                    ลิสต์เรียง critical→warn→info อยู่แล้ว จึงคั่นหัวข้อตามรอยต่อของ tone ได้เลย */}
+                {notices.map((n, i) => {
+                  const isInfo = n.tone === "info";
+                  const firstInfo = isInfo && (i === 0 || notices[i - 1].tone !== "info");
+                  const header = i === 0 && !isInfo
+                    ? "งานสำคัญ — ควรจัดการก่อน"
+                    : firstInfo ? "ข่าวสาร/ทั่วไป" : null;
                   const t = TONE[n.tone];
                   return (
                     <li key={n.key} className={cn("px-4 py-3", t.ring, "border-x-0 border-b-0 border-t-0")}>
+                      {header && (
+                        <p className="-mx-1 mb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">{header}</p>
+                      )}
                       <div className="flex gap-2.5">
                         <t.Icon className={cn("mt-0.5 h-4 w-4 shrink-0", t.text)} />
                         <div className="min-w-0 flex-1">
