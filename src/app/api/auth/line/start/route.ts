@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getLineLoginKeys } from "@/lib/line-login";
 
 // ============================================================
 //  เริ่ม LINE Login (OAuth 2.1 ของ LINE) — Supabase ไม่รองรับ LINE ตรง จึงทำเอง
@@ -7,10 +8,12 @@ import { NextResponse } from "next/server";
 // ============================================================
 export async function GET(request: Request) {
   const origin = new URL(request.url).origin;
-  const channelId = process.env.LINE_LOGIN_CHANNEL_ID;
-  if (!channelId || !process.env.LINE_LOGIN_CHANNEL_SECRET) {
+  // คีย์มาจากที่เดียวกับเส้น /api/line/* — env มาก่อน แล้วค่อยถอยไปอ่านจากหน้าแอดมิน
+  const keys = await getLineLoginKeys();
+  if (!keys) {
     return NextResponse.redirect(new URL("/login?line_error=unavailable", origin));
   }
+  const channelId = keys.channelId;
 
   const state = crypto.randomUUID();
   const auth = new URL("https://access.line.me/oauth2/v2.1/authorize");

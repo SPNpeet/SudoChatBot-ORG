@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getLineLoginKeys } from "@/lib/line-login";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
 // ============================================================
@@ -25,9 +26,10 @@ export async function GET(request: Request) {
   const u = new URL(request.url);
   const origin = u.origin;
   try {
-    const channelId = process.env.LINE_LOGIN_CHANNEL_ID;
-    const secret = process.env.LINE_LOGIN_CHANNEL_SECRET;
-    if (!channelId || !secret) return fail(origin, "unavailable");
+    const keys = await getLineLoginKeys();
+    if (!keys) return fail(origin, "unavailable");
+    const channelId = keys.channelId;
+    const secret = keys.channelSecret;
 
     const code = u.searchParams.get("code");
     const state = u.searchParams.get("state");
