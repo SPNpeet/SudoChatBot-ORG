@@ -37,7 +37,11 @@ function delta(now: number, prev: number) {
 }
 
 export default async function Overview() {
-  const { supabase, shop } = await getCurrentShop();
+  const { supabase, shop, role } = await getCurrentShop();
+  // แดชบอร์ดปรับตามบทบาท (ผลตรวจ 28 ส.ค. 2569) — พนักงาน (agent) มาทำงานเอกสาร
+  // ไม่ควรเห็นเงินสดรวม/กระแสเงินของกิจการ ซึ่งเป็นข้อมูลระดับเจ้าของ
+  // ลูกหนี้/เจ้าหนี้ยังเห็น เพราะจำเป็นต่องานตามบิลของเขาเอง
+  const seeMoney = role !== "agent";
   // ชื่อที่ลูกค้าตั้งให้ผู้ช่วย (ตั้งได้ที่หน้าผู้ช่วย) — ใช้ทักทายบนช่องสั่งงาน
   const assistantName = String((((shop as { settings?: Record<string, unknown> | null }).settings ?? {}) as Record<string, unknown>).assistant_name ?? "").trim() || null;
   const bkkNow = new Date(Date.now() + 7 * 3600_000);
@@ -141,10 +145,12 @@ export default async function Overview() {
         <p className="mt-1 text-sm text-neutral-500">
           {docCount === 0
             ? "ยังไม่มีเอกสารในระบบ — เริ่มจากกดปุ่ม + มุมขวาล่าง หรือลองข้อมูลตัวอย่างด้านล่าง"
-            : <>เดือนนี้เงินสด{netFlow >= 0 ? "เป็นบวก " : "ติดลบ "}
+            : !seeMoney
+              ? "งานของคุณวันนี้อยู่ในกล่องด้านล่าง — บันทึกบิลใหม่ได้จากปุ่ม + มุมขวาล่าง"
+              : <>เดือนนี้เงินสด{netFlow >= 0 ? "เป็นบวก " : "ติดลบ "}
                 <b className={netFlow >= 0 ? "text-emerald-700" : "text-red-600"}>{baht(Math.abs(netFlow))}</b>
-                {ar > 0 && <> · รอเก็บอีก <b className="text-amber-700">{baht(ar)}</b></>}
-              </>}
+                  {ar > 0 && <> · รอเก็บอีก <b className="text-amber-700">{baht(ar)}</b></>}
+                </>}
         </p>
       </div>
 
@@ -181,16 +187,16 @@ export default async function Overview() {
         {/* ⚠️ ป้ายต้องเขียนว่า "เงินสด + เงินฝาก" และกำกับว่า "ตามสมุดบัญชี" เสมอ
             ห้ามเปลี่ยนเป็น "เงินคงเหลือในบัญชี" หรือคำที่ทำให้เข้าใจว่าเป็นยอดในธนาคารจริง
             ระบบไม่ได้ต่อกับธนาคาร ตัวเลขนี้ยังไม่ผ่านการกระทบยอด — เหตุผลเต็มอยู่ใน migration 105 */}
-        <StatCard label="เงินสด + เงินฝาก" value={baht(cashBalance)} icon={<Wallet className="h-4 w-4" />}
+        {seeMoney && <StatCard label="เงินสด + เงินฝาก" value={baht(cashBalance)} icon={<Wallet className="h-4 w-4" />}
           tone={cashBalance < 0 ? "red" : "green"} href="/dashboard/journal"
           hint={cashBalance < 0
             ? "ติดลบ — แปลว่ามีรายจ่ายที่จ่ายออกมากกว่าเงินที่บันทึกรับเข้า"
-            : "ตามสมุดบัญชี · ยังไม่กระทบยอดธนาคาร"} />
+            : "ตามสมุดบัญชี · ยังไม่กระทบยอดธนาคาร"} />}
         {/* ทุกใบกดได้ทั้งใบ ไม่ใช่กดได้แค่ตัวหนังสือเล็กๆ ข้างล่าง */}
-        <StatCard label="เงินเข้าเดือนนี้" value={baht(monthIn)} icon={<TrendingUp className="h-4 w-4" />} tone="green"
-          hint={trend(dIn, true)} href="/dashboard/money" />
-        <StatCard label="เงินออกเดือนนี้" value={baht(monthOut)} icon={<TrendingDown className="h-4 w-4" />}
-          hint={trend(dOut, false)} href="/dashboard/money" />
+        {seeMoney && <StatCard label="เงินเข้าเดือนนี้" value={baht(monthIn)} icon={<TrendingUp className="h-4 w-4" />} tone="green"
+          hint={trend(dIn, true)} href="/dashboard/money" />}
+        {seeMoney && <StatCard label="เงินออกเดือนนี้" value={baht(monthOut)} icon={<TrendingDown className="h-4 w-4" />}
+          hint={trend(dOut, false)} href="/dashboard/money" />}
         {/* ไอคอน 2 ใบนี้ต้องบอก "ใคร/อะไร" ไม่ใช่แค่ "เงิน" — ลูกหนี้=คนที่ค้างเรา, เจ้าหนี้=บิลที่เราต้องจ่าย */}
         <StatCard label="ลูกหนี้ค้างรับ" value={baht(ar)} icon={<Users className="h-4 w-4" />} tone="amber"
           href="/dashboard/sales?t=unpaid"
@@ -210,7 +216,7 @@ export default async function Overview() {
           ซึ่งอ่านแล้วเข้าใจผิดว่ามีแนวโน้ม ทั้งที่เส้นระหว่างจุด 2 จุดไม่ได้บอกอะไรเลย
           กราฟที่ข้อมูลไม่พอคือการตกแต่ง ไม่ใช่ข้อมูล — และกินพื้นที่ที่ควรเป็นของงานจริง
           ต่ำกว่าเกณฑ์ = ไม่โชว์การ์ดเลย ดีกว่าโชว์กล่องว่างที่กินที่เท่ากัน */}
-      {chartData.length >= 4 && (
+      {seeMoney && chartData.length >= 4 && (
         <Card>
           <CardHeader><CardTitle>เงินเข้า-ออก 30 วันล่าสุด</CardTitle></CardHeader>
           <CardContent><CashflowChart data={chartData} /></CardContent>

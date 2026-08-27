@@ -492,7 +492,21 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
                     <Input inputMode="decimal" placeholder="ราคา/หน่วย" value={r.unit_price}
                       aria-invalid={showRowErrors && !(Number(r.unit_price) > 0) ? true : undefined}
                       className={cn("min-w-0", showRowErrors && !(Number(r.unit_price) > 0) && "border-red-400 bg-red-50/40 focus:border-red-500")}
-                      onChange={(e) => setRow(i, { unit_price: e.target.value })} />
+                      onChange={(e) => setRow(i, { unit_price: e.target.value })}
+                      // Enter ที่ช่องสุดท้ายของแถวสุดท้าย = เพิ่มแถวใหม่แล้วโฟกัสชื่อรายการ
+                      // (ผลตรวจ 28 ส.ค. 2569: คนคีย์บิลหลายรายการต้องไม่หยิบเมาส์ทุกบรรทัด)
+                      // ห้ามปล่อยให้ Enter submit ฟอร์ม — บิลยังคีย์ไม่จบแล้วโดนบันทึกคือหายนะ
+                      onKeyDown={(e) => {
+                        if (e.key !== "Enter") return;
+                        e.preventDefault();
+                        if (i === rows.length - 1 && (r.name.trim() || r.unit_price)) {
+                          setRows((rs) => [...rs, emptyRow()]);
+                          requestAnimationFrame(() => {
+                            const inputs = rowsRef.current?.querySelectorAll<HTMLInputElement>("input[placeholder='ชื่อรายการ/สินค้า']");
+                            inputs?.[inputs.length - 1]?.focus();
+                          });
+                        }
+                      }} />
                     <button type="button" aria-label="ลบบรรทัดนี้"
                       onClick={() => setRows((rs) => rs.length > 1 ? rs.filter((_, j) => j !== i) : rs)}
                       className="grid h-9 w-8 place-items-center text-neutral-400 hover:text-red-500"><Trash2 className="h-4 w-4 shrink-0" /></button>

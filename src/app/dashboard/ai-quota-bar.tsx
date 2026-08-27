@@ -29,6 +29,13 @@ export default function AiQuotaBar({ quota }: { quota: AiQuota | null }) {
       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-neutral-100">
         <div className={cn("h-full rounded-full transition-all", color)} style={{ width: `${Math.min(100, Math.max(2, pct))}%` }} />
       </div>
+      {/* บอกจุดรีเซ็ตด้วย — ผลตรวจ 28 ส.ค. 2569: เห็นแค่ "ใช้ไปเท่าไร" แต่ไม่รู้ว่า
+          "จะได้คืนเมื่อไหร่" ทำให้รู้สึกโดนตัดสิทธิ์ไม่ทันตั้งตัว */}
+      {(quota.cap_today || quota.cap_month) && (
+        <p className="mt-0.5 text-[10px] text-neutral-400">
+          {quota.cap_today ? "รีเซ็ตเที่ยงคืนทุกวัน" : "รีเซ็ตวันที่ 1 ของเดือน"}
+        </p>
+      )}
       {!quota.allowed && <p className="mt-1 text-xs font-medium text-red-600">โควตาเต็ม — กดเพื่ออัปเกรด</p>}
     </Link>
   );

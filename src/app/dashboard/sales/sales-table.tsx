@@ -9,7 +9,7 @@
 //  ห้ามเพิ่ม "ยกเลิกหลายใบพร้อมกัน" — การยกเลิกกลับรายการบัญชีจริง
 //  พลาดทีเดียวเสียหายหลายใบ ต้องบังคับทำทีละใบให้เห็นหน้าเอกสารก่อนเสมอ
 // ============================================================
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Badge, Table, Th, Td } from "@/components/ui";
 import { baht, dateOnlyTH, cn } from "@/lib/utils";
@@ -19,7 +19,8 @@ import RowLink from "@/components/row-link";
 import { useToast } from "@/components/toast";
 import { saveBlob } from "@/lib/download";
 import { authOrigin } from "@/lib/app-origin";
-import { Copy, FileDown, X } from "lucide-react";
+import { Copy, FileDown, X, ExternalLink, Printer } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export interface SalesRow {
   id: string; doc_number: string; doc_type: string; contact_name: string | null;
@@ -29,6 +30,33 @@ export interface SalesRow {
 export default function SalesTable({ rows }: { rows: SalesRow[] }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const toast = useToast();
+  const router = useRouter();
+  // เมนูลัดของแถว — คลิกขวา (เดสก์ท็อป) หรือกดค้าง ~0.6 วิ (มือถือ) ตามผลตรวจ 28 ส.ค. 2569
+  // มีเฉพาะงาน "อ่าน/ส่งออก" เช่นเดียวกับแถบเลือกหลายใบ — งานอันตรายยังต้องเข้าหน้าเอกสาร
+  const [menu, setMenu] = useState<{ x: number; y: number; row: SalesRow } | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function openMenu(e: { clientX: number; clientY: number }, row: SalesRow) {
+    // กันเมนูตกขอบจอ: จอแคบสุด 320px เมนูกว้าง ~208px
+    setMenu({ x: Math.min(e.clientX, window.innerWidth - 216), y: Math.min(e.clientY, window.innerHeight - 170), row });
+  }
+  function startPress(e: React.TouchEvent, row: SalesRow) {
+    const t = e.touches[0];
+    const at = { clientX: t.clientX, clientY: t.clientY };
+    pressTimer.current = setTimeout(() => openMenu(at, row), 600);
+  }
+  function cancelPress() {
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
+  }
+  async function copyOneLink(row: SalesRow) {
+    if (!row.share_key) {
+      toast({ tone: "error", text: "ใบนี้ยังไม่มีลิงก์ส่งลูกค้า — เปิดเอกสารแล้วกด “ลิงก์ส่งลูกค้า” ก่อน" });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(`${authOrigin()}/doc/${row.share_key}`);
+      toast({ tone: "success", text: `คัดลอกลิงก์ ${row.doc_number} แล้ว` });
+    } catch { toast({ tone: "error", text: "คัดลอกไม่สำเร็จ ลองใหม่อีกครั้ง" }); }
+  }
   const picked = rows.filter((r) => sel.has(r.id));
 
   function toggle(id: string) {
@@ -82,7 +110,9 @@ export default function SalesTable({ rows }: { rows: SalesRow[] }) {
         </tr></thead>
         <tbody>
           {rows.map((d) => (
-            <RowLink key={d.id} href={`/dashboard/sales/${d.id}`} className={cn(d.status === "void" && "opacity-50")}>
+            <RowLink key={d.id} href={`/dashboard/sales/${d.id}`} className={cn(d.status === "void" && "opacity-50")}
+              onContextMenu={(e) => { e.preventDefault(); openMenu(e, d); }}
+              onTouchStart={(e) => startPress(e, d)} onTouchEnd={cancelPress} onTouchMove={cancelPress}>
               {/* ช่องติ๊กต้องไม่พาไปหน้าเอกสาร — หยุด event ก่อนถึง RowLink */}
               {/* บนมือถือตารางกลายเป็นการ์ด (ดู .rtable) — ใส่ label ให้ช่องติ๊กอ่านออกว่าคืออะไร */}
               <Td label="เลือกใบนี้" onClick={(e) => { e.stopPropagation(); e.preventDefault(); toggle(d.id); }}>
@@ -104,6 +134,28 @@ export default function SalesTable({ rows }: { rows: SalesRow[] }) {
           ))}
         </tbody>
       </Table>
+
+      {/* เมนูลัดของแถว — ฉากหลังโปร่งเต็มจอไว้ปิดเมนูเมื่อกดที่อื่น */}
+      {menu && (
+        <div className="fixed inset-0 z-50" onClick={() => setMenu(null)} onContextMenu={(e) => { e.preventDefault(); setMenu(null); }}>
+          <div className="absolute w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white py-1 shadow-xl"
+            style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
+            <p className="border-b border-neutral-100 px-3 py-1.5 text-xs font-semibold text-neutral-500">{menu.row.doc_number}</p>
+            <button type="button" onClick={() => { setMenu(null); router.push(`/dashboard/sales/${menu.row.id}`); }}
+              className="flex min-h-[40px] w-full items-center gap-2 px-3 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+              <ExternalLink className="h-3.5 w-3.5 text-neutral-400" /> เปิดเอกสาร
+            </button>
+            <button type="button" onClick={() => { copyOneLink(menu.row); setMenu(null); }}
+              className="flex min-h-[40px] w-full items-center gap-2 px-3 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+              <Copy className="h-3.5 w-3.5 text-neutral-400" /> คัดลอกลิงก์ส่งลูกค้า
+            </button>
+            <button type="button" onClick={() => { setMenu(null); window.open(`/dashboard/print/${menu.row.id}`, "_blank"); }}
+              className="flex min-h-[40px] w-full items-center gap-2 px-3 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+              <Printer className="h-3.5 w-3.5 text-neutral-400" /> พิมพ์ / บันทึก PDF
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* แถบงานกลุ่ม — ลอยล่างจอเมื่อเลือกอย่างน้อย 1 ใบ อยู่เหนือปุ่ม + ลอย */}
       {sel.size > 0 && (
