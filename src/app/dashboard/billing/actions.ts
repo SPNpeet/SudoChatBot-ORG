@@ -33,7 +33,7 @@ async function createStripeCheckout(
   const svc = createServiceClient();
   const { getStripeSecretKey, createCheckoutSession, isLiveStripeKey } = await import("@/lib/stripe");
   const secretKey = await getStripeSecretKey(svc);
-  if (!secretKey) return { ok: false, error: "ระบบรับชำระเงินยังไม่เปิด — ติดต่อผู้ดูแลระบบ" };
+  if (!secretKey) return { ok: false, error: "ช่องทางจ่ายออนไลน์ยังไม่เปิด — ติดต่อเราที่หน้า /contact เพื่อเริ่มแพ็กได้เลยค่ะ" };
 
   // ⚠️ ด่านนี้ต้องอยู่ที่ server (กติกาข้อ 3: ห้ามพึ่งการซ่อนปุ่ม)
   // Server Action คือ endpoint สาธารณะ — ใครยิงตรงก็ได้แม้ปุ่มจะถูกซ่อนไปแล้ว
@@ -42,7 +42,7 @@ async function createStripeCheckout(
   if (!isLiveStripeKey(secretKey)) {
     const { isPlatformAdmin } = await import("@/lib/shop");
     if (!(await isPlatformAdmin())) {
-      return { ok: false, error: "ระบบรับชำระเงินยังไม่เปิดให้ใช้งานจริง — ผู้ดูแลกำลังตั้งค่าอยู่ ติดต่อเราได้เลยค่ะ" };
+      return { ok: false, error: "ช่องทางจ่ายออนไลน์กำลังเปิดใช้ — อยากเริ่มแพ็กตอนนี้ ติดต่อเราที่หน้า /contact ทีมงานเปิดแพ็กให้ได้ภายในวันเดียวกันค่ะ" };
     }
   }
 
