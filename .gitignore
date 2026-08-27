@@ -18,3 +18,7 @@ playwright-report/
 # APK ที่ build แล้ว — ไม่ commit ขึ้น repo (ไฟล์ใหญ่ + สร้างใหม่ได้เสมอ)
 mobile/build/
 android/local.properties
+
+# ภาพหน้าจอที่ถ่ายไว้ตรวจงาน ไม่ใช่ของที่ต้องเก็บใน repo
+shots/
+test-results/
