@@ -102,22 +102,22 @@ export default function DocActions({ doc }: DocActionsProps) {
     <div className="flex flex-wrap items-center gap-2">
       {payable && (
         <Button size="sm" onClick={() => setPayOpen(true)}>
-          <Banknote className="h-4 w-4" /> {isExpense ? "บันทึกจ่ายเงิน" : "บันทึกรับเงิน"}
+          <Banknote className="h-4 w-4" /> {isExpense ? "บันทึกว่าจ่ายแล้ว" : "บันทึกว่ารับชำระแล้ว"}
         </Button>
       )}
       {convertible && (
         <Button size="sm" variant="outline" onClick={submitConvert} disabled={pending}>
-          <ArrowRightLeft className="h-4 w-4" /> {doc.docType === "quotation" ? "แปลงเป็นใบแจ้งหนี้" : "ออกใบเสร็จ"}
+          <ArrowRightLeft className="h-4 w-4" /> {doc.docType === "quotation" ? "สร้างใบแจ้งหนี้ต่อเลย" : "ออกใบเสร็จให้ลูกค้า"}
         </Button>
       )}
       {doc.status !== "void" && (
         <a href={`/dashboard/print/${doc.id}`} target="_blank">
-          <Button size="sm" variant="outline"><Printer className="h-4 w-4" /> พิมพ์/PDF</Button>
+          <Button size="sm" variant="outline"><Printer className="h-4 w-4" /> ดาวน์โหลด PDF</Button>
         </a>
       )}
       {!isExpense && doc.shareKey && doc.status !== "void" && doc.status !== "draft" && (
         <Button size="sm" variant="outline" onClick={copyShareLink}>
-          {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Link2 className="h-4 w-4" />} {copied ? "คัดลอกแล้ว" : "ลิงก์ส่งลูกค้า"}
+          {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Link2 className="h-4 w-4" />} {copied ? "คัดลอกลิงก์แล้ว" : doc.docType === "invoice" && doc.outstanding > 0 ? "ส่งลิงก์รับชำระ" : "ส่งเอกสารให้ลูกค้า"}
         </Button>
       )}
       {notable && (
@@ -127,7 +127,7 @@ export default function DocActions({ doc }: DocActionsProps) {
       )}
       {doc.status !== "void" && (
         <Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50" onClick={() => setVoidOpen(true)}>
-          <Ban className="h-4 w-4" /> ยกเลิก
+          <Ban className="h-4 w-4" /> ยกเลิกเอกสาร
         </Button>
       )}
 

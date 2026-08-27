@@ -44,8 +44,34 @@ export const QT_STATUS_TH: Record<DocStatus, string> = {
   void: "ยกเลิก",
 };
 
+/** สถานะของใบเสร็จ — ใบเสร็จออกหลังรับเงินเสมอ คำว่า "รอชำระ" จึงห้ามโผล่บนใบเสร็จ */
+export const RECEIPT_STATUS_TH: Record<DocStatus, string> = {
+  draft: "ร่าง",
+  awaiting: "รอบันทึกรับเงิน",
+  partial: "รับบางส่วน",
+  paid: "รับเงินแล้ว",
+  void: "ยกเลิก",
+};
+
+/** สถานะของใบลดหนี้ — เอกสารนี้ "ลดหนี้/คืนเงิน" ไม่ใช่รอเก็บเงิน คำว่า "รอชำระ" ผิดความหมาย */
+export const CN_STATUS_TH: Record<DocStatus, string> = {
+  draft: "ร่าง",
+  awaiting: "รอคืนเงิน/หักหนี้",
+  partial: "หักบางส่วน",
+  paid: "คืนเงิน/หักแล้ว",
+  void: "ยกเลิก",
+};
+
+/**
+ * ⚠️ ป้ายสถานะต้องตรงกับความหมายทางบัญชีของเอกสารแต่ละชนิด (แก้ 28 ส.ค. 2569)
+ * เดิมทุกชนิดยกเว้นใบเสนอราคาใช้ชุดเดียวกัน ใบลดหนี้กับใบเสร็จจึงขึ้น "รอชำระ" ได้
+ * ซึ่งผิดตรรกะต่อหน้าลูกค้าและนักบัญชี — คนตรวจภายนอกจับได้จากภาพหน้าจอจริง
+ */
 export function docStatusLabel(docType: DocType, status: DocStatus): string {
-  return docType === "quotation" ? QT_STATUS_TH[status] : DOC_STATUS_TH[status];
+  if (docType === "quotation") return QT_STATUS_TH[status];
+  if (docType === "receipt") return RECEIPT_STATUS_TH[status];
+  if (docType === "credit_note") return CN_STATUS_TH[status];
+  return DOC_STATUS_TH[status];
 }
 
 export function docStatusTone(status: DocStatus): "neutral" | "green" | "amber" | "red" | "blue" {

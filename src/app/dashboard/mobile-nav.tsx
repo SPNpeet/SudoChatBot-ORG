@@ -33,6 +33,9 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
   // อยู่หน้าที่ซ่อนอยู่ใน "เพิ่มเติม" ก็ต้องเห็นว่าแท็บนั้น active ไม่ใช่ลอยไม่มีที่ยืน
   const moreActive = !main.some((m) => active(m.href));
 
+  // หน้าพิมพ์/PDF ต้องเต็มจอ ไม่มีแถบล่าง — เหตุผลเดียวกับปุ่มลอย (ดู quick-create.tsx)
+  if (path.startsWith("/dashboard/print")) return null;
+
   return (
     <>
       {open && (

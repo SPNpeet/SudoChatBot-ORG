@@ -13,8 +13,11 @@ import { ArrowLeft } from "lucide-react";
 import { Logo } from "@/components/logo";
 
 const NAV = [
+  { href: "/about", label: "เกี่ยวกับเรา" },
+  { href: "/contact", label: "ติดต่อเรา" },
   { href: "/privacy", label: "นโยบายความเป็นส่วนตัว" },
   { href: "/terms", label: "ข้อกำหนดการใช้งาน" },
+  { href: "/refund", label: "นโยบายการคืนเงิน" },
   { href: "/data-deletion", label: "การลบข้อมูล" },
 ];
 

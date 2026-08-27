@@ -122,6 +122,10 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
           </Table>
           <div className="ml-auto max-w-xs space-y-1 px-5 py-4 text-sm">
             {Number(doc.discount) > 0 && <div className="flex justify-between"><span className="text-neutral-400">ส่วนลด</span><span>-{baht(doc.discount)}</span></div>}
+            {/* ก่อน VAT / VAT / ยอดสุทธิ ต้องครบสามตัว (เพิ่ม 28 ส.ค. 2569)
+                เดิมโชว์แค่ VAT กับยอดรวม คนอ่านต้องลบเลขเองว่าฐานภาษีเท่าไร
+                ซึ่งเป็นเลขที่นักบัญชีและแบบภาษีใช้จริง */}
+            {doc.vat_mode !== "none" && <div className="flex justify-between"><span className="text-neutral-400">มูลค่าก่อน VAT</span><span>{baht(Number(doc.total) - Number(doc.vat_amount))}</span></div>}
             {doc.vat_mode !== "none" && <div className="flex justify-between"><span className="text-neutral-400">VAT {vatPercentLabelOf(doc)} (ภาษีซื้อ)</span><span>{baht(doc.vat_amount)}</span></div>}
             <div className="flex justify-between font-semibold"><span>ยอดเอกสาร</span><span>{baht(doc.total)}</span></div>
             {Number(doc.wht_amount) > 0 && <div className="flex justify-between text-neutral-500"><span>หัก ณ ที่จ่าย {Number(doc.wht_rate)}%</span><span>-{baht(doc.wht_amount)}</span></div>}

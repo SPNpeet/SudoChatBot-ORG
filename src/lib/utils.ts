@@ -5,7 +5,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * จำนวนเงินสำหรับแสดงผล — ทศนิยม 2 ตำแหน่งเสมอ
+ *
+ * ⚠️ แก้ 28 ส.ค. 2569: เดิม minimumFractionDigits: 0 ทำให้ 155.70 แสดงเป็น "155.7"
+ * และ 100 แสดงเป็น "100" — ตัวเลขเงินที่ความยาวทศนิยมไม่เท่ากันในหน้าเดียว
+ * ทำให้สแกนตาแนวตั้งไม่ได้และดูไม่เป็นระบบบัญชี (คนตรวจภายนอกจับได้)
+ * ยกเว้นจำนวนเต็มพอดียังแสดงสั้นได้ในที่ที่จงใจ เช่น หน้าโฆษณา — ใช้ bahtShort
+ */
 export function baht(n: number | string | null | undefined): string {
+  const v = Number(n ?? 0);
+  return v.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ฿";
+}
+/** จำนวนเงินแบบสั้นสำหรับหน้าการตลาด (ราคาแพ็กเกจ 99, 199) — ห้ามใช้ในหน้าบัญชี/เอกสาร */
+export function bahtShort(n: number | string | null | undefined): string {
   const v = Number(n ?? 0);
   return v.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + " ฿";
 }

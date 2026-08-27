@@ -39,6 +39,10 @@ export default function QuickCreate() {
   // และไปบังกล่องแชทซึ่งเป็นสิ่งเดียวที่หน้านั้นต้องใช้
   // ต้องอยู่ "หลัง" hooks ทุกตัว ไม่งั้นผิดกฎ Rules of Hooks (จำนวน hook ต้องเท่ากันทุก render)
   if (path?.startsWith("/dashboard/assistant")) return null;
+  // หน้าพิมพ์/PDF คือ "ตัวเอกสาร" ที่ผู้ใช้กำลังตรวจก่อนส่งให้คนอื่น
+  // ปุ่มลอยไปทับมุมเอกสารทั้งบนจอและในภาพที่คนแคปส่งต่อ (คนตรวจภายนอกจับได้)
+  // หน้านี้ต้องเป็น preview เต็มจอเท่านั้น (แก้ 28 ส.ค. 2569)
+  if (path?.startsWith("/dashboard/print")) return null;
 
   return (
     <>

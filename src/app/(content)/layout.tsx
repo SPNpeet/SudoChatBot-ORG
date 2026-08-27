@@ -59,6 +59,9 @@ export default function ContentLayout({ children }: { children: React.ReactNode 
           </div>
           <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-neutral-400">
             <span>SudoChatBot — ระบบบัญชีออนไลน์และผู้ช่วยบัญชี AI สำหรับ SME ไทย</span>
+            <span>· <Link href="/about" className="underline hover:text-neutral-600">เกี่ยวกับเรา</Link></span>
+            <span>· <Link href="/contact" className="underline hover:text-neutral-600">ติดต่อเรา</Link></span>
+            <span>· <Link href="/refund" className="underline hover:text-neutral-600">นโยบายการคืนเงิน</Link></span>
             <span>· <Link href="/privacy" className="underline hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link></span>
             <span>· <Link href="/terms" className="underline hover:text-neutral-600">ข้อกำหนดการใช้งาน</Link></span>
           </p>

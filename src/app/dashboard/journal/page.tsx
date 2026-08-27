@@ -124,7 +124,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
             <b className="text-neutral-700">เครดิต</b> = ฝั่งที่เงินหรือรายได้ <i>ออก/เกิดขึ้น</i> (ขายได้, เป็นหนี้เพิ่ม, เงินออกจากบัญชี)
           </p>
         </div>
-        <p className="mt-2 text-[11.5px] text-neutral-400">ทุกรายการสองฝั่งต้องเท่ากันเสมอ — ระบบตรวจให้อยู่แล้ว ถ้าไม่เท่าจะมีป้ายเตือนสีแดง</p>
+        <p className="mt-2 text-[11.5px] text-neutral-400">ทุกรายการสองฝั่งต้องเท่ากันเสมอ — ระบบตรวจให้เองทุกครั้ง ถ้าไม่เท่าจะมีป้ายเตือนสีแดง</p>
       </div>
 
       {rows.length === 0 ? (

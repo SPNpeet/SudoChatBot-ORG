@@ -40,6 +40,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly" as const,
       priority: 0.6,
     })),
+    // หน้าความเชื่อถือ — เครื่องมือตรวจ trust ของภายนอกมองหาสามหน้านี้ตรง ๆ (28 ส.ค. 2569)
+    { url: `${SITE}/about`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${SITE}/contact`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${SITE}/refund`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE}/terms`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE}/data-deletion`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },

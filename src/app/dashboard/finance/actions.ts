@@ -739,6 +739,17 @@ export async function convertDoc(shopId: string, docId: string): Promise<DocResu
     if (r.ok && d.doc_type === "quotation") {
       await svc.from("fin_docs").update({ status: "paid" }).eq("id", docId); // quotation: paid = ตอบรับแล้ว
     }
+    // ⚠️ ใบเสร็จคือหลักฐานว่ารับเงินแล้ว ต้องเกิดมาเป็น "รับเงินแล้ว" เสมอ (แก้ 28 ส.ค. 2569)
+    // เดิมสร้างด้วย status: "awaiting" แล้วไม่มีใครไปปิด ผลคือใบเสร็จที่แปลงจาก
+    // ใบแจ้งหนี้ที่จ่ายครบแล้ว ขึ้นป้าย "รอชำระ" ต่อหน้าลูกค้า — ผิดตรรกะบัญชีตรง ๆ
+    // (คนตรวจภายนอกจับได้จากภาพหน้าจอจริง) · ไม่แตะสมุดรายวันเพราะเงินถูกบันทึก
+    // ตอนรับชำระใบแจ้งหนี้ไปแล้ว ใบเสร็จใบนี้จึงจงใจไม่ลงบัญชีซ้ำอยู่แล้ว
+    if (r.ok && target === "receipt") {
+      await svc.from("fin_docs").update({
+        status: "paid",
+        paid_amount: Math.round((Number(d.total) - Number(d.wht_amount || 0)) * 100) / 100,
+      }).eq("id", r.docId).eq("shop_id", shopId);
+    }
     return r;
   } catch (e) {
     return { ok: false, error: friendly(e, "แปลงเอกสารไม่สำเร็จ") };

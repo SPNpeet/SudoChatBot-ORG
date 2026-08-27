@@ -52,7 +52,7 @@ export interface HomeCopy {
   pricingHead: { cheap: string; straight: string; title: string };
   faqHead: string;
   finalCta: string;
-  footer: { features: string; articles: string; pricing: string; privacy: string; terms: string; deletion: string; contact: string };
+  footer: { features: string; articles: string; pricing: string; about: string; refund: string; privacy: string; terms: string; deletion: string; contact: string };
   flow: { n: string; say: string; does: string; gets: string[] }[];
   outputs: { label: string; sub: string }[];
   audience: { title: string; lead: string; points: string[] }[];
@@ -101,6 +101,7 @@ const EN: HomeCopy = {
   finalCta: "Issue your first document in 3 minutes",
   footer: {
     features: "All features", articles: "Accounting & tax articles", pricing: "Pricing",
+    about: "About us", refund: "Refund policy",
     privacy: "Privacy policy", terms: "Terms of use", deletion: "Data deletion", contact: "Contact us",
   },
   flow: [

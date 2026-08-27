@@ -420,6 +420,10 @@ export default async function Landing() {
             <Link href="/pricing" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.pricing ?? "ราคา"}</Link>
           </div>
           <div className="flex flex-wrap justify-center gap-x-4">
+            {/* หน้าความเชื่อถือ — เครื่องมือตรวจ trust ภายนอกมองหาสามหน้านี้ตรง ๆ (28 ส.ค. 2569) */}
+            <Link href="/about" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.about ?? "เกี่ยวกับเรา"}</Link>
+            <Link href="/contact" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.contact ?? "ติดต่อเรา"}</Link>
+            <Link href="/refund" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.refund ?? "นโยบายการคืนเงิน"}</Link>
             <Link href="/privacy" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.privacy ?? "นโยบายความเป็นส่วนตัว"}</Link>
             <Link href="/terms" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.terms ?? "เงื่อนไขการใช้งาน"}</Link>
             <Link href="/data-deletion" className="inline-flex min-h-[44px] items-center px-1 hover:text-neutral-600">{c?.footer.deletion ?? "การลบข้อมูล"}</Link>
