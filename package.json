@@ -34,7 +34,8 @@
     "app:ios": "cap open ios",
     "app:build:android": "cd android && ANDROID_HOME=${ANDROID_HOME:-/opt/android-sdk} gradle assembleDebug && cp app/build/outputs/apk/debug/app-debug.apk ../mobile/build/SudoChatBot-debug.apk",
     "check:promptcache": "tsx scripts/check-prompt-cache.mjs",
-    "check:taxkb": "tsx scripts/check-tax-kb.mjs"
+    "check:taxkb": "tsx scripts/check-tax-kb.mjs",
+    "seo:ping": "tsx scripts/seo-ping.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",

@@ -65,7 +65,10 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         action={canEdit && <ContactForm shopId={shop.id} />}
       />
 
-      <div className="flex flex-wrap gap-2">
+      {/* แถบตัวกรองต้องเป็นแถวเดียวที่เลื่อนได้ ห้ามตกบรรทัด (แก้ 28 ส.ค. 2569)
+          บนจอ 390px ตัวกรองหลายอันตกลงมา 2-3 แถว กินหน้าจอแรกก่อนที่ผู้ใช้จะเห็นรายการจริง
+          เหตุผลและ CSS เดียวกับหน้ารายงาน ดู .tabstrip ใน globals.css */}
+      <div className="tabstrip">
         {FILTERS.map((t) => (
           <Link key={t.id} href={t.id === "all" ? "/dashboard/contacts" : `/dashboard/contacts?f=${t.id}`}
             className={cn(

@@ -90,7 +90,10 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      {/* แถบตัวกรองต้องเป็นแถวเดียวที่เลื่อนได้ ห้ามตกบรรทัด (แก้ 28 ส.ค. 2569)
+          บนจอ 390px ตัวกรองหลายอันตกลงมา 2-3 แถว กินหน้าจอแรกก่อนที่ผู้ใช้จะเห็นรายการจริง
+          เหตุผลและ CSS เดียวกับหน้ารายงาน ดู .tabstrip ใน globals.css */}
+      <div className="tabstrip">
         {TABS.map((x) => (
           <Link key={x.id} href={x.id === "all" ? "/dashboard/money" : `/dashboard/money?t=${x.id}`}
             className={cn(

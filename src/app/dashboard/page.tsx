@@ -166,7 +166,7 @@ export default async function Overview() {
 
       <SetupChecklist shop={shop} />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-5">
         {/* ⚠️ ป้ายต้องเขียนว่า "เงินสด + เงินฝาก" และกำกับว่า "ตามสมุดบัญชี" เสมอ
             ห้ามเปลี่ยนเป็น "เงินคงเหลือในบัญชี" หรือคำที่ทำให้เข้าใจว่าเป็นยอดในธนาคารจริง
             ระบบไม่ได้ต่อกับธนาคาร ตัวเลขนี้ยังไม่ผ่านการกระทบยอด — เหตุผลเต็มอยู่ใน migration 105 */}
