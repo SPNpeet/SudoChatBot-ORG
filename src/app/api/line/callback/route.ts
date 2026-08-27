@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { handleLineLoginCallback } from "@/lib/line-login-flow";
 import { createServiceClient } from "@/lib/supabase/server";
 import { assertMember } from "@/lib/shop";
 import { pushLineMessage } from "@/lib/line";
@@ -16,6 +17,17 @@ export async function GET(request: Request) {
   const back = (q: string) => NextResponse.redirect(new URL(`/dashboard/settings?line=${q}`, APP_ORIGIN));
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state") ?? "";
+
+  // ⚠️ เส้นนี้เป็น callback เดียวที่ลงทะเบียนไว้ในคอนโซล LINE จึงรับสองงาน
+  // แยกด้วย state: ล็อกอินใช้ UUID ที่ต้องตรงกับคุกกี้ line_oauth_state เป๊ะ
+  // ส่วนการผูก OA ใช้ shopId.nonce.signature ซึ่งมีจุดคั่นและลายเซ็น
+  // เงื่อนไขนี้แคบมากโดยตั้งใจ ไม่เข้าเงื่อนไขเมื่อไหร่ = ทำงานเหมือนเดิมทุกบรรทัด
+  {
+    const savedState = request.headers.get("cookie")?.match(/(?:^|;\s*)line_oauth_state=([^;]+)/)?.[1];
+    if (savedState && state && savedState === state && !state.includes(".")) {
+      return handleLineLoginCallback(request, LINE_CALLBACK_URL);
+    }
+  }
 
   if (url.searchParams.get("error")) return back("cancelled");
   const [shopId, nonce, sig] = state.split(".");

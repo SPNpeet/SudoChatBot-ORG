@@ -19,7 +19,11 @@ export async function GET(request: Request) {
   const auth = new URL("https://access.line.me/oauth2/v2.1/authorize");
   auth.searchParams.set("response_type", "code");
   auth.searchParams.set("client_id", channelId);
-  auth.searchParams.set("redirect_uri", `${origin}/api/auth/line/callback`);
+  // ⚠️ ต้องใช้ URL ที่ลงทะเบียนไว้ในคอนโซล LINE เท่านั้น (แก้ 28 ส.ค. 2569)
+  // ของโปรเจกต์นี้ลงทะเบียนไว้แค่ /api/line/callback — ยิง /api/auth/line/callback
+  // แล้ว LINE ตอบ 400 ทันที (พิสูจน์แล้วด้วยการยิงเทียบทั้งสองเส้น)
+  // เส้นนั้นแยกงานล็อกอินออกมาให้แล้วด้วยคุกกี้ line_oauth_state
+  auth.searchParams.set("redirect_uri", `${origin}/api/line/callback`);
   auth.searchParams.set("state", state);
   // email ขอไว้ด้วย — LINE จะให้ก็ต่อเมื่อ channel ผ่านการขอสิทธิ์ email ไม่ให้ก็ยังล็อกอินได้
   auth.searchParams.set("scope", "profile openid email");
