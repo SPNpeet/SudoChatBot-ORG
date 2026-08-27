@@ -100,7 +100,11 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                 <CardContent className="space-y-1.5 pt-4">
                   <div className="flex items-start justify-between gap-2">
                     {/* กดชื่อ = เข้าหน้ารายคน (ประวัติ + ออกเอกสารต่อได้เลย) — object-centric ตามผลตรวจ 28 ส.ค. 2569 */}
-                    <Link href={`/dashboard/contacts/${c.id}`} className="font-semibold text-neutral-900 hover:text-emerald-700 hover:underline">{c.name}</Link>
+                    {/* aria-label ต้องบอกว่าเปิด "ของใคร" — ผู้ติดต่อชื่อซ้ำกันมีจริง (ด่าน check:dupbuttons)
+                        เขียนยาวโดยตั้งใจ: ป้ายที่สั้นและซ้ำกันหลายใบในจอเดียวคือสิ่งที่ด่านห้าม */}
+                    <Link href={`/dashboard/contacts/${c.id}`}
+                      aria-label={`เปิดประวัติ ยอดค้าง และออกเอกสารให้ผู้ติดต่อ ${c.name}`}
+                      className="font-semibold text-neutral-900 hover:text-emerald-700 hover:underline">{c.name}</Link>
                     <Badge tone={c.kind === "vendor" ? "blue" : c.kind === "both" ? "amber" : "green"}>{kindTH[c.kind]}</Badge>
                   </div>
                   {c.tax_id && <p className="text-xs text-neutral-400">เลขผู้เสียภาษี {c.tax_id}{c.branch ? ` · ${c.branch}` : ""}</p>}
@@ -111,7 +115,9 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                       {o.ap > 0 && <span className="font-medium text-red-600">ค้างจ่าย {baht(o.ap)}</span>}
                     </div>
                   ) : <p className="pt-1 text-xs text-neutral-300">ไม่มียอดค้าง</p>}
-                  <Link href={`/dashboard/contacts/${c.id}`} className="inline-block pt-1 text-xs font-medium text-emerald-700 hover:underline">
+                  <Link href={`/dashboard/contacts/${c.id}`}
+                    aria-label={`ดูประวัติเอกสารและออกเอกสารใหม่ให้ผู้ติดต่อ ${c.name}`}
+                    className="inline-block pt-1 text-xs font-medium text-emerald-700 hover:underline">
                     ประวัติ + ออกเอกสารให้รายนี้ →
                   </Link>
                   {canEdit && (
