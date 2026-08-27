@@ -179,9 +179,9 @@ export default async function PlatformStatsPage() {
                 {s.recent_shops.map((r, i) => (
                   <tr key={i}>
                     <Td className="font-medium">{r.name}</Td>
-                    <Td><Badge tone={r.plan === "free" ? "neutral" : "green"}>{PLAN_TH[r.plan] ?? r.plan}</Badge></Td>
-                    <Td className="text-neutral-500">{r.owner_email ?? "-"}</Td>
-                    <Td className="text-neutral-400">{dateTH(r.created_at)}</Td>
+                    <Td label="แพ็ก"><Badge tone={r.plan === "free" ? "neutral" : "green"}>{PLAN_TH[r.plan] ?? r.plan}</Badge></Td>
+                    <Td label="เจ้าของ" className="text-neutral-500">{r.owner_email ?? "-"}</Td>
+                    <Td label="สมัครเมื่อ" className="text-neutral-400">{dateTH(r.created_at)}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -200,11 +200,11 @@ export default async function PlatformStatsPage() {
                   {s.recent_topups.map((t, i) => (
                     <tr key={i}>
                       <Td className="font-medium">{t.shop ?? "-"}</Td>
-                      <Td>{baht(t.amount)}</Td>
-                      <Td><Badge tone={t.status === "paid" ? "green" : t.status === "rejected" ? "red" : "amber"}>
+                      <Td label="จำนวน">{baht(t.amount)}</Td>
+                      <Td label="สถานะ"><Badge tone={t.status === "paid" ? "green" : t.status === "rejected" ? "red" : "amber"}>
                         {t.status === "paid" ? "สำเร็จ" : t.status === "verifying" ? "รอตรวจสลิป" : t.status === "rejected" ? "ไม่ผ่าน" : t.status === "expired" ? "หมดอายุ" : "รอชำระ"}
                       </Badge></Td>
-                      <Td className="text-neutral-400">{dateTH(t.created_at)}</Td>
+                      <Td label="เมื่อ" className="text-neutral-400">{dateTH(t.created_at)}</Td>
                     </tr>
                   ))}
                 </tbody>

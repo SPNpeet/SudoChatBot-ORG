@@ -132,14 +132,14 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
                         {p.direction === "in" ? "+" : "-"}{baht(p.amount)}
                       </Td>
                       <Td label="ช่องทาง" className="text-neutral-500">{PAY_METHOD_TH[p.method] ?? p.method}</Td>
-                      <Td>
+                      <Td label="เอกสาร">
                         {p.fin_docs ? (
                           <Link href={p.fin_docs.doc_type === "expense" ? `/dashboard/expenses/${p.doc_id}` : `/dashboard/sales/${p.doc_id}`}
                             className="text-emerald-700 hover:underline">{p.fin_docs.doc_number}</Link>
                         ) : <span className="text-neutral-300">ไม่ผูกเอกสาร</span>}
                         {p.fin_docs?.contact_name && <span className="ml-1 text-xs text-neutral-400">{p.fin_docs.contact_name}</span>}
                       </Td>
-                      <Td>
+                      <Td label="สลิป">
                         {url ? (
                           <a href={url} target="_blank" rel="noreferrer" className="text-xs text-emerald-700 hover:underline">
                             {p.verify_status === "verified" ? "ตรวจแล้ว" : p.verify_status === "failed" ? "มีปัญหา" : "ดูสลิป"}

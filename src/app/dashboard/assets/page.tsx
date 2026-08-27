@@ -139,13 +139,13 @@ export default async function AssetsPage() {
                           {a.serial_no ? <span className="block font-mono">{a.serial_no}</span> : null}
                           {[a.location, a.holder].filter(Boolean).join(" · ") || (a.serial_no ? null : "—")}
                         </Td>
-                        <Td>{dateOnlyTH(a.acquired_on)}</Td>
-                        <Td>{Number(a.life_years)}</Td>
-                        <Td className="text-right tabular-nums">{baht(Number(a.cost))}</Td>
-                        <Td className="text-right tabular-nums text-amber-700">{baht(taken)}</Td>
-                        <Td className="text-right tabular-nums font-medium">{baht(nbv)}</Td>
-                        <Td className="text-neutral-500">{dateOnlyTH(end.toISOString().slice(0, 10))}</Td>
-                        <Td>
+                        <Td label="ได้มาเมื่อ">{dateOnlyTH(a.acquired_on)}</Td>
+                        <Td label="อายุ (ปี)">{Number(a.life_years)}</Td>
+                        <Td label="ราคาทุน" className="text-right tabular-nums">{baht(Number(a.cost))}</Td>
+                        <Td label="ค่าเสื่อมสะสม" className="text-right tabular-nums text-amber-700">{baht(taken)}</Td>
+                        <Td label="คงเหลือ" className="text-right tabular-nums font-medium">{baht(nbv)}</Td>
+                        <Td label="หมดอายุ" className="text-neutral-500">{dateOnlyTH(end.toISOString().slice(0, 10))}</Td>
+                        <Td label="ตรวจนับล่าสุด">
                           <VerifyAsset shopId={shop.id} assetId={a.id}
                             verifiedOn={a.verified_on ?? null} verifiedNote={a.verified_note ?? null} />
                         </Td>
@@ -169,10 +169,10 @@ export default async function AssetsPage() {
                 {closes.map((c) => (
                   <tr key={c.year_end}>
                     <Td className="font-medium">{dateOnlyTH(c.year_end)}</Td>
-                    <Td className={`text-right tabular-nums font-medium ${Number(c.net_profit) < 0 ? "text-red-600" : "text-emerald-700"}`}>
+                    <Td label="กำไร(ขาดทุน)สุทธิ" className={`text-right tabular-nums font-medium ${Number(c.net_profit) < 0 ? "text-red-600" : "text-emerald-700"}`}>
                       {baht(Number(c.net_profit))}
                     </Td>
-                    <Td className="text-neutral-500">{new Date(c.closed_at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}</Td>
+                    <Td label="ปิดเมื่อ" className="text-neutral-500">{new Date(c.closed_at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}</Td>
                   </tr>
                 ))}
               </tbody>

@@ -81,7 +81,7 @@ export default async function ProductsPage() {
                     <Td label="SKU" className="text-neutral-500">{p.sku ?? "-"}</Td>
                     <Td label="ราคาขาย" className="font-semibold">{baht(p.price)}</Td>
                     <Td label="ต้นทุน" className="text-neutral-500">{p.cost != null ? baht(p.cost) : "-"}</Td>
-                    <Td>
+                    <Td label="สต๊อก">
                       <span className={p.track_stock && p.stock <= 3 ? "font-semibold text-red-600" : ""}>{p.track_stock ? p.stock : "ไม่นับ"}</span>
                     </Td>
                     <Td label="สถานะ"><Badge tone={p.status === "active" ? "green" : "neutral"}>{p.status === "active" ? "ใช้งาน" : "พัก"}</Badge></Td>

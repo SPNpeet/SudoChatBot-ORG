@@ -49,8 +49,8 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
     <>
       <tr>
         <Td className="font-medium">{name}</Td>
-        <Td className="text-neutral-500">{ownerEmail ?? "-"}</Td>
-        <Td>
+        <Td label="เจ้าของ" className="text-neutral-500">{ownerEmail ?? "-"}</Td>
+        <Td label="แพ็ก">
           {/* เปลี่ยนแพ็กลูกค้าคือของจริงที่กระทบเงิน — ต้องยืนยันก่อน ไม่งั้นเลื่อนนิ้วโดนบนมือถือก็เปลี่ยนแล้ว */}
           <Select disabled={pending} value={plan} className="h-9 text-xs"
             onChange={(e) => {
@@ -65,7 +65,7 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
             {Object.entries(planOptions).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
           </Select>
         </Td>
-        <Td>
+        <Td label="โควตา AI/วัน">
           <div className="flex items-center gap-1.5">
             <input inputMode="numeric" value={quota} onChange={(e) => setQuota(e.target.value.replace(/[^0-9]/g, ""))}
               placeholder="ตามแพ็ก" title="เพดานงาน AI/วัน เฉพาะกิจการนี้ — ว่าง = ใช้ตามแพ็กเกจ"
@@ -78,7 +78,7 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
         </Td>
         {/* ใช้ AI แล้ว — เจ้าของแพลตฟอร์มขอเอง (1 ส.ค. 2569): "แต่ละที่ไม่มีบอกว่าใช้ไปเท่าไหร่
             แล้วครบเท่าไหร่ admin ไม่รู้เลย" · แดง = ชนเพดาน · เหลือง = >=80% (เกณฑ์เดียวกับ ai-quota-bar) */}
-        <Td className="whitespace-nowrap text-xs tabular-nums">
+        <Td label="ใช้ AI แล้ว" className="whitespace-nowrap text-xs tabular-nums">
           {usage ? (
             <>
               <span className={
@@ -96,7 +96,7 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
             </>
           ) : <span className="text-neutral-300">-</span>}
         </Td>
-        <Td>
+        <Td label="สถานะ">
           <div className="flex items-center gap-2">
             <Badge tone={STATUS_TONE[status] ?? "neutral"}>{SHOP_STATUS_TH[status] ?? status}</Badge>
             <Select disabled={pending} value={status} className="h-9 w-28 text-xs"
@@ -113,7 +113,7 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
             </Select>
           </div>
         </Td>
-        <Td className="text-neutral-400">{dateTH(createdAt)}</Td>
+        <Td label="สมัครเมื่อ" className="text-neutral-400">{dateTH(createdAt)}</Td>
       </tr>
       {err && (
         <tr><Td colSpan={7} className="!border-t-0 !py-1.5"><p className="rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-600">{err}</p></Td></tr>

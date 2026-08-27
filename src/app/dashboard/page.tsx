@@ -269,11 +269,11 @@ export default async function Overview() {
                       <Link href={d.doc_type === "expense" ? `/dashboard/expenses/${d.id}` : `/dashboard/sales/${d.id}`}
                         className="font-medium text-emerald-700 hover:underline">{d.doc_number}</Link>
                     </Td>
-                    <Td>{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
-                    <Td>{d.contact_name ?? "-"}</Td>
-                    <Td className="text-right tabular-nums">{baht(d.total)}</Td>
-                    <Td><Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge></Td>
-                    <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
+                    <Td label="ประเภท">{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
+                    <Td label="คู่ค้า">{d.contact_name ?? "-"}</Td>
+                    <Td label="ยอด" className="text-right tabular-nums">{baht(d.total)}</Td>
+                    <Td label="สถานะ"><Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge></Td>
+                    <Td label="วันที่" className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
                   </RowLink>
                 ))}
               </tbody>

@@ -113,9 +113,9 @@ export default async function ExpenseDocPage({ params }: { params: Promise<{ id:
               {(doc.fin_doc_items ?? []).map((it, i) => (
                 <tr key={i}>
                   <Td>{it.name}</Td>
-                  <Td className="text-right">{Number(it.qty).toLocaleString()}{it.unit ? ` ${it.unit}` : ""}</Td>
-                  <Td className="text-right">{bahtDoc(it.unit_price)}</Td>
-                  <Td className="text-right">{bahtDoc(it.amount)}</Td>
+                  <Td label="จำนวน" className="text-right">{Number(it.qty).toLocaleString()}{it.unit ? ` ${it.unit}` : ""}</Td>
+                  <Td label="ราคา/หน่วย" className="text-right">{bahtDoc(it.unit_price)}</Td>
+                  <Td label="รวม" className="text-right">{bahtDoc(it.amount)}</Td>
                 </tr>
               ))}
             </tbody>

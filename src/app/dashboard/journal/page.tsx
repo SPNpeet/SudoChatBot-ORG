@@ -207,12 +207,12 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                               {/* มือถือไม่มีคอลัมน์ประเภท/ผล เลยยัดมาไว้ใต้ชื่อบัญชีแทน จะได้ไม่เสียข้อมูล */}
                               {t && <span className="mt-0.5 block text-xs text-neutral-400 sm:hidden">{TYPE_TH[t]} · {plainEffect(t, isDebit)}</span>}
                             </Td>
-                            <Td className="hidden sm:table-cell">
+                            <Td label="ประเภท" className="hidden sm:table-cell">
                               {t && <Badge tone={TYPE_TONE[t]}>{TYPE_TH[t]}</Badge>}
                             </Td>
-                            <Td className="hidden text-[12px] text-neutral-500 md:table-cell">{plainEffect(t, isDebit)}</Td>
-                            <Td className="text-right tabular-nums">{isDebit ? bahtDoc(l.debit) : <span className="text-neutral-200">—</span>}</Td>
-                            <Td className="text-right tabular-nums">{Number(l.credit) > 0 ? bahtDoc(l.credit) : <span className="text-neutral-200">—</span>}</Td>
+                            <Td label="ผลที่เกิดขึ้น" className="hidden text-[12px] text-neutral-500 md:table-cell">{plainEffect(t, isDebit)}</Td>
+                            <Td label="เดบิต" className="text-right tabular-nums">{isDebit ? bahtDoc(l.debit) : <span className="text-neutral-200">—</span>}</Td>
+                            <Td label="เครดิต" className="text-right tabular-nums">{Number(l.credit) > 0 ? bahtDoc(l.credit) : <span className="text-neutral-200">—</span>}</Td>
                           </tr>
                         );
                       })}
@@ -220,8 +220,8 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                         <Td className="text-[12px] text-neutral-500">รวม</Td>
                         <Td className="hidden sm:table-cell" />
                         <Td className="hidden md:table-cell" />
-                        <Td className="text-right tabular-nums">{bahtDoc(totalDr)}</Td>
-                        <Td className="text-right tabular-nums">{bahtDoc(totalCr)}</Td>
+                        <Td label="เดบิต" className="text-right tabular-nums">{bahtDoc(totalDr)}</Td>
+                        <Td label="เครดิต" className="text-right tabular-nums">{bahtDoc(totalCr)}</Td>
                       </tr>
                     </tbody>
                   </Table>
