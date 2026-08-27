@@ -178,7 +178,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                       {e.memo || SOURCE_PLAIN[e.source_type] || "บันทึกบัญชี"}
                     </p>
                     {href && (
-                      <Link href={href} className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[12px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50">
+                      <Link href={href} aria-label={`ดูเอกสารต้นทางของ ${e.entry_number}`} className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[12px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50">
                         ดูเอกสารต้นทาง<ExternalLink className="h-3 w-3" />
                       </Link>
                     )}
