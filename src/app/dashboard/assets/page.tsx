@@ -101,7 +101,47 @@ export default async function AssetsPage() {
               hint="เพิ่มของที่ใช้งานได้เกิน 1 ปี เช่น คอมพิวเตอร์ รถ เครื่องจักร แล้วระบบจะคำนวณค่าเสื่อมให้ทุกเดือน"
             />
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* มือถือ = การ์ด · เดสก์ท็อป = ตาราง (แก้ 29 ส.ค. 2569)
+                ตารางนี้มี 10 คอลัมน์ = 10 บรรทัดต่อทรัพย์สิน 1 ชิ้นบนมือถือ หนักที่สุดในระบบ
+                ⚠️ ราคาทุน - ค่าเสื่อมสะสม = คงเหลือ ต้องอ่านครบทั้งสามตัวในสายตาเดียว
+                เป็นความสัมพันธ์ที่ใช้จับว่าตัวเลขเพี้ยนหรือเปล่า จึงวางเรียงบรรทัดเดียวกัน
+                ⚠️ ปุ่มตรวจนับต้องอยู่ครบ — ผู้สอบบัญชีขอดูทุกปี และใช้จับของที่หายแล้ว
+                แต่ยังคิดค่าเสื่อมอยู่ (ค่าใช้จ่ายเกินจริง) */}
+            <div className="space-y-2 px-4 pb-4 sm:hidden">
+              {assets.map((a) => {
+                const taken = takenBy.get(a.id) ?? 0;
+                const nbv = Math.round((Number(a.cost) - taken) * 100) / 100;
+                const done = Math.round((Number(a.cost) - Number(a.salvage) - taken) * 100) / 100 <= 0;
+                return (
+                  <div key={a.id} className="rounded-xl border border-neutral-200 bg-white p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="truncate text-[13px] font-semibold text-neutral-900">{a.name}</span>
+                          {a.disposed_on && <Badge tone="neutral">จำหน่ายแล้ว</Badge>}
+                          {!a.disposed_on && done && <Badge tone="green">ตัดครบแล้ว</Badge>}
+                        </div>
+                        <div className="mt-0.5 truncate text-xs text-neutral-500">
+                          {a.asset_code ? `${a.asset_code} · ` : ""}{[a.serial_no, a.location, a.holder].filter(Boolean).join(" · ") || "ไม่ระบุที่ตั้ง"}
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-right text-[13px] font-semibold tabular-nums text-neutral-900">{baht(nbv)}</span>
+                    </div>
+                    <div className="mt-1 text-xs tabular-nums text-neutral-500">
+                      ทุน {baht(Number(a.cost))} - ค่าเสื่อม <span className="text-amber-700">{baht(taken)}</span> = คงเหลือ {baht(nbv)}
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between gap-2">
+                      <span className="text-[11px] text-neutral-400">ได้มา {dateOnlyTH(a.acquired_on)} · อายุ {Number(a.life_years)} ปี</span>
+                      <VerifyAsset shopId={shop.id} assetId={a.id}
+                        verifiedOn={a.verified_on ?? null} verifiedNote={a.verified_note ?? null} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden overflow-x-auto sm:block">
               <Table>
                 <thead>
                   <tr>
@@ -155,6 +195,7 @@ export default async function AssetsPage() {
                 </tbody>
               </Table>
             </div>
+            </>
           )}
         </CardContent>
       </Card>
