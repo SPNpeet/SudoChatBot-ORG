@@ -318,8 +318,18 @@ export function Badge({ className, tone = "neutral", ...props }: React.HTMLAttri
  */
 export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
   return (
+    // ⚠️ lg: ขึ้นไปต้องเป็น overflow-x-clip ไม่ใช่ auto (เพิ่ม 29 ส.ค. 2569)
+    // เหตุผล: หัวตารางต้องหนึบ (sticky) ตอนเลื่อนอ่านรายการยาว ๆ ไม่งั้นเลื่อนไปสิบแถว
+    // ก็จำไม่ได้แล้วว่าเลขคอลัมน์ไหนคือ "ยอด" คอลัมน์ไหนคือ "ค้างรับ" ซึ่งเป็นตัวเลขเงินคนละความหมาย
+    // แต่ overflow-x:auto บังคับให้ overflow-y กลายเป็น auto ตามสเปก = กล่องนี้กลายเป็น
+    // scroll container แนวตั้ง แล้ว sticky จะยึดกับกล่องที่ไม่เคยเลื่อน = ไม่ทำงานเลยแบบเงียบ ๆ
+    // ส่วน clip ไม่สร้าง scroll container จึงปล่อยให้ overflow-y เป็น visible ได้ sticky จึงทำงาน
+    //
+    // ปลอดภัยเพราะวัดแล้ว: ที่ความกว้าง 1024/1280/1440/1920 ตารางทุกหน้าพอดีกล่องเป๊ะ
+    // (ตารางเป็น w-full หดตามกล่องอยู่แล้ว) ไม่มีหน้าไหนต้องเลื่อนแนวนอนเลยสักความกว้างเดียว
+    // ต่ำกว่า lg ยังเป็น auto เหมือนเดิม เพราะช่วง 768-1023px ยังมีโอกาสต้องเลื่อน
     <div
-      className="rtable overflow-x-auto"
+      className="rtable overflow-x-auto lg:overflow-x-clip lg:overflow-y-visible"
       style={{
         backgroundImage:
           "linear-gradient(to right, white 30%, transparent), linear-gradient(to left, white 30%, transparent), linear-gradient(to right, rgba(16,24,40,.10), transparent 14px), linear-gradient(to left, rgba(16,24,40,.10), transparent 14px)",
@@ -334,7 +344,13 @@ export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTab
   );
 }
 export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
-  return <th className={cn("whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400", className)} {...props} />;
+  // หัวตารางหนึบบนเดสก์ท็อป — เลื่อนอ่านรายการยาวแล้วยังรู้ว่าคอลัมน์ไหนคืออะไร
+  // ต้องมีพื้นหลังทึบ ไม่งั้นแถวข้อมูลจะวิ่งทะลุขึ้นมาซ้อนตัวหนังสือหัวตาราง
+  // มือถือไม่เกี่ยว เพราะ .rtable ซ่อน thead แล้วเปลี่ยนเป็นการ์ด (ดู globals.css)
+  return <th className={cn(
+    "whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-neutral-400",
+    "lg:sticky lg:top-0 lg:z-10 lg:bg-white",
+    className)} {...props} />;
 }
 /**
  * ช่องข้อมูลในตาราง

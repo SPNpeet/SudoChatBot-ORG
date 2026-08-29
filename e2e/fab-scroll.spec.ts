@@ -71,3 +71,44 @@ test("เปิดเมนูปุ่ม + แล้วทุกใบกว�
   const lefts = new Set(boxes.map((b) => b.left));
   expect(lefts.size, `ขอบซ้ายต้องตรงกันทุกใบ แต่ได้ ${[...lefts].join(",")}`).toBe(1);
 });
+
+// ============================================================
+//  หัวตารางต้องหนึบบนเดสก์ท็อป
+//
+//  ⚠️ ของที่พังง่ายและพังเงียบ (29 ส.ค. 2569)
+//  sticky จะทำงานก็ต่อเมื่อ "ไม่มีบรรพบุรุษตัวไหนเป็น scroll container"
+//  กล่องหุ้มตารางเดิมเป็น overflow-x:auto ซึ่งตามสเปกบังคับให้ overflow-y เป็น auto ตาม
+//  = กลายเป็น scroll container แล้ว sticky ตายเงียบ ๆ โดยไม่มี error อะไรเลย
+//  ถ้าวันหลังมีคนเห็น overflow-x-clip แล้วคิดว่า "auto น่าจะถูกกว่า" แล้วแก้กลับ
+//  หัวตารางจะเลิกหนึบทันทีโดยไม่มีอะไรฟ้อง — เทสต์นี้คือสิ่งที่ฟ้อง
+//
+//  ต้องโคลนแถวให้ตารางยาวก่อน เพราะกิจการทดสอบมีเอกสารไม่กี่ใบ
+//  ถ้าไม่โคลน หน้าจะไม่ยาวพอให้เลื่อน แล้วเทสต์จะ "ผ่าน" แบบไม่ได้ตรวจอะไรเลย
+// ============================================================
+test("หัวตารางหนึบตอนเลื่อนอ่านรายการยาว (เดสก์ท็อป)", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "เดสก์ท็อป", "พฤติกรรมนี้มีเฉพาะจอ lg ขึ้นไป");
+  await login(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/dashboard/sales");
+  await page.waitForTimeout(800);
+
+  const th = page.locator(".rtable th").first();
+  await expect(th).toHaveCSS("position", "sticky");
+
+  const scrollable = await page.evaluate(() => {
+    const tb = document.querySelector(".rtable tbody");
+    const row = tb?.querySelector("tr");
+    if (!tb || !row) return 0;
+    for (let i = 0; i < 60; i++) tb.appendChild(row.cloneNode(true));
+    return document.documentElement.scrollHeight - window.innerHeight;
+  });
+  expect(scrollable, "ต้องยาวพอจะเลื่อน ไม่งั้นเทสต์นี้วัดอะไรไม่ได้").toBeGreaterThan(500);
+
+  await page.evaluate(() => window.scrollTo({ top: 900, behavior: "instant" }));
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => Math.round(window.scrollY)), "ต้องเลื่อนได้จริง").toBeGreaterThan(500);
+
+  const top = (await th.boundingBox())!.y;
+  expect(top, `เลื่อนแล้วหัวตารางหลุดจอไปที่ ${top}px — sticky ไม่ทำงาน`).toBeLessThan(120);
+  expect(top).toBeGreaterThanOrEqual(-1);
+});

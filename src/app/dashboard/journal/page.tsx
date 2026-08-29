@@ -147,8 +147,12 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
             const balanced = Math.abs(totalDr - totalCr) < 0.005;
             const href = sourceHref(e);
 
+            // ⚠️ ต้องเป็น overflow-clip ไม่ใช่ overflow-hidden (แก้ 29 ส.ค. 2569)
+            // ทั้งคู่ตัดมุมโค้งเหมือนกันเป๊ะ แต่ hidden สร้าง scroll container ขึ้นมาด้วย
+            // ซึ่งทำให้หัวตารางที่ตั้ง sticky ไว้ยึดกับกล่องที่ไม่เคยเลื่อน = ไม่หนึบแบบเงียบ ๆ
+            // clip ไม่สร้าง scroll container จึงยังตัดมุมได้และ sticky ทำงาน
             return (
-              <Card key={e.id} className="overflow-hidden">
+              <Card key={e.id} className="overflow-clip">
                 {/* หัวการ์ด: เลขที่ · ที่มา · วันที่ · ยอด · สถานะลงตัว */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 bg-neutral-50/60 px-4 py-2.5 sm:px-5">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
