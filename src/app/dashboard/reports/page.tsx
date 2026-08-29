@@ -183,12 +183,30 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
           { label: `รายได้ ${period.label}`, value: baht(periodIncome), tone: "text-emerald-700", href: "/dashboard/sales" },
           { label: `ค่าใช้จ่าย ${period.label}`, value: baht(periodExpense), tone: "text-red-600", href: "/dashboard/expenses" },
           { label: `กำไร (ก่อนภาษี) ${period.label}`, value: baht(periodIncome - periodExpense), tone: periodIncome - periodExpense >= 0 ? "text-emerald-700" : "text-red-600", href: "/dashboard/journal" },
-          { label: "ค้างรับ / ค้างจ่าย ตอนนี้", value: `${baht(ar)} / ${baht(ap)}`, tone: "text-neutral-800", href: `/dashboard/reports?t=aging&period=${period.key}` },
+          // ⚠️ ใบนี้มีสองตัวเลข ห้ามยัดรวมเป็นสตริงเดียว (แก้ 29 ส.ค. 2569)
+          // เดิมเขียน `${ar} / ${ap}` ผลบนจอ 390px คือ "5,200.00 ฿ /" ขึ้นบรรทัดแรก
+          // แล้ว "992.00 ฿" ตกไปบรรทัดสอง อ่านแวบแรกนึกว่าเป็นตัวเลขเดียวที่ยาวผิดปกติ
+          // แยกเป็นสองบรรทัดมีป้ายกำกับของตัวเอง + สีตามที่ทั้งแอปใช้ (ค้างรับเหลือง ค้างจ่ายแดง)
+          { label: "ค้างรับ / ค้างจ่าย ตอนนี้",
+            parts: [{ k: "ค้างรับ", v: baht(ar), tone: ar > 0 ? "text-amber-600" : "text-neutral-800" },
+                    { k: "ค้างจ่าย", v: baht(ap), tone: ap > 0 ? "text-red-600" : "text-neutral-800" }],
+            href: `/dashboard/reports?t=aging&period=${period.key}` },
         ].map((s) => (
           <Link key={s.label} href={s.href}
             className="block rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)] transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md">
             <p className="text-xs font-medium text-neutral-500">{s.label}</p>
-            <p className={cn("mt-2 text-xl font-bold tabular-nums tracking-tight", s.tone)}>{s.value}</p>
+            {s.parts ? (
+              <span className="mt-2 block space-y-1">
+                {s.parts.map((p) => (
+                  <span key={p.k} className="flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] text-neutral-400">{p.k}</span>
+                    <span className={cn("text-base font-bold tabular-nums tracking-tight", p.tone)}>{p.v}</span>
+                  </span>
+                ))}
+              </span>
+            ) : (
+              <p className={cn("mt-2 text-xl font-bold tabular-nums tracking-tight", s.tone)}>{s.value}</p>
+            )}
           </Link>
         ))}
       </div>
