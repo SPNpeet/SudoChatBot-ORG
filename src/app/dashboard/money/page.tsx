@@ -118,6 +118,58 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
               ]}
               action={{ href: "/dashboard/sales?t=unpaid", label: "ดูใบแจ้งหนี้ค้างรับ" }} />
           ) : (
+            <>
+            {/* ============================================================
+                มือถือ = การ์ด 2 บรรทัด · เดสก์ท็อป = ตาราง (แก้ 29 ส.ค. 2569)
+
+                ⚠️ เดิม .rtable กางทุกคอลัมน์เป็นบรรทัด "ชื่อฟิลด์ : ค่า" = 5 บรรทัดต่อรายการ
+                เจ้าของแคปมาจริง: เห็นได้ 3 รายการต่อจอ ทั้งที่สิ่งที่คนมาหน้านี้มาดูคือ
+                "เข้าหรือออก เท่าไร ของใบไหน" ซึ่งอ่านได้ในบรรทัดเดียว
+                ส่วนคำว่า "ทิศทาง" กับ "ช่องทาง" เป็นชื่อคอลัมน์ ไม่ใช่ข้อมูล — ตัดออกบนมือถือ
+                (ทิศทางดูจากสี+เครื่องหมายบวกลบอยู่แล้ว ชัดกว่าอ่านคำว่า "เงินเข้า" อีก)
+
+                รูปแบบเดียวกับรายการเอกสารขาย เพื่อให้ทั้งแอปอ่านเหมือนกัน
+                ============================================================ */}
+            <div className="space-y-2 px-4 pb-4 sm:hidden">
+              {rows.map((p) => {
+                const url = p.slip_storage_path ? urlMap.get(p.slip_storage_path) : undefined;
+                const docHref = p.fin_docs
+                  ? (p.fin_docs.doc_type === "expense" ? `/dashboard/expenses/${p.doc_id}` : `/dashboard/sales/${p.doc_id}`)
+                  : null;
+                const inner = (
+                  <>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold text-neutral-900">
+                        {p.fin_docs?.doc_number ?? "ยังไม่ผูกเอกสาร"}
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                        {p.fin_docs?.contact_name ?? PAY_METHOD_TH[p.method] ?? p.method}
+                        {url && <span className="text-emerald-700"> · {p.verify_status === "verified" ? "สลิปตรวจแล้ว" : p.verify_status === "failed" ? "สลิปมีปัญหา" : "มีสลิป"}</span>}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className={cn("block text-[13px] font-semibold tabular-nums",
+                        p.direction === "in" ? "text-emerald-700" : "text-red-600")}>
+                        {p.direction === "in" ? "+" : "-"}{baht(p.amount)}
+                      </span>
+                      <span className="block text-xs text-neutral-400">{dateTH(p.paid_at)}</span>
+                    </span>
+                  </>
+                );
+                return docHref ? (
+                  <Link key={p.id} href={docHref}
+                    className="flex min-h-[44px] items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 active:bg-neutral-50">
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={p.id} className="flex min-h-[44px] items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3">
+                    {inner}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="hidden sm:block">
             <Table>
               <thead><tr><Th>วันที่</Th><Th>ทิศทาง</Th><Th className="text-right">ยอด</Th><Th>ช่องทาง</Th><Th>เอกสาร</Th><Th>สลิป</Th></tr></thead>
               <tbody>
@@ -157,6 +209,8 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
                 })}
               </tbody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>

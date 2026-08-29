@@ -90,6 +90,46 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
               action={{ href: "/dashboard/expenses/new", label: "บันทึกค่าใช้จ่ายใบแรก" }}
               secondary={{ href: "/dashboard/assistant", label: "ให้ AI อ่านบิลให้" }} />
           ) : (
+            <>
+            {/* มือถือ = การ์ด 2 บรรทัด · เดสก์ท็อป = ตาราง (แก้ 29 ส.ค. 2569)
+                เหตุผลเดียวกับรายการเอกสารขายและหน้าการเงิน: .rtable กางเป็น 7 บรรทัดต่อใบ
+                จนเห็นได้ 2 ใบครึ่งต่อจอ · ค้างจ่ายโชว์เฉพาะตอนมีจริง ไม่งั้นโชว์วันที่แทน */}
+            <div className="space-y-2 px-4 pb-4 sm:hidden">
+              {rows.map((d) => {
+                const outstanding = ["awaiting", "partial"].includes(d.status) ? docOutstanding(d) : 0;
+                return (
+                  <Link key={d.id} href={`/dashboard/expenses/${d.id}`}
+                    className={cn("flex min-h-[44px] items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3 active:bg-neutral-50",
+                      d.status === "void" && "opacity-50")}>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        <span className={cn("truncate text-[13px] font-semibold text-neutral-900",
+                          d.status === "void" && "text-neutral-400 line-through")}>{d.doc_number}</span>
+                        <span className="shrink-0 whitespace-nowrap">
+                          {d.approval_status === "pending"
+                            ? <Badge tone="amber">รออนุมัติ</Badge>
+                            : d.approval_status === "rejected"
+                              ? <Badge tone="red">ถูกปฏิเสธ</Badge>
+                              : <Badge tone={docStatusTone(d.status as DocStatus)}>{DOC_STATUS_TH[d.status as DocStatus]}</Badge>}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                        {d.contact_name ?? "ไม่ระบุผู้ขาย"}
+                        {d.expense_categories?.name && ` · ${d.expense_categories.name}`}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-right">
+                      <span className="block text-[13px] font-semibold tabular-nums text-neutral-900">{baht(d.total)}</span>
+                      {outstanding > 0
+                        ? <span className="block text-xs font-medium tabular-nums text-red-600">ค้าง {baht(outstanding)}</span>
+                        : <span className="block text-xs text-neutral-400">{dateOnlyTH(d.issue_date)}</span>}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="hidden sm:block">
             <Table>
               <thead><tr><Th>เลขที่</Th><Th>ผู้ขาย</Th><Th>หมวด</Th><Th>วันที่</Th><Th className="text-right">ยอด</Th><Th className="text-right">ค้างจ่าย</Th><Th>สถานะ</Th></tr></thead>
               <tbody>
@@ -115,6 +155,8 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                 ))}
               </tbody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
