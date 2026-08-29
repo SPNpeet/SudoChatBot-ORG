@@ -547,7 +547,14 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
           ไม่ใช่ขอบล่างของทั้งแชท ถ้าเกาะทั้งแชท พอแนบบิลไว้ช่องพิมพ์จะสูงขึ้นอีก ~80px
           แล้วปุ่มจะไปทับรูปบิลที่แนบค้างไว้ */}
       <div className="relative flex min-h-0 flex-1 flex-col">
-      <div ref={listRef} onScroll={onListScroll} className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
+      {/* ⚠️ ข้อความต้องกองอยู่ "ล่าง" ของพื้นที่แชท ไม่ใช่บน (แก้ 29 ส.ค. 2569)
+          เจ้าของแคปมาจริง: คุยไป 2 ประโยคแล้วขึ้น "ผู้ช่วยบัญชีกำลังจัดการให้..."
+          ตัวข้อความเกาะอยู่บนสุด เหลือพื้นที่ขาวโล่งใต้มันเกินครึ่งจอ
+          อ่านแล้วเหมือนหน้าค้าง/โหลดไม่ขึ้น ทั้งที่ระบบกำลังทำงานอยู่จริง
+          justify-end + min-h-full = สั้นก็ชิดล่างติดช่องพิมพ์แบบแชททั่วไป
+          ยาวเกินจอก็ยืดแล้วเลื่อนได้ตามปกติ (ห้ามใช้ h-full ตัวเนื้อหาจะโดนตัด) */}
+      <div ref={listRef} onScroll={onListScroll} className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
+      <div className={cn("flex min-h-full flex-col space-y-3", msgs.length > 0 && "justify-end")}>
         {msgs.length === 0 && (
           /* ==========================================================
              หน้าต้อนรับ — เจ้าของบอกว่าของเดิม "โล่งและไม่เป็นมืออาชีพ"
@@ -729,6 +736,7 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
             </a>
           </div>
         )}
+      </div>
       </div>
 
       {/* ปุ่มลงล่างสุด — โผล่เฉพาะตอนเลื่อนหนีขึ้นไปแล้ว

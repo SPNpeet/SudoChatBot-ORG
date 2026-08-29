@@ -14,6 +14,7 @@ import { saveDoc, recordPayment, convertDoc, voidDoc, issueCreditDebitNote, addM
   approveExpense, rejectExpense, type SaveDocInput } from "../finance/actions";
 import { addFixedAsset, runDepreciation } from "../assets/actions";
 import type { DocType, VatMode } from "@/lib/types/finance";
+import { sanitizeAssistantText } from "@/lib/assistant-text";
 
 export interface AssistantCtx {
   svc: SupabaseClient;
@@ -67,6 +68,18 @@ function collectArtifacts(r: LoopResult, resultStr: string) {
       try { r.choices = JSON.parse(j.next_choices) as AssistantChoice[]; } catch { /* ข้าม */ }
     }
   } catch { /* ผลลัพธ์ไม่ใช่ JSON — ข้าม */ }
+}
+
+/**
+ * ถอด markdown ที่หลุดมาออกจากข้อความตอบ และยกลิงก์ขึ้นไปเป็นปุ่ม
+ * กฎจริงอยู่ที่ src/lib/assistant-text.ts ที่เดียว (ด่านตรวจเรียกตัวเดียวกัน)
+ * แก้ที่ r โดยตรง เพราะต้องให้ทั้งข้อความที่ผู้ใช้เห็นและที่เก็บลง log สะอาดตรงกัน
+ */
+function sanitizeReply(r: LoopResult) {
+  if (!r.text) return;
+  const { text, artifacts } = sanitizeAssistantText(r.text, r.artifacts);
+  r.text = text;
+  r.artifacts.push(...artifacts);
 }
 
 /** ดึงตัวเลือกจาก tool ask_user มาโชว์เป็นปุ่ม */
@@ -1543,6 +1556,10 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
       ],
     };
   }
+
+  // ⚠️ ต้องอยู่ก่อนทั้งการเก็บ log และการ return — ไม่งั้น log กับสิ่งที่ผู้ใช้เห็นจะคนละอย่าง
+  // เวลาลูกค้าแจ้งว่า "แชทตอบแปลก ๆ" เราต้องเปิด log แล้วเห็นของเดียวกับที่เขาเห็น
+  sanitizeReply(r);
 
   await ctx.svc.from("ai_usage_logs").insert({
     shop_id: ctx.shopId, purpose: "assistant", model: `${cfg.provider}/${cfg.model}`,

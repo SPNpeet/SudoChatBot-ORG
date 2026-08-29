@@ -26,6 +26,7 @@ const ACTIONS = [
 
 export default function QuickCreate() {
   const [open, setOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const path = usePathname();
 
   useEffect(() => { setOpen(false); }, [path]);          // เปลี่ยนหน้าแล้วปิดเอง
@@ -34,6 +35,30 @@ export default function QuickCreate() {
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
   }, []);
+
+  // ⚠️ หลบให้ตอนกำลังเลื่อนอ่าน (เพิ่ม 29 ส.ค. 2569)
+  // เจ้าของแคปมาจริงหลายหน้า: ปุ่มลอยทับป้าย "ชำระแล้ว" ในรายการเอกสาร
+  // และทับตัวเลข "ค้างรับ / ค้างจ่าย" ในการ์ดสรุปของหน้ารายงาน
+  // ระยะ padding ล่างของ MainArea แก้ได้แค่ "บรรทัดสุดท้ายของหน้า" เท่านั้น
+  // แต่ระหว่างเลื่อนกลางหน้า ปุ่มยังลอยทับอะไรก็ตามที่บังเอิญอยู่ใต้มัน ซึ่งแก้ด้วย padding ไม่ได้
+  // ทางแก้: เลื่อนลง = กำลังอ่าน ปุ่มหลบลงไป · หยุดหรือเลื่อนขึ้น = กำลังหาที่จะกด ปุ่มกลับมา
+  useEffect(() => {
+    if (open) return;                                    // เมนูเปิดอยู่ห้ามหลบ ผู้ใช้กำลังจะเลือก
+    let last = window.scrollY;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;                                   // อ่านค่าอย่างมากเฟรมละครั้ง
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const y = window.scrollY;
+        if (Math.abs(y - last) < 8) return;              // ขยับเล็กน้อย/ยางยืดตอนสุดขอบ ไม่นับ
+        setHidden(y > last && y > 120);                  // ลงและพ้นหัวหน้าแล้วเท่านั้นจึงหลบ
+        last = y;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); if (raf) cancelAnimationFrame(raf); };
+  }, [open]);
 
   // หน้าผู้ช่วย AI สั่งงานด้วยการพิมพ์อยู่แล้ว ปุ่มสร้างเอกสารลอยทับจึงซ้ำซ้อน
   // และไปบังกล่องแชทซึ่งเป็นสิ่งเดียวที่หน้านั้นต้องใช้
@@ -50,7 +75,12 @@ export default function QuickCreate() {
 
       {/* เมนูล่างสูงประมาณ 60px + safe area — เดิมตั้ง 4.75rem (76px) ซึ่งเฉียดจนนิ้วกดพลาด
           ดันเป็น 6.25rem (100px) ให้มีระยะปลอดภัยจริง ๆ ระหว่างปุ่มลอยกับแถบเมนู */}
-      <div className="fixed right-4 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-[46] flex flex-col items-end gap-2 md:bottom-6">
+      <div className={cn(
+        "fixed right-4 bottom-[calc(6.25rem+env(safe-area-inset-bottom))] z-[46] flex flex-col items-end gap-2 md:bottom-6",
+        "transition-transform duration-200 motion-reduce:transition-none",
+        // หลบลงพ้นขอบจอ ไม่ใช่จางหาย — ปุ่มจาง ๆ ที่ยังกดโดนคือของที่แย่กว่าไม่มี
+        hidden && !open && "translate-y-[calc(100%+2rem)]",
+      )}>
         {/* หุบขึ้น-ลงจากปุ่มเดียว — ไม่มีปุ่มลอยตัวที่สองมาทับของใต้มันอีก
             ใช้ animate เข้าจากล่างเล็กน้อยเพื่อให้รู้ว่าโผล่มาจากปุ่ม ไม่ใช่จู่โจม */}
         {open && (
@@ -62,8 +92,12 @@ export default function QuickCreate() {
                 ตอนนี้: ปกติ = แบน ขอบบาง · hover = ยกขึ้น + พื้นเขียวจาง + เลื่อนซ้ายนิดเดียว
                 · กดจริง = ยุบลง (scale) — สามสถานะแยกออกจากกันด้วยตาเปล่า */}
             {ACTIONS.map((a) => (
+              // ⚠️ ความกว้างต้องเท่ากันทุกใบ (แก้ 29 ส.ค. 2569)
+              // เดิมปล่อยให้กว้างตามข้อความ + ชิดขวา ผลคือขอบซ้ายของแต่ละใบไม่ตรงกัน
+              // เป็นขั้นบันไดฟันปลา เจ้าของแคปมาแล้วอ่านว่า "รก" ซึ่งถูก
+              // ตรึงความกว้างไว้ = เป็นคอลัมน์เดียวสะอาด กวาดตาอ่านทีเดียวครบ
               <Link key={a.href} href={a.href}
-                className="group flex items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white py-2.5 pl-3.5 pr-4 shadow-sm transition-all duration-150 hover:-translate-x-0.5 hover:border-emerald-500/40 hover:bg-emerald-50/60 hover:shadow-xl active:translate-x-0 active:scale-[0.97] active:shadow-sm motion-reduce:transition-none motion-reduce:hover:translate-x-0">
+                className="group flex w-[15.5rem] max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl border border-neutral-200/80 bg-white py-2.5 pl-3.5 pr-4 shadow-sm transition-all duration-150 hover:-translate-x-0.5 hover:border-emerald-500/40 hover:bg-emerald-50/60 hover:shadow-xl active:translate-x-0 active:scale-[0.97] active:shadow-sm motion-reduce:transition-none motion-reduce:hover:translate-x-0">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-50 transition-colors group-hover:bg-emerald-600">
                   <a.icon className="h-4 w-4 text-emerald-600 transition-colors group-hover:text-white" />
                 </span>

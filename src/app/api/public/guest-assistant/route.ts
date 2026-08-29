@@ -132,6 +132,14 @@ export async function POST(request: Request) {
       }
       const j = await res.json();
       reply = ((j.candidates?.[0]?.content?.parts ?? []) as { text?: string }[]).map((p) => p.text ?? "").join("").trim();
+      // ถอด markdown ที่หลุดมา — หน้าแรกวาดคำตอบเป็น plain text เหมือนหน้าแชท
+      // ดาวคู่จึงโผล่เป็นตัวอักษรดิบใส่คนที่ยังไม่เป็นลูกค้า (บั๊กชนิดเดียวกับใน engine.ts
+      // ที่แก้ 29 ส.ค. 2569 — prompt ข้อ 5 สั่งห้าม markdown อยู่แล้วแต่โมเดลยังทำ)
+      reply = reply
+        .replace(/\*\*(.+?)\*\*/gs, "$1")
+        .replace(/__(.+?)__/gs, "$1")
+        .replace(/^#{1,6}\s+/gm, "")
+        .trim();
       if (reply) break;
     }
 

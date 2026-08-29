@@ -99,6 +99,58 @@ export default function SalesTable({ rows }: { rows: SalesRow[] }) {
 
   return (
     <div className="relative">
+      {/* ============================================================
+          มือถือ = การ์ดสรุป 3 บรรทัด · เดสก์ท็อป = ตาราง (แก้ 29 ส.ค. 2569)
+
+          ⚠️ เดิมปล่อยให้ .rtable แปลงตารางเป็นการ์ดอัตโนมัติ ซึ่งกางทุกคอลัมน์
+          เป็นบรรทัด "ชื่อฟิลด์ : ค่า" = 7 บรรทัดต่อเอกสาร 1 ใบ
+          เจ้าของแคปมาจริง: จอ 390px เห็นเอกสารได้ 2 ใบครึ่ง ต้องเลื่อนยาวมากกว่าจะเจอใบที่ต้องการ
+          และข้อมูลที่คนหาจริง ๆ (เลขที่ · ยอด · จ่ายหรือยัง) จมอยู่กับคำว่า "ประเภท/วันที่" ที่ไม่ได้ช่วยอะไร
+
+          รูปแบบนี้ลอกจากการ์ด "เอกสารล่าสุด" ในหน้าภาพรวมที่ใช้อยู่แล้ว
+          ไม่ได้คิดของใหม่ — ทั้งแอปควรอ่านเหมือนกัน
+          ============================================================ */}
+      <div className="space-y-2 px-4 pb-4 sm:hidden">
+        {rows.map((d) => (
+          <div key={d.id}
+            className={cn("flex items-center gap-2.5 rounded-xl border border-neutral-200 bg-white p-3",
+              sel.has(d.id) && "border-emerald-500 bg-emerald-50/40",
+              d.status === "void" && "opacity-50")}
+            onContextMenu={(e) => { e.preventDefault(); openMenu(e, d); }}
+            onTouchStart={(e) => startPress(e, d)} onTouchEnd={cancelPress} onTouchMove={cancelPress}>
+            {/* เป้ากด 44px ตามกติกาหน้าตา — ช่องติ๊กเล็ก ๆ บนมือถือกดพลาดตลอด */}
+            <label className="-m-2 grid h-11 w-11 shrink-0 cursor-pointer place-items-center p-2">
+              <input type="checkbox" aria-label={`เลือก ${d.doc_number}`} checked={sel.has(d.id)}
+                onChange={() => toggle(d.id)} className="h-4 w-4 accent-emerald-600" />
+            </label>
+            <Link href={`/dashboard/sales/${d.id}`} className="flex min-w-0 flex-1 items-center gap-2.5">
+              <span className="min-w-0 flex-1">
+                {/* ป้ายสถานะห้ามตัดบรรทัด — "รอชำระ" ที่หักเป็น "รอ / ชำระ" อ่านแล้วสะดุด
+                    ให้เลขที่เอกสารเป็นตัวที่ย่อแทน เพราะย่อแล้วยังเดาออกจากท้ายเลข */}
+                <span className="flex items-center gap-2">
+                  <span className={cn("truncate text-[13px] font-semibold text-neutral-900",
+                    d.status === "void" && "text-neutral-400 line-through")}>{d.doc_number}</span>
+                  <span className="shrink-0 whitespace-nowrap">
+                    <Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge>
+                  </span>
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-neutral-500">
+                  {DOC_TYPE_TH[d.doc_type as DocType]} · {d.contact_name ?? "ไม่ระบุลูกค้า"}
+                </span>
+              </span>
+              <span className="shrink-0 text-right">
+                <span className="block text-[13px] font-semibold tabular-nums text-neutral-900">{baht(d.total)}</span>
+                {/* ค้างรับโชว์เฉพาะตอนมีจริง — บรรทัด "ค้างรับ: -" ไม่ได้บอกอะไรนอกจากกินที่ */}
+                {d.outstanding > 0
+                  ? <span className="block text-xs font-medium tabular-nums text-amber-600">ค้าง {baht(d.outstanding)}</span>
+                  : <span className="block text-xs text-neutral-400">{dateOnlyTH(d.issue_date)}</span>}
+              </span>
+            </Link>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden sm:block">
       <Table>
         <thead><tr>
           <Th className="w-10">
@@ -134,6 +186,7 @@ export default function SalesTable({ rows }: { rows: SalesRow[] }) {
           ))}
         </tbody>
       </Table>
+      </div>
 
       {/* เมนูลัดของแถว — ฉากหลังโปร่งเต็มจอไว้ปิดเมนูเมื่อกดที่อื่น */}
       {menu && (
