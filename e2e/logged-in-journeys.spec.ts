@@ -160,8 +160,15 @@ test.describe("มือถือหลังล็อกอิน", () => {
     test.skip(testInfo.project.name !== "มือถือ", "ตรวจเฉพาะโปรเจกต์มือถือ");
     await login(page);
 
+    // ⚠️ ต้องครบ "ทุกหน้าที่ล็อกอินแล้วเข้าได้" ไม่ใช่เฉพาะหน้าที่เพิ่งแก้
+    // ครั้งก่อนใส่แค่ 6 หน้าที่ตัวเองแตะ = หน้าที่ไม่ได้แตะยังไม่มีใครตรวจเหมือนเดิม
+    // ซึ่งเป็นบั๊กแบบเดียวกับที่กติกาข้อ 5 เตือนไว้ (ตรวจเฉพาะที่ตัวเองมองอยู่)
     for (const path of ["/dashboard", "/dashboard/sales", "/dashboard/expenses",
-      "/dashboard/money", "/dashboard/reports", "/dashboard/contacts"]) {
+      "/dashboard/money", "/dashboard/reports", "/dashboard/contacts",
+      "/dashboard/assistant", "/dashboard/products", "/dashboard/journal",
+      "/dashboard/assets", "/dashboard/billing", "/dashboard/settings",
+      "/dashboard/help", "/dashboard/account", "/dashboard/sales/new",
+      "/dashboard/expenses/new", "/dashboard/products/import"]) {
       await page.goto(path);
       await page.waitForLoadState("domcontentloaded");
       const overflow = await page.evaluate(() =>
