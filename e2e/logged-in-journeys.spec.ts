@@ -145,3 +145,28 @@ test.describe("หน้าทดสอบกับผู้ใช้จริ�
     await expect(page.getByRole("button", { name: /ยอมแพ้/ })).toBeVisible();
   });
 });
+
+// ============================================================
+//  มือถือหลังล็อกอิน — กลุ่มผู้ใช้หลักของระบบนี้
+//
+//  ⚠️ ช่องโหว่ที่เพิ่งปิด (29 ส.ค. 2569)
+//  เทสต์ "ไม่ล้นแนวนอน" เดิมมีเฉพาะหน้าสาธารณะ 5 หน้า
+//  แต่หน้าที่ลูกค้าที่จ่ายเงินแล้วใช้ทุกวันคือหน้าหลังล็อกอิน ซึ่งไม่เคยถูกตรวจเรื่องนี้เลย
+//  รอบนี้เพิ่งรื้อรายการเอกสารขาย/ค่าใช้จ่าย/การเงิน เป็นการ์ดบนมือถือ
+//  ถ้าไม่มีด่านนี้ วันหลังใครแก้แล้วล้นจอจะไม่มีอะไรจับได้จนกว่าเจ้าของจะแคปมาเอง
+// ============================================================
+test.describe("มือถือหลังล็อกอิน", () => {
+  test("หน้าที่ใช้ทุกวันไม่ล้นออกนอกจอแนวนอน", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "มือถือ", "ตรวจเฉพาะโปรเจกต์มือถือ");
+    await login(page);
+
+    for (const path of ["/dashboard", "/dashboard/sales", "/dashboard/expenses",
+      "/dashboard/money", "/dashboard/reports", "/dashboard/contacts"]) {
+      await page.goto(path);
+      await page.waitForLoadState("domcontentloaded");
+      const overflow = await page.evaluate(() =>
+        document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, `${path} ล้นแนวนอน ${overflow}px`).toBeLessThanOrEqual(1);
+    }
+  });
+});
