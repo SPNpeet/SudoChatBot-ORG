@@ -303,6 +303,34 @@ async function AgingTab({ shopId, supabase }: { shopId: string; supabase: SB }) 
             <EmptyState icon={CheckCircle2} title="ไม่มียอดค้าง"
               hint={kind === "invoice" ? "ลูกค้าจ่ายครบทุกใบแล้ว" : "จ่ายบิลครบทุกใบแล้ว"} />
           ) : (
+            <>
+            {/* มือถือ = การ์ด · เดสก์ท็อป = ตาราง (แก้ 29 ส.ค. 2569)
+                หน้านี้คนเปิดมาเพื่อตอบคำถามเดียว "ใครค้างเท่าไร นานแค่ไหน"
+                ซึ่งอ่านได้ในสองบรรทัด ไม่ต้องกาง 5 บรรทัดต่อใบ */}
+            <div className="space-y-2 px-4 pb-4 sm:hidden">
+              {list.map((d) => {
+                const b = agingBucket(d);
+                return (
+                  <Link key={d.id} href={kind === "invoice" ? `/dashboard/sales/${d.id}` : `/dashboard/expenses/${d.id}`}
+                    className="block rounded-xl border border-neutral-200 bg-white p-3 active:bg-neutral-50">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-[13px] font-semibold text-emerald-700">{d.doc_number}</span>
+                      <span className="shrink-0 text-[13px] font-semibold tabular-nums text-neutral-900">{bahtDoc(docOutstanding(d))}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2">
+                      <span className="truncate text-xs text-neutral-500">
+                        {d.contact_name ?? "ไม่ระบุคู่ค้า"} · ครบกำหนด {dateOnlyTH(d.due_date ?? d.issue_date)}
+                      </span>
+                      <span className="shrink-0">
+                        <Badge tone={b === "current" ? "neutral" : b === "d90up" ? "red" : "amber"}>{AGING_LABEL_TH[b]}</Badge>
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="hidden sm:block">
             <Table>
               <thead><tr><Th>เลขที่</Th><Th>คู่ค้า</Th><Th>ครบกำหนด</Th><Th className="text-right">ค้าง</Th><Th>อายุหนี้</Th></tr></thead>
               <tbody>
@@ -320,6 +348,8 @@ async function AgingTab({ shopId, supabase }: { shopId: string; supabase: SB }) 
                 })}
               </tbody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -415,6 +445,41 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                   ? { href: "/dashboard/sales/new?type=invoice", label: "+ ออกใบแจ้งหนี้มี VAT" }
                   : { href: "/dashboard/expenses/new", label: "+ บันทึกบิลซื้อมี VAT" }} />
             ) : (
+              <>
+              {/* ============================================================
+                  มือถือ = การ์ด 2 บรรทัด · เดสก์ท็อป = ตาราง (แก้ 29 ส.ค. 2569)
+
+                  ⚠️ เดิม .rtable กางทุกคอลัมน์เป็น "ชื่อฟิลด์ : ค่า" = 6 บรรทัดต่อใบ สูง 166px
+                  ร้านที่ออกบิล 50 ใบต่อเดือน ต้องเลื่อนกว่า 8,000px เพื่ออ่านรายงานภาษีใบเดียว
+                  ตรงกับที่เจ้าของบ่นตั้งแต่แรกว่า "รายงานต่างๆ ในมือถือแม่งไม่สวยเลย"
+
+                  ⚠️ เลขผู้เสียภาษีโชว์เฉพาะตอน "ไม่มี" เท่านั้น — ตั้งใจ ไม่ใช่ตัดทิ้ง
+                  เพราะสิ่งที่ต้องลงมือทำคือ "ใบที่ขาดเลขภาษี" (ยื่น ภ.พ.30 แล้วมีช่องว่าง)
+                  ส่วนใบที่มีครบไม่ต้องอ่านซ้ำทีละใบ — โชว์ทุกใบ = กลบใบที่มีปัญหาจริง
+                  ============================================================ */}
+              <div className="space-y-2 px-4 pb-4 sm:hidden">
+                {sec.list.map((d) => (
+                  <div key={d.id} className="rounded-xl border border-neutral-200 bg-white p-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-[13px] font-semibold text-neutral-900">{d.doc_number}</span>
+                      <span className="shrink-0 text-[13px] font-semibold tabular-nums text-neutral-900">
+                        {bahtDoc(Number(d.total) - Number(d.vat_amount))}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 flex items-baseline justify-between gap-2">
+                      <span className="truncate text-xs text-neutral-500">
+                        {d.contact_name ?? "ไม่ระบุคู่ค้า"} · {dateOnlyTH(d.issue_date)}
+                      </span>
+                      <span className="shrink-0 text-xs tabular-nums text-neutral-500">VAT {bahtDoc(d.vat_amount)}</span>
+                    </div>
+                    {!d.contact_tax_id && (
+                      <p className="mt-1 text-[11px] font-medium text-amber-700">ยังไม่มีเลขผู้เสียภาษี — ยื่นแล้วช่องนี้จะว่าง</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden sm:block">
               <Table>
                 <thead><tr><Th>วันที่</Th><Th>เลขที่</Th><Th>คู่ค้า</Th><Th>เลขผู้เสียภาษี</Th><Th className="text-right">มูลค่า</Th><Th className="text-right">VAT</Th></tr></thead>
                 <tbody>
@@ -430,6 +495,8 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                   ))}
                 </tbody>
               </Table>
+              </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -579,6 +646,37 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                 hint="ค่าใช้จ่ายใบไหนที่เลือกอัตราหัก ณ ที่จ่าย จะมาที่นี่ พร้อมพิมพ์หนังสือรับรอง 50 ทวิ ให้เลย"
                 action={{ href: "/dashboard/expenses/new", label: "บันทึกค่าใช้จ่ายมีหัก ณ ที่จ่าย" }} />
             ) : (
+              <>
+              {/* มือถือ = การ์ด · เดสก์ท็อป = ตาราง (แก้ 29 ส.ค. 2569)
+                  ตารางนี้หนักสุดในระบบ: 7 คอลัมน์ = 7 บรรทัดต่อใบ สูง 187px บนมือถือ
+                  ⚠️ ฐานเงิน x อัตรา = ภาษีหัก ต้องอ่านครบสามตัวในสายตาเดียว
+                  เพราะเป็นความสัมพันธ์ที่ใช้จับว่ากรอกผิดช่องหรือเปล่า (ดูบันทึกเรื่องคอลัมน์สลับ)
+                  จึงวางไว้บรรทัดเดียวกันแบบ "30,000.00 x 3% = 900.00" ไม่แยกคนละบรรทัด
+                  ⚠️ ปุ่มพิมพ์ 50 ทวิ ต้องอยู่ครบ — เป็นเอกสารที่ต้องส่งให้คู่ค้าตามกฎหมาย */}
+              <div className="space-y-2 px-4 pb-4 sm:hidden">
+                {sec.list.map((d) => (
+                  <div key={d.id} className="rounded-xl border border-neutral-200 bg-white p-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="truncate text-[13px] font-semibold text-neutral-900">{d.contact_name ?? "ไม่ระบุผู้ถูกหัก"}</span>
+                      <span className="shrink-0 text-[13px] font-semibold tabular-nums text-neutral-900">{bahtDoc(d.wht_amount)}</span>
+                    </div>
+                    <div className="mt-0.5 text-xs tabular-nums text-neutral-500">
+                      {bahtDoc(Number(d.total) - Number(d.vat_amount))} x {Number(d.wht_rate)}% · {dateOnlyTH(d.issue_date)}
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between gap-2">
+                      {d.contact_tax_id
+                        ? <span className="truncate text-[11px] text-neutral-400">เลขภาษี {d.contact_tax_id}</span>
+                        : <span className="text-[11px] font-medium text-amber-700">ยังไม่มีเลขผู้เสียภาษี</span>}
+                      <a href={`/dashboard/print/${d.id}?form=wht`} target="_blank"
+                        className="inline-flex min-h-[32px] shrink-0 items-center rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-medium text-emerald-700">
+                        พิมพ์ 50 ทวิ
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden sm:block">
               <Table>
                 <thead><tr><Th>วันที่</Th><Th>ผู้ถูกหัก</Th><Th>เลขผู้เสียภาษี</Th><Th className="text-right">ฐานเงิน</Th><Th className="text-right">อัตรา</Th><Th className="text-right">ภาษีหัก</Th><Th>50 ทวิ</Th></tr></thead>
                 <tbody>
@@ -595,6 +693,8 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                   ))}
                 </tbody>
               </Table>
+              </div>
+              </>
             )}
           </CardContent>
         </Card>

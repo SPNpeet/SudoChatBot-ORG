@@ -61,6 +61,43 @@ export default async function ProductsPage() {
                 "ของเยอะ? นำเข้าจากไฟล์ Excel ทีเดียวทั้งหมด",
               ]} />
           ) : (
+            <>
+            {/* มือถือ = การ์ด · เดสก์ท็อป = ตาราง (แก้ 29 ส.ค. 2569)
+                เดิม .rtable กางเป็น 8 บรรทัดต่อสินค้า 1 ตัว
+                สิ่งที่คนเปิดหน้านี้มาดูคือ "ราคาเท่าไร เหลือกี่ชิ้น" ซึ่งอ่านได้บรรทัดเดียว
+                ⚠️ สต๊อกใกล้หมด (<=3) ต้องเด่นสีแดงเหมือนเดิม เพราะเป็นสัญญาณให้สั่งของ */}
+            <div className="space-y-2 px-4 pb-4 sm:hidden">
+              {products.map((p) => (
+                <div key={p.id} className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white p-3">
+                  {Array.isArray(p.images) && Boolean(p.images[0]) && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={String(p.images[0])} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-[13px] font-semibold text-neutral-900">{p.name}</span>
+                      {p.status !== "active" && <span className="shrink-0"><Badge tone="neutral">พัก</Badge></span>}
+                    </div>
+                    <div className="mt-0.5 truncate text-xs text-neutral-500">
+                      {p.sku ? `${p.sku} · ` : ""}{p.track_stock
+                        ? <span className={p.stock <= 3 ? "font-semibold text-red-600" : ""}>เหลือ {p.stock}</span>
+                        : "ไม่นับสต๊อก"}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-[13px] font-semibold tabular-nums text-neutral-900">{baht(p.price)}</div>
+                    {canEdit && (
+                      <div className="mt-1 flex items-center justify-end gap-1.5">
+                        <ProductForm shopId={shop.id} action={save} product={p} />
+                        <ArchiveButton productId={p.id} shopId={shop.id} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden sm:block">
             <Table>
               <thead><tr><Th>รายการ</Th><Th>SKU</Th><Th>ราคาขาย</Th><Th>ต้นทุน</Th><Th>สต๊อก</Th><Th>สถานะ</Th><Th>เพิ่มเมื่อ</Th>{canEdit && <Th />}</tr></thead>
               <tbody>
@@ -100,6 +137,8 @@ export default async function ProductsPage() {
                 ))}
               </tbody>
             </Table>
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
