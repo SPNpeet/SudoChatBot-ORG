@@ -26,6 +26,7 @@ interface Health {
   tax_id_ok: boolean; address_ok: boolean;
   bad_partners: number; partner_names: string;
   odd_dates: number; odd_list: string;
+  dup_docs: number; dup_list: string;
   error?: string;
 }
 interface VatStatus {
@@ -131,6 +132,18 @@ export async function getNotices(shopId: string, quota?: QuotaLike | null): Prom
           body: `${h.odd_list} — น่าจะกรอก พ.ศ. ลงช่อง ค.ศ. เอกสารพวกนี้ไม่โผล่ในรายงานงวดไหนเลย `
             + "แต่ยังค้างในยอดลูกหนี้/เจ้าหนี้ตลอดไป ต้องกดยกเลิกแล้วออกใหม่",
           href: "/dashboard/expenses", cta: "ไปตรวจเอกสาร",
+        });
+      }
+      // risk detection: คู่เอกสารที่น่าจะออกซ้ำ (มอคอัพ Sudo Financial OS — "Sudo สังเกตเห็น")
+      // อ่านอย่างเดียว ไม่บล็อกอะไร — saveDoc มีด่านกันตอนสร้างใหม่แล้ว อันนี้จับของเก่าที่หลุดมาก่อน
+      if (h.dup_docs > 0) {
+        all.push({
+          key: `health:dup:${h.dup_docs}`,
+          tone: "warn",
+          title: `พบเอกสาร ${h.dup_docs} คู่ที่อาจออกซ้ำกัน`,
+          body: `${h.dup_list} — ยอดรวม ชนิดเอกสาร และคู่ค้าตรงกัน ห่างกันไม่เกิน 3 วัน `
+            + "ถ้าตั้งใจออกซ้ำจริงไม่ต้องแก้อะไร แต่ถ้าเป็นการพิมพ์ซ้ำต้องยกเลิกใบใดใบหนึ่ง ไม่งั้นยอดขาย/ภาษีเกินจริง",
+          href: "/dashboard/sales", cta: "ไปตรวจเอกสาร",
         });
       }
     }
@@ -278,6 +291,7 @@ export async function getNoticeHistory(shopId: string): Promise<HistoryItem[]> {
 
 /** แปลกุญแจเป็นชื่อเรื่องที่คนอ่านรู้เรื่อง — กุญแจเป็นของภายใน ไม่ควรโชว์ดิบ ๆ */
 function dismissedLabel(key: string): string {
+  if (key.startsWith("health:dup:")) return "เอกสารที่อาจออกซ้ำกัน";
   const head = key.split(":")[0];
   return {
     quota: "โควตาผู้ช่วย AI",
