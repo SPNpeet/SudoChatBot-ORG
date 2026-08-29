@@ -17,7 +17,8 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUp, ImagePlus, Bot } from "lucide-react";
+import { ArrowUp, ImagePlus, Bot, Mic, MicOff } from "lucide-react";
+import { useVoiceInput } from "@/lib/use-voice-input";
 
 /** ยาวสุดที่ส่งผ่าน URL ได้อย่างปลอดภัย — ยาวกว่านี้ให้ไปพิมพ์ต่อในหน้าแชท */
 const MAX_LEN = 300;
@@ -34,6 +35,9 @@ export default function CommandBar({ assistantName, proactive }: { assistantName
   const [text, setText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  // พูดสั่งงานได้จากหน้าแรกเลย ไม่ต้องเข้าไปหน้าแชทก่อน — เติมข้อความอย่างเดียว
+  // ยังต้องกด "ส่งคำสั่ง" เองเหมือนพิมพ์ ไม่ auto-submit เพราะเป็นคำสั่งเงินของลูกค้า
+  const { listening, supported: voiceSupported, toggle: toggleVoice } = useVoiceInput(setText);
 
   function go(raw: string) {
     const q = raw.trim().slice(0, MAX_LEN);
@@ -69,10 +73,23 @@ export default function CommandBar({ assistantName, proactive }: { assistantName
           onChange={(e) => setText(e.target.value)}
           maxLength={MAX_LEN}
           aria-label="พิมพ์สั่งงานบัญชี"
-          placeholder="พิมพ์สิ่งที่คุณต้องการ..."
+          placeholder={listening ? "กำลังฟัง... พูดสั่งงานได้เลย" : "พิมพ์สิ่งที่คุณต้องการ..."}
           className="min-w-0 flex-1 bg-transparent py-2 text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
         />
         {/* ปุ่มไอคอนล้วนต้องมีชื่อ ไม่งั้นโปรแกรมอ่านหน้าจอจะอ่านได้แค่คำว่า "ปุ่ม" */}
+        {voiceSupported && (
+          <button
+            type="button"
+            onClick={toggleVoice}
+            aria-label={listening ? "หยุดฟัง" : "พูดสั่งงาน"}
+            title={listening ? "หยุดฟัง" : "พูดสั่งงาน — พูดแล้วตรวจข้อความก่อนกดส่งเหมือนพิมพ์เอง"}
+            className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors ${
+              listening ? "animate-pulse bg-red-50 text-red-600" : "text-neutral-400 hover:bg-neutral-100 hover:text-emerald-600"
+            }`}
+          >
+            {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+          </button>
+        )}
         <button
           type="submit"
           aria-label="ส่งคำสั่ง"

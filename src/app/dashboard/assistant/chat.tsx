@@ -11,9 +11,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Send, Calculator, Paperclip, X, Loader2, Trash2, Zap, ArrowDown, Plus,
-  FileText, Receipt, BarChart3, Users, Landmark, Package,
+  FileText, Receipt, BarChart3, Users, Landmark, Package, Mic, MicOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useVoiceInput } from "@/lib/use-voice-input";
 import { ACTION_CHIP } from "@/components/ui";
 import { assistantProgress, assistantReply, getDocPreview, type AssistantTurn, type DocPreviewData } from "./actions";
 import DocPreview from "@/app/dashboard/finance/doc-preview";
@@ -128,6 +129,11 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState("");                    // ข้อความความคืบหน้าตอนอ่านบิล
+  const [error, setError] = useState<string | null>(null);
+  // พูดสั่งงาน (Web Speech API) — เพิ่ม 28 ส.ค. 2569 ตามมอคอัพ Sudo Financial OS
+  // เสียงแค่ "พิมพ์แทนมือ" ลงช่องเดิม ไม่ auto-submit เด็ดขาด — ต้องผ่านด่านตรวจ/ยืนยันเดิม
+  // ทุกอย่างเหมือนคำสั่งพิมพ์เอง ไม่เปิดทางลัดให้เสียงสั่งเงินตรงๆ โดยไม่มีคนเห็นข้อความก่อนส่ง
+  const { listening, supported: voiceSupported, toggle: toggleVoice } = useVoiceInput(setInput, setError);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);  // แนบค้างไว้หลายใบ พิมพ์สั่งกำกับก่อนส่ง
   const [dragOver, setDragOver] = useState(false);               // ลากไฟล์มาวางเหนือกล่องพิมพ์
   const [stepLabel, setStepLabel] = useState<string | null>(null);  // ขั้นตอนจริงที่ AI กำลังทำ (จาก server)
@@ -166,7 +172,6 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
       setError("วางได้เฉพาะรูป (PNG/JPG/WebP) หรือไฟล์ PDF — ถ้าก๊อปมาจากหน้าจอ ให้แคปเป็นรูปก่อน");
     }
   }
-  const [error, setError] = useState<string | null>(null);
   const [quotaWall, setQuotaWall] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -797,8 +802,21 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
               const all = files.length ? files : fromList;
               if (all.length) { e.preventDefault(); addFiles(all, "paste"); }
             }}
-            placeholder={pendingFiles.length ? "สั่งกำกับบิล (ไม่พิมพ์ก็ได้) เช่น ค่าเช่า ยังไม่จ่าย" : "สั่งงานบัญชี หรือวางรูปบิลด้วย Ctrl+V ได้เลย"}
+            placeholder={listening ? "กำลังฟัง... พูดสั่งงานได้เลย" : pendingFiles.length ? "สั่งกำกับบิล (ไม่พิมพ์ก็ได้) เช่น ค่าเช่า ยังไม่จ่าย" : "สั่งงานบัญชี หรือวางรูปบิลด้วย Ctrl+V ได้เลย"}
             className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
+          {voiceSupported && (
+            <button type="button" onClick={toggleVoice} disabled={busy || !!reading}
+              aria-label={listening ? "หยุดฟัง" : "พูดสั่งงาน"}
+              title={listening ? "หยุดฟัง" : "พูดสั่งงาน — พูดแล้วตรวจข้อความก่อนกดส่งเหมือนพิมพ์เอง"}
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border disabled:opacity-40",
+                listening
+                  ? "border-red-300 bg-red-50 text-red-600 animate-pulse"
+                  : "border-neutral-300 text-neutral-500 hover:border-emerald-400 hover:text-emerald-600",
+              )}>
+              {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </button>
+          )}
           <button disabled={busy || !!reading || (!input.trim() && !pendingFiles.length)}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
             {busy || reading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
