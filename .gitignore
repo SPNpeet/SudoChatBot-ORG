@@ -22,3 +22,9 @@ android/local.properties
 # ภาพหน้าจอที่ถ่ายไว้ตรวจงาน ไม่ใช่ของที่ต้องเก็บใน repo
 shots/
 test-results/
+
+# ไฟล์ตรวจงานชั่วคราวของผู้ช่วย — ภาพหน้าจอหลังล็อกอินมีข้อมูลบัญชีทดสอบ ห้ามขึ้น repo สาธารณะ
+audit-shots/
+*.probe.mjs
+audit.mjs
+vshot.mjs
