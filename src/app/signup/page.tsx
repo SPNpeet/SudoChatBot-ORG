@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/logo";
+import AuthSide from "@/components/auth-side";
 import { Eye, EyeOff, Check, ArrowRight } from "lucide-react";
 import { signUpDirect } from "./actions";
 import OAuthButtons from "@/components/oauth-buttons";
@@ -73,7 +74,12 @@ export default function SignupPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-emerald-50 via-white to-white px-4 py-8">
-      <div className="w-full max-w-sm">
+      {/* จอกว้าง: แผงเล่าคุณค่าซ้าย + ฟอร์มขวา (30 ส.ค. 2569 ตามภาพอ้างอิงของเจ้าของ)
+          เดิมการ์ดเดี่ยวลอยกลางจอเปล่า — ครึ่งจอที่เหลือควรเล่าว่าระบบทำอะไรได้
+          มือถือเห็นเฉพาะฟอร์มเหมือนเดิม ฟอร์มข้างในไม่ถูกแตะแม้แต่บรรทัดเดียว */}
+      <div className="grid w-full max-w-sm gap-6 lg:max-w-4xl lg:grid-cols-2 lg:items-stretch">
+        <AuthSide />
+      <div className="w-full lg:self-center">
         <div className="rounded-2xl border border-emerald-100 bg-white p-8 shadow-sm">
           <Logo className="justify-center" />
           <h1 className="mt-4 text-center text-lg font-bold tracking-tight">สร้างบัญชีฟรี</h1>
@@ -149,6 +155,7 @@ export default function SignupPage() {
             มีบัญชีอยู่แล้ว? <Link href="/login" className="inline-flex min-h-[44px] items-center font-semibold text-emerald-600 hover:underline">เข้าสู่ระบบ</Link>
           </p>
         </div>
+      </div>
       </div>
     </main>
   );

@@ -19,6 +19,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUp, ImagePlus, Bot, Mic, MicOff } from "lucide-react";
 import { useVoiceInput } from "@/lib/use-voice-input";
+import Mascot from "@/components/mascot";
 
 /** ยาวสุดที่ส่งผ่าน URL ได้อย่างปลอดภัย — ยาวกว่านี้ให้ไปพิมพ์ต่อในหน้าแชท */
 const MAX_LEN = 300;
@@ -47,10 +48,15 @@ export default function CommandBar({ assistantName, proactive }: { assistantName
 
   return (
     <section className="rounded-2xl border border-neutral-200/80 bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)] sm:p-5">
-      <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
-        <Bot className="h-3.5 w-3.5 text-emerald-600" />
-        สั่งงานบัญชีได้เลย {assistantName ? `— ${assistantName} รออยู่` : "— พิมพ์เป็นภาษาคน"}
-      </p>
+      {/* มาสคอตอยู่ในแถวหัวด้วย flex — ห้ามใช้ absolute เพราะภาพจริง 31 ส.ค. 2569
+          มันลอยลงมาทับปุ่มส่งของช่องพิมพ์ · โชว์เฉพาะจอกว้างที่มีที่ว่างจริง */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
+          <Bot className="h-3.5 w-3.5 text-emerald-600" />
+          สั่งงานบัญชีได้เลย {assistantName ? `— ${assistantName} รออยู่` : "— พิมพ์เป็นภาษาคน"}
+        </p>
+        <Mascot size={44} className="hidden shrink-0 md:block" />
+      </div>
 
       {/* AI ทักก่อน — ผลตรวจ 28 ส.ค. 2569: ผู้ช่วยที่ดีไม่รอให้ถาม เห็นงานค้างแล้วชวนทำเลย
           กดแล้วส่งคำสั่งสำเร็จรูปไปหน้าผู้ช่วยทันที ไม่ต้องคิดเองว่าจะพิมพ์ยังไง */}
@@ -110,8 +116,6 @@ export default function CommandBar({ assistantName, proactive }: { assistantName
             {s}
           </button>
         ))}
-        {/* ⚠️ ไม่มีปุ่มไมโครโฟน — ระบบยังพูดสั่งไม่ได้
-            ปุ่มที่กดแล้วไม่เกิดอะไรทำให้ผู้ใช้คิดว่าระบบพัง แย่กว่าไม่มีปุ่มนั้น */}
         <Link
           href="/dashboard/assistant"
           className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-neutral-500 transition-colors hover:text-emerald-700"

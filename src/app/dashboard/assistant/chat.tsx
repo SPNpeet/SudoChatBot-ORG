@@ -14,6 +14,7 @@ import {
   FileText, Receipt, BarChart3, Users, Landmark, Package, Mic, MicOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import Mascot from "@/components/mascot";
 import { useVoiceInput } from "@/lib/use-voice-input";
 import { ACTION_CHIP } from "@/components/ui";
 import { assistantProgress, assistantReply, getDocPreview, type AssistantTurn, type DocPreviewData } from "./actions";
@@ -573,10 +574,8 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
           <div className="flex min-h-full flex-col items-center justify-center px-1 sm:px-2">
             <div className="w-full max-w-2xl">
               <div className="text-center">
-                <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50">
-                  <Calculator className="h-6 w-6 text-emerald-600" />
-                </div>
-                <h2 className="mt-3 text-lg font-bold tracking-tight text-neutral-900">วันนี้ให้ช่วยเรื่องไหนดี</h2>
+                <Mascot size={84} className="mx-auto" />
+                <h2 className="mt-2 text-lg font-bold tracking-tight text-neutral-900">วันนี้ให้ช่วยเรื่องไหนดี</h2>
                 <p className="mt-1 text-[13px] text-neutral-500">
                   พิมพ์สั่งเป็นภาษาคนในช่องด้านล่าง หรือเริ่มจากงานที่ใช้บ่อย
                 </p>

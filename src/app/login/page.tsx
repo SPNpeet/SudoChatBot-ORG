@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import AuthSide from "@/components/auth-side";
 import { Eye, EyeOff } from "lucide-react";
 import OAuthButtons from "@/components/oauth-buttons";
 
@@ -50,7 +51,12 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 py-8">
-      <div className="w-full max-w-sm">
+      {/* จอกว้าง: แผงเล่าคุณค่าซ้าย + ฟอร์มขวา (30 ส.ค. 2569 ตามภาพอ้างอิงของเจ้าของ)
+          เดิมการ์ดเดี่ยวลอยกลางจอเปล่า — ครึ่งจอที่เหลือควรเล่าว่าระบบทำอะไรได้
+          มือถือเห็นเฉพาะฟอร์มเหมือนเดิม ฟอร์มข้างในไม่ถูกแตะแม้แต่บรรทัดเดียว */}
+      <div className="grid w-full max-w-sm gap-6 lg:max-w-4xl lg:grid-cols-2 lg:items-stretch">
+        <AuthSide />
+      <div className="w-full lg:self-center">
         <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-[0_1px_3px_rgba(16,24,40,0.06)]">
           <Logo className="justify-center" />
           <h1 className="mt-4 text-center text-lg font-bold tracking-tight">เข้าสู่ระบบ</h1>
@@ -105,6 +111,7 @@ export default function LoginPage() {
           การเข้าสู่ระบบถือว่ายอมรับ<Link href="/terms" className="inline-flex min-h-[44px] items-center px-0.5 underline">เงื่อนไขการใช้งาน</Link>
           และ<Link href="/privacy" className="inline-flex min-h-[44px] items-center px-0.5 underline">นโยบายความเป็นส่วนตัว</Link>
         </p>
+      </div>
       </div>
     </main>
   );

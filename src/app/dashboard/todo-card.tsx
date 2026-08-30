@@ -56,19 +56,34 @@ function dueLabel(due: string, today: string): { text: string; tone: Task["tone"
  */
 function filingTasks(today: string, hasVat: boolean): Task[] {
   const [y, m] = today.split("-").map(Number);
-  const period = new Date(Date.UTC(y, m - 2, 1));            // งวดคือเดือนที่แล้ว
-  const pStr = period.toISOString().slice(0, 7);
-  const pLabel = period.toLocaleDateString("th-TH", { month: "long", year: "numeric", timeZone: "UTC" });
-  const day = (n: number) => new Date(Date.UTC(y, m - 1, n)).toISOString().slice(0, 10);
 
-  const out: Task[] = [
-    { title: "ยื่น ภ.ง.ด.3 / ภ.ง.ด.53", sub: `ภาษีหัก ณ ที่จ่าย งวด${pLabel}`, href: `/dashboard/reports?t=wht&period=${pStr}`, due: day(7), tone: "neutral" },
-  ];
-  if (hasVat) {
-    out.push({ title: "ยื่น ภ.พ.30", sub: `ภาษีมูลค่าเพิ่ม งวด${pLabel}`, href: `/dashboard/reports?t=vat&period=${pStr}`, due: day(15), tone: "neutral" });
+  // ⚠️ ต้องมองสองงวด: กำหนดของเดือนนี้ (งวดเดือนก่อน) และกำหนดของเดือนหน้า (งวดเดือนนี้)
+  // เดิมมองแค่งวดเดียว ผลจริงบนจอ 30 ส.ค.: กำหนด 7/15 ส.ค. ผ่านไปแล้วถูกกรองทิ้ง
+  // การ์ดเลยขึ้น "ไม่มีงานค้าง" ทั้งที่อีก 8 วันต้องยื่น ภ.ง.ด. งวดสิงหาคม
+  // = ระบบเงียบในจังหวะที่ควรเตือนที่สุด (ก่อนถึงกำหนด) แล้วค่อยมาแดงตอนเลยกำหนดแล้ว
+  const out: Task[] = [];
+  for (const offset of [0, 1]) {                             // 0 = กำหนดเดือนนี้ · 1 = กำหนดเดือนหน้า
+    const period = new Date(Date.UTC(y, m - 2 + offset, 1)); // งวด = เดือนก่อนหน้าของกำหนดนั้น
+    const pStr = period.toISOString().slice(0, 7);
+    const pLabel = period.toLocaleDateString("th-TH", { month: "long", year: "numeric", timeZone: "UTC" });
+    const day = (n: number) => new Date(Date.UTC(y, m - 1 + offset, n)).toISOString().slice(0, 10);
+
+    out.push({ title: "ยื่น ภ.ง.ด.3 / ภ.ง.ด.53", sub: `ภาษีหัก ณ ที่จ่าย งวด${pLabel}`, href: `/dashboard/reports?t=wht&period=${pStr}`, due: day(7), tone: "neutral" });
+    if (hasVat) {
+      out.push({ title: "ยื่น ภ.พ.30", sub: `ภาษีมูลค่าเพิ่ม งวด${pLabel}`, href: `/dashboard/reports?t=vat&period=${pStr}`, due: day(15), tone: "neutral" });
+    }
   }
-  // แสดงเฉพาะที่ยังไม่พ้นไปไกล — งานที่เลยมาเกินครึ่งเดือนแล้วไม่ใช่ "งานพรุ่งนี้" อีกต่อไป
-  return out.filter((t) => Date.parse(t.due) >= Date.parse(today) - 20 * 864e5);
+
+  // เก็บใบเดียวต่อแบบ: ใบที่กำหนดใกล้ที่สุดซึ่งยังไม่พ้นไปไกล (เลยมาเกิน 20 วัน = ไม่ใช่งานพรุ่งนี้แล้ว)
+  // และไม่โชว์ของที่ไกลเกิน 45 วันข้างหน้า — เตือนล่วงหน้าข้ามงวดคือเสียงรบกวน
+  const seen = new Set<string>();
+  return out
+    .filter((t) => {
+      const d = Date.parse(t.due) - Date.parse(today);
+      return d >= -20 * 864e5 && d <= 45 * 864e5;
+    })
+    .sort((a, b) => a.due.localeCompare(b.due))
+    .filter((t) => { if (seen.has(t.title)) return false; seen.add(t.title); return true; });
 }
 
 export default function TodoCard(input: TodoInput) {
