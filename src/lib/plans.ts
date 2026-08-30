@@ -15,6 +15,7 @@
 //  ค่าใน FALLBACK ตรงกับฐานข้อมูล ณ 6 ส.ค. 2569
 // ============================================================
 import { createServiceClient } from "@/lib/supabase/server";
+import { PLAN_NAME_TH } from "@/lib/plan-names";
 
 export interface PublicPlan {
   code: string;
@@ -31,11 +32,11 @@ export interface PublicPlan {
 const num = (n: number) => n.toLocaleString("th-TH");
 
 const FALLBACK: PublicPlan[] = [
-  { code: "free", name: "ทดลองใช้", price: "0", items: ["1 กิจการ", "ออกเอกสาร/บัญชี คีย์เองไม่จำกัด", "งาน AI 15 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติ 10 สลิป/เดือน", "พนักงานไม่จำกัด"], hot: false, free: true },
-  { code: "starter", name: "เริ่มต้น", price: "99", yearly: "990", items: ["1 กิจการ", "ออกเอกสาร/บัญชี/ภาษี ครบ คีย์เองไม่จำกัด", "งาน AI 100 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติ 100 สลิป/เดือน", "พนักงานไม่จำกัด"], hot: false, free: false },
-  { code: "professional", name: "ธุรกิจ", price: "199", yearly: "1,990", items: ["สูงสุด 3 กิจการ (แชร์โควตาร่วมกัน)", "สมุดรายวัน + 50 ทวิ + AI อ่านบิล", "งาน AI 400 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติ 200 สลิป/เดือน", "ถูกกว่าเจ้าตลาด และได้ผู้ช่วย AI ที่เขาไม่มี"], hot: true, free: false },
-  { code: "executive", name: "สำนักงานบัญชี", price: "499", yearly: "4,990", items: ["สูงสุด 10 กิจการ", "ไฟล์ยื่นสรรพากร ภ.พ.30 / ภ.ง.ด. (.txt)", "งาน AI 1,000 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติ 500 สลิป/เดือน", "ชุดส่งนักบัญชี Excel ครบงวด"], hot: false, free: false },
-  { code: "agency", name: "สำนักงานบัญชีใหญ่", price: "999", yearly: "9,990", items: ["ไม่จำกัดจำนวนกิจการ", "ทุกอย่างในสำนักงานบัญชี", "งาน AI 3,000 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติไม่จำกัด", "Audit Log + แยกข้อมูลลูกค้าเด็ดขาด (RLS)"], hot: false, free: false },
+  { code: "free", name: PLAN_NAME_TH.free, price: "0", items: ["1 กิจการ", "ออกเอกสาร/บัญชี คีย์เองไม่จำกัด", "งาน AI 15 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติ 10 สลิป/เดือน", "พนักงานไม่จำกัด"], hot: false, free: true },
+  { code: "starter", name: PLAN_NAME_TH.starter, price: "99", yearly: "990", items: ["1 กิจการ", "ออกเอกสาร/บัญชี/ภาษี ครบ คีย์เองไม่จำกัด", "งาน AI 100 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติ 100 สลิป/เดือน", "พนักงานไม่จำกัด"], hot: false, free: false },
+  { code: "professional", name: PLAN_NAME_TH.professional, price: "199", yearly: "1,990", items: ["สูงสุด 3 กิจการ (แชร์โควตาร่วมกัน)", "สมุดรายวัน + 50 ทวิ + AI อ่านบิล", "งาน AI 400 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติ 200 สลิป/เดือน", "ถูกกว่าเจ้าตลาด และได้ผู้ช่วย AI ที่เขาไม่มี"], hot: true, free: false },
+  { code: "executive", name: PLAN_NAME_TH.executive, price: "499", yearly: "4,990", items: ["สูงสุด 10 กิจการ", "ไฟล์ยื่นสรรพากร ภ.พ.30 / ภ.ง.ด. (.txt)", "งาน AI 1,000 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติ 500 สลิป/เดือน", "ชุดส่งนักบัญชี Excel ครบงวด"], hot: false, free: false },
+  { code: "agency", name: PLAN_NAME_TH.agency, price: "999", yearly: "9,990", items: ["ไม่จำกัดจำนวนกิจการ", "ทุกอย่างในสำนักงานบัญชี", "งาน AI 3,000 คำสั่ง/เดือน", "ตรวจสลิปอัตโนมัติไม่จำกัด", "Audit Log + แยกข้อมูลลูกค้าเด็ดขาด (RLS)"], hot: false, free: false },
 ];
 
 /** แพ็กที่เปิดขายจริง เรียงตาม sort — ใช้ทั้งหน้าแรกและที่อื่นที่ต้องโชว์ราคาให้คนนอกดู */

@@ -67,7 +67,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* ส่งได้เฉพาะข้อมูลที่ serialize ได้ (boolean / object ธรรมดา / server action / JSX)
           รายการเมนูพร้อมไอคอนอยู่ใน side-nav.tsx ฝั่ง client แล้ว ห้ามย้ายกลับมาที่นี่ */}
       <SideNav isAdmin={!!isAdmin}
-        foot={<SidebarFoot quota={quota as AiQuota | null} me={me} signOut={signOut} />}>
+        foot={<SidebarFoot quota={quota as AiQuota | null} planCode={shop.plan} me={me} signOut={signOut} />}>
         <SidebarHead companies={companies} currentId={shop.id} shopId={shop.id} notices={notices} />
       </SideNav>
 

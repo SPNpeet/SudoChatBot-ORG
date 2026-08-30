@@ -64,15 +64,15 @@ export function SidebarHead({ companies, currentId, shopId, notices }: {
  * ตอนนี้ปุ่มออกจากระบบย้ายเข้าไปอยู่ในเมนูบัญชี ซึ่งเป็นที่ที่ควรอยู่ —
  * และได้ผลพลอยได้คือกดพลาดยากขึ้น เดิมมันอยู่ติดเมนูสุดท้ายจนกดโดนบ่อย
  */
-export function SidebarFoot({ quota, me, signOut }: {
-  quota: AiQuota | null; me: Me; signOut: () => Promise<void>;
+export function SidebarFoot({ quota, planCode, me, signOut }: {
+  quota: AiQuota | null; planCode?: string | null; me: Me; signOut: () => Promise<void>;
 }) {
   const { collapsed } = useNav();
   return (
     <>
       {!collapsed && (
         <div className="border-t border-neutral-100 px-2 pt-2">
-          <AiQuotaBar quota={quota} />
+          <AiQuotaBar quota={quota} planCode={planCode} />
         </div>
       )}
       {/* "แนะนำ/ติชม" มาอยู่ตรงนี้แทนกระดิ่ง (กระดิ่งย้ายขึ้นบนสุด)

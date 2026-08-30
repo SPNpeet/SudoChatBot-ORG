@@ -13,7 +13,7 @@ export default async function BillingPage() {
   const { supabase, shop, role } = await getCurrentShop();
   const svc = createServiceClient();
 
-  const [{ data: summary }, { data: plans }, { data: txns }, { data: topups }, { data: pf }] = await Promise.all([
+  const [{ data: summary }, { data: plans }, { data: txns }, { data: topups }, { data: pf }, { data: quotaRaw }] = await Promise.all([
     supabase.rpc("billing_summary", { p_shop_id: shop.id }),
     svc.from("plans").select("*").eq("active", true).order("sort"),
     svc.from("wallet_transactions").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20),
@@ -21,7 +21,16 @@ export default async function BillingPage() {
     // ตรวจว่าตั้งคีย์ Stripe แล้วหรือยัง — แปลงเป็น boolean ทันที
     // ⚠️ ห้ามส่งค่าคีย์ลงไปที่ BillingClient เด็ดขาด (เป็น client component = หลุดถึงเบราว์เซอร์)
     svc.rpc("get_platform_stripe_key"),
+    // ⚠️ โควตา AI ต้องมาจาก get_ai_quota_status ตัวเดียว — ตัวเดียวกับที่ตัดจริงและที่ sidebar โชว์
+    // ภาพจริงจากมือถือ 30 ส.ค. 2569: sidebar บอก "8/15" แต่หน้านี้บอก "0/15 · เหลือ 15 จาก 15"
+    // เพราะหน้านี้เดิมนับจาก billing_summary (usage รายกิจการ) แต่ตัวที่ตัดนับ ai_usage_logs
+    // (assistant+ocr รวมทุกกิจการของเจ้าของ) — เลขคนละตัวบนเรื่องเดียวกัน = ผู้ใช้ไม่เชื่อระบบ
+    // บทเรียนเดียวกับกฎบัญชี: กฎที่อยู่สองที่จะเพี้ยนเสมอ
+    supabase.rpc("get_ai_quota_status", { p_shop_id: shop.id }),
   ]);
+  const quota = (quotaRaw ?? null) as {
+    used_today: number; cap_today: number | null; used_month: number; cap_month: number | null;
+  } | null;
 
   // ⚠️ "มีคีย์" ไม่เท่ากับ "รับเงินได้" — คีย์ sk_test รับได้แค่บัตรทดสอบ
   // ปล่อยให้ลูกค้าจริงเห็นปุ่มจ่ายเงินทั้งที่จ่ายไม่ผ่าน = เสียลูกค้าฟรี ๆ
@@ -48,13 +57,9 @@ export default async function BillingPage() {
   // กติกาที่ต้องคงไว้: เพดานรายวันมีจริงเฉพาะแพ็กที่ตั้ง daily_reply_cap ไว้เท่านั้น
   // ห้ามใส่ค่าสำรองเป็นตัวเลข — ไม่รู้ ต้องไม่เดา
   const planRow = (plans ?? []).find((p) => p.code === (plan?.code ?? "free")) as Plan | undefined;
-  const dailyCap = planRow?.daily_reply_cap ?? null;
-  const monthlyCap = plan?.included_replies ?? planRow?.included_replies ?? 0;
-  const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10); // วันแบบเวลาไทย
-  const { data: dailyRow } = await svc.from("usage_daily").select("replies_count").eq("shop_id", shop.id).eq("day", today).maybeSingle();
-  const dailyUsed = Math.min(dailyRow?.replies_count ?? 0, dailyCap ?? Infinity);
-  const monthlyUsed = Math.min(usage.replies_count, monthlyCap);
-  const quotaUsed = dailyCap ? dailyUsed : monthlyUsed;
+  const dailyCap = quota?.cap_today ?? planRow?.daily_reply_cap ?? null;
+  const monthlyCap = quota?.cap_month ?? plan?.included_replies ?? planRow?.included_replies ?? 0;
+  const quotaUsed = dailyCap ? (quota?.used_today ?? 0) : Math.min(quota?.used_month ?? usage.replies_count, monthlyCap);
   const quotaMax = dailyCap ?? monthlyCap;
   const quotaPct = quotaMax ? Math.round((quotaUsed / quotaMax) * 100) : 0;
   const monthlyFull = monthlyCap > 0 && usage.replies_count >= monthlyCap;
@@ -67,7 +72,7 @@ export default async function BillingPage() {
         help="ค่าบริการคิดตามแพ็กเกจที่เลือก ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด · ที่จำกัดคือ “งาน AI” (ผู้ช่วย + อ่านบิล) เท่านั้น — การออกเอกสาร ลงบัญชี และดูรายงานเองใช้ได้ไม่จำกัดทุกแพ็ก แม้โควตา AI หมด"
       />
 
-      {dailyCap !== null && dailyUsed >= dailyCap && (
+      {dailyCap !== null && quotaUsed >= dailyCap && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <span>ใช้ครบโควตา AI วันนี้แล้ว ({dailyCap.toLocaleString()} ครั้ง/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา (คีย์เอกสารเองได้ไม่จำกัด)</span>
         </div>

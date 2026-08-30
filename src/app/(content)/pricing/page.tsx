@@ -11,6 +11,7 @@
 // ============================================================
 import type { Metadata } from "next";
 import Link from "next/link";
+import StickyCta from "@/app/sticky-cta";
 import { ArrowRight, Check } from "lucide-react";
 import { getPublicPlans } from "@/lib/plans";
 
@@ -150,14 +151,9 @@ export default async function PricingPage() {
         </div>
       </section>
 
-      {/* แถบ CTA ติดจอมือถือ — หน้า ราคายาว เลื่อนถึงท้ายแล้วปุ่มหลักต้องยังอยู่ในมือเสมอ
-          โชว์เฉพาะจอเล็ก เดสก์ท็อปเห็นปุ่มบนการ์ดครบอยู่แล้ว */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/95 p-3 backdrop-blur sm:hidden">
-        <Link href="/signup"
-          className="flex min-h-12 w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-700 text-sm font-semibold text-white">
-          เริ่มทดลองใช้ฟรี — ไม่ต้องใช้บัตร <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
+      {/* แถบ CTA ติดจอมือถือ — โผล่หลังเลื่อนพ้นจอแรก (การ์ดแพ็กแรกมีปุ่มหลักอยู่แล้ว
+          ขึ้นพร้อมกัน = ปุ่มใหญ่สองปุ่มซ้อนในจอเดียว บทเรียนเดียวกับหน้าแรก 30 ส.ค. 2569) */}
+      <StickyCta label="เริ่มทดลองใช้ฟรี — ไม่ต้องใช้บัตร" brand="#047857" />
       <div className="h-16 sm:hidden" aria-hidden="true" />
     </div>
   );

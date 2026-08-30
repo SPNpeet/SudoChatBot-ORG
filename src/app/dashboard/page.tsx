@@ -225,6 +225,10 @@ export default async function Overview() {
 
       {/* ⚠️ วางก่อน "เอกสารล่าสุด" โดยตั้งใจ — สิ่งที่ยังต้องทำสำคัญกว่าสิ่งที่ทำไปแล้ว
           และเป็นเหตุผลเดียวที่ทำให้คนเปิดระบบซ้ำในวันถัดไป (ดูคอมเมนต์ใน todo-card.tsx) */}
+      {/* จอกว้าง: เอกสารล่าสุด | งานที่ต้องทำ เคียงกัน (ภาพอ้างอิงของเจ้าของ 30 ส.ค. 2569)
+          — เดิมกองเป็นตั้งแนวเดียว จอ 1440px เหลือที่ว่างขวามือทั้งแถบไม่ได้ใช้
+          จอเล็กยังเรียงลงเหมือนเดิม โดยงานที่ต้องทำมาก่อน (สิ่งที่ต้องทำสำคัญกว่าสิ่งที่ทำแล้ว) */}
+      <div className="grid items-start gap-4 xl:grid-cols-2">
       <TodoCard
         today={today}
         overdue={(overdue ?? []) as never}
@@ -233,8 +237,6 @@ export default async function Overview() {
         draftDocs={draftDocs ?? 0}
         hasVat={!!shop.tax_id}
       />
-
-      <DocTemplates />
 
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
@@ -293,9 +295,11 @@ export default async function Overview() {
                     </Td>
                     <Td label="ประเภท">{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
                     <Td label="คู่ค้า">{d.contact_name ?? "-"}</Td>
-                    <Td label="ยอด" className="text-right tabular-nums">{baht(d.total)}</Td>
-                    <Td label="สถานะ"><Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge></Td>
-                    <Td label="วันที่" className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
+                    {/* การ์ดนี้กว้างครึ่งจอแล้ว (จัดคู่กับงานที่ต้องทำ) — ยอดเงิน/วันที่ห้ามหักบรรทัด
+                        ภาพจริง 30 ส.ค. 2569: "32,100.00 ฿" หักเป็นสองบรรทัด อ่านเหมือนเลขคนละตัว */}
+                    <Td label="ยอด" className="whitespace-nowrap text-right tabular-nums">{baht(d.total)}</Td>
+                    <Td label="สถานะ"><span className="whitespace-nowrap"><Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge></span></Td>
+                    <Td label="วันที่" className="whitespace-nowrap text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
                   </RowLink>
                 ))}
               </tbody>
@@ -305,6 +309,15 @@ export default async function Overview() {
           )}
         </CardContent>
       </Card>
+      </div>
+
+      <DocTemplates />
+
+      {/* แถบความเชื่อมั่นท้ายหน้า — พูดเฉพาะสิ่งที่ระบบทำจริง ไม่อวดเลขลอย ๆ อย่าง "ปลอดภัย 100%" */}
+      <p className="pb-2 text-center text-[11px] text-neutral-400">
+        ข้อมูลของคุณเข้ารหัสระหว่างทางและแยกรายกิจการที่ระดับฐานข้อมูล · สำรองอัตโนมัติทุกวัน ·{" "}
+        <Link href="/privacy" className="underline hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
+      </p>
     </div>
   );
 }

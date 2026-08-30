@@ -124,8 +124,11 @@ export function StatCard({ label, value, hint, icon, tone = "neutral", className
           )}>{icon}</span>
         )}
       </div>
+      {/* ⚠️ ตัวเลขเงินห้ามตัดบรรทัด (แก้ 30 ส.ค. 2569 — ภาพจริงจากมือถือ:
+          "-52,100.00" อยู่บรรทัดหนึ่ง "฿" ตกไปอีกบรรทัด อ่านแวบแรกเหมือนเลขคนละตัว)
+          จอเล็กใช้ตัวเล็กลงหนึ่งขั้นแทนการยอมให้หัก — เลขยาวสุดที่เจอจริงยังพอดีกรอบ 2 คอลัมน์ */}
       <p className={cn(
-        "mt-2 text-2xl font-bold tabular-nums tracking-tight",
+        "mt-2 whitespace-nowrap text-xl font-bold tabular-nums tracking-tight sm:text-2xl",
         tone === "red" ? "text-red-600" : tone === "green" ? "text-emerald-700" : "text-neutral-900",
       )}>{value}</p>
       {hint && <p className="mt-1 text-xs text-neutral-400">{hint}</p>}

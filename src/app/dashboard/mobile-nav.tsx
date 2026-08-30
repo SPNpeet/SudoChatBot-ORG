@@ -5,8 +5,7 @@ import { cn } from "@/lib/utils";
 import { LayoutDashboard, FileText, Receipt, Menu, Calculator } from "lucide-react";
 import { useState } from "react";
 import {
-  Settings, ShieldCheck, Wallet, CircleHelp, BarChart3, Landmark, Store,
-  MessagesSquare, ScrollText, Package, Users, Banknote, BookOpenText, PieChart,
+  Settings, ShieldCheck, Wallet, CircleHelp, Package, Users, Banknote, BookOpenText, PieChart,
 } from "lucide-react";
 
 const main = [
@@ -36,18 +35,17 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
   // หน้าพิมพ์/PDF ต้องเต็มจอ ไม่มีแถบล่าง — เหตุผลเดียวกับปุ่มลอย (ดู quick-create.tsx)
   if (path.startsWith("/dashboard/print")) return null;
 
+  // ⚠️ แผ่นเมนูต้องสูงกว่าปุ่ม + ลอย (z-[46]) — ภาพจริงจากมือถือ 30 ส.ค. 2569:
+  // เปิดเมนูเพิ่มเติมแล้วปุ่มลอยสีเขียวทับแถว "ตั้งค่า" จนกดไม่ได้
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[48] bg-black/30 md:hidden" onClick={() => setOpen(false)}>
           <div className="absolute bottom-16 left-3 right-3 max-h-[65vh] overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-2" onClick={(e) => e.stopPropagation()}>
+            {/* โซน admin แยกไปมี layout + แถบนำทางของตัวเองแล้ว — ที่นี่เหลือทางเข้าเดียว
+                (คำสั่งเจ้าของ 30 ส.ค. 2569 ให้ระบบ admin แยกเป็นของมันเฉพาะ) */}
             {[...more, ...(isAdmin ? [
-              { href: "/dashboard/admin", label: "ศูนย์ AI (Admin)", icon: ShieldCheck },
-              { href: "/dashboard/admin/stats", label: "แดชบอร์ดแพลตฟอร์ม", icon: BarChart3 },
-              { href: "/dashboard/admin/billing", label: "รายได้ + บัญชีรับเงิน", icon: Landmark },
-              { href: "/dashboard/admin/shops", label: "จัดการผู้ใช้ระบบ", icon: Store },
-              { href: "/dashboard/admin/feedback", label: "ความเห็นผู้ใช้", icon: MessagesSquare },
-              { href: "/dashboard/admin/logs", label: "Audit Log", icon: ScrollText },
+              { href: "/dashboard/admin", label: "ศูนย์ผู้ดูแลแพลตฟอร์ม", icon: ShieldCheck },
             ] : [])].map((m) => (
               <Link key={m.href} href={m.href} onClick={() => setOpen(false)}
                 className={cn("flex items-center gap-3 rounded-xl px-4 py-3 text-sm", active(m.href) ? "bg-emerald-50 text-emerald-700" : "text-neutral-700 hover:bg-neutral-50")}>

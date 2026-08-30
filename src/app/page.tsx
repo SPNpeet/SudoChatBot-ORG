@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import HeroCommand from "./hero-command";
+import StickyCta from "./sticky-cta";
 import HeroTilt from "./hero-tilt";
 import PricingCards from "./pricing-cards";
 import { ArrowRight, Check, ShieldCheck, ChevronDown, ChevronUp, FileText, BookOpenText, Landmark, Receipt } from "lucide-react";
@@ -400,13 +401,8 @@ export default async function Landing() {
         </div>
       </section>
 
-      {/* แถบ CTA ติดล่างบนมือถือ — เลื่อนอ่านถึงไหนก็สมัครได้ทันที */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur sm:hidden">
-        <Link href="/signup" className="flex h-12 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-white active:scale-[0.99]"
-          style={{ backgroundColor: BRAND }}>
-          {c?.stickyCta ?? "เริ่มใช้ฟรี ไม่ต้องใช้บัตร"} <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
+      {/* แถบ CTA ติดล่างบนมือถือ — โผล่หลังเลื่อนพ้นจอแรก (จอแรกมีปุ่มหลักอยู่แล้ว) */}
+      <StickyCta label={c?.stickyCta ?? "เริ่มใช้ฟรี ไม่ต้องใช้บัตร"} brand={BRAND} />
 
       <footer className="border-t border-neutral-100 py-8 pb-24 sm:pb-8">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-6 text-xs text-neutral-400">
