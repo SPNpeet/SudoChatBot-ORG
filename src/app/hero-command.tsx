@@ -11,7 +11,8 @@
 //  ไม่ต้องเรียนรู้อะไรใหม่ และไม่ได้บังคับให้พิมพ์ — ปุ่ม "เริ่มใช้ฟรี" ยังอยู่ครบ
 // ============================================================
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Mic, MicOff } from "lucide-react";
+import { useVoiceInput } from "@/lib/use-voice-input";
 import type { HomeCopy } from "@/lib/i18n";
 
 // ตัวอย่างคำสั่งจริงที่ระบบทำได้ — วนให้เห็นขอบเขตงานโดยไม่ต้องเขียนบรรยายยาว
@@ -33,6 +34,10 @@ export default function HeroCommand({ cmd }: { cmd?: HomeCopy["heroCmd"] }) {
   const [text, setText] = useState("");
   const [ph, setPh] = useState("");
   const [focused, setFocused] = useState(false);
+  const [voiceMsg, setVoiceMsg] = useState<string | null>(null);
+  // พูดสั่งได้ตั้งแต่ยังไม่สมัคร — จุดที่คนตัดสินใจว่าจะใช้หรือไม่ใช้อยู่ตรงนี้
+  // เสียงเติมลงช่องเท่านั้น ยังต้องกด "ลองสั่ง" เอง (เห็นข้อความก่อนส่งเสมอ)
+  const { listening, supported: voiceOk, toggle: toggleVoice } = useVoiceInput(setText, setVoiceMsg);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // พิมพ์ตัวอย่างวนไปเรื่อย ๆ จนกว่าผู้ใช้จะเริ่มพิมพ์เอง
@@ -78,16 +83,28 @@ export default function HeroCommand({ cmd }: { cmd?: HomeCopy["heroCmd"] }) {
           ref={inputRef} value={text} onChange={(e) => setText(e.target.value)}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           maxLength={150} aria-label={cmd?.label ?? "พิมพ์สั่งงานบัญชี"}
-          placeholder={focused ? (cmd?.placeholder ?? "พิมพ์สั่งได้เลย เช่น ออกใบแจ้งหนี้ 5,000 ให้คุณสมชาย") : ph || " "}
+          placeholder={listening ? "กำลังฟัง... พูดได้เลย" : focused ? (cmd?.placeholder ?? "พิมพ์สั่งได้เลย เช่น ออกใบแจ้งหนี้ 5,000 ให้คุณสมชาย") : ph || " "}
           className="min-w-0 flex-1 bg-transparent py-3 text-[15px] text-neutral-900 outline-none placeholder:text-neutral-400"
         />
+        {voiceOk && (
+          <button type="button" onClick={() => { setVoiceMsg(null); toggleVoice(text); }}
+            aria-label={listening ? "หยุดฟัง" : "พูดสั่งงาน"} aria-pressed={listening}
+            title={listening ? "หยุดฟัง" : "พูดสั่งงาน — พูดจบแล้วหยุดเอง"}
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition-colors ${
+              listening ? "animate-pulse bg-red-50 text-red-600" : "text-neutral-500 hover:bg-neutral-100 hover:text-[#0B6B4A]"}`}>
+            {listening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          </button>
+        )}
         <button type="submit"
           className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#0B6B4A] px-4 py-3 text-sm font-semibold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.97] sm:px-5">
           {cmd?.send ?? "ลองสั่ง"} <ArrowRight className="h-4 w-4" />
         </button>
       </div>
       <p className="mt-2.5 text-[12px] text-neutral-500">
-        {cmd?.note ?? "ลองฟรี 3 ครั้ง ไม่ต้องสมัคร ไม่ต้องใช้บัตร"}
+        {listening
+          ? <span className="inline-flex items-center gap-1.5 font-medium text-red-600"><span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-red-500" />กำลังฟัง — พูดจบแล้วหยุดเอง แล้วค่อยกด “{cmd?.send ?? "ลองสั่ง"}”</span>
+          : voiceMsg ? <span className="text-amber-700">{voiceMsg}</span>
+          : (cmd?.note ?? "ลองฟรี 3 ครั้ง ไม่ต้องสมัคร ไม่ต้องใช้บัตร")}
       </p>
     </form>
   );

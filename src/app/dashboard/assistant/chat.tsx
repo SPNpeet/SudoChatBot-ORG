@@ -827,13 +827,13 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
               if (all.length) { e.preventDefault(); addFiles(all, "paste"); }
             }}
             placeholder={listening ? "กำลังฟัง... พูดสั่งงานได้เลย" : pendingFiles.length ? "สั่งกำกับบิล (ไม่พิมพ์ก็ได้) เช่น ค่าเช่า ยังไม่จ่าย" : "สั่งงานบัญชี หรือวางรูปบิลด้วย Ctrl+V ได้เลย"}
-            className="h-10 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
+            className="h-11 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
           {voiceSupported && (
-            <button type="button" onClick={toggleVoice} disabled={busy || !!reading}
-              aria-label={listening ? "หยุดฟัง" : "พูดสั่งงาน"}
-              title={listening ? "หยุดฟัง" : "พูดสั่งงาน — พูดแล้วตรวจข้อความก่อนกดส่งเหมือนพิมพ์เอง"}
+            <button type="button" onClick={() => { setError(null); toggleVoice(input); }} disabled={busy || !!reading}
+              aria-label={listening ? "หยุดฟัง" : "พูดสั่งงาน"} aria-pressed={listening}
+              title={listening ? "หยุดฟัง" : "พูดสั่งงาน — พูดจบแล้วหยุดเอง ตรวจข้อความก่อนกดส่งเหมือนพิมพ์เอง"}
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border disabled:opacity-40",
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border disabled:opacity-40",
                 listening
                   ? "border-red-300 bg-red-50 text-red-600 animate-pulse"
                   : "border-neutral-300 text-neutral-500 hover:border-emerald-400 hover:text-emerald-600",
@@ -842,10 +842,16 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
             </button>
           )}
           <button disabled={busy || !!reading || (!input.trim() && !pendingFiles.length)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
             {busy || reading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>
         </form>
+        {listening && (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-medium text-red-600">
+            <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+            กำลังฟัง — พูดจบแล้วหยุดเอง ตรวจข้อความแล้วค่อยกดส่ง
+          </p>
+        )}
         {/* คำเตือนตามผลตรวจ 28 ส.ค. 2569 — ความเชื่อใจมาจากความตรง ไม่ใช่จากการอวดว่าไม่พลาด */}
         <p className="mt-1.5 text-center text-[11px] leading-snug text-neutral-400">
           AI อาจอ่านบิลหรือสรุปผิดได้ — ตรวจตัวเลขก่อนใช้ยื่นภาษีเสมอ · แตะข้อความเดิมของคุณเพื่อสั่งซ้ำ

@@ -38,7 +38,8 @@ export default function CommandBar({ assistantName, proactive }: { assistantName
   const router = useRouter();
   // พูดสั่งงานได้จากหน้าแรกเลย ไม่ต้องเข้าไปหน้าแชทก่อน — เติมข้อความอย่างเดียว
   // ยังต้องกด "ส่งคำสั่ง" เองเหมือนพิมพ์ ไม่ auto-submit เพราะเป็นคำสั่งเงินของลูกค้า
-  const { listening, supported: voiceSupported, toggle: toggleVoice } = useVoiceInput(setText);
+  const [voiceMsg, setVoiceMsg] = useState<string | null>(null);
+  const { listening, supported: voiceSupported, toggle: toggleVoice } = useVoiceInput(setText, setVoiceMsg);
 
   function go(raw: string) {
     const q = raw.trim().slice(0, MAX_LEN);
@@ -86,10 +87,10 @@ export default function CommandBar({ assistantName, proactive }: { assistantName
         {voiceSupported && (
           <button
             type="button"
-            onClick={toggleVoice}
-            aria-label={listening ? "หยุดฟัง" : "พูดสั่งงาน"}
-            title={listening ? "หยุดฟัง" : "พูดสั่งงาน — พูดแล้วตรวจข้อความก่อนกดส่งเหมือนพิมพ์เอง"}
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors ${
+            onClick={() => { setVoiceMsg(null); toggleVoice(text); }}
+            aria-label={listening ? "หยุดฟัง" : "พูดสั่งงาน"} aria-pressed={listening}
+            title={listening ? "หยุดฟัง" : "พูดสั่งงาน — พูดจบแล้วหยุดเอง ตรวจข้อความก่อนกดส่งเหมือนพิมพ์เอง"}
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-lg transition-colors ${
               listening ? "animate-pulse bg-red-50 text-red-600" : "text-neutral-400 hover:bg-neutral-100 hover:text-emerald-600"
             }`}
           >
@@ -99,11 +100,18 @@ export default function CommandBar({ assistantName, proactive }: { assistantName
         <button
           type="submit"
           aria-label="ส่งคำสั่ง"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-500 disabled:opacity-40"
+          className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-emerald-600 text-white transition-colors hover:bg-emerald-500 disabled:opacity-40"
         >
           <ArrowUp className="h-4 w-4" />
         </button>
       </form>
+      {/* สถานะเสียงต้องเห็นชัดโดยไม่ต้องจ้องปุ่มเล็ก ๆ — บรรทัดเดียว หายเองเมื่อจบ */}
+      {(listening || voiceMsg) && (
+        <p className={`mt-2 inline-flex items-center gap-1.5 text-xs ${listening ? "font-medium text-red-600" : "text-amber-700"}`}>
+          {listening && <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-red-500" />}
+          {listening ? "กำลังฟัง — พูดจบแล้วหยุดเอง แล้วค่อยกดส่ง" : voiceMsg}
+        </p>
+      )}
 
       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
         {EXAMPLES.map((s) => (
