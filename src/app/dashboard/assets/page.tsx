@@ -64,7 +64,7 @@ export default async function AssetsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PageHeader icon={Boxes} tone="slate"
         title="ทรัพย์สิน + งานปิดงวด"
         lead={assets.length === 0
           ? "ยังไม่มีทรัพย์สินในทะเบียน — ของที่ใช้ได้เกิน 1 ปี ต้องทยอยตัดค่าเสื่อม ไม่ใช่ลงเป็นค่าใช้จ่ายทีเดียว"

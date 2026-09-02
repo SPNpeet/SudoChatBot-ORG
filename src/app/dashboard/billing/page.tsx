@@ -1,3 +1,4 @@
+import { Wallet } from "lucide-react";
 import { getCurrentShop, isPlatformAdmin } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle, Badge, PageHeader } from "@/components/ui";
@@ -66,7 +67,7 @@ export default async function BillingPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
-      <PageHeader
+      <PageHeader icon={Wallet} tone="emerald"
         title="แพ็กเกจและเครดิต"
         lead={<>แพ็กปัจจุบัน <b>{plan?.name ?? "ทดลองใช้"}</b>{quotaMax > 0 && <> · โควตา AI เหลือ <b>{Math.max(0, quotaMax - quotaUsed).toLocaleString()}</b> จาก {quotaMax.toLocaleString()} {dailyCap ? "วันนี้" : "เดือนนี้"}</>}</>}
         help="ค่าบริการคิดตามแพ็กเกจที่เลือก ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด · ที่จำกัดคือ “งาน AI” (ผู้ช่วย + อ่านบิล) เท่านั้น — การออกเอกสาร ลงบัญชี และดูรายงานเองใช้ได้ไม่จำกัดทุกแพ็ก แม้โควตา AI หมด"

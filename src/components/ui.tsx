@@ -155,17 +155,41 @@ export function StatCard({ label, value, hint, icon, tone = "neutral", className
  *  · help   = "หน้านี้ใช้ทำอะไร" ภาษาชาวบ้าน — สำคัญมากกับคนที่ไม่เคยใช้โปรแกรมบัญชี
  *  · action = ปุ่มหลัก 1 ปุ่ม (มือถือเต็มความกว้าง นิ้วกดง่าย)
  */
-export function PageHeader({ title, lead, help, action, back }: {
+/** สีประจำหมวด — ให้หน้าแต่ละกลุ่มมีสีของตัวเอง คนจำ "สีส้ม = ค่าใช้จ่าย" ได้โดยไม่ต้องอ่าน */
+const PAGE_TONES = {
+  emerald: "bg-emerald-100 text-emerald-700",
+  orange: "bg-orange-100 text-orange-700",
+  blue: "bg-blue-100 text-blue-700",
+  violet: "bg-violet-100 text-violet-700",
+  amber: "bg-amber-100 text-amber-700",
+  teal: "bg-teal-100 text-teal-700",
+  slate: "bg-slate-200 text-slate-700",
+  sky: "bg-sky-100 text-sky-700",
+  neutral: "bg-neutral-200 text-neutral-700",
+} as const;
+export type PageTone = keyof typeof PAGE_TONES;
+
+export function PageHeader({ title, lead, help, action, back, icon: Icon, tone = "emerald" }: {
   title: string; lead?: React.ReactNode; help?: React.ReactNode; action?: React.ReactNode;
   back?: { href: string; label: string };
+  icon?: React.ComponentType<{ className?: string }>; tone?: PageTone;
 }) {
   return (
     <div className="space-y-3">
       {back && <BackLink href={back.href} label={back.label} />}
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
+        {/* ไอคอนสีประจำหน้า (เพิ่ม 31 ส.ค. 2569 — เจ้าของบอกทั้งแอป "จืด ดูยาก งง")
+            ตัวเดียวกับไอคอนเมนูข้าง = เปิดมาแล้วรู้ทันทีว่ามาถูกหน้า โดยไม่ต้องอ่านหัวเรื่อง */}
+        <div className="flex min-w-0 items-start gap-3">
+          {Icon && (
+            <span className={cn("mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl", PAGE_TONES[tone])}>
+              <Icon className="h-5 w-5" />
+            </span>
+          )}
+          <div className="min-w-0">
           <h1 className="text-[22px] font-bold leading-tight tracking-tight text-neutral-900">{title}</h1>
           {lead && <p className="mt-1 text-sm text-neutral-600">{lead}</p>}
+          </div>
         </div>
         {action && <div className="w-full sm:w-auto [&_a]:w-full [&_button]:w-full sm:[&_a]:w-auto sm:[&_button]:w-auto">{action}</div>}
       </div>

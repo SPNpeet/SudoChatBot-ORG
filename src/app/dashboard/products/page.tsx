@@ -28,7 +28,7 @@ export default async function ProductsPage() {
   return (
     <div className="space-y-5">
       {/* คำโปรยบอกจำนวนกับของที่ใกล้หมด — สองอย่างที่คนเปิดหน้านี้มาดู ไม่ใช่ทวนชื่อหน้า */}
-      <PageHeader
+      <PageHeader icon={Package} tone="amber"
         title="สินค้า / บริการ"
         lead={products.length === 0 ? "ยังไม่มีรายการ — ใส่ของที่ขายประจำไว้ครั้งเดียว ใช้ได้ตลอด" : <>
           {products.length} รายการ

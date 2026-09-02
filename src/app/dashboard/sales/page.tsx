@@ -44,7 +44,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PageHeader icon={FileText} tone="emerald"
         title="เอกสารขาย"
         lead={<>ลูกค้ายังค้างเราอยู่ <b className="text-amber-600">{baht(outstandingTotal)}</b></>}
         help="ขายของ/บริการแล้วออกเอกสารที่นี่ — ได้เงินแล้วเลือก “ขายสด/ใบเสร็จ” · ให้เครดิตเลือก “ใบแจ้งหนี้” ระบบจะตามยอดค้างให้เอง · ยังไม่ตกลงราคาเลือก “ใบเสนอราคา” แล้วแปลงเป็นใบแจ้งหนี้ทีหลังได้ ไม่ต้องพิมพ์ใหม่"

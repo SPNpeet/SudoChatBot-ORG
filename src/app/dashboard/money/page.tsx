@@ -9,7 +9,7 @@ import { baht, dateTH, cn } from "@/lib/utils";
 import { PAY_METHOD_TH, docOutstanding } from "@/lib/finance";
 import type { FinPayment } from "@/lib/types/finance";
 import Link from "next/link";
-import { Landmark } from "lucide-react";
+import { Banknote, Landmark } from "lucide-react";
 import RowLink from "@/components/row-link";
 import SlipMatch from "./slip-match";
 import StatementImport from "./statement-import";
@@ -77,7 +77,7 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PageHeader icon={Banknote} tone="blue"
         title="การเงิน / กระทบยอด"
         lead={<>เดือนนี้เงินเข้า <b className="text-emerald-600">{baht(inMonth)}</b> · เงินออก <b className="text-red-600">{baht(outMonth)}</b></>}
         help="ที่นี่ไว้เช็คว่าเงินที่เข้าบัญชีจริง ตรงกับเอกสารที่ออกไปไหม — อัปสลิปที่ลูกค้าโอนมา ระบบจะจับคู่กับใบแจ้งหนี้และตัดยอดให้เอง หรือโหลดรายการเดินบัญชีจากแอปธนาคารมาเทียบทีเดียวทั้งเดือนก็ได้"

@@ -89,6 +89,12 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
+        {/* ไอคอนสีเดียวกับเมนูข้าง — มาตรฐานเดียวกับ PageHeader ของหน้าอื่น
+            (หน้านี้มีตัวเลือกเดือนในหัวจึงไม่ได้ใช้ PageHeader ตรง ๆ แต่หน้าตาต้องเข้าชุด) */}
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-200 text-slate-700">
+            <BookOpenText className="h-5 w-5" />
+          </span>
         <div className="min-w-0">
           <h1 className="text-[22px] font-bold leading-tight tracking-tight text-neutral-900">สมุดรายวัน</h1>
           <p className="mt-1 text-sm text-neutral-600">
@@ -96,6 +102,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
               ? <>เดือนนี้ <b className="text-neutral-900">{rows.length}</b> รายการ มูลค่ารวม <b className="text-neutral-900">{bahtDoc(monthTotal)}</b></>
               : "บันทึกบัญชีของทุกธุรกรรม เรียงตามวันที่"}
           </p>
+        </div>
         </div>
         <div className="flex items-center gap-2">
           <form method="get" className="flex items-center gap-2">

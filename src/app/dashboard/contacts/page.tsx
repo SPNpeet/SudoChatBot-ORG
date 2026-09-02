@@ -54,7 +54,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           เดิมเขียนว่า "ลูกค้าและผู้ขายทั้งหมดของ <ชื่อร้าน>" ซึ่งไม่ได้อะไรเพิ่มจากคำว่า
           "ผู้ติดต่อ" ที่อยู่ข้างบนเลย — เจ้าของบอกว่าอ่านแล้วเหมือนเขียนส่ง ๆ
           บรรทัดนี้คนกวาดตาผ่านทุกครั้งที่เข้าหน้า ต้องคุ้มค่าที่กวาด */}
-      <PageHeader
+      <PageHeader icon={Users} tone="violet"
         title="ผู้ติดต่อ"
         lead={<>
           {rows.length} รายชื่อ

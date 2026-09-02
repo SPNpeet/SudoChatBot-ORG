@@ -49,7 +49,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PageHeader icon={Receipt} tone="orange"
         title="ค่าใช้จ่าย"
         lead={<>บิลที่เรายังไม่ได้จ่าย <b className="text-red-600">{baht(unpaidTotal)}</b></>}
         help="ทุกบาทที่จ่ายออกไปบันทึกที่นี่ — ถ่ายรูปบิลให้ AI อ่านให้ก็ได้ ไม่ต้องพิมพ์เอง · ระบบแยก VAT ภาษีซื้อ และหัก ณ ที่จ่ายให้อัตโนมัติ เอาไปใช้ลดภาษีตอนสิ้นเดือนได้เลย"

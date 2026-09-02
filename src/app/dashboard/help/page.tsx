@@ -1,7 +1,7 @@
 // คู่มือใช้งาน — ภาพการทำงานจริงครบทุกโมดูล อ่านจบใช้เป็น
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitleIcon, PageHeader } from "@/components/ui";
-import {
+import { CircleHelp,
   Rocket, FileText, Receipt, Landmark, BookOpenText, Calculator, ShieldCheck, ArrowRight,
   Boxes, FileUp, Bell, Zap,
   type LucideIcon,
@@ -116,7 +116,7 @@ const SECTIONS: { title: string; icon: LucideIcon; items: { q: string; a: string
 export default function HelpPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <PageHeader
+      <PageHeader icon={CircleHelp} tone="sky"
         title="คู่มือใช้งาน"
         lead="ตอบคำถามที่คนใช้ครั้งแรกถามบ่อยที่สุด"
         help="ไม่ต้องอ่านทั้งหมดก็ได้ — ถ้าติดตรงไหน พิมพ์ถามผู้ช่วยบัญชี AI ได้เลย หรือกด แนะนำ/ติชม ในแถบเมนูซ้าย (บนมือถืออยู่ในเมนูบัญชี) เพื่อส่งคำถามถึงทีมงานโดยตรง"

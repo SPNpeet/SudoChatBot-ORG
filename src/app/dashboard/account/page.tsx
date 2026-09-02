@@ -19,7 +19,7 @@ import { PageHeader, Card, CardHeader, CardTitle, CardContent } from "@/componen
 import { roleLabel } from "@/lib/roles";
 import AccountForm from "./account-form";
 import Link from "next/link";
-import { Building2, ShieldCheck, FileText, ExternalLink } from "lucide-react";
+import { UserRound, Building2, ShieldCheck, FileText, ExternalLink } from "lucide-react";
 
 export default async function AccountPage() {
   const { supabase, user, memberships } = await getCurrentShop();
@@ -44,7 +44,7 @@ export default async function AccountPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
-      <PageHeader
+      <PageHeader icon={UserRound} tone="neutral"
         title="บัญชีของฉัน"
         lead="ชื่อที่นี่คือชื่อที่ถูกประทับไว้ในประวัติการแก้ไขเอกสารทุกใบที่คุณบันทึก"
         back={{ href: "/dashboard", label: "ภาพรวม" }}

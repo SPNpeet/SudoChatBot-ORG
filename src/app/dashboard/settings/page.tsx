@@ -6,7 +6,7 @@
 import { getCurrentShop } from "@/lib/shop";
 import { createServiceClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitleIcon, PageHeader } from "@/components/ui";
-import { Building2, Wallet, Bell, UsersRound, Lock } from "lucide-react";
+import { Settings, Building2, Wallet, Bell, UsersRound, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import PaymentSettingsForm from "./payment-settings-form";
@@ -79,7 +79,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5">
-      <PageHeader
+      <PageHeader icon={Settings} tone="neutral"
+        help="ตั้งครั้งเดียวใช้ได้ตลอด — ข้อมูลกิจการขึ้นบนหัวเอกสารทุกใบ ช่องทางรับเงินทำให้ใบแจ้งหนี้มี QR ให้ลูกค้าสแกน ส่วนการแจ้งเตือนเลือกได้ว่าอยากให้ระบบเตือนเรื่องไหน"
         title="ตั้งค่า"
         lead={todoCount > 0
           ? <>ยังตั้งค่าไม่ครบ <b className="text-amber-600">{todoCount} เรื่อง</b> — จุดที่มีป้ายสีคือที่ต้องไปต่อ</>

@@ -62,7 +62,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <ToastProvider>
     <NavShell>
-    <div className="min-h-screen">
+    {/* พื้นเทาอ่อนทั้งแคนวาส — เดิมขาวชนขาว การ์ดกับพื้นแยกไม่ออก เจ้าของอ่านว่า "จืด"
+        เงาอ่อน ๆ บนการ์ดทำงานได้ก็ต่อเมื่อพื้นหลังเข้มกว่าการ์ดสักหนึ่งขั้น */}
+    <div className="min-h-screen bg-neutral-100/60">
       {/* Sidebar — เดสก์ท็อป (พับได้ SideNav คุมความกว้างเอง) */}
       {/* ส่งได้เฉพาะข้อมูลที่ serialize ได้ (boolean / object ธรรมดา / server action / JSX)
           รายการเมนูพร้อมไอคอนอยู่ใน side-nav.tsx ฝั่ง client แล้ว ห้ามย้ายกลับมาที่นี่ */}

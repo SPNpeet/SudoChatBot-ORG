@@ -403,7 +403,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
             <div>
               <Label>{isExpense ? "ผู้ขาย/ซัพพลายเออร์" : "ลูกค้า"}</Label>
               <Select value={contactId} onChange={(e) => setContactId(e.target.value)}>
-                <option value="">— พิมพ์ชื่อเองด้านล่าง —</option>
+                <option value="">{isExpense ? "ผู้ขายรายใหม่ — พิมพ์ชื่อในช่องด้านล่าง" : "ลูกค้าใหม่ — พิมพ์ชื่อในช่องด้านล่าง"}</option>
                 {contacts.filter((c) => c.kind === contactKind || c.kind === "both").map((c) => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
@@ -435,7 +435,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
 
           {/* รายการ */}
           <div>
-            <Label>รายการ</Label>
+            <Label>รายการสินค้า/บริการ</Label>
             <div ref={rowsRef} className="space-y-2">
               {/*
                 ⚠️ เดิมบรรทัดนี้มี sm:grid-cols- ซ้ำสองอันในคลาสเดียวกัน (4 ช่อง กับ 5 ช่อง)

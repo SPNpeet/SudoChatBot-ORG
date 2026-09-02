@@ -10,7 +10,7 @@ import { agingBucket, AGING_LABEL_TH, docOutstanding, DOC_TYPE_TH } from "@/lib/
 import { rdClean, rdDateBE, rdAmount, checkRdWhtRows, rdVatLine, rdWhtLine, rdFile } from "@/lib/rd";
 import type { FinDoc } from "@/lib/types/finance";
 import Link from "next/link";
-import { LineChart, CheckCircle2, FileText, FileSpreadsheet, BookOpenText } from "lucide-react";
+import { PieChart, LineChart, CheckCircle2, FileText, FileSpreadsheet, BookOpenText } from "lucide-react";
 import ExportButtons from "./export-buttons";
 import PeriodPicker from "./period-picker";
 import AccountantPackage from "./accountant-package";
@@ -65,7 +65,15 @@ function parsePeriod(raw: string | undefined): Period {
   const m = raw && /^\d{4}-\d{2}$/.test(raw) ? raw : nowMonth;
   const d = new Date(m + "-01T00:00:00Z");
   d.setUTCMonth(d.getUTCMonth() + 1);
-  return { start: `${m}-01`, end: `${d.toISOString().slice(0, 7)}-01`, label: `เดือน ${m}`, key: m, months: [m] };
+  // ป้ายเดือนต้องเป็นภาษาคน — ภาพจริง 31 ส.ค. 2569: "กำลังดูเดือน 2026-09" อ่านเป็นเลขเครื่อง
+  // (ปี ค.ศ. ทั้งที่ทั้งระบบพูด พ.ศ.) ส่วน key ยังเป็น YYYY-MM เพราะ URL/คิวรีใช้ต่อ
+  const thLabel = new Date(m + "-01T00:00:00Z").toLocaleDateString("th-TH", { month: "long", year: "numeric", timeZone: "UTC" });
+  return { start: `${m}-01`, end: `${d.toISOString().slice(0, 7)}-01`, label: `เดือน${thLabel}`, key: m, months: [m] };
+}
+
+/** "2026-08" -> "ส.ค. 69" — เดือนในตารางต้องเป็นภาษาคน (ภาพจริง 31 ส.ค. 2569 โชว์เลขเครื่อง) */
+function thMonth(m: string) {
+  return new Date(m + "-01T00:00:00Z").toLocaleDateString("th-TH", { month: "short", year: "2-digit", timeZone: "UTC" });
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ t?: string; period?: string; m?: string }> }) {
@@ -82,7 +90,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PageHeader icon={PieChart} tone="teal"
         title="รายงาน + ภาษี"
         lead={<>กำลังดู{period.label}</>}
         help="ตัวเลขทุกช่องมาจากเอกสารจริงที่คุณบันทึกไว้ ไม่ต้องรอปิดงบ — ดูกำไร-ขาดทุน ใครค้างเรานานแค่ไหน และภาษีที่ต้องยื่นเดือนนี้ · โหลดเป็น Excel ส่งนักบัญชี หรือโหลดไฟล์ยื่นสรรพากรได้เลย"
@@ -236,7 +244,7 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
                   const profit = v.income - v.expense;
                   return (
                     <tr key={mm}>
-                      <Td className="font-medium">{mm}</Td>
+                      <Td className="whitespace-nowrap font-medium">{thMonth(mm)}</Td>
                       <Td label="รายได้" className="text-right text-emerald-700">{bahtDoc(v.income)}</Td>
                       <Td label="ค่าใช้จ่าย" className="text-right text-red-600">{bahtDoc(v.expense)}</Td>
                       <Td label="กำไร" className={cn("text-right font-semibold", profit >= 0 ? "text-emerald-700" : "text-red-600")}>{bahtDoc(profit)}</Td>
@@ -252,7 +260,7 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
                     <tr className="font-bold">
                       {/* เดิมเขียนว่า "รวม{period.label}" ซึ่งผิด เพราะรวมทุกเดือนในตาราง
                           ไม่ใช่เฉพาะงวดที่เลือก — คนอ่านแล้วเข้าใจว่ากำไรของเดือนนั้นเยอะกว่าจริง */}
-                      <Td>{rows.length > 1 ? `รวม ${rows[0]} ถึง ${rows[rows.length - 1]}` : `รวม${period.label}`}</Td>
+                      <Td>{rows.length > 1 ? `รวม ${thMonth(rows[0])} ถึง ${thMonth(rows[rows.length - 1])}` : `รวม${period.label}`}</Td>
                       <Td label="รายได้" className="text-right text-emerald-700">{bahtDoc(sum.income)}</Td>
                       <Td label="ค่าใช้จ่าย" className="text-right text-red-600">{bahtDoc(sum.expense)}</Td>
                       <Td label="กำไร" className={cn("text-right", sum.income - sum.expense >= 0 ? "text-emerald-700" : "text-red-600")}>{bahtDoc(sum.income - sum.expense)}</Td>
