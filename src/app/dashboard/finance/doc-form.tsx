@@ -281,6 +281,10 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
       force_duplicate: forceDuplicate,
     };
     start(async () => {
+      // ⚠️ ต้องมี catch เสมอ — saveDoc โยน exception ได้ตอนเน็ตหลุด
+      // ไม่มี catch = กดบันทึกแล้วเงียบสนิท ซึ่งคืออาการ "กดแล้วไม่เกิดอะไร"
+      // แบบเดียวกับบทเรียน 2 ส.ค. 2569 ข้างบนเป๊ะ แค่คนละเส้นทาง
+      try {
       const r = await saveDoc(shopId, input);
       if (r.ok) {
         // บอกให้ชัดว่าสำเร็จก่อนพาไปหน้าใหม่ — หน้าใหม่โหลดช้าบนมือถือ
@@ -296,6 +300,9 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
 ยืนยันออกเอกสารซ้ำอีกใบ?`)) submit(status, true);
         else setError(r.error);
       } else setError(r.error);
+      } catch {
+        setError("เชื่อมต่อไม่สำเร็จ — ข้อมูลที่พิมพ์ยังอยู่ครบ กดบันทึกอีกครั้งได้เลย");
+      }
     });
   }
 

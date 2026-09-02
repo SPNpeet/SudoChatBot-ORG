@@ -7,6 +7,7 @@ import MobileNav from "./mobile-nav";
 import { NavShell, MainArea } from "./nav-shell";
 import { SidebarHead, SidebarFoot } from "./sidebar-parts";
 import { ToastProvider } from "@/components/toast";
+import FailureNet from "./failure-net";
 import CommandPalette from "./command-palette";
 import SystemInbox from "./system-inbox";
 import { getNotices, type Notice, type QuotaLike } from "@/lib/notices";
@@ -61,6 +62,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <ToastProvider>
+      <FailureNet />
     <NavShell>
     {/* พื้นเทาอ่อนทั้งแคนวาส — เดิมขาวชนขาว การ์ดกับพื้นแยกไม่ออก เจ้าของอ่านว่า "จืด"
         เงาอ่อน ๆ บนการ์ดทำงานได้ก็ต่อเมื่อพื้นหลังเข้มกว่าการ์ดสักหนึ่งขั้น */}

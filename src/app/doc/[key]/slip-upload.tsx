@@ -8,9 +8,13 @@ export default function PublicSlipUpload({ docKey, autoVerify }: { docKey: strin
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // เก็บไฟล์รอบล่าสุดไว้ให้ปุ่ม "ส่งอีกครั้ง" — เดิมส่งล้มแล้วไฟล์หาย
+  // ลูกค้าต้องกลับไปควานหาสลิปในแกลเลอรีใหม่ ซึ่งหลายคนเลิกส่งตรงนี้เลย
+  const lastFileRef = useRef<File | null>(null);
   const router = useRouter();
 
   async function onFile(fRaw: File) {
+    lastFileRef.current = fRaw;
     setBusy(true); setMsg(null);
     try {
       const f = await compressImage(fRaw);
@@ -53,9 +57,16 @@ export default function PublicSlipUpload({ docKey, autoVerify }: { docKey: strin
           : "ร้านจะได้รับแจ้งเตือนและตรวจสลิปเอง สถานะจะเปลี่ยนเมื่อร้านยืนยันเรียบร้อย"}
       </p>
       {msg && (
-        <p className={`mt-2 rounded-xl px-3 py-2 text-sm ${msg.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+        <div className={`mt-2 rounded-xl px-3 py-2 text-sm ${msg.ok ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
           {msg.text}
-        </p>
+          {!msg.ok && lastFileRef.current && (
+            <button type="button" disabled={busy}
+              onClick={() => { const f = lastFileRef.current; if (f) void onFile(f); }}
+              className="mt-1.5 block w-full rounded-lg bg-red-600 py-2 text-xs font-semibold text-white transition-colors hover:bg-red-500 disabled:opacity-50">
+              ส่งสลิปเดิมอีกครั้ง
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

@@ -131,6 +131,8 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState("");                    // ข้อความความคืบหน้าตอนอ่านบิล
   const [error, setError] = useState<string | null>(null);
+  // ประวัติของรอบที่ส่งไม่สำเร็จ — ให้ปุ่ม "ส่งอีกครั้ง" ยิงซ้ำได้โดยไม่ต้องพิมพ์ใหม่
+  const retryRef = useRef<Msg[] | null>(null);
   // พูดสั่งงาน (Web Speech API) — เพิ่ม 28 ส.ค. 2569 ตามมอคอัพ Sudo Financial OS
   // เสียงแค่ "พิมพ์แทนมือ" ลงช่องเดิม ไม่ auto-submit เด็ดขาด — ต้องผ่านด่านตรวจ/ยืนยันเดิม
   // ทุกอย่างเหมือนคำสั่งพิมพ์เอง ไม่เปิดทางลัดให้เสียงสั่งเงินตรงๆ โดยไม่มีคนเห็นข้อความก่อนส่ง
@@ -359,10 +361,12 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
       } else if (r.quotaExceeded) {
         setQuotaWall(r.error ?? "โควตางาน AI เต็มแล้ว");
       } else {
+        retryRef.current = history;
         setError(r.error ?? "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
       }
     } catch {
-      setError("เชื่อมต่อไม่สำเร็จ ลองใหม่อีกครั้ง");
+      retryRef.current = history;
+      setError("เชื่อมต่อไม่สำเร็จ — ข้อความของคุณยังอยู่ กดส่งอีกครั้งได้เลย");
     } finally {
       clearInterval(poll);
       setStepLabel(null);
@@ -723,7 +727,20 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
             <Loader2 className="h-3 w-3 animate-spin" /> {stepLabel ? `${stepLabel}...` : "ผู้ช่วยบัญชีกำลังจัดการให้..."}
           </p>
         )}
-        {error && <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-600">{error}</p>}
+        {/* ล้มแล้วต้องมีปุ่มไปต่อในที่เดียวกัน — ข้อความว่า "ลองใหม่" เฉย ๆ โดยไม่มีปุ่ม
+            แปลว่าบังคับให้ผู้ใช้พิมพ์คำสั่งยาว ๆ ใหม่เอง ซึ่งคือจังหวะที่คนปิดแอปจริง */}
+        {error && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-red-50 px-3.5 py-2.5">
+            <p className="min-w-0 flex-1 text-sm text-red-600">{error}</p>
+            {retryRef.current && (
+              <button type="button"
+                onClick={() => { const h = retryRef.current; retryRef.current = null; setError(null); if (h) void askAi(h); }}
+                className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-500">
+                ส่งอีกครั้ง
+              </button>
+            )}
+          </div>
+        )}
         {quotaWall && (
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 text-center">
             <Zap className="mx-auto h-7 w-7 text-emerald-500" />
