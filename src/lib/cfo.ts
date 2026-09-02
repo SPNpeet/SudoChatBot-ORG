@@ -118,7 +118,10 @@ export async function getCfoBrief(db: SupabaseClient, shopId: string): Promise<C
       action: { label: "ใบไหนบ้าง", command: "มีบิลไหนต้องจ่ายภายใน 7 วันนี้บ้าง เรียงตามวันครบกำหนด" },
     });
   }
-  if (income_change_pct !== null && Math.abs(income_change_pct) >= 20) {
+  // เทียบแนวโน้มเฉพาะเมื่อเดือนเดินมาพอ — ภาพจริง 3 ก.ย. 2569: ขึ้น "รายรับลดลง 100%"
+  // ทั้งที่เดือนเพิ่งเริ่ม 3 วัน = ตัวเลขถูกแต่ความหมายผิด (สร้างความตกใจฟรี)
+  const dayOfMonth = Number(today.slice(8, 10));
+  if (dayOfMonth >= 10 && income_change_pct !== null && Math.abs(income_change_pct) >= 20) {
     insights.push({
       tone: income_change_pct < 0 ? "amber" : "green",
       title: `รายรับเดือนนี้${income_change_pct < 0 ? "ลดลง" : "เพิ่มขึ้น"} ${pct(Math.abs(income_change_pct))} จากเดือนก่อน`,
@@ -133,6 +136,7 @@ export async function getCfoBrief(db: SupabaseClient, shopId: string): Promise<C
   const headline = ar_overdue > 0
     ? `มีเงินรอเก็บที่เกินกำหนดแล้ว ${money(ar_overdue)} — เรื่องแรกที่ควรทำวันนี้คือทวง`
     : net < 0 ? `เดือนนี้เงินออกมากกว่าเข้า ${money(-net)} — ดูหมวดรายจ่ายก่อน`
+    : month_in === 0 && month_out === 0 ? `เดือนนี้ยังไม่มีเงินเข้า-ออก${ar_total > 0 ? ` — มีรอเก็บ ${money(ar_total)} ที่ยังไม่ถึงกำหนด` : ""}`
     : `เดือนนี้เงินสดเป็นบวก ${money(net)} — ไม่มีอะไรเร่ง`;
 
   return {
