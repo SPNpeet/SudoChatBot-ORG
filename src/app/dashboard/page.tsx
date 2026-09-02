@@ -8,6 +8,9 @@ import { baht, dateOnlyTH } from "@/lib/utils";
 import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding } from "@/lib/finance";
 import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
 import TodoCard from "./todo-card";
+import { createServiceClient } from "@/lib/supabase/server";
+import { hasDueWorkflows, runShopWorkflows } from "@/lib/workflows";
+import { saveDoc } from "@/app/dashboard/finance/actions";
 import CashflowChart from "./cashflow-chart";
 import SetupChecklist from "./setup-checklist";
 import SampleDataCard from "./sample-data-card";
@@ -38,6 +41,19 @@ function delta(now: number, prev: number) {
 
 export default async function Overview() {
   const { supabase, shop, role } = await getCurrentShop();
+  // AI Auto Workflow: ตรวจงานอัตโนมัติที่ถึงรอบ ตอนสมาชิกเปิดแดชบอร์ดครั้งแรกของวัน
+  // เหตุผลที่อยู่ตรงนี้: เส้น cron ยังไม่มี CRON_SECRET บน production (503) และเส้น cron
+  // ไม่มี session จึงสร้างร่างเอกสารไม่ได้ — ที่นี่มีทั้งสองอย่าง · จำกัดเวลา 6 วิ กันหน้าค้าง
+  // (งานเป็น idempotent ถ้าหมดเวลากลางคันรอบหน้าทำต่อได้ ไม่ซ้ำ) · ล้มได้เงียบ ไม่กระทบหน้า
+  try {
+    const svcWf = createServiceClient();
+    if (await hasDueWorkflows(svcWf, shop.id)) {
+      await Promise.race([
+        runShopWorkflows(svcWf, shop.id, { createDoc: (input) => saveDoc(shop.id, input) }),
+        new Promise((r) => setTimeout(r, 6000)),
+      ]);
+    }
+  } catch { /* งานอัตโนมัติเป็นของเสริม หน้าหลักต้องขึ้นเสมอ */ }
   // แดชบอร์ดปรับตามบทบาท (ผลตรวจ 28 ส.ค. 2569) — พนักงาน (agent) มาทำงานเอกสาร
   // ไม่ควรเห็นเงินสดรวม/กระแสเงินของกิจการ ซึ่งเป็นข้อมูลระดับเจ้าของ
   // ลูกหนี้/เจ้าหนี้ยังเห็น เพราะจำเป็นต่องานตามบิลของเขาเอง

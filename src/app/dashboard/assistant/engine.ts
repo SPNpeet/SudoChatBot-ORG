@@ -5,6 +5,7 @@
 //  audit log ครบเหมือนคีย์มือทุกประการ · ไม่มี tool ลบข้อมูล/แตะเงินแพลตฟอร์ม
 // ============================================================
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { validateConfig, WORKFLOW_MAX_PER_SHOP, WORKFLOW_KIND_TH } from "@/lib/workflows";
 import { addMemory, memoriesToPromptLines, resolveMemoryId, touchMemories, type BusinessMemory } from "@/lib/business-memory";
 import { OPENAI_COMPAT_BASE, estimateAiCost } from "@/lib/ai-catalog";
 import { resolvePurposeKey, resolveDefaultAiConfig } from "@/lib/ai-config";
@@ -168,6 +169,26 @@ export const TOOLS = [
       type: "object",
       properties: { id: { type: "string", description: "id ย่อ 8 ตัว เช่น 3f2a9c1b" } },
       required: ["id"],
+    },
+  },
+  {
+    name: "setup_workflow",
+    description: "ตั้งงานอัตโนมัติให้กิจการ (AI Auto Workflow) เมื่อผู้ใช้สั่งชัดเจน เช่น \"ทุกวันที่ 1 ร่างใบแจ้งหนี้ค่าเช่า 15,000 ให้ร้าน A\" / \"เตือนทวงหนี้ที่เกินกำหนด 7 วัน\" / \"แจ้งสต๊อกเหลือต่ำกว่า 5\" — งานอัตโนมัติทำได้แค่ ร่าง+แจ้ง ไม่ออกเอกสารจริง ไม่จ่ายเงิน ไม่ส่งหาลูกค้าเอง · ต้องบอกผู้ใช้เสมอว่าตรวจ/ปิดได้ที่หน้า งานอัตโนมัติ",
+    input_schema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: ["overdue_reminder", "recurring_invoice", "low_stock"] },
+        name: { type: "string", description: "ชื่องานสั้นๆ" },
+        days_after_due: { type: "number", description: "overdue_reminder: เตือนเมื่อเกินกำหนดครบกี่วัน (0-90)" },
+        threshold: { type: "number", description: "low_stock: แจ้งเมื่อเหลือไม่เกินกี่ชิ้น" },
+        day_of_month: { type: "number", description: "recurring_invoice: ร่างทุกวันที่ (1-28)" },
+        contact_name: { type: "string", description: "recurring_invoice: ชื่อลูกค้า" },
+        items: { type: "array", description: "recurring_invoice: รายการ", items: { type: "object", properties: {
+          name: { type: "string" }, qty: { type: "number" }, unit_price: { type: "number" } }, required: ["name", "unit_price"] } },
+        vat_mode: { type: "string", enum: ["none", "exclusive", "inclusive"] },
+        wht_rate: { type: "number" },
+      },
+      required: ["kind"],
     },
   },
   {
@@ -459,6 +480,7 @@ export const TOOLS = [
 export const ASSISTANT_TOOL_LABEL_TH: Record<string, string> = {
   ask_user: "ขอคำยืนยัน",
   remember: "จดจำข้อมูลกิจการ",
+  setup_workflow: "ตั้งงานอัตโนมัติ",
   forget: "ลืมข้อมูลที่จำไว้",
   get_overview: "ดูภาพรวมธุรกิจ", list_docs: "ค้นเอกสาร", get_doc: "เปิดเอกสาร",
   create_sales_doc: "ออกเอกสารขาย", create_expense: "บันทึกค่าใช้จ่าย",
@@ -533,6 +555,27 @@ export async function executeTool(ctx: AssistantCtx, name: string, input: Record
         return JSON.stringify(r.ok
           ? { ok: true, id: r.id.slice(0, 8), note: "จำแล้ว — ผู้ใช้ดู/ลบได้ที่หน้า สิ่งที่ผู้ช่วยจำ" }
           : { error: r.error });
+      }
+      case "setup_workflow": {
+        if (ctx.role !== "owner" && ctx.role !== "admin") return JSON.stringify({ error: "เฉพาะเจ้าของ/ผู้ดูแลเท่านั้นที่ตั้งงานอัตโนมัติได้" });
+        await reportProgress(ctx, "ตั้งงานอัตโนมัติ");
+        const kind = String(input.kind ?? "") as keyof typeof WORKFLOW_KIND_TH;
+        if (!(kind in WORKFLOW_KIND_TH)) return JSON.stringify({ error: "ไม่รู้จักชนิดงาน" });
+        if (kind === "recurring_invoice" && input.contact_name) {
+          const c = await matchContact(ctx, String(input.contact_name), "customer");
+          if (c?.id) input.contact_id = c.id;
+        }
+        const v = validateConfig(kind, input);
+        if (!v.ok) return JSON.stringify({ error: v.error });
+        const { count } = await s.from("ai_workflows").select("id", { count: "exact", head: true }).eq("shop_id", ctx.shopId);
+        if ((count ?? 0) >= WORKFLOW_MAX_PER_SHOP) return JSON.stringify({ error: `ตั้งได้สูงสุด ${WORKFLOW_MAX_PER_SHOP} งาน` });
+        const name = String(input.name ?? "").trim().slice(0, 120) || WORKFLOW_KIND_TH[kind].name;
+        const { data: wf, error } = await s.from("ai_workflows")
+          .insert({ shop_id: ctx.shopId, kind, name, config: v.config, source: "ai", created_by: ctx.userId })
+          .select("id").single();
+        if (error || !wf) return JSON.stringify({ error: "บันทึกไม่สำเร็จ" });
+        return JSON.stringify({ ok: true, name, link: "/dashboard/assistant/workflows",
+          note: "ตั้งแล้ว — ระบบจะตรวจทุกวัน ทำได้แค่ร่าง/แจ้ง ผู้ใช้ต้องกดออกจริง/ส่งเอง ปิดได้ที่หน้า งานอัตโนมัติ" });
       }
       case "forget": {
         const id = await resolveMemoryId(s, ctx.shopId, String(input.id ?? ""));
@@ -1472,7 +1515,7 @@ const WRITE_TOOLS = new Set([
   // แล้วบังคับให้โมเดลวนทำซ้ำ = ออกใบลดหนี้/ลงสมุดรายวันซ้ำสองครั้ง
   "issue_credit_note", "add_journal_entry", "approve_expense", "add_fixed_asset", "run_depreciation",
   // ความจำ: "จำแล้ว/ลืมแล้ว" ก็เป็นคำอ้างที่ต้องมี tool จริงรองรับ
-  "remember", "forget",
+  "remember", "forget", "setup_workflow",
 ]);
 // อ้างว่าทำรายการสำเร็จ (เช่น "บันทึก...เรียบร้อยแล้ว") แต่ไม่นับประโยคปฏิเสธ
 const CLAIM_RE = /(บันทึก|ออกใบ|สร้างใบ|ลงบัญชี|ตั้งหนี้|ยกเลิกเอกสาร|แปลงเป็น|รับชำระ|จ่ายเงิน)[^\n]{0,60}(แล้ว|เรียบร้อย|สำเร็จ)/;

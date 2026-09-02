@@ -1,6 +1,6 @@
 import { getCurrentShop } from "@/lib/shop";
 import { Card, CardContent } from "@/components/ui";
-import { Calculator, FileText, Banknote, Receipt, BarChart3, Package, Landmark, CircleHelp, Brain } from "lucide-react";
+import { Calculator, FileText, Banknote, Receipt, BarChart3, Package, Landmark, CircleHelp, Brain, Workflow } from "lucide-react";
 import Link from "next/link";
 import AssistantChat from "./chat";
 import AssistantNameEditor from "./name-editor";
@@ -60,6 +60,10 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+        <Link href="/dashboard/assistant/workflows" title="งานอัตโนมัติที่ตั้งไว้"
+          className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
+          <Workflow className="h-3.5 w-3.5" /><span className="hidden sm:inline">งานอัตโนมัติ</span>
+        </Link>
         <Link href="/dashboard/assistant/memory" title="สิ่งที่ผู้ช่วยจำเกี่ยวกับกิจการ"
           className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
           <Brain className="h-3.5 w-3.5" /><span className="hidden sm:inline">สิ่งที่จำ</span>
