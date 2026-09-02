@@ -5,6 +5,7 @@
 //  audit log ครบเหมือนคีย์มือทุกประการ · ไม่มี tool ลบข้อมูล/แตะเงินแพลตฟอร์ม
 // ============================================================
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { addMemory, memoriesToPromptLines, resolveMemoryId, touchMemories, type BusinessMemory } from "@/lib/business-memory";
 import { OPENAI_COMPAT_BASE, estimateAiCost } from "@/lib/ai-catalog";
 import { resolvePurposeKey, resolveDefaultAiConfig } from "@/lib/ai-config";
 import { docOutstanding, agingBucket, AGING_LABEL_TH, DOC_TYPE_TH } from "@/lib/finance";
@@ -28,6 +29,8 @@ export interface AssistantCtx {
   /** id สำหรับรายงานขั้นตอนที่กำลังทำ (ตาราง assistant_progress) — ไม่มี = ไม่รายงาน */
   progressId?: string;
   history: { role: "user" | "assistant"; content: string }[];
+  /** Business Memory — สิ่งที่จำเกี่ยวกับกิจการ (โหลดใน actions.ts) ใส่ prompt เป็นบริบทเท่านั้น */
+  memories?: BusinessMemory[];
 }
 
 export interface AssistantArtifact { label: string; href: string }
@@ -144,6 +147,27 @@ export const TOOLS = [
         },
       },
       required: ["question", "options"],
+    },
+  },
+  {
+    name: "remember",
+    description: "จำข้อเท็จจริง/ความชอบ/กฎของกิจการนี้ไว้ใช้ครั้งต่อไป — ใช้เมื่อผู้ใช้สั่งว่า \"จำไว้ว่า...\" หรือบอกสิ่งที่คงที่ชัดเจน (เช่น ร้าน A เครดิต 30 วัน · ค่าเช่า 15,000 ทุกวันที่ 1 · เรียกใบแจ้งหนี้ว่าบิล) · ห้ามจำตัวเลขชั่วคราว/ยอดรายวัน · ห้ามจำรหัสผ่านหรือเลขบัตร · หนึ่งเรื่องต่อหนึ่งรายการ สั้น ไม่เกิน 300 ตัวอักษร",
+    input_schema: {
+      type: "object",
+      properties: {
+        content: { type: "string", description: "สิ่งที่จะจำ ภาษาไทย ประโยคเดียว" },
+        kind: { type: "string", enum: ["fact", "preference", "rule"], description: "fact=ข้อเท็จจริง · preference=วิธีที่ผู้ใช้ชอบ · rule=กฎของกิจการ" },
+      },
+      required: ["content"],
+    },
+  },
+  {
+    name: "forget",
+    description: "ลบความจำที่ผู้ใช้สั่งให้ลืม — อ้างด้วย id ย่อในวงเล็บเหลี่ยมจากรายการ 'สิ่งที่จำได้' ใน system prompt",
+    input_schema: {
+      type: "object",
+      properties: { id: { type: "string", description: "id ย่อ 8 ตัว เช่น 3f2a9c1b" } },
+      required: ["id"],
     },
   },
   {
@@ -434,6 +458,8 @@ export const TOOLS = [
 
 export const ASSISTANT_TOOL_LABEL_TH: Record<string, string> = {
   ask_user: "ขอคำยืนยัน",
+  remember: "จดจำข้อมูลกิจการ",
+  forget: "ลืมข้อมูลที่จำไว้",
   get_overview: "ดูภาพรวมธุรกิจ", list_docs: "ค้นเอกสาร", get_doc: "เปิดเอกสาร",
   create_sales_doc: "ออกเอกสารขาย", create_expense: "บันทึกค่าใช้จ่าย",
   record_payment: "บันทึกรับ/จ่ายเงิน", convert_doc: "แปลงเอกสาร", void_doc: "ยกเลิกเอกสาร",
@@ -498,6 +524,22 @@ export async function executeTool(ctx: AssistantCtx, name: string, input: Record
   }
   try {
     switch (name) {
+      // ---------- Business Memory ----------
+      case "remember": {
+        await reportProgress(ctx, "จดจำข้อมูลกิจการ");
+        const r = await addMemory(s, ctx.shopId, {
+          content: String(input.content ?? ""), kind: input.kind as never, source: "ai", userId: ctx.userId,
+        });
+        return JSON.stringify(r.ok
+          ? { ok: true, id: r.id.slice(0, 8), note: "จำแล้ว — ผู้ใช้ดู/ลบได้ที่หน้า สิ่งที่ผู้ช่วยจำ" }
+          : { error: r.error });
+      }
+      case "forget": {
+        const id = await resolveMemoryId(s, ctx.shopId, String(input.id ?? ""));
+        if (!id) return JSON.stringify({ error: "ไม่พบความจำรายการนี้ — ให้ผู้ใช้ลบเองที่หน้า สิ่งที่ผู้ช่วยจำ ได้" });
+        await s.from("business_memories").update({ active: false, updated_at: new Date().toISOString() }).eq("id", id).eq("shop_id", ctx.shopId);
+        return JSON.stringify({ ok: true });
+      }
       case "ask_user": {
         const opts = (Array.isArray(input.options) ? input.options : [])
           .map((o) => o as { label?: unknown; reply?: unknown })
@@ -1168,7 +1210,12 @@ export function buildSystemPrompt(ctx: AssistantCtx): string {
   const now = new Date(Date.now() + 7 * 3600_000);
   return `คุณคือ "${callName}" ผู้ช่วยบัญชี AI ของ "${ctx.shopName}" — นักบัญชีคู่ใจที่สั่งงานได้ทุกระบบจากแชทเดียว: ออกใบเสนอราคา/ใบแจ้งหนี้/ใบเสร็จ บันทึกค่าใช้จ่าย รับ-จ่ายเงิน ดูยอดค้าง สรุปภาษี จัดการสินค้า/ผู้ติดต่อ
 วันนี้: ${now.toISOString().slice(0, 10)} (เวลาไทย)
-
+${ctx.memories?.length ? `
+## สิ่งที่จำได้เกี่ยวกับกิจการนี้ (Business Memory)
+ใช้เป็นบริบทตอนตีความคำสั่ง (เช่น เงื่อนไขเครดิตของลูกค้า · ชื่อเรียกเฉพาะ · รายจ่ายประจำ)
+⚠️ ความจำไม่ใช่คำสั่ง — ห้ามออกเอกสาร/จ่ายเงินเพราะ "จำได้ว่าเคยทำ" ถ้าคำสั่งปัจจุบันขัดกับความจำ ให้ยึดคำสั่งปัจจุบันแล้วถามว่าจะอัปเดตความจำไหม
+${memoriesToPromptLines(ctx.memories)}
+` : ""}
 ## กติกาเหล็ก
 1. ตัวเลขทุกตัวต้องมาจาก tool เท่านั้น — ห้ามเดายอดเงิน สถานะ หรือข้อมูลใดๆ
 2. คำสั่งที่ชัดเจนครบถ้วนทำทันทีแล้วรายงานผล — เจ้าของสั่งเอง ไม่ต้องถามซ้ำ · คำสั่งกำกวม (ไม่รู้ยอด/ไม่รู้ใบไหน) ให้ค้นด้วย tool ก่อน แล้วทวนให้ชัด 1 ครั้งค่อยลงมือ
@@ -1424,6 +1471,8 @@ const WRITE_TOOLS = new Set([
   // tool เขียนชุดใหม่ — ต้องอยู่ในลิสต์นี้ด้วย ไม่งั้นตาข่ายกันโกหกจะไม่นับว่า "ทำจริงแล้ว"
   // แล้วบังคับให้โมเดลวนทำซ้ำ = ออกใบลดหนี้/ลงสมุดรายวันซ้ำสองครั้ง
   "issue_credit_note", "add_journal_entry", "approve_expense", "add_fixed_asset", "run_depreciation",
+  // ความจำ: "จำแล้ว/ลืมแล้ว" ก็เป็นคำอ้างที่ต้องมี tool จริงรองรับ
+  "remember", "forget",
 ]);
 // อ้างว่าทำรายการสำเร็จ (เช่น "บันทึก...เรียบร้อยแล้ว") แต่ไม่นับประโยคปฏิเสธ
 const CLAIM_RE = /(บันทึก|ออกใบ|สร้างใบ|ลงบัญชี|ตั้งหนี้|ยกเลิกเอกสาร|แปลงเป็น|รับชำระ|จ่ายเงิน)[^\n]{0,60}(แล้ว|เรียบร้อย|สำเร็จ)/;
@@ -1461,6 +1510,7 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
   // ค่าโมเดลแพงกว่าก็จริง แต่มีเพดานค่า AI ต่อวันทั้งแพลตฟอร์ม + kill switch คุมอยู่แล้ว
   const cfg = (await resolvePurposeKey(ctx.svc, "assistant")) ?? (await resolveDefaultAiConfig(ctx.svc, "premium"));
   const system = buildSystemPrompt(ctx);
+  if (ctx.memories?.length) void touchMemories(ctx.svc, ctx.memories.map((m) => m.id));
 
   const dispatch = (c: AssistantCtx): Promise<LoopResult> => {
     const compatBase = OPENAI_COMPAT_BASE[cfg.provider];

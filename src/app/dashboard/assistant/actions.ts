@@ -9,6 +9,7 @@ import { assertMember } from "@/lib/shop";
 import { platformAiGuard, consumeAiQuota } from "@/lib/ai-guard";
 import { createServiceClient } from "@/lib/supabase/server";
 import { friendlyAiError } from "@/lib/ai-errors";
+import { loadMemoriesForPrompt } from "@/lib/business-memory";
 import { runAssistant, type AssistantCtx } from "./engine";
 
 export interface AssistantTurn { role: "user" | "assistant"; content: string }
@@ -65,8 +66,10 @@ export async function assistantReply(shopId: string, history: AssistantTurn[], p
       return { ok: false, error: "ไม่มีข้อความให้ตอบ" };
     }
 
+    // Business Memory — โหลดล้มได้เงียบ (ไม่มีความจำ ผู้ช่วยยังทำงานได้ แค่ต้องบอกซ้ำ)
+    const memories = await loadMemoriesForPrompt(svc, shopId).catch(() => []);
     const ctx: AssistantCtx = {
-      svc, shopId, shopName: shop.name, role, userId: user.id, history: trimmed,
+      svc, shopId, shopName: shop.name, role, userId: user.id, history: trimmed, memories,
       progressId: progressId && UUID_RE.test(progressId) ? progressId : undefined,
       assistantName: String(((shop.settings ?? {}) as Record<string, unknown>).assistant_name ?? "").trim() || undefined,
     };

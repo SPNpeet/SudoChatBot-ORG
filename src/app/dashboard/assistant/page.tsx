@@ -1,6 +1,7 @@
 import { getCurrentShop } from "@/lib/shop";
 import { Card, CardContent } from "@/components/ui";
-import { Calculator, FileText, Banknote, Receipt, BarChart3, Package, Landmark, CircleHelp } from "lucide-react";
+import { Calculator, FileText, Banknote, Receipt, BarChart3, Package, Landmark, CircleHelp, Brain } from "lucide-react";
+import Link from "next/link";
 import AssistantChat from "./chat";
 import AssistantNameEditor from "./name-editor";
 import FitViewport from "@/components/fit-viewport";
@@ -58,6 +59,11 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
             {["owner", "admin"].includes(role) && <AssistantNameEditor shopId={shop.id} current={assistantName} />}
           </div>
         </div>
+        <div className="flex shrink-0 items-center gap-2">
+        <Link href="/dashboard/assistant/memory" title="สิ่งที่ผู้ช่วยจำเกี่ยวกับกิจการ"
+          className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
+          <Brain className="h-3.5 w-3.5" /><span className="hidden sm:inline">สิ่งที่จำ</span>
+        </Link>
         <details className="relative shrink-0">
           <summary className="inline-flex h-11 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
             <CircleHelp className="h-3.5 w-3.5" />ทำอะไรได้บ้าง
@@ -75,6 +81,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
             ))}
           </div>
         </details>
+        </div>
       </div>
 
       <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
