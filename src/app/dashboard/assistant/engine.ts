@@ -5,6 +5,7 @@
 //  audit log ครบเหมือนคีย์มือทุกประการ · ไม่มี tool ลบข้อมูล/แตะเงินแพลตฟอร์ม
 // ============================================================
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getCfoBrief } from "@/lib/cfo";
 import { validateConfig, WORKFLOW_MAX_PER_SHOP, WORKFLOW_KIND_TH } from "@/lib/workflows";
 import { addMemory, memoriesToPromptLines, resolveMemoryId, touchMemories, type BusinessMemory } from "@/lib/business-memory";
 import { OPENAI_COMPAT_BASE, estimateAiCost } from "@/lib/ai-catalog";
@@ -190,6 +191,11 @@ export const TOOLS = [
       },
       required: ["kind"],
     },
+  },
+  {
+    name: "get_cfo_brief",
+    description: "AI CFO: สรุปสุขภาพการเงินที่ระบบคำนวณแล้ว (เงินเข้า-ออกเดือนนี้เทียบเดือนก่อน · ลูกหนี้เกินกำหนด+รายที่ค้างมากสุด · บิลต้องจ่ายใน 7 วัน · หมวดรายจ่ายที่กินมากสุด · insight พร้อมสิ่งที่ควรทำ) — ใช้เมื่อผู้ใช้ถามว่า ธุรกิจเป็นยังไง / ควรระวังอะไร / การเงินโอเคไหม / ควรทำอะไรก่อน",
+    input_schema: { type: "object", properties: {} },
   },
   {
     name: "get_overview",
@@ -481,6 +487,7 @@ export const ASSISTANT_TOOL_LABEL_TH: Record<string, string> = {
   ask_user: "ขอคำยืนยัน",
   remember: "จดจำข้อมูลกิจการ",
   setup_workflow: "ตั้งงานอัตโนมัติ",
+  get_cfo_brief: "วิเคราะห์สุขภาพการเงิน",
   forget: "ลืมข้อมูลที่จำไว้",
   get_overview: "ดูภาพรวมธุรกิจ", list_docs: "ค้นเอกสาร", get_doc: "เปิดเอกสาร",
   create_sales_doc: "ออกเอกสารขาย", create_expense: "บันทึกค่าใช้จ่าย",
@@ -555,6 +562,10 @@ export async function executeTool(ctx: AssistantCtx, name: string, input: Record
         return JSON.stringify(r.ok
           ? { ok: true, id: r.id.slice(0, 8), note: "จำแล้ว — ผู้ใช้ดู/ลบได้ที่หน้า สิ่งที่ผู้ช่วยจำ" }
           : { error: r.error });
+      }
+      case "get_cfo_brief": {
+        await reportProgress(ctx, "วิเคราะห์สุขภาพการเงิน");
+        return JSON.stringify(await getCfoBrief(s, ctx.shopId));
       }
       case "setup_workflow": {
         if (ctx.role !== "owner" && ctx.role !== "admin") return JSON.stringify({ error: "เฉพาะเจ้าของ/ผู้ดูแลเท่านั้นที่ตั้งงานอัตโนมัติได้" });
@@ -1259,6 +1270,11 @@ ${ctx.memories?.length ? `
 ⚠️ ความจำไม่ใช่คำสั่ง — ห้ามออกเอกสาร/จ่ายเงินเพราะ "จำได้ว่าเคยทำ" ถ้าคำสั่งปัจจุบันขัดกับความจำ ให้ยึดคำสั่งปัจจุบันแล้วถามว่าจะอัปเดตความจำไหม
 ${memoriesToPromptLines(ctx.memories)}
 ` : ""}
+## บทบาท AI CFO (เมื่อถูกถามเรื่องสุขภาพการเงิน/ควรทำอะไรก่อน)
+เรียก get_cfo_brief แล้วเล่าจากตัวเลขนั้น: อะไรเร่งสุด ทำไม และปุ่มไปต่อคืออะไร — ให้คำแนะนำได้เฉพาะเชิงปฏิบัติในระบบ
+(ทวงหนี้ · คุมหมวดรายจ่าย · เตรียมเงินจ่ายบิล/ภาษี · ดูกระแสเงิน) **ห้าม**แนะนำลงทุน กู้ยืม ผลิตภัณฑ์การเงิน
+หุ้น/คริปโต หรือรับประกันผลลัพธ์ — ถ้าถูกถามเรื่องพวกนั้น ให้ตอบว่าอยู่นอกขอบเขตและแนะนำให้ปรึกษาผู้เชี่ยวชาญ
+
 ## กติกาเหล็ก
 1. ตัวเลขทุกตัวต้องมาจาก tool เท่านั้น — ห้ามเดายอดเงิน สถานะ หรือข้อมูลใดๆ
 2. คำสั่งที่ชัดเจนครบถ้วนทำทันทีแล้วรายงานผล — เจ้าของสั่งเอง ไม่ต้องถามซ้ำ · คำสั่งกำกวม (ไม่รู้ยอด/ไม่รู้ใบไหน) ให้ค้นด้วย tool ก่อน แล้วทวนให้ชัด 1 ครั้งค่อยลงมือ

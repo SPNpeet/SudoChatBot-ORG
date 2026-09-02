@@ -8,6 +8,8 @@ import { baht, dateOnlyTH } from "@/lib/utils";
 import { DOC_TYPE_TH, docStatusLabel, docStatusTone, docOutstanding } from "@/lib/finance";
 import type { DocStatus, DocType, FinDoc } from "@/lib/types/finance";
 import TodoCard from "./todo-card";
+import CfoCard from "./cfo-card";
+import { getCfoBrief } from "@/lib/cfo";
 import { createServiceClient } from "@/lib/supabase/server";
 import { hasDueWorkflows, runShopWorkflows } from "@/lib/workflows";
 import { saveDoc } from "@/app/dashboard/finance/actions";
@@ -58,6 +60,8 @@ export default async function Overview() {
   // ไม่ควรเห็นเงินสดรวม/กระแสเงินของกิจการ ซึ่งเป็นข้อมูลระดับเจ้าของ
   // ลูกหนี้/เจ้าหนี้ยังเห็น เพราะจำเป็นต่องานตามบิลของเขาเอง
   const seeMoney = role !== "agent";
+  // AI CFO — ล้มได้เงียบ (การ์ดหาย หน้าหลักยังขึ้น) · เฉพาะบทบาทที่เห็นเงิน
+  const cfo = seeMoney ? await getCfoBrief(supabase, shop.id).catch(() => null) : null;
   // ชื่อที่ลูกค้าตั้งให้ผู้ช่วย (ตั้งได้ที่หน้าผู้ช่วย) — ใช้ทักทายบนช่องสั่งงาน
   const assistantName = String((((shop as { settings?: Record<string, unknown> | null }).settings ?? {}) as Record<string, unknown>).assistant_name ?? "").trim() || null;
   const bkkNow = new Date(Date.now() + 7 * 3600_000);
@@ -225,6 +229,9 @@ export default async function Overview() {
       {/* checklist ตั้งค่าอยู่ใต้ตัวเลข — ผลตรวจ 28 ส.ค. 2569: สามบล็อกบนของหน้าแรกต้องเป็น
           "วันนี้ต้องทำอะไร · AI ทักก่อน · เงินโดยย่อ" เท่านั้น เรื่องตั้งค่าเป็นงานครั้งเดียวจบ
           ไม่ควรเบียดงานประจำวัน (component เดิม ไม่ได้แก้ข้างใน) */}
+      {/* AI CFO — ต่อจากตัวเลขดิบ: บอกว่า "แล้วต้องทำอะไร" (คำนวณด้วยโค้ด ไม่กิน token) */}
+      {seeMoney && (docCount ?? 0) > 0 && cfo && <CfoCard brief={cfo} />}
+
       <SetupChecklist shop={shop} />
 
       {/* ⚠️ กราฟขึ้นเฉพาะตอนมีข้อมูลพอจะเห็น "แนวโน้ม" จริง (>= 4 วันที่มีเงินเคลื่อนไหว)
