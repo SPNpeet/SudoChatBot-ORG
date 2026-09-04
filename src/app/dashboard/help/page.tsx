@@ -1,6 +1,7 @@
 // คู่มือใช้งาน — ภาพการทำงานจริงครบทุกโมดูล อ่านจบใช้เป็น
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitleIcon, PageHeader } from "@/components/ui";
+import { ChevronDown } from "lucide-react";
+import { Card, CardContent, CardTitleIcon, PageHeader } from "@/components/ui";
 import { CircleHelp,
   Rocket, FileText, Receipt, Landmark, BookOpenText, Calculator, ShieldCheck, ArrowRight,
   Boxes, FileUp, Bell, Zap,
@@ -115,15 +116,26 @@ const SECTIONS: { title: string; icon: LucideIcon; items: { q: string; a: string
 
 export default function HelpPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-2.5">
       <PageHeader icon={CircleHelp} tone="sky"
         title="คู่มือใช้งาน"
         lead="ตอบคำถามที่คนใช้ครั้งแรกถามบ่อยที่สุด"
         help="ไม่ต้องอ่านทั้งหมดก็ได้ — ถ้าติดตรงไหน พิมพ์ถามผู้ช่วยบัญชี AI ได้เลย หรือกด แนะนำ/ติชม ในแถบเมนูซ้าย (บนมือถืออยู่ในเมนูบัญชี) เพื่อส่งคำถามถึงทีมงานโดยตรง"
       />
-      {SECTIONS.map((sec) => (
-        <Card key={sec.title}>
-          <CardHeader className="pt-5"><CardTitleIcon icon={sec.icon}>{sec.title}</CardTitleIcon></CardHeader>
+      {/* ⚠️ พับทุกหัวข้อ เปิดเฉพาะที่อยากอ่าน (แก้ 5 ก.ย. 2569 — เจ้าของบอกว่า "รก มองยาก")
+          วัดจริงบนมือถือ: กางทั้ง 11 หัวข้อพร้อมกัน หน้าสูง 6,306px = เลื่อน 7.5 จอ
+          คนหา "ค่าใช้จ่าย" ต้องเลื่อนผ่านคำตอบของหัวข้ออื่นทั้งหมดก่อน
+          พับแล้วเห็นสารบัญครบใน 1-2 จอ กดหัวข้อเดียวที่ต้องการ = เจอคำตอบเร็วกว่ามาก
+          ⚠️ ใช้ details/summary ล้วน ไม่ใช้ state — หน้านี้เป็น Server Component
+          และ Ctrl+F ของเบราว์เซอร์ยังหาข้อความในส่วนที่ปิดอยู่ไม่เจอ จึงต้องเปิดหัวข้อแรกไว้
+          ให้เห็นรูปแบบว่ากดแล้วกางได้ */}
+      {SECTIONS.map((sec, i) => (
+        <Card key={sec.title} className="overflow-clip">
+          <details open={i === 0} className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-5 py-4 transition-colors hover:bg-neutral-50">
+              <span className="min-w-0 flex-1"><CardTitleIcon icon={sec.icon}>{sec.title}</CardTitleIcon></span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-neutral-400 transition-transform group-open:rotate-180" />
+            </summary>
           <CardContent className="space-y-3.5">
             {sec.items.map((it) => (
               <div key={it.q} className="border-l-2 border-neutral-100 pl-3">
@@ -138,6 +150,7 @@ export default function HelpPage() {
               </div>
             ))}
           </CardContent>
+          </details>
         </Card>
       ))}
       <p className="pb-4 text-xs text-neutral-400">

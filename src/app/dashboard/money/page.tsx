@@ -9,7 +9,7 @@ import { baht, dateTH, cn } from "@/lib/utils";
 import { PAY_METHOD_TH, docOutstanding } from "@/lib/finance";
 import type { FinPayment } from "@/lib/types/finance";
 import Link from "next/link";
-import { Banknote, Landmark } from "lucide-react";
+import { Upload, ChevronDown, Banknote, Landmark } from "lucide-react";
 import RowLink from "@/components/row-link";
 import SlipMatch from "./slip-match";
 import StatementImport from "./statement-import";
@@ -83,11 +83,30 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
         help="ที่นี่ไว้เช็คว่าเงินที่เข้าบัญชีจริง ตรงกับเอกสารที่ออกไปไหม — อัปสลิปที่ลูกค้าโอนมา ระบบจะจับคู่กับใบแจ้งหนี้และตัดยอดให้เอง หรือโหลดรายการเดินบัญชีจากแอปธนาคารมาเทียบทีเดียวทั้งเดือนก็ได้"
       />
 
+      {/* ⚠️ เครื่องมือนำเข้าพับไว้บนมือถือ (แก้ 5 ก.ย. 2569 — เจ้าของบอกว่ารก)
+          วัดจริง: การ์ดสองใบนี้กินราว 500px บนสุดของหน้า ทั้งที่เป็นงานที่ทำนาน ๆ ครั้ง
+          (อัปสลิปเมื่อลูกค้าโอน · โหลดรายการเดินบัญชีเดือนละครั้ง)
+          ส่วนสิ่งที่คนเปิดหน้านี้มาดูทุกวันคือ "รายการเงินล่าสุด" ซึ่งถูกดันลงไปใต้จอ
+          จอ lg ขึ้นไปมีที่พอ จึงกางเหมือนเดิม (details[open] ที่ lg ผ่าน CSS ไม่ได้
+          จึงเรนเดอร์สองชุด: มือถือพับ · จอใหญ่กางเหมือนเดิม เนื้อหาเดียวกันทั้งคู่) */}
       {canEdit && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <SlipMatch shopId={shop.id} />
-          <StatementImport shopId={shop.id} invoices={invoices} />
-        </div>
+        <>
+          <details className="group rounded-2xl border border-neutral-200/80 bg-white shadow-sm lg:hidden">
+            <summary className="flex min-h-[52px] cursor-pointer list-none items-center gap-2 px-4 text-sm font-semibold text-neutral-800">
+              <Upload className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span className="min-w-0 flex-1">อัปสลิป / นำเข้ารายการเดินบัญชี</span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-neutral-400 transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="space-y-3 px-3 pb-3">
+              <SlipMatch shopId={shop.id} />
+              <StatementImport shopId={shop.id} invoices={invoices} />
+            </div>
+          </details>
+          <div className="hidden gap-4 lg:grid lg:grid-cols-2">
+            <SlipMatch shopId={shop.id} />
+            <StatementImport shopId={shop.id} invoices={invoices} />
+          </div>
+        </>
       )}
 
       {/* แถบตัวกรองต้องเป็นแถวเดียวที่เลื่อนได้ ห้ามตกบรรทัด (แก้ 28 ส.ค. 2569)
