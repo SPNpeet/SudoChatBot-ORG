@@ -57,14 +57,21 @@ export default function ContentLayout({ children }: { children: React.ReactNode 
               สมัครใช้งาน
             </Link>
           </div>
-          <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-neutral-400">
-            <span>SudoChatBot — ระบบบัญชีออนไลน์และผู้ช่วยบัญชี AI สำหรับ SME ไทย</span>
-            <span>· <Link href="/about" className="underline hover:text-neutral-600">เกี่ยวกับเรา</Link></span>
-            <span>· <Link href="/contact" className="underline hover:text-neutral-600">ติดต่อเรา</Link></span>
-            <span>· <Link href="/refund" className="underline hover:text-neutral-600">นโยบายการคืนเงิน</Link></span>
-            <span>· <Link href="/privacy" className="underline hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link></span>
-            <span>· <Link href="/terms" className="underline hover:text-neutral-600">ข้อกำหนดการใช้งาน</Link></span>
+          {/* ⚠️ ลิงก์ท้ายหน้าต้องกดติดด้วยนิ้ว (แก้ 5 ก.ย. 2569 — วัดจริงได้สูงแค่ 19px)
+              หน้าพวกนี้คือหน้าที่คนกดตอนจะ "ตัดสินใจเชื่อ" (นโยบาย · คืนเงิน · ติดต่อ)
+              กดพลาดตรงนี้แล้วไปโดนลิงก์ข้างเคียง = คนเลิกอ่านทั้งชุด */}
+          <p className="mt-3 text-xs text-neutral-400">
+            SudoChatBot — ระบบบัญชีออนไลน์และผู้ช่วยบัญชี AI สำหรับ SME ไทย
           </p>
+          <div className="-mx-2 mt-1 flex flex-wrap items-center text-xs text-neutral-400">
+            {[["/about", "เกี่ยวกับเรา"], ["/contact", "ติดต่อเรา"], ["/refund", "นโยบายการคืนเงิน"],
+              ["/privacy", "นโยบายความเป็นส่วนตัว"], ["/terms", "ข้อกำหนดการใช้งาน"]].map(([href, label]) => (
+              <Link key={href} href={href}
+                className="inline-flex min-h-11 items-center px-2 underline underline-offset-2 hover:text-neutral-600">
+                {label}
+              </Link>
+            ))}
+          </div>
           <p className="mt-2 text-xs text-neutral-400">
             เนื้อหาในหน้านี้เป็นข้อมูลทั่วไปเพื่อความเข้าใจ ไม่ใช่คำวินิจฉัยทางภาษีหรือคำแนะนำเฉพาะราย
             กรุณาตรวจกับผู้ทำบัญชีหรือประกาศล่าสุดของกรมสรรพากรก่อนใช้จริง

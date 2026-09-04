@@ -841,7 +841,10 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
               {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
           )}
-          <button disabled={busy || !!reading || (!input.trim() && !pendingFiles.length)}
+          {/* ปุ่มไอคอนล้วนต้องมีชื่อเสมอ — ปุ่มส่งของหน้าแชทเคยไม่มี aria-label
+              โปรแกรมอ่านหน้าจอจึงอ่านได้แค่คำว่า "ปุ่ม" (พบจากการกวาดทั้งระบบ 5 ก.ย. 2569) */}
+          <button aria-label="ส่งข้อความ" title="ส่งข้อความ"
+            disabled={busy || !!reading || (!input.trim() && !pendingFiles.length)}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white hover:bg-neutral-700 disabled:opacity-40">
             {busy || reading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>

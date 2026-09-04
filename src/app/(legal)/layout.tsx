@@ -48,14 +48,17 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
               className="inline-flex items-center gap-1.5 rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-neutral-700">
               <ArrowLeft className="h-4 w-4" /> กลับหน้าแรก
             </Link>
-            <p className="mt-4 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-neutral-400">
-              <span>SudoChatBot · ติดต่อ: supanut6420@gmail.com</span>
+            {/* ⚠️ ลิงก์ท้ายหน้าต้องกดติดด้วยนิ้ว — วัดจริง 5 ก.ย. 2569 ได้สูงแค่ 19px
+                หน้ากฎหมายคือหน้าที่คนกดตอนกำลังตัดสินใจว่าจะเชื่อระบบไหม กดพลาด = เลิกอ่าน */}
+            <p className="mt-4 text-xs text-neutral-400">SudoChatBot · ติดต่อ: supanut6420@gmail.com</p>
+            <div className="-mx-2 mt-1 flex flex-wrap items-center text-xs text-neutral-400">
               {NAV.map((n) => (
-                <span key={n.href}>
-                  · <Link href={n.href} className="underline hover:text-neutral-600">{n.label}</Link>
-                </span>
+                <Link key={n.href} href={n.href}
+                  className="inline-flex min-h-11 items-center px-2 underline underline-offset-2 hover:text-neutral-600">
+                  {n.label}
+                </Link>
               ))}
-            </p>
+            </div>
           </div>
         </div>
       </div>
