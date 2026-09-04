@@ -343,7 +343,7 @@ export default async function Overview() {
       {/* แถบความเชื่อมั่นท้ายหน้า — พูดเฉพาะสิ่งที่ระบบทำจริง ไม่อวดเลขลอย ๆ อย่าง "ปลอดภัย 100%" */}
       <p className="pb-2 text-center text-[11px] text-neutral-400">
         ข้อมูลของคุณเข้ารหัสระหว่างทางและแยกรายกิจการที่ระดับฐานข้อมูล · สำรองอัตโนมัติทุกวัน ·{" "}
-        <Link href="/privacy" className="underline hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
+        <Link href="/privacy" className="inline-flex min-h-11 items-center underline hover:text-neutral-600">นโยบายความเป็นส่วนตัว</Link>
       </p>
     </div>
   );

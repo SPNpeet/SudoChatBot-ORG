@@ -82,7 +82,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {/* จอแคบเหลือแค่โลโก้ ไม่เอาตัวอักษร — คืนพื้นที่ ~105px ให้ชื่อกิจการ
             บนจอ 360px ถ้าโชว์ตัวอักษรด้วย ชื่อกิจการจะเหลือที่แค่ 8 ตัวอักษร
             "ตอนนี้ทำบัญชีของบริษัทไหน" สำคัญกว่าการเห็นชื่อแบรนด์ตัวเองซ้ำทุกหน้า */}
-        <Link href="/dashboard" aria-label="กลับหน้าภาพรวม" className="shrink-0 rounded-lg transition-opacity active:opacity-60">
+        <Link href="/dashboard" aria-label="กลับหน้าภาพรวม" className="-m-2 inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg p-2 transition-opacity active:opacity-60">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-mark.png" alt="SudoChatBot" width={28} height={28} className="h-7 w-7 rounded-lg object-cover sm:hidden" />
           <Logo className="hidden sm:inline-flex" />
