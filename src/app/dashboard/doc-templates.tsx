@@ -31,7 +31,7 @@ export default function DocTemplates() {
     <Card>
       <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
         <CardTitle>ออกเอกสารใหม่</CardTitle>
-        <Link href="/dashboard/sales" className="shrink-0 text-xs font-medium text-emerald-700 hover:underline">
+        <Link href="/dashboard/sales" className="-mx-2 inline-flex min-h-11 shrink-0 items-center px-2 text-xs font-medium text-emerald-700 hover:underline">
           เอกสารทั้งหมด →
         </Link>
       </CardHeader>

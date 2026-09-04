@@ -269,7 +269,7 @@ export default async function Overview() {
         <CardHeader className="flex-row items-center justify-between gap-3 space-y-0">
           <CardTitle>เอกสารล่าสุด</CardTitle>
           {/* ทางออกจากการ์ด — เดิมดูได้แค่ 6 ใบแล้วตัน ต้องไปหาเมนูเอง */}
-          <Link href="/dashboard/sales" className="shrink-0 text-xs font-medium text-emerald-700 hover:underline">
+          <Link href="/dashboard/sales" className="-mx-2 inline-flex min-h-11 shrink-0 items-center px-2 text-xs font-medium text-emerald-700 hover:underline">
             ดูทั้งหมด →
           </Link>
         </CardHeader>

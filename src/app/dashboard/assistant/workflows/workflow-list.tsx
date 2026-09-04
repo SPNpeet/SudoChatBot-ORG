@@ -131,7 +131,7 @@ export default function WorkflowList({ shopId, items, runs, contacts, canManage 
                     className="grid h-11 place-items-center rounded-xl text-neutral-400 hover:bg-neutral-100 disabled:opacity-30"><Trash className="h-4 w-4" /></button>
                 </div>
               ))}
-              <button type="button" onClick={() => setRows([...rows, { name: "", qty: "1", unit_price: "" }])} className="text-xs font-medium text-emerald-700 hover:underline">+ เพิ่มบรรทัด</button>
+              <button type="button" onClick={() => setRows([...rows, { name: "", qty: "1", unit_price: "" }])} className="-mx-2 inline-flex min-h-11 items-center px-2 text-xs font-medium text-emerald-700 hover:underline">+ เพิ่มบรรทัด</button>
             </div>
           )}
           <div className="flex gap-2">

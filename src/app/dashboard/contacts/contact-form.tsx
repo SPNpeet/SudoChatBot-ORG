@@ -63,8 +63,10 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
         // บนจอ 390px มีปุ่มชื่อซ้ำกันหลายปุ่มในหน้าเดียว และโปรแกรมอ่านหน้าจอ
         // จะอ่านว่า "แก้ไข" ซ้ำ ๆ โดยไม่มีอะไรบอกว่าเป็นของผู้ติดต่อรายไหน
         <button onClick={() => setOpen(true)} aria-label={`แก้ไข ${KIND_TH[contact.kind] ?? ""} ${contact.name}${contact.tax_id ? ` เลขผู้เสียภาษี ${contact.tax_id}` : contact.phone ? ` โทร ${contact.phone}` : ""}`.replace(/\s+/g, " ").trim()}
-          className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-700">
-          <Pencil className="h-3 w-3" /> แก้ไข
+          // ⚠️ เป้ากด 44px (วัดจริง 5 ก.ย. 2569 ได้ 16px — นิ้วกดพลาดไปโดนลิงก์ข้างบนแทน)
+          // กติกาข้อ 9 ของโปรเจกต์: เป้ากดขั้นต่ำ 44px ในหน้าที่ลูกค้าใช้
+          className="-mx-2 inline-flex min-h-11 items-center gap-1 px-2 text-xs text-neutral-400 hover:text-neutral-700">
+          <Pencil className="h-3.5 w-3.5" /> แก้ไข
         </button>
       ) : (
         <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> เพิ่มผู้ติดต่อ</Button>
