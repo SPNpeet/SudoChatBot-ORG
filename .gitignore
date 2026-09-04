@@ -28,3 +28,10 @@ audit-shots/
 *.probe.mjs
 audit.mjs
 vshot.mjs
+# สคริปต์กวาด/ตรวจงานชั่วคราวทุกชื่อ — เคยหลุดเข้า repo มาแล้ว (sweep2.mjs 5 ก.ย. 2569)
+sweep*.mjs
+vt*.mjs
+id*.mjs
+shot*.mjs
+dbg*.mjs
+find*.mjs
