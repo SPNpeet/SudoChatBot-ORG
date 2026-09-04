@@ -24,6 +24,11 @@ import { cn } from "@/lib/utils";
 import { ACTION_CHIP } from "@/components/ui";
 import { docDateTooFarFuture, docDateVeryOld } from "@/lib/tax-th";
 
+/** ตัวย่อเดือนไทยตามราชบัณฑิตฯ — ⚠️ ห้ามสร้างจากการตัดชื่อเต็ม
+ *  เคยพลาดจริง 5 ก.ย. 2569: ใช้ "กันยายน".slice(0,3) ได้ "กัน" ซึ่งไม่ใช่คำย่อของเดือนใดเลย */
+const TH_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+  "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
 const TH_MONTHS = [
   "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
   "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
@@ -63,7 +68,6 @@ export default function DateField({
   const ref = useRef<HTMLInputElement>(null);
   const today = bkkTodayISO();
 
-  const reading = readThaiDate(value);
   const farFuture = value ? docDateTooFarFuture(value, today) : false;
   const veryOld = value ? docDateVeryOld(value, today) : false;
 
@@ -94,10 +98,25 @@ export default function DateField({
             // (เจ้าของแคปมาจริงจาก iPhone 2 ส.ค. 2569: ไอคอนปฏิทินโผล่นอกขอบขาว)
             "appearance-none [&::-webkit-date-and-time-value]:text-left",
             "[&::-webkit-calendar-picker-indicator]:opacity-0",
+            /* ⚠️ ซ่อนตัวเลขของเบราว์เซอร์แล้ววาดวันที่ไทยทับ (แก้ 5 ก.ย. 2569)
+               วัดจริงบน production: Chrome แสดง input[type=date] เป็น "09/05/2026"
+               แม้ตั้ง locale เป็น th-TH — คนไทยอ่านเป็น "9 พฤษภาคม" ทันที
+               และนี่คือช่อง "วันที่เอกสาร" ของใบกำกับภาษี = อ่านผิดแล้วยื่นภาษีผิดงวด
+               ตัวช่องยังเป็น input[type=date] เดิมทุกอย่าง (คลิกเปิดปฏิทิน showPicker iOS)
+               แค่ตัวอักษรโปร่งใสเมื่อมีค่า แล้ววาดข้อความไทยทับด้วย pointer-events-none */
+            value && "text-transparent",
             farFuture ? "border-red-400 focus:border-red-500"
               : "border-neutral-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15",
           )}
         />
+        {/* วันที่ที่ "คนอ่าน" — ทับตำแหน่งเดิมของตัวเลขเบราว์เซอร์ กดทะลุไปที่ช่องได้ */}
+        <span aria-hidden className={cn(
+          "pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 pr-11 text-base sm:text-sm",
+          value ? (farFuture ? "font-medium text-red-600" : "font-medium text-neutral-900") : "text-neutral-400",
+        )}>
+          {value ? readThaiDate(value) : "เลือกวันที่"}
+        </span>
+
         {/* ไอคอนของเราเอง วางทับตัวเนทีฟที่ซ่อนไว้ ให้พื้นที่กดใหญ่ขึ้น */}
         <button type="button" aria-label="เปิดปฏิทิน" onClick={openPicker} tabIndex={-1}
           className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600">
@@ -105,13 +124,9 @@ export default function DateField({
         </button>
       </div>
 
-      {/* อ่านเป็นภาษาไทย + พ.ศ. — จุดที่ทำให้คนจับได้เองว่าพิมพ์ปีผิด */}
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-        {reading && (
-          <span className={cn("text-[12px] font-medium", farFuture ? "text-red-600" : "text-neutral-600")}>
-            {reading}
-          </span>
-        )}
+      {/* วันที่ไทยย้ายขึ้นไปอยู่ในช่องแล้ว ข้างล่างจึงเหลือเฉพาะปุ่มลัด
+          (เดิมบรรทัดนี้คือทางแก้ปัญหา "09/05" แบบหมายเหตุตัวเล็ก — ตอนนี้แก้ที่ต้นเหตุแล้ว) */}
+      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 empty:mt-0">
         {/* ปุ่มจริง — เป็นทางลัดที่คนกดบ่อยที่สุดในฟอร์ม ต้องกดง่ายไม่ใช่ข้อความเล็ก ๆ */}
         {!hideToday && value !== today && (
           <button type="button" onClick={() => onChange(today)}
@@ -131,5 +146,68 @@ export default function DateField({
       )}
       {hint && !farFuture && <p className="mt-1 text-xs text-neutral-400">{hint}</p>}
     </div>
+  );
+}
+
+/** "2026-09-05" -> "5 ก.ย. 69" — แบบสั้นสำหรับช่องแคบ (บนตัวเอกสาร/ในแถว) */
+export function readThaiDateShort(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  const [y, m, d] = iso.split("-").map(Number);
+  if (m < 1 || m > 12) return "";
+  return `${d} ${TH_MONTHS_SHORT[m - 1]} ${String((y + 543) % 100).padStart(2, "0")}`;
+}
+
+/**
+ * ช่องวันที่แบบแคบ — ใช้ที่ที่ DateField เต็มรูปแบบไม่พอดี (บนตัวเอกสาร · ในแถวรายการ)
+ * เหตุผลเดียวกับ DateField: เบราว์เซอร์แสดง "09/05/2026" ซึ่งคนไทยอ่านผิดเป็น 9 พ.ค.
+ * ตัว input ยังเป็น type=date เดิมทุกอย่าง แค่วาดข้อความไทยทับ
+ */
+export function ThaiDateInline({ value, onChange, ariaLabel, className, max, min }: {
+  value: string; onChange: (v: string) => void; ariaLabel: string;
+  className?: string; max?: string; min?: string;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <span className="relative inline-flex">
+      <input
+        ref={ref} type="date" value={value} max={max} min={min} aria-label={ariaLabel}
+        onChange={(e) => onChange(e.target.value)}
+        onClick={() => { try { ref.current?.showPicker?.(); } catch { /* เบราว์เซอร์เก่าใช้ไอคอนเนทีฟ */ } }}
+        className={cn("appearance-none [&::-webkit-calendar-picker-indicator]:opacity-0", value && "text-transparent", className)}
+      />
+      <span aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-end pr-2 text-sm text-neutral-900">
+        {value ? readThaiDateShort(value) : "เลือกวันที่"}
+      </span>
+    </span>
+  );
+}
+
+/**
+ * ช่องเลือกเดือน — select เดือนไทย + ปี พ.ศ.
+ * ⚠️ ห้ามกลับไปใช้ input[type="month"] (วัดจริง 5 ก.ย. 2569: แสดง "September 2026"
+ * อังกฤษ + ค.ศ. แม้ตั้ง locale th-TH · เปลี่ยนข้อความไม่ได้เลย)
+ * ค่าที่ส่งออกยังเป็น "YYYY-MM" เหมือน input เดิมทุกประการ — ผู้เรียกไม่ต้องแก้ตรรกะ
+ */
+export function MonthField({ value, onChange, name, ariaLabel = "เลือกเดือน", years = 6 }: {
+  value: string; onChange?: (v: string) => void; name?: string; ariaLabel?: string; years?: number;
+}) {
+  const [y, m] = (/^\d{4}-\d{2}$/.test(value) ? value : bkkTodayISO().slice(0, 7)).split("-");
+  const thisYear = Number(bkkTodayISO().slice(0, 4));
+  const opts = Array.from({ length: years }, (_, i) => thisYear - i);
+  const cls = "h-10 rounded-xl border border-neutral-300 bg-white px-2.5 text-base outline-none focus:border-emerald-500 sm:text-sm";
+  return (
+    <span className="inline-flex gap-1.5">
+      {/* ส่งค่ารวมเป็นช่องซ่อน เพื่อให้ฟอร์มแบบ method=get ที่ใช้ name เดิมยังทำงานเหมือนเดิม */}
+      {name && <input type="hidden" name={name} value={`${y}-${m}`} />}
+      <select aria-label={ariaLabel} value={m} onChange={(e) => onChange?.(`${y}-${e.target.value}`)} className={cls}>
+        {TH_MONTHS.map((label, i) => {
+          const v = String(i + 1).padStart(2, "0");
+          return <option key={v} value={v}>{label}</option>;
+        })}
+      </select>
+      <select aria-label="ปี" value={y} onChange={(e) => onChange?.(`${e.target.value}-${m}`)} className={cls}>
+        {opts.map((yy) => <option key={yy} value={yy}>{yy + 543}</option>)}
+      </select>
+    </span>
   );
 }

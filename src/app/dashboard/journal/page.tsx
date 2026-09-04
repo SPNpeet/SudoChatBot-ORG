@@ -13,6 +13,7 @@ import { bahtDoc, dateOnlyTH, cn } from "@/lib/utils";
 import type { Account, JournalEntry, JournalLine } from "@/lib/types/finance";
 import { BookOpenText, CheckCircle2, AlertTriangle, ExternalLink, Lightbulb } from "lucide-react";
 import Link from "next/link";
+import JournalMonthPicker from "./month-picker";
 import ManualJournalForm from "./manual-form";
 
 export const dynamic = "force-dynamic";
@@ -105,11 +106,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
         </div>
         </div>
         <div className="flex items-center gap-2">
-          <form method="get" className="flex items-center gap-2">
-            <input type="month" name="m" defaultValue={month} aria-label="เลือกเดือน"
-              className="h-10 rounded-xl border border-neutral-300 bg-white px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
-            <button className="h-10 rounded-xl bg-neutral-900 px-4 text-sm font-medium text-white transition-colors hover:bg-neutral-700">ดู</button>
-          </form>
+          <JournalMonthPicker month={month} />
           {canEdit && <ManualJournalForm shopId={shop.id} accounts={(accounts ?? []) as Account[]} />}
         </div>
       </div>

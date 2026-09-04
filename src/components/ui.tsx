@@ -110,13 +110,17 @@ export function StatCard({ label, value, hint, icon, tone = "neutral", className
   label: string; value: React.ReactNode; hint?: React.ReactNode; icon?: React.ReactNode;
   tone?: "neutral" | "green" | "amber" | "red"; className?: string; href?: string;
 }) {
+  // ⚠️ มือถือ = แถวเดียว (ไอคอน+ป้ายซ้าย · ตัวเลขขวา) · จอ sm ขึ้นไป = การ์ดแนวตั้งเหมือนเดิม
+  // วัดจริง 5 ก.ย. 2569: การ์ดแนวตั้ง 5 ใบบนแดชบอร์ดมือถือกินความสูงรวม ~540px
+  // ทั้งที่เนื้อหาคือตัวเลข 5 ตัว — คนต้องเลื่อน 2 จอเพื่ออ่านตัวเลขที่ควรเห็นพร้อมกัน
+  // แถวเดียวเหลือใบละ ~60px และยังกดได้ทั้งใบเหมือนเดิม (หลักเดียวกับการ์ดตารางมือถือ)
   const body = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-medium text-neutral-500">{label}</p>
+      <div className="flex items-start justify-between gap-3 max-sm:contents">
+        <p className="text-xs font-medium text-neutral-500 max-sm:order-2 max-sm:flex-1">{label}</p>
         {icon && (
           <span className={cn(
-            "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
+            "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors max-sm:order-1",
             tone === "green" && "bg-emerald-50 text-emerald-600",
             tone === "amber" && "bg-amber-50 text-amber-600",
             tone === "red" && "bg-red-50 text-red-600",
@@ -129,9 +133,11 @@ export function StatCard({ label, value, hint, icon, tone = "neutral", className
           จอเล็กใช้ตัวเล็กลงหนึ่งขั้นแทนการยอมให้หัก — เลขยาวสุดที่เจอจริงยังพอดีกรอบ 2 คอลัมน์ */}
       <p className={cn(
         "mt-2 whitespace-nowrap text-xl font-bold tabular-nums tracking-tight sm:text-2xl",
+        "max-sm:order-3 max-sm:mt-0 max-sm:text-right",
         tone === "red" ? "text-red-600" : tone === "green" ? "text-emerald-700" : "text-neutral-900",
       )}>{value}</p>
-      {hint && <p className="mt-1 text-xs text-neutral-400">{hint}</p>}
+      {/* คำอธิบายบนมือถือซ่อนไว้ใต้ป้าย (บรรทัดเดียว ตัดท้ายถ้ายาว) — ครบเหมือนเดิมบนจอใหญ่ */}
+      {hint && <p className="mt-1 text-xs text-neutral-400 max-sm:order-4 max-sm:mt-0 max-sm:w-full max-sm:truncate">{hint}</p>}
     </>
   );
 
@@ -139,13 +145,14 @@ export function StatCard({ label, value, hint, icon, tone = "neutral", className
     return (
       <Link href={href} className={cn(
         "block rounded-2xl border border-neutral-200/80 bg-white p-5",
+        "max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-2.5 max-sm:gap-y-0.5 max-sm:px-3.5 max-sm:py-3",
         "shadow-[0_1px_2px_rgba(16,24,40,0.04),0_1px_3px_rgba(16,24,40,0.06)]",
         "transition-all duration-150 hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-md active:translate-y-0",
         FOCUS, className,
       )}>{body}</Link>
     );
   }
-  return <Card className={cn("p-5", className)}>{body}</Card>;
+  return <Card className={cn("p-5", "max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-2.5 max-sm:gap-y-0.5 max-sm:px-3.5 max-sm:py-3", className)}>{body}</Card>;
 }
 
 /**

@@ -1,4 +1,5 @@
 "use client";
+import { ThaiDateInline } from "@/components/date-field";
 // ============================================================
 //  โหมดแก้บนตัวเอกสาร (WYSIWYG) — พิมพ์ลงบนกระดาษที่ลูกค้าจะได้รับจริง
 //
@@ -208,8 +209,7 @@ export default function TryDocEditor() {
                 className="w-32 text-right text-neutral-600" />
               {/* iOS Safari: input[type=date] จะกางตามเนื้อหาตัวเองและไม่สนใจ w-full
                   ต้อง appearance-none + min-w-0 max-w-full ไม่งั้นล้นออกนอกกระดาษ (เคยเกิดจริง) */}
-              <input type="date" value={d.issueDate} onChange={(e) => set({ issueDate: e.target.value })}
-                aria-label="วันที่ออกเอกสาร"
+              <ThaiDateInline value={d.issueDate} onChange={(v) => set({ issueDate: v })} ariaLabel="วันที่ออกเอกสาร"
                 // min-h-11 = เป้ากด 44px บนจอ (วัดจริง 4 ส.ค. 2569 ได้แค่ 24px กดยากบนมือถือ)
                 // ตอนพิมพ์ช่องนี้ถูกซ่อนอยู่แล้ว (print:hidden) จึงไม่กระทบหน้ากระดาษ
                 className="ml-auto block min-h-11 min-w-0 max-w-full appearance-none rounded-[3px] border-0 bg-transparent px-1 py-0.5 text-right text-neutral-600 outline-none hover:bg-emerald-50/70 focus:bg-emerald-50 focus:ring-1 focus:ring-emerald-300 print:hidden" />

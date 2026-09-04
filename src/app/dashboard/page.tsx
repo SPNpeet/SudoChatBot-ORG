@@ -128,6 +128,10 @@ export default async function Overview() {
   const dOut = delta(monthOut, prevOut);
   const trend = (pct: number | null, goodWhenUp: boolean) => {
     if (pct === null) return undefined;
+    // ⚠️ ต้นเดือนอย่าเทียบ (แก้ 5 ก.ย. 2569 — ภาพจริงวันที่ 5 ขึ้น "0.00 ฿ ลง 100% จากเดือนก่อน")
+    // ตัวเลขถูกแต่ความหมายผิด: เดือนเพิ่งเริ่มย่อมน้อยกว่าเดือนเต็มเสมอ = ตกใจฟรีทุกต้นเดือน
+    // กติกาเดียวกับ AI CFO ที่วางไว้แล้ว (src/lib/cfo.ts) ต้องตรงกันทั้งระบบ
+    if (dayOfMonth < 10) return undefined;
     const good = goodWhenUp ? pct > 0 : pct < 0;
     const Icon = pct > 0 ? ArrowUpRight : ArrowDownRight;
     return (
@@ -203,7 +207,7 @@ export default async function Overview() {
         />
       )}
 
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-4 xl:grid-cols-5">
         {/* ⚠️ ป้ายต้องเขียนว่า "เงินสด + เงินฝาก" และกำกับว่า "ตามสมุดบัญชี" เสมอ
             ห้ามเปลี่ยนเป็น "เงินคงเหลือในบัญชี" หรือคำที่ทำให้เข้าใจว่าเป็นยอดในธนาคารจริง
             ระบบไม่ได้ต่อกับธนาคาร ตัวเลขนี้ยังไม่ผ่านการกระทบยอด — เหตุผลเต็มอยู่ใน migration 105 */}

@@ -77,7 +77,12 @@ export default function TodayPanel({ overdue, pendingApproval, unmatchedSlips, t
         <span aria-hidden className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-emerald-100">
           <Check className="h-3 w-3 text-emerald-600" />
         </span>
-        <span><b className="font-semibold text-neutral-700">เคลียร์หมดแล้ว</b> — ไม่มีเอกสารเกินกำหนด ไม่มีรายการรออนุมัติ ไม่มีสลิปค้าง</span>
+        {/* ⚠️ บรรทัดเดียวพอ (แก้ 5 ก.ย. 2569) — เดิมไล่ "ไม่มี...ไม่มี...ไม่มี" สามอย่าง
+            กินสองบรรทัดเต็มบนมือถือเพื่อบอกว่า "ไม่มีอะไรต้องทำ" ซึ่งขัดกับหลักที่เขียนไว้เองข้างบน
+            ว่าศูนย์งาน = เกือบศูนย์พื้นที่ · รายละเอียดว่าเช็คอะไรบ้างอยู่ใน title */}
+        <span title="ตรวจแล้ว: เอกสารเกินกำหนด · รายการรออนุมัติ · สลิปที่ยังไม่จับคู่">
+          <b className="font-semibold text-neutral-700">เคลียร์หมดแล้ว</b> — ไม่มีงานค้างวันนี้
+        </span>
       </p>
     );
   }

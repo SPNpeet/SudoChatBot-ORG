@@ -17,7 +17,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowUp, ImagePlus, Bot, Mic, MicOff } from "lucide-react";
+import { ArrowUp, ImagePlus, Bot, Mic, MicOff, FileText } from "lucide-react";
 import { useVoiceInput } from "@/lib/use-voice-input";
 import Mascot from "@/components/mascot";
 
@@ -113,23 +113,36 @@ export default function CommandBar({ assistantName, proactive }: { assistantName
         </p>
       )}
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+      {/* ⚠️ งานหลักต้องอยู่จอแรก (แก้ 5 ก.ย. 2569 — วัดจริงบนมือถือ 390px)
+          เดิมจอแรกของแดชบอร์ดมีแต่ช่องแชทกับ "ตัวอย่างคำสั่ง" 3 อันเรียงลงมาแนวตั้ง
+          กินครึ่งจอ แล้วต้องเลื่อนถึงจะเจอตัวเลข ส่วนงานที่คนเปิดแอปมาทำจริง
+          (ออกบิล/บันทึกรายจ่าย) ถูกซ่อนหลังปุ่ม + ลอยซึ่งไม่มีอะไรบอกว่ากดแล้วได้อะไร
+          ตอนนี้: ปุ่มงานจริง 2 ปุ่มมาก่อน · ตัวอย่างคำสั่งย้ายไปแถวเลื่อนแนวนอนบรรทัดเดียว */}
+      <div className="mt-2.5 grid grid-cols-2 gap-2">
+        <Link href="/dashboard/sales/new?type=invoice"
+          className="flex min-h-[46px] items-center justify-center gap-1.5 rounded-xl bg-neutral-900 px-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-700">
+          <FileText className="h-4 w-4" />ออกบิล/ใบเสร็จ
+        </Link>
+        <Link href="/dashboard/expenses/new"
+          className="flex min-h-[46px] items-center justify-center gap-1.5 rounded-xl border border-neutral-300 bg-white px-3 text-sm font-semibold text-neutral-800 transition-colors hover:bg-neutral-50">
+          <ImagePlus className="h-4 w-4" />ถ่ายรูปบิล
+        </Link>
+      </div>
+
+      {/* แถวเดียวเลื่อนแนวนอน — ตัวอย่างคำสั่งเป็นของ "ลองดู" ไม่ใช่งานประจำวัน
+          จึงไม่ควรกินพื้นที่แนวตั้งเท่างานจริง */}
+      <div className="-mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <span className="flex shrink-0 items-center pr-0.5 text-[11px] text-neutral-400">ลองสั่ง:</span>
         {EXAMPLES.map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => go(s)}
-            className="inline-flex min-h-[44px] items-center rounded-full border border-neutral-200 bg-white px-3.5 text-xs text-neutral-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
+            className="inline-flex min-h-[36px] shrink-0 items-center whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 text-xs text-neutral-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
           >
             {s}
           </button>
         ))}
-        <Link
-          href="/dashboard/assistant"
-          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full px-3 text-xs font-medium text-neutral-500 transition-colors hover:text-emerald-700"
-        >
-          <ImagePlus className="h-3.5 w-3.5" />แนบรูปบิล
-        </Link>
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { ThaiDateInline } from "@/components/date-field";
 // ============================================================
 //  ดูตัวอย่างเอกสารก่อนออกจริง
 //
@@ -187,14 +188,14 @@ export default function DocPreview({
                   <div className="mt-1 space-y-1">
                     <label className="flex items-center justify-end gap-1 text-xs text-neutral-500">
                       วันที่
-                      <input type="date" value={issueDate} onChange={(e) => edit.setIssueDate(e.target.value)}
-                        aria-label="วันที่ออกเอกสาร" className={`${CELL} max-w-[9.5rem] text-right`} />
+                      <ThaiDateInline value={issueDate} onChange={edit.setIssueDate}
+                        ariaLabel="วันที่ออกเอกสาร" className={`${CELL} w-[9.5rem] text-right`} />
                     </label>
                     {docType !== "receipt" && (
                       <label className="flex items-center justify-end gap-1 text-xs text-neutral-500">
                         ครบกำหนด
-                        <input type="date" value={dueDate} onChange={(e) => edit.setDueDate(e.target.value)}
-                          aria-label="วันครบกำหนดชำระ" className={`${CELL} max-w-[9.5rem] text-right`} />
+                        <ThaiDateInline value={dueDate} onChange={edit.setDueDate}
+                          ariaLabel="วันครบกำหนดชำระ" className={`${CELL} w-[9.5rem] text-right`} />
                       </label>
                     )}
                   </div>

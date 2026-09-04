@@ -338,13 +338,9 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
           ))}
         </div>
       )}
-      {!isExpense && !draft && (
-        <p className="text-xs text-neutral-400">
-          {docType === "quotation" ? "ยังไม่ตกลงราคา — ยังไม่ลงบัญชี แปลงเป็นใบแจ้งหนี้ทีหลังได้"
-            : docType === "invoice" ? "ขายเชื่อ ตั้งลูกหนี้ — ระบบตามยอดค้างให้"
-            : "ขายสด รับเงินทันที — ลงบัญชีเงินเข้าเลย"}
-        </p>
-      )}
+      {/* ⚠️ เดิมมีคำอธิบายชนิดเอกสารตรงนี้อีกชุด ซึ่งพูดเรื่องเดียวกับบรรทัดใต้หัวข้อหน้า
+          ("ขายเชื่อ — ระบบตั้งลูกหนี้...") ห่างกันแค่แถบแท็บเดียว = อ่านซ้ำสองรอบไม่ได้อะไรเพิ่ม
+          ตัดออก 5 ก.ย. 2569 (เจ้าของบอกว่ารก) — คำอธิบายเหลือที่เดียวคือใต้หัวข้อหน้า */}
       {isExpense && (
         <Card className="border-dashed">
           <CardContent className="flex flex-wrap items-center gap-3 pt-4">
@@ -416,7 +412,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
                 ))}
               </Select>
               {!contactId && (
-                <Input className="mt-2" placeholder={isExpense ? "ชื่อผู้ขาย (ไม่บังคับ)" : "ชื่อลูกค้า (ไม่บังคับ)"}
+                <Input className="mt-2" placeholder={isExpense ? "พิมพ์ชื่อผู้ขาย" : "พิมพ์ชื่อลูกค้า"}
                   value={contactName} onChange={(e) => setContactName(e.target.value)} />
               )}
             </div>
@@ -528,10 +524,15 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
             )}
             {/* คำกำกับใต้ช่อง — บอกกติกาไว้ก่อนที่ผู้ใช้จะกดบันทึกแล้วเจอ error
                 ข้อความสั้นตรงจุดที่กรอก ได้ผลกว่าข้อความยาวท้ายฟอร์มที่คนไม่อ่าน */}
-            <p className={cn("mt-1.5 text-xs leading-relaxed",
-              showRowErrors ? "font-medium text-red-600" : "text-neutral-400")}>
-              ต้องกรอก <b>ชื่อรายการ · จำนวน · ราคา/หน่วย</b> ให้ครบอย่างน้อย 1 บรรทัด — ยอดรวมต้องมากกว่า 0 ระบบถึงลงบัญชีให้ได้
-            </p>
+            {/* ⚠️ ขึ้นเฉพาะตอนกรอกไม่ครบจริง (แก้ 5 ก.ย. 2569)
+                เดิมโชว์ตลอดเวลาเป็นตัวเทา 2 บรรทัด = สอนกติกาก่อนที่คนจะทำอะไรผิด
+                ซึ่งคนอ่านครั้งเดียวแล้วไม่อ่านอีก แต่กินที่ทุกครั้งที่เปิดฟอร์ม
+                ช่องที่ขาดขึ้นกรอบแดงอยู่แล้ว ข้อความจึงจำเป็นเฉพาะตอนนั้น */}
+            {showRowErrors && (
+              <p className="mt-1.5 text-xs font-medium leading-relaxed text-red-600">
+                ต้องกรอก <b>ชื่อรายการ · จำนวน · ราคา/หน่วย</b> ให้ครบอย่างน้อย 1 บรรทัด — ยอดรวมต้องมากกว่า 0 ระบบถึงลงบัญชีให้ได้
+              </p>
+            )}
 
             <button type="button" onClick={() => setRows((rs) => [...rs, emptyRow()])}
               className="mt-2 inline-flex items-center gap-1 text-sm text-emerald-700 hover:text-emerald-800">

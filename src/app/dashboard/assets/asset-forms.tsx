@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Calculator, BookLock, TriangleAlert, Camera, X } from "lucide-react";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/components/ui";
 import { addFixedAsset, runDepreciation, closeFiscalYear, uploadAssetPhoto } from "./actions";
+import { MonthField } from "@/components/date-field";
 import DateField from "@/components/date-field";
 
 /** อายุการใช้งานที่พบบ่อย — เป็นตัวช่วยกรอก ไม่ใช่คำวินิจฉัยทางภาษี */
@@ -198,7 +199,7 @@ export default function AssetForms({ shopId, canEdit, isOwner, defaultMonth }: {
             </p>
             <div>
               <Label>เดือนที่ต้องการลง</Label>
-              <Input type="month" value={depMonth} onChange={(e) => setDepMonth(e.target.value)} />
+              <div className="mt-1"><MonthField value={depMonth} onChange={setDepMonth} ariaLabel="เดือนที่ลงค่าเสื่อม" /></div>
               <p className="mt-1 text-xs text-neutral-400">ลงได้เมื่อสิ้นเดือนนั้นผ่านไปแล้ว</p>
             </div>
             <Button variant="outline" disabled={pending} onClick={() => run(() => runDepreciation(shopId, depMonth))}>

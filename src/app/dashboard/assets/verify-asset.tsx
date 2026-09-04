@@ -1,4 +1,5 @@
 "use client";
+import { ThaiDateInline } from "@/components/date-field";
 // ============================================================
 //  ตรวจนับทรัพย์สิน — ยืนยันว่า "ของอยู่ที่นั่นจริง" ณ วันที่ระบุ (คำขอเจ้าของ 4 ส.ค. 2569)
 //
@@ -38,9 +39,8 @@ export default function VerifyAsset({
   if (open) {
     return (
       <span className="flex flex-wrap items-center gap-1.5">
-        <input type="date" value={date} max={bkkToday()} onChange={(e) => setDate(e.target.value)}
-          aria-label="วันที่ตรวจนับ"
-          className="h-11 min-w-0 max-w-full appearance-none rounded-xl border border-neutral-300 px-2 text-sm outline-none focus:border-emerald-500" />
+        <ThaiDateInline value={date} max={bkkToday()} onChange={setDate} ariaLabel="วันที่ตรวจนับ"
+          className="h-11 w-[8.5rem] min-w-0 rounded-xl border border-neutral-300 px-2 text-sm outline-none focus:border-emerald-500" />
         <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300}
           placeholder="ที่ตั้งจริง / สภาพ (ไม่บังคับ)" aria-label="บันทึกการตรวจนับ"
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setOpen(false); }}
