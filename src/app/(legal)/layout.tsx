@@ -30,13 +30,14 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             className="inline-flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:border-neutral-300 hover:bg-neutral-100">
             <ArrowLeft className="h-4 w-4" /> กลับหน้าแรก
           </Link>
-          <Link href="/login" className="text-sm font-medium text-emerald-700 hover:underline">
+          {/* เป้ากด 44px — วัดจริง 5 ก.ย. 2569 ได้ 20px ทั้งที่เป็นปุ่มนำทาง ไม่ใช่ลิงก์ในย่อหน้า */}
+          <Link href="/login" className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-emerald-700 hover:underline">
             เข้าสู่ระบบ
           </Link>
         </div>
 
         <div className="rounded-2xl border border-neutral-200 bg-white p-6 md:p-12">
-          <Link href="/" className="inline-flex" aria-label="กลับหน้าแรก">
+          <Link href="/" className="inline-flex min-h-11 items-center" aria-label="กลับหน้าแรก">
             <Logo />
           </Link>
           <article className="prose prose-neutral mt-6 max-w-none prose-h1:text-2xl prose-h2:mt-8 prose-h2:text-lg [&_h1]:font-bold [&_h2]:font-semibold [&_li]:my-1 [&_p]:leading-relaxed [&_ul]:list-disc [&_ul]:pl-6">
