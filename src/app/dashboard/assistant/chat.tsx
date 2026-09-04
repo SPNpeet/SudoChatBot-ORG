@@ -827,7 +827,10 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
               if (all.length) { e.preventDefault(); addFiles(all, "paste"); }
             }}
             placeholder={listening ? "กำลังฟัง... พูดสั่งงานได้เลย" : pendingFiles.length ? "สั่งกำกับบิล (ไม่พิมพ์ก็ได้) เช่น ค่าเช่า ยังไม่จ่าย" : "สั่งงานบัญชี หรือวางรูปบิลด้วย Ctrl+V ได้เลย"}
-            className="h-11 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
+            // ⚠️ min-w-0 จำเป็น (แก้ 5 ก.ย. 2569 — ภาพจริงบนมือถือ 390px: ปุ่ม "ส่งข้อความ" ถูกดัน
+            // หลุดขอบจอขวาไปครึ่งปุ่ม) input มี min-width ตามค่าเริ่มต้นของเบราว์เซอร์ราว 150-180px
+            // flex-1 จึงหดไม่ลงเมื่อมีปุ่มแนบ+ไมค์+ส่งอยู่ในแถวเดียว ต้องบอกให้หดได้ถึงศูนย์
+            className="h-11 w-0 min-w-0 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
           {voiceSupported && (
             <button type="button" onClick={() => { setError(null); toggleVoice(input); }} disabled={busy || !!reading}
               aria-label={listening ? "หยุดฟัง" : "พูดสั่งงาน"} aria-pressed={listening}

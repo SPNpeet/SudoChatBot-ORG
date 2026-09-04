@@ -269,7 +269,7 @@ export async function POST(request: Request) {
       spentUsd += ocrCostUsd(eng.name);
       try {
         const rows = await eng.run();
-        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `import/${eng.name}`, cost_usd: spentUsd });
+        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", credits: 3, model: `import/${eng.name}`, cost_usd: spentUsd });
         return NextResponse.json({ ok: true, rows, engine: eng.name });
       } catch (e) {
         lastErr = (e as Error).message;
@@ -280,7 +280,7 @@ export async function POST(request: Request) {
     // เดิมบันทึกเฉพาะตอนสำเร็จ ไฟล์เสียใบเดียวจึงกดซ้ำเผา token ได้ไม่จำกัด
     // โดยตัวนับทุกชั้น (โควตาผู้ใช้/เพดานนำเข้า/เพดานแพลตฟอร์ม) มองไม่เห็นเลย
     try {
-      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: "import/failed", cost_usd: spentUsd || OCR_EST_COST_USD });
+      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", credits: 3, model: "import/failed", cost_usd: spentUsd || OCR_EST_COST_USD });
     } catch { /* บันทึกไม่สำเร็จอย่าไปทับ error จริงของผู้ใช้ */ }
     return NextResponse.json({ ok: false, error: friendlyAiError(lastErr) });
   } catch (e) {

@@ -49,27 +49,31 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
     // เจ้าของเจอเองว่า "มันเลื่อนแม่ง 2 อัน ทั้งจอและกรอบที่ให้คุยแชท"
     // FitViewport วัดของจริงทุกครั้ง รวมตอนหมุนจอและตอนแป้นพิมพ์มือถือเด้งขึ้นมา
     <FitViewport className="flex flex-col gap-3" minHeight={340}>
-      <div className="flex items-center justify-between gap-3">
+      {/* ⚠️ มือถือ: หัวข้อกับเครื่องมือต้องอยู่คนละแถว (แก้ 5 ก.ย. 2569 — เจ้าของแคปมาว่า
+          "หน้า AI มีเครื่องมือที่โดนบัง มองไรก็ไม่เห็น") ภาพจริง 390px: ชื่อผู้ช่วยตกสองบรรทัด
+          และปุ่ม 3 ตัวเหลือแต่ไอคอนเปล่าเบียดกันมุมขวา ไม่มีใครรู้ว่ากดแล้วได้อะไร
+          ตอนนี้: แถวแรก = ชื่อ + ตั้งชื่อ · แถวสอง = เครื่องมือ 3 ชิ้น "มีคำกำกับทุกปุ่ม"
+          เลื่อนแนวนอนได้ถ้าไม่พอ · จอ sm ขึ้นไปยังเรียงแถวเดียวเหมือนเดิม */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-[22px] font-bold leading-tight tracking-tight">
-            <Calculator className="h-5 w-5 shrink-0 text-emerald-600" />{assistantName ?? "ผู้ช่วยบัญชี AI"}
-          </h1>
-          <div className="mt-0.5 flex items-center gap-1.5">
-            <p className="truncate text-sm text-neutral-500">พิมพ์สั่งเป็นภาษาคน หรือส่งรูปบิลมาให้ลงบัญชีให้</p>
+            <Calculator className="h-5 w-5 shrink-0 text-emerald-600" />
+            <span className="truncate">{assistantName ?? "ผู้ช่วยบัญชี AI"}</span>
             {["owner", "admin"].includes(role) && <AssistantNameEditor shopId={shop.id} current={assistantName} />}
-          </div>
+          </h1>
+          <p className="mt-0.5 truncate text-sm text-neutral-500">พิมพ์สั่งเป็นภาษาคน หรือส่งรูปบิลมาให้ลงบัญชีให้</p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="-mx-1 flex shrink-0 items-center gap-2 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
         <Link href="/dashboard/assistant/workflows" title="งานอัตโนมัติที่ตั้งไว้"
-          className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
-          <Workflow className="h-3.5 w-3.5" /><span className="hidden sm:inline">งานอัตโนมัติ</span>
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
+          <Workflow className="h-3.5 w-3.5" />งานอัตโนมัติ
         </Link>
         <Link href="/dashboard/assistant/memory" title="สิ่งที่ผู้ช่วยจำเกี่ยวกับกิจการ"
-          className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
-          <Brain className="h-3.5 w-3.5" /><span className="hidden sm:inline">สิ่งที่จำ</span>
+          className="inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
+          <Brain className="h-3.5 w-3.5" />สิ่งที่จำ
         </Link>
         <details className="relative shrink-0">
-          <summary className="inline-flex h-11 cursor-pointer list-none items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
+          <summary className="inline-flex h-11 cursor-pointer list-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-600 transition-colors hover:bg-neutral-50">
             <CircleHelp className="h-3.5 w-3.5" />ทำอะไรได้บ้าง
           </summary>
           {/* ⚠️ มือถือต้องยึดขอบจอ ไม่ใช่ขอบปุ่ม

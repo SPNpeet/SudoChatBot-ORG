@@ -1670,8 +1670,12 @@ export async function runAssistant(ctx: AssistantCtx): Promise<AssistantResult> 
   // เวลาลูกค้าแจ้งว่า "แชทตอบแปลก ๆ" เราต้องเปิด log แล้วเห็นของเดียวกับที่เขาเห็น
   sanitizeReply(r);
 
+  // ⚠️ "เครดิต AI" = มาตรวัดกลาง (migration 113) — แชท 1 เครดิต และ +1 ทุก 30,000 โทเคน
+  // ข้อความยาว/เรียก tool หลายรอบมีต้นทุนจริงสูงกว่าแชทสั้นหลายเท่า เดิมนับ 1 เท่ากันหมด
+  // ตัวเลข 30,000 มาจากของจริง: เทิร์นเฉลี่ย ~13,000 โทเคน จึงส่วนใหญ่ = 1 เครดิตพอดี
+  const credits = 1 + Math.floor(((r.inTok ?? 0) + (r.outTok ?? 0)) / 30_000);
   await ctx.svc.from("ai_usage_logs").insert({
-    shop_id: ctx.shopId, purpose: "assistant", model: `${cfg.provider}/${cfg.model}`,
+    shop_id: ctx.shopId, purpose: "assistant", model: `${cfg.provider}/${cfg.model}`, credits,
     input_tokens: r.inTok, output_tokens: r.outTok, cached_tokens: r.cachedTok,
     // ⚠️ ต้องส่ง "provider/model" ไม่ใช่ชื่อโมเดลล้วน — ส่วนลด cache แยกตามค่าย
     // ส่งชื่อล้วนไปจะไม่รู้ว่าค่ายไหน แล้วตกไปคิดราคาเต็มเงียบ ๆ (เพดานดับเร็วกว่าที่ควร)

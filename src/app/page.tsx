@@ -214,7 +214,7 @@ export default async function Landing() {
               {[
                 c
                   ? `${c.hero.pricePrefix} ${(cheapestMonthly ?? 99).toLocaleString("en-US")} ${c.hero.priceSuffix}`
-                  : `เดือนละ ${(cheapestMonthly ?? 99).toLocaleString("th-TH")} บาท`,
+                  : `เดือนละ ${(cheapestMonthly ?? 199).toLocaleString("th-TH")} บาท`,
                 // ⚠️ ตัด "ลองฟรี 3 ครั้ง ไม่ต้องสมัคร" ออกจากแถบนี้โดยตั้งใจ
                 // ช่องสั่งงาน (HeroCommand) ที่อยู่เหนือขึ้นไป 1 นิ้วเขียนประโยคนี้อยู่แล้ว
                 // เขียนซ้ำในระยะสายตาเดียวกันทำให้หน้ารก และเป็นปัญหาเดียวกับที่รื้อหน้าแรกไปแล้วรอบหนึ่ง
@@ -344,7 +344,7 @@ export default async function Landing() {
             {c ? (
               <>{c.pricing.from} <span style={{ color: BRAND }} className="tabular-nums">{cheapest ? cheapest.toLocaleString("en-US") : "83"}</span> {c.pricing.baht} {c.pricing.perMonth}</>
             ) : (
-              <>เริ่มที่เดือนละ <span style={{ color: BRAND }} className="tabular-nums">{cheapest ? cheapest.toLocaleString("th-TH") : "83"}</span> บาท</>
+              <>เริ่มที่เดือนละ <span style={{ color: BRAND }} className="tabular-nums">{cheapest ? cheapest.toLocaleString("th-TH") : "166"}</span> บาท</>
             )}
           </h2>
           <p className="mx-auto mt-2 max-w-xl text-center text-sm leading-relaxed text-neutral-500">

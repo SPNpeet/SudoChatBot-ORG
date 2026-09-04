@@ -17,6 +17,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { FileText, Receipt, FileSignature, Camera, Banknote } from "lucide-react";
+import TemplatePreview from "./template-preview";
 
 const TEMPLATES = [
   { href: "/dashboard/sales/new?type=invoice", icon: FileText, label: "ใบแจ้งหนี้", sub: "INVOICE", hint: "ขายเชื่อ ตั้งลูกหนี้" },
@@ -51,6 +52,13 @@ export default function DocTemplates() {
               <span className="text-xs leading-snug text-neutral-400">{t.hint}</span>
             </Link>
           ))}
+        </div>
+        {/* เอกสารตัวอย่างแบบป๊อบอัพ — เห็นหน้าตาใบจริงก่อนตัดสินใจกดออก (เจ้าของขอ 5 ก.ย. 2569) */}
+        <div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-neutral-400">
+          <span className="pr-1">ยังไม่แน่ใจว่าใบไหน?</span>
+          <TemplatePreview docType="quotation" href="/dashboard/sales/new?type=quotation" label="ใบเสนอราคา" />
+          <TemplatePreview docType="invoice" href="/dashboard/sales/new?type=invoice" label="ใบแจ้งหนี้" />
+          <TemplatePreview docType="receipt" href="/dashboard/sales/new?type=receipt" label="ใบเสร็จรับเงิน" />
         </div>
       </CardContent>
     </Card>

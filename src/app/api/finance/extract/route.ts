@@ -309,7 +309,7 @@ export async function POST(request: Request) {
       try {
         const data = await eng.run();
         // ลงต้นทุนรวมของทุกเอนจินที่ยิงไปในคำขอนี้ ไม่ใช่เฉพาะตัวที่สำเร็จ
-        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: `finance/${eng.name}`, cost_usd: spentUsd });
+        await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", credits: 2, model: `finance/${eng.name}`, cost_usd: spentUsd });
         return NextResponse.json({ ok: true, data, engine: eng.name, file_path: path });
       } catch (e) {
         lastErr = (e as Error).message;
@@ -319,7 +319,7 @@ export async function POST(request: Request) {
     // พังทุกเอนจินก็บันทึก — เหตุผลเดียวกับหน้านำเข้าสินค้า (กันกดซ้ำเผา token ฟรี)
     // ตรงนี้คือกรณีที่จ่ายแพงที่สุด: ยิงครบทุกค่ายแล้วไม่ได้อะไรเลย
     try {
-      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", model: "finance/failed", cost_usd: spentUsd || OCR_EST_COST_USD });
+      await svc.from("ai_usage_logs").insert({ shop_id: shopId, purpose: "ocr", credits: 2, model: "finance/failed", cost_usd: spentUsd || OCR_EST_COST_USD });
     } catch { /* อย่าทับ error จริง */ }
     return NextResponse.json({ ok: false, error: friendlyAiError(lastErr), file_path: path });
   } catch (e) {

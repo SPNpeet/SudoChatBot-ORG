@@ -138,8 +138,11 @@ export async function assertShopActive(svc: SupabaseClient, shopId: string): Pro
  *  ทำไมต้องมี (5 ส.ค. 2569): OCR แพงกว่าคำสั่งแชท ~8 เท่า (0.72฿ vs 0.09฿)
  *  ถ้าคุมด้วยโควตา AI รวมอย่างเดียว แพ็กธุรกิจ 249฿ ที่ใช้ 400 คำสั่งเป็น OCR ล้วน
  *  ต้นทุนจะเกินราคาขาย — ด่านนี้ทำให้การขาดทุนเป็นไปไม่ได้เชิงคณิตศาสตร์ ไม่ใช่แค่ "ไม่น่าเกิด" */
+// ตัวเลขต้องคู่กับ included_credits ของ migration 113 (อ่านบิล 2 เครดิต):
+// free 60 -> 30 ใบ · starter 400 -> 200 · professional 1,500 -> 750 · executive 5,000 -> 2,500 · agency ไม่จำกัดในทางปฏิบัติ
+// เพดานนี้ต่ำกว่าเครดิตนิดหน่อยโดยตั้งใจ — กันคนใช้ OCR (แพงสุด) กินเครดิตหมดคนเดียว
 const OCR_MONTHLY_CAP: Record<string, number> = {
-  free: 5, starter: 30, professional: 100, executive: 250, agency: 750,
+  free: 30, starter: 200, professional: 750, executive: 2500, agency: 7500,
 };
 
 /** ด่านนี้ "ปฏิเสธเฉย ๆ" ไม่ตัดโควตา — ต้องเรียกก่อน consumeAiQuota เสมอ (กติกาลำดับด่าน) */

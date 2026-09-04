@@ -26,6 +26,13 @@ const PAGES = [
   { path: "/privacy", index: true },
   { path: "/terms", index: true },
   { path: "/data-deletion", index: true },
+  // เพิ่ม 5 ก.ย. 2569 — เดิมด่านตรวจแค่ 7 หน้า ทั้งที่หน้าขาย (ราคา/ฟีเจอร์/คู่มือ) คือหน้าที่ Google ต้องเจอ
+  { path: "/pricing", index: true },
+  { path: "/features", index: true },
+  { path: "/guide", index: true },
+  { path: "/about", index: true },
+  { path: "/contact", index: true },
+  { path: "/refund", index: true },
 ];
 
 let failures = 0;

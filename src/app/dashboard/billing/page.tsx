@@ -14,7 +14,7 @@ export default async function BillingPage() {
   const { supabase, shop, role } = await getCurrentShop();
   const svc = createServiceClient();
 
-  const [{ data: summary }, { data: plans }, { data: txns }, { data: topups }, { data: pf }, { data: quotaRaw }] = await Promise.all([
+  const [{ data: summary }, { data: plans }, { data: txns }, { data: topups }, { data: pf }, { data: quotaRaw }, { data: creditLog }] = await Promise.all([
     supabase.rpc("billing_summary", { p_shop_id: shop.id }),
     svc.from("plans").select("*").eq("active", true).order("sort"),
     svc.from("wallet_transactions").select("*").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(20),
@@ -28,6 +28,9 @@ export default async function BillingPage() {
     // (assistant+ocr รวมทุกกิจการของเจ้าของ) — เลขคนละตัวบนเรื่องเดียวกัน = ผู้ใช้ไม่เชื่อระบบ
     // บทเรียนเดียวกับกฎบัญชี: กฎที่อยู่สองที่จะเพี้ยนเสมอ
     supabase.rpc("get_ai_quota_status", { p_shop_id: shop.id }),
+    // ประวัติเครดิต — "ใช้ไปเท่าไหร่กับอะไร" (เจ้าของ 5 ก.ย. 2569: เดิมไม่มีมาตรฐานเลย มีแค่รายครั้ง)
+    svc.from("ai_usage_logs").select("purpose,model,credits,input_tokens,output_tokens,created_at")
+      .eq("shop_id", shop.id).in("purpose", ["assistant", "ocr"]).order("created_at", { ascending: false }).limit(20),
   ]);
   const quota = (quotaRaw ?? null) as {
     used_today: number; cap_today: number | null; used_month: number; cap_month: number | null;
@@ -69,19 +72,19 @@ export default async function BillingPage() {
     <div className="mx-auto w-full max-w-5xl space-y-6">
       <PageHeader icon={Wallet} tone="emerald"
         title="แพ็กเกจและเครดิต"
-        lead={<>แพ็กปัจจุบัน <b>{plan?.name ?? "ทดลองใช้"}</b>{quotaMax > 0 && <> · โควตา AI เหลือ <b>{Math.max(0, quotaMax - quotaUsed).toLocaleString()}</b> จาก {quotaMax.toLocaleString()} {dailyCap ? "วันนี้" : "เดือนนี้"}</>}</>}
-        help="ค่าบริการคิดตามแพ็กเกจที่เลือก ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด · ที่จำกัดคือ “งาน AI” (ผู้ช่วย + อ่านบิล) เท่านั้น — การออกเอกสาร ลงบัญชี และดูรายงานเองใช้ได้ไม่จำกัดทุกแพ็ก แม้โควตา AI หมด"
+        lead={<>แพ็กปัจจุบัน <b>{plan?.name ?? "ทดลองใช้"}</b>{quotaMax > 0 && <> · เครดิต AI เหลือ <b>{Math.max(0, quotaMax - quotaUsed).toLocaleString()}</b> จาก {quotaMax.toLocaleString()} {dailyCap ? "วันนี้" : "เดือนนี้"}</>}</>}
+        help="ค่าบริการคิดตามแพ็กเกจ ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด · สิ่งเดียวที่มีโควตาคือ “เครดิต AI”: สั่งงานผู้ช่วย 1 ข้อความ = 1 เครดิต · ให้ AI อ่านบิล 1 ใบ = 2 เครดิต · นำเข้าสินค้าจากไฟล์ = 3 เครดิต (ข้อความยาวมากอาจนับเพิ่ม) · การออกเอกสาร ลงบัญชี รายงาน คีย์เองไม่จำกัดทุกแพ็ก แม้เครดิตหมด"
       />
 
       {dailyCap !== null && quotaUsed >= dailyCap && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <span>ใช้ครบโควตา AI วันนี้แล้ว ({dailyCap.toLocaleString()} ครั้ง/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา (คีย์เอกสารเองได้ไม่จำกัด)</span>
+          <span>ใช้เครดิต AI วันนี้ครบแล้ว ({dailyCap.toLocaleString()} เครดิต/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา (คีย์เอกสารเองได้ไม่จำกัด)</span>
         </div>
       )}
       {monthlyFull && balance <= 0 && (
         <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {/* ห้ามบอกว่า "พรุ่งนี้ใช้ต่อได้" ในกรณีนี้ — โควตารายเดือนรีเซ็ตต้นเดือนถัดไปเท่านั้น */}
-          <span>ใช้ครบโควตา AI ของแพ็กเกจเดือนนี้แล้ว ({monthlyCap.toLocaleString()} ครั้ง/เดือน) และไม่มีเครดิตคงเหลือ — งาน AI (อ่านบิล/ผู้ช่วย) จะหยุดจนกว่าจะเติมเครดิตหรืออัปเกรด · โควตารีเซ็ตต้นเดือนหน้า · คีย์เอกสารเองยังใช้ได้ปกติ</span>
+          <span>ใช้เครดิต AI ของแพ็กเกจเดือนนี้ครบแล้ว ({monthlyCap.toLocaleString()} เครดิต/เดือน) และไม่มีเครดิตคงเหลือ — งาน AI (อ่านบิล/ผู้ช่วย) จะหยุดจนกว่าจะเติมเครดิตหรืออัปเกรด · โควตารีเซ็ตต้นเดือนหน้า · คีย์เอกสารเองยังใช้ได้ปกติ</span>
         </div>
       )}
 
@@ -102,7 +105,7 @@ export default async function BillingPage() {
         </Card>
         <Card>
           <CardContent className="pt-5">
-            <p className="text-xs text-neutral-400">{dailyCap ? "โควตา AI วันนี้ (รีเซ็ตทุกวัน)" : "โควตา AI เดือนนี้ (รีเซ็ตต้นเดือน)"}</p>
+            <p className="text-xs text-neutral-400">{dailyCap ? "เครดิต AI วันนี้ (รีเซ็ตทุกวัน)" : "เครดิต AI เดือนนี้ (รีเซ็ตต้นเดือน)"}</p>
             <p className="mt-1 text-2xl font-bold tracking-tight">{quotaUsed.toLocaleString()}<span className="text-sm font-normal text-neutral-400">/{quotaMax.toLocaleString()}</span></p>
             <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
               <div className={`h-full rounded-full ${quotaPct >= 100 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(quotaPct, 100)}%` }} />
@@ -110,6 +113,31 @@ export default async function BillingPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ประวัติการใช้เครดิต — ทุกแถวบอกว่างานอะไร กี่เครดิต และใช้โทเคนจริงเท่าไหร่
+          นี่คือ "มาตรฐาน" ที่เจ้าของขอ: ตรวจสอบย้อนหลังได้ทุกเครดิต ไม่ใช่ตัวเลขลอย ๆ */}
+      {(creditLog ?? []).length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>ประวัติการใช้เครดิต AI (20 รายการล่าสุด)</CardTitle></CardHeader>
+          <CardContent className="px-0 pb-0">
+            <ul className="divide-y divide-neutral-100">
+              {(creditLog ?? []).map((l, i) => {
+                const kind = l.purpose === "ocr" ? (String(l.model).startsWith("import/") ? "นำเข้าสินค้าจากไฟล์" : "AI อ่านบิล/ไฟล์") : "สั่งงานผู้ช่วย";
+                const tok = (Number(l.input_tokens ?? 0) + Number(l.output_tokens ?? 0));
+                return (
+                  <li key={i} className="flex items-center gap-3 px-5 py-2.5 text-sm">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-neutral-800">{kind}</span>
+                      <span className="block text-[11px] text-neutral-400">{dateTH(l.created_at)}{tok > 0 && ` · ${tok.toLocaleString()} โทเคน`}</span>
+                    </span>
+                    <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums text-neutral-900">-{Number(l.credits ?? 1)} เครดิต</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <BillingClient
         shopId={shop.id}

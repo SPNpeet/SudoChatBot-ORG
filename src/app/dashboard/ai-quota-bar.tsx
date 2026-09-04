@@ -25,11 +25,12 @@ export default function AiQuotaBar({ quota, planCode }: { quota: AiQuota | null;
   const unlimited = !quota.cap_today && !quota.cap_month;
 
   // รายละเอียดตัวเลขจริง — อยู่ใน title เสมอ ใครอยากรู้เป๊ะ ๆ ชี้ดูได้ ไม่โดนซ่อน
+  // หน่วยเป็น "เครดิต" (migration 113): แชท 1 · อ่านบิล 2 · นำเข้าไฟล์ 3 — มาตรวัดเดียวทั้งระบบ
   const detail = quota.cap_today
-    ? `ใช้งาน AI วันนี้ ${quota.used_today.toLocaleString()} จาก ${quota.cap_today.toLocaleString()} งาน · รีเซ็ตเที่ยงคืน`
+    ? `ใช้ไป ${quota.used_today.toLocaleString()} จาก ${quota.cap_today.toLocaleString()} เครดิตวันนี้ · รีเซ็ตเที่ยงคืน`
     : quota.cap_month
-      ? `ใช้งาน AI เดือนนี้ ${quota.used_month.toLocaleString()} จาก ${quota.cap_month.toLocaleString()} งาน · รีเซ็ตวันที่ 1`
-      : "งาน AI ไม่จำกัดในแพ็กนี้";
+      ? `ใช้ไป ${quota.used_month.toLocaleString()} จาก ${quota.cap_month.toLocaleString()} เครดิตเดือนนี้ · รีเซ็ตวันที่ 1`
+      : "เครดิต AI ไม่จำกัดในแพ็กนี้";
 
   const tone = !quota.allowed ? "full" : pct >= 80 ? "near" : "ok";
 
@@ -47,7 +48,7 @@ export default function AiQuotaBar({ quota, planCode }: { quota: AiQuota | null;
         )}
       </div>
       {unlimited ? (
-        <p className="mt-1 text-[11px] text-neutral-400">งาน AI ไม่จำกัด</p>
+        <p className="mt-1 text-[11px] text-neutral-400">เครดิต AI ไม่จำกัด</p>
       ) : (
         <>
           <div className="mt-1.5 flex items-center gap-2">
@@ -58,7 +59,9 @@ export default function AiQuotaBar({ quota, planCode }: { quota: AiQuota | null;
             </div>
             <span className="shrink-0 text-[10px] tabular-nums text-neutral-400">{pct}%</span>
           </div>
-          <p className="mt-1 text-[10px] text-neutral-400">การใช้งาน AI {quota.cap_today ? "วันนี้" : "เดือนนี้"}</p>
+          <p className="mt-1 text-[10px] tabular-nums text-neutral-400">
+            เครดิต AI {quota.cap_today ? "วันนี้" : "เดือนนี้"} · เหลือ {Math.max(0, (quota.cap_today ?? quota.cap_month ?? 0) - (quota.cap_today ? quota.used_today : quota.used_month)).toLocaleString()}
+          </p>
         </>
       )}
       {/* ชวนอัปเกรดเฉพาะตอนที่มันช่วยได้จริง — ใกล้เต็ม/เต็มแล้วเท่านั้น ไม่ขายของตลอดเวลา */}

@@ -82,8 +82,11 @@ const CELL =
   "focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/15";
 
 export default function DocPreview({
-  docType, seller, buyer, rows, totals, issueDate, dueDate, vatMode, whtRate, notes, onClose, edit, variant = "modal",
+  docType, seller, buyer, rows, totals, issueDate, dueDate, vatMode, whtRate, notes, onClose, edit, variant = "modal", sample = false,
 }: {
+  /** โหมด "เอกสารตัวอย่าง" (ป๊อบอัพบนแดชบอร์ด): ไม่มีหัว/ท้ายของฟอร์ม เพราะไม่มีฟอร์มให้กลับไปแก้
+   *  — ตัวเนื้อใบ (ด่าน ม.86/4 · สูตรยอด) เหมือนเดิมทุกบรรทัด นี่คือเหตุผลที่เป็น prop ไม่ใช่คอมโพเนนต์ใหม่ */
+  sample?: boolean;
   docType: DocType;
   seller: PreviewSeller;
   buyer: PreviewBuyer;
@@ -125,7 +128,7 @@ export default function DocPreview({
     <div className={panel ? "space-y-3" : "w-full max-w-3xl space-y-3"}
       onClick={panel ? undefined : (e) => e.stopPropagation()}>
 
-        <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3">
+        {!sample && <div className="flex items-center justify-between rounded-2xl bg-white px-4 py-3">
           <div>
             <h2 className="font-semibold">{edit ? "ตัวอย่างเอกสาร — แก้ได้บนใบเลย" : "ตัวอย่างก่อนออกเอกสาร"}</h2>
             <p className="flex items-center gap-1 text-xs text-neutral-500">
@@ -138,7 +141,7 @@ export default function DocPreview({
             className="-m-2 rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900">
             <X className="h-5 w-5" />
           </button>
-        </div>
+        </div>}
 
         {/* ด่านความครบถ้วนตามกฎหมาย — ขึ้นก่อนตัวเอกสาร เพราะเป็นเหตุผลหลักที่ต้องดูก่อนออก */}
         {isTaxInvoice && (
@@ -356,7 +359,7 @@ export default function DocPreview({
           </div>
         </div>
 
-        <div className="sticky bottom-0 flex flex-col gap-2 rounded-2xl bg-white px-4 py-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+        {!sample && <div className="sticky bottom-0 flex flex-col gap-2 rounded-2xl bg-white px-4 py-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-neutral-500">
             {edit ? <>ยอดที่ลูกค้าต้องจ่าย <b className="text-neutral-900 tabular-nums">{baht(totals.wht > 0 ? totals.cashDue : totals.total)}</b></> : "ปิดหน้าต่างเพื่อกลับไปแก้ในฟอร์ม"}
           </p>
@@ -368,7 +371,7 @@ export default function DocPreview({
               </Button>
             )}
           </div>
-        </div>
+        </div>}
       </div>
   );
 
