@@ -10,7 +10,7 @@
 //  ⚠️ ข้อมูลตัวอย่างเป็นชื่อสมมติล้วน ห้ามใช้ชื่อ/เลขภาษีของกิจการจริงหรือลูกค้าจริง
 //  (repo สาธารณะ + หน้านี้เห็นได้ทุกบทบาท) และไม่ยิงฐานข้อมูลเลย — เป็นภาพประกอบเท่านั้น
 // ============================================================
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Eye, ArrowRight, X } from "lucide-react";
 import DocPreview from "@/app/dashboard/finance/doc-preview";
@@ -36,6 +36,20 @@ function totalsOf(vatMode: VatMode, whtRate: number) {
 
 export default function TemplatePreview({ docType, href, label }: { docType: DocType; href: string; label: string }) {
   const [open, setOpen] = useState(false);
+  // ⚠️ ย่อทั้งใบให้พอดีความกว้างจอ (แก้ 5 ก.ย. 2569 — ภาพจริงมือถือ: zoom คงที่ 0.72 ยังไม่พอ
+  // คอลัมน์ตัวเลขด้านขวาถูกตัด เห็นแต่ป้าย "รวมเป็นเงิน" ไม่มีตัวเลข)
+  // เรนเดอร์ใบที่ความกว้างเดสก์ท็อป 720px คงที่ แล้วคำนวณอัตราย่อจากความกว้างจริงของกรอบ
+  // = เห็นครบทุกคอลัมน์เสมอ (เล็กลงแต่ครบ — เหมือนดู PDF บนมือถือ ซูมนิ้วได้)
+  const DOC_W = 720;
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    if (!open) return;
+    const fit = () => { const w = frameRef.current?.clientWidth ?? DOC_W; setScale(Math.min(1, w / DOC_W)); };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [open]);
   const today = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 10);
   const due = new Date(Date.now() + 37 * 864e5).toISOString().slice(0, 10);
   const vatMode: VatMode = "exclusive";
@@ -63,8 +77,8 @@ export default function TemplatePreview({ docType, href, label }: { docType: Doc
             </div>
             {/* มือถือย่อทั้งใบให้พอดีจอ (zoom) — เอกสารกว้างแบบ A4 ถ้าไม่ย่อ คอลัมน์ตัวเลขจะหลุดขวา
                 เห็นแต่ป้าย "รวมเป็นเงิน" โดยไม่มีตัวเลข (ภาพจริง 5 ก.ย. 2569) · จอ sm ขึ้นไปขนาดปกติ */}
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-b-2xl bg-neutral-100 p-2 sm:p-4">
-              <div className="[zoom:0.72] sm:[zoom:1]">
+            <div ref={frameRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden rounded-b-2xl bg-neutral-100 p-2 sm:p-4">
+              <div style={{ width: DOC_W, zoom: scale }}>
               <DocPreview
                 sample
                 variant="panel"
