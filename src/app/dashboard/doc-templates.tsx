@@ -48,7 +48,7 @@ export default function DocTemplates() {
                 <t.icon className="h-4 w-4" />
               </span>
               <span className="mt-1 text-[13px] font-semibold leading-tight text-neutral-900">{t.label}</span>
-              <span className="text-xs font-medium uppercase tracking-wider text-neutral-300">{t.sub}</span>
+              <span className="text-xs font-medium uppercase tracking-wider text-neutral-500">{t.sub}</span>
               <span className="text-xs leading-snug text-neutral-400">{t.hint}</span>
             </Link>
           ))}

@@ -20,6 +20,9 @@ export function contentJsonLd(page: ContentPage) {
         description: page.description,
         inLanguage: "th",
         mainEntityOfPage: url,
+        image: `${SITE}/opengraph-image`,
+        // ไม่ได้เก็บวันเผยแพร่แยก — ใช้วันอัปเดตล่าสุด (บอกตรง ดีกว่าปล่อยว่างแล้ว Google ไม่แสดงวันเลย)
+        datePublished: page.updated,
         dateModified: page.updated,
         author: { "@type": "Organization", name: "SudoChatBot", url: SITE },
         publisher: { "@type": "Organization", name: "SudoChatBot", url: SITE },

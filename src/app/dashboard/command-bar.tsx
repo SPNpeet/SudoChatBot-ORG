@@ -138,7 +138,7 @@ export default function CommandBar({ assistantName, proactive }: { assistantName
             key={s}
             type="button"
             onClick={() => go(s)}
-            className="inline-flex min-h-[36px] shrink-0 items-center whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 text-xs text-neutral-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
+            className="inline-flex min-h-11 shrink-0 items-center whitespace-nowrap rounded-full sm:min-h-[36px] border border-neutral-200 bg-white px-3 text-xs text-neutral-600 transition-colors hover:border-emerald-300 hover:bg-emerald-50/60 hover:text-emerald-700"
           >
             {s}
           </button>

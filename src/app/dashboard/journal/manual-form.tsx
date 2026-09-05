@@ -46,7 +46,7 @@ export default function ManualJournalForm({ shopId, accounts }: { shopId: string
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> บันทึกรายวันเอง</Button>
+      <Button variant="outline" onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> บันทึกรายวันเอง</Button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 px-4 pb-10 pt-14 sm:items-center" onClick={() => setOpen(false)}>
           <div className="w-full rounded-2xl bg-white p-5 sm:max-w-2xl" onClick={(e) => e.stopPropagation()}>

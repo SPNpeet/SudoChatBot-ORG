@@ -35,19 +35,19 @@ export default function ExportButtons({ rows, xlsxName, txtName, txtContent, txt
       {/* xlsx โหลดแบบ dynamic import (หลายร้อย KB) ถ้าไม่ล็อกไว้ กดรัว = ได้ไฟล์ซ้ำหลายใบ */}
       <button onClick={async () => { if (busy) return; setBusy(true); try { await downloadXlsx(); } finally { setBusy(false); } }}
         disabled={!rows.length || busy}
-        className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 px-3 text-xs text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-40">
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-neutral-200 px-3 text-xs text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-40 sm:min-h-9">
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
         {busy ? "กำลังสร้างไฟล์…" : "Excel"}
       </button>
       {txtName && (
         txtLocked ? (
           <Link href="/dashboard/billing" title="ไฟล์ยื่นสรรพากรปลดล็อกในแพ็ก AI Executive ขึ้นไป"
-            className="inline-flex h-8 items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 text-xs text-amber-700 hover:bg-amber-100">
+            className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 text-xs text-amber-700 hover:bg-amber-100 sm:min-h-8">
             <Lock className="h-3.5 w-3.5" /> ไฟล์ยื่น .txt — อัปเกรด
           </Link>
         ) : (
           <button onClick={downloadTxt} disabled={!txtContent}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-neutral-200 px-3 text-xs text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-40">
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-neutral-200 px-3 text-xs text-neutral-600 transition-colors hover:bg-neutral-50 disabled:opacity-40 sm:min-h-9">
             <FileText className="h-3.5 w-3.5" /> ไฟล์ยื่นสรรพากร (.txt)
           </button>
         )

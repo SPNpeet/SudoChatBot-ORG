@@ -5,6 +5,8 @@ export const metadata = {
   title: "เกี่ยวกับเรา",
   description: "SudoChatBot คือระบบบัญชีออนไลน์และผู้ช่วยบัญชี AI สำหรับ SME ไทย — ทีมพัฒนา แนวคิด และหลักการที่ระบบยึดถือ",
   alternates: { canonical: "https://sudochatbot.online/about" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "https://sudochatbot.online/about", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 export default function AboutPage() {

@@ -79,7 +79,8 @@ export default function CompanySwitcher({ companies, currentId }: { companies: C
     if (id === currentId) { setOpen(false); return; }
     start(async () => {
       const r = await switchShop(id);
-      if (r.ok) { setOpen(false); router.refresh(); }
+      // สลับกิจการแล้วต้องออกจากหน้ารายละเอียดของกิจการเดิม — ไม่งั้นค้างอยู่ที่เอกสารของกิจการเก่า/404
+      if (r.ok) { setOpen(false); router.push("/dashboard"); router.refresh(); }
     });
   }
 
@@ -95,7 +96,7 @@ export default function CompanySwitcher({ companies, currentId }: { companies: C
   return (
     <div className="relative">
       <button ref={btnRef} onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-xl border border-neutral-200 px-2.5 py-2 text-left text-sm hover:bg-neutral-50">
+        className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-neutral-200 px-2.5 py-2 text-left text-sm hover:bg-neutral-50">
         <Building2 className="h-4 w-4 shrink-0 text-emerald-600" />
         <span className="flex-1 truncate font-medium">{current?.name ?? "เลือกกิจการ"}</span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-neutral-400" />

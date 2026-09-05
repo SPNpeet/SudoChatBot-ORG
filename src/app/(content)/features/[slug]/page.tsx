@@ -17,7 +17,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     // ⚠️ ทุกหน้าต้องประกาศ canonical ของตัวเอง — layout ไม่ได้ตั้งให้โดยตั้งใจ
     // (ถ้า layout ตั้ง ทุกหน้าจะประกาศว่าตัวเองคือสำเนาของหน้าแรกแล้วหลุดจากดัชนี)
     alternates: { canonical: `/features/${page.slug}` },
-    openGraph: { title: page.title, description: page.description, url: `/features/${page.slug}`, type: "article" },
+    openGraph: { title: page.title, description: page.description, url: `/features/${page.slug}`, type: "article",
+      images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", modifiedTime: page.updated },
   };
 }
 

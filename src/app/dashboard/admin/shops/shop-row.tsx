@@ -65,7 +65,7 @@ export default function ShopRow({ id, name, ownerEmail, plan, status, createdAt,
             {Object.entries(planOptions).map(([code, label]) => <option key={code} value={code}>{label}</option>)}
           </Select>
         </Td>
-        <Td label="โควตา AI/วัน">
+        <Td label="เพดาน AI/วัน">
           <div className="flex items-center gap-1.5">
             <input inputMode="numeric" value={quota} onChange={(e) => setQuota(e.target.value.replace(/[^0-9]/g, ""))}
               placeholder="ตามแพ็ก" title="เพดานงาน AI/วัน เฉพาะกิจการนี้ — ว่าง = ใช้ตามแพ็กเกจ"

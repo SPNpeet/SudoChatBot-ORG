@@ -25,7 +25,7 @@ export default function CfoCard({ brief }: { brief: CfoBrief }) {
           <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">AI CFO</p>
           <p className="mt-0.5 text-[15px] font-bold leading-snug">{brief.headline}</p>
           <p className="mt-1 text-xs text-neutral-400">
-            เงินเข้า {brief.metrics.month_in.toLocaleString("th-TH")} · เงินออก {brief.metrics.month_out.toLocaleString("th-TH")} · รอเก็บ {brief.metrics.ar_total.toLocaleString("th-TH")} บาท
+            เงินเข้า {brief.metrics.month_in.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿ · เงินออก {brief.metrics.month_out.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿ · รอเก็บ {brief.metrics.ar_total.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿
           </p>
         </div>
       </div>

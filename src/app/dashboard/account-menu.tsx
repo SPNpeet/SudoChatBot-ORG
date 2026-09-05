@@ -91,7 +91,7 @@ export default function AccountMenu({ me, signOut, variant = "row" }: {
   const Avatar = ({ big }: { big?: boolean }) => (
     <span aria-hidden className={cn(
       "grid shrink-0 place-items-center rounded-full bg-emerald-600 font-semibold text-white",
-      big ? "h-10 w-10 text-sm" : "h-8 w-8 text-xs",
+      big ? "h-11 w-11 text-sm" : "h-8 w-8 text-xs",
     )}>{initials}</span>
   );
 
@@ -111,7 +111,7 @@ export default function AccountMenu({ me, signOut, variant = "row" }: {
                 ชื่อซ้ำกันได้ จึงต้องเห็นอีเมลโดยไม่ต้องกดอะไรเลย */}
             <span className="min-w-0 flex-1">
               <span className="block truncate text-[13px] font-medium text-neutral-800">{me.name?.trim() || "ยังไม่ได้ตั้งชื่อ"}</span>
-              <span className="block truncate text-xs text-neutral-400">{me.email ?? "—"}</span>
+              <span className="block truncate text-[11px] text-neutral-400">{me.email ?? "—"}</span>
             </span>
             <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
           </>

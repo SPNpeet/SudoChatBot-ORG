@@ -20,7 +20,7 @@ export default function LangToggle({ lang }: { lang: "th" | "en" }) {
       {(["th", "en"] as const).map((l) => (
         <button key={l} type="submit" name="lang" value={l}
           aria-current={lang === l ? "true" : undefined}
-          className={`min-h-9 rounded-lg px-2.5 text-xs font-semibold transition-colors ${
+          className={`min-h-10 rounded-lg px-2.5 text-xs font-semibold transition-colors ${
             lang === l ? "bg-neutral-900 text-white" : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
           }`}>
           {l === "th" ? "ไทย" : "EN"}

@@ -161,7 +161,7 @@ export default async function PrintDocPage({ params, searchParams }: {
             <div className="mt-4 flex justify-between gap-3 sm:gap-6">
               <div className="min-w-0 max-w-[58%]">
                 <p className="text-xs font-semibold text-neutral-400">ลูกค้า</p>
-                <p className="break-words font-semibold">{doc.contact_name ?? "-"}</p>
+                <p className="break-words font-semibold">{doc.contact_name ?? "ไม่ระบุชื่อ"}</p>
                 {doc.contact_address && <p className="whitespace-pre-wrap break-words text-neutral-600">{doc.contact_address}</p>}
                 {doc.contact_tax_id && (
                   <p className="text-neutral-600">
@@ -330,7 +330,7 @@ function WhtCert({ doc, shopName, shopTaxId, shopAddress }: {
 
         <section className="rounded border border-neutral-300 p-4">
           <p className="text-xs font-semibold text-neutral-400">ผู้ถูกหักภาษี ณ ที่จ่าย (ผู้รับเงิน)</p>
-          <p className="font-semibold">{doc.contact_name ?? "-"}</p>
+          <p className="font-semibold">{doc.contact_name ?? "ไม่ระบุชื่อ"}</p>
           {doc.contact_address && <p className="whitespace-pre-wrap text-neutral-600">{doc.contact_address}</p>}
           {doc.contact_tax_id && <p className="text-neutral-600">เลขประจำตัวผู้เสียภาษี {doc.contact_tax_id}</p>}
         </section>

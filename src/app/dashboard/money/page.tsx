@@ -1,5 +1,5 @@
 // ============================================================
-//  การเงิน/กระทบยอด — เงินเข้า-ออกทุกช่องทาง · อัปสลิปให้ระบบตรวจ+จับคู่ ·
+//  การเงินและกระทบยอด — เงินเข้า-ออกทุกช่องทาง · อัปสลิปให้ระบบตรวจ+จับคู่ ·
 //  นำเข้า statement ธนาคารมากระทบยอดกับเอกสาร
 // ============================================================
 import { getCurrentShop } from "@/lib/shop";
@@ -13,6 +13,7 @@ import { Upload, ChevronDown, Banknote, Landmark } from "lucide-react";
 import RowLink from "@/components/row-link";
 import SlipMatch from "./slip-match";
 import StatementImport from "./statement-import";
+import { canSeeMoney } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 90;
@@ -78,8 +79,10 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
   return (
     <div className="space-y-5">
       <PageHeader icon={Banknote} tone="blue"
-        title="การเงิน / กระทบยอด"
-        lead={<>เดือนนี้เงินเข้า <b className="text-emerald-600">{baht(inMonth)}</b> · เงินออก <b className="text-red-600">{baht(outMonth)}</b></>}
+        title="การเงินและกระทบยอด"
+        lead={canSeeMoney(role)
+          ? <>เดือนนี้เงินเข้า <b className="text-emerald-600">{baht(inMonth)}</b> · เงินออก <b className="text-red-600">{baht(outMonth)}</b></>
+          : "อัปโหลดสลิปหรือรายการเดินบัญชี ระบบจับคู่กับเอกสารและตัดยอดให้"}
         help="ที่นี่ไว้เช็คว่าเงินที่เข้าบัญชีจริง ตรงกับเอกสารที่ออกไปไหม — อัปสลิปที่ลูกค้าโอนมา ระบบจะจับคู่กับใบแจ้งหนี้และตัดยอดให้เอง หรือโหลดรายการเดินบัญชีจากแอปธนาคารมาเทียบทีเดียวทั้งเดือนก็ได้"
       />
 
@@ -162,7 +165,7 @@ export default async function MoneyPage({ searchParams }: { searchParams: Promis
                         {p.fin_docs?.doc_number ?? "ยังไม่ผูกเอกสาร"}
                       </span>
                       <span className="mt-0.5 block truncate text-xs text-neutral-500">
-                        {p.fin_docs?.contact_name ?? PAY_METHOD_TH[p.method] ?? p.method}
+                        {p.fin_docs?.contact_name ?? PAY_METHOD_TH[p.method] ?? "ช่องทางอื่น"}
                         {url && <span className="text-emerald-700"> · {p.verify_status === "verified" ? "สลิปตรวจแล้ว" : p.verify_status === "failed" ? "สลิปมีปัญหา" : "มีสลิป"}</span>}
                       </span>
                     </span>

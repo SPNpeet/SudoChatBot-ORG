@@ -176,7 +176,7 @@ export default function ImportClient({ shopId }: { shopId: string }) {
                 <Upload className="h-8 w-8 text-neutral-300" />
                 <p className="mt-3 text-sm font-medium">ลากไฟล์มาวาง หรือกดเลือกไฟล์</p>
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-3 text-xs text-neutral-400">
-                  <span className="flex items-center gap-1"><FileSpreadsheet className="h-3.5 w-3.5" /> Excel / CSV — อ่านตรง แม่น 100%</span>
+                  <span className="flex items-center gap-1"><FileSpreadsheet className="h-3.5 w-3.5" /> Excel / CSV — อ่านจากไฟล์โดยตรง ไม่ผ่าน AI</span>
                   <span className="flex items-center gap-1"><FileText className="h-3.5 w-3.5" /> PDF / รูปแคตตาล็อก — AI อ่านให้ (≤4MB)</span>
                 </div>
                 <Button className="mt-4" onClick={() => inputRef.current?.click()}>เลือกไฟล์</Button>

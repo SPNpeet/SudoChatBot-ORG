@@ -22,6 +22,7 @@ import DocTemplates from "./doc-templates";
 import { TrendingUp, TrendingDown, Users, Receipt, ArrowUpRight, ArrowDownRight, LineChart, FileText, Wallet } from "lucide-react";
 import Link from "next/link";
 import RowLink from "@/components/row-link";
+import { canManage, canWork } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -117,7 +118,7 @@ export default async function Overview() {
     byDay.set(d, cur);
   }
   const chartData = [...byDay.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([d, v]) => ({
-    date: new Date(d).toLocaleDateString("th-TH", { day: "numeric", month: "short" }), ...v,
+    date: new Date(d).toLocaleDateString("th-TH", { day: "numeric", month: "short", timeZone: "UTC" }), ...v,
   }));
 
   // ภ.พ.30 ยื่นภายในวันที่ 15 ของเดือนถัดไป
@@ -163,7 +164,7 @@ export default async function Overview() {
         <p className="text-xs text-neutral-400">
           {bkkNow.toLocaleDateString("th-TH", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}
         </p>
-        <h1 className="mt-0.5 text-xl font-bold tracking-tight">
+        <h1 className="mt-0.5 text-[22px] font-bold tracking-tight">
           {greeting(bkkNow.getUTCHours())} · {shop.name}
         </h1>
         <p className="mt-1 text-sm text-neutral-500">
@@ -183,7 +184,7 @@ export default async function Overview() {
           และกลับไปคีย์มือเหมือนโปรแกรมบัญชีทั่วไป = จ่ายค่า AI แล้วไม่ได้ใช้ */}
       {/* AI ทักก่อน — เลือกงานเร่งสุดหนึ่งเรื่องพอ (เกินกำหนด > สลิปยังไม่จับคู่ > ภ.พ.30)
           หลายเรื่องพร้อมกันคือเสียงรบกวน ไม่ใช่ผู้ช่วย */}
-      <CommandBar assistantName={assistantName} proactive={
+      {canWork(role) && <CommandBar assistantName={assistantName} proactive={
         (overdue ?? []).length > 0
           ? { text: `มีใบแจ้งหนี้เกินกำหนด ${(overdue ?? []).length} ใบ รวม ${baht((overdue ?? []).reduce((a, d) => a + docOutstanding(d), 0))} — ให้ช่วยร่างข้อความตามหนี้แบบสุภาพไหม`,
               command: "ช่วยร่างข้อความทวงถามยอดค้างแบบสุภาพ สำหรับใบแจ้งหนี้ที่เกินกำหนดชำระ" }
@@ -194,9 +195,9 @@ export default async function Overview() {
               ? { text: `เหลืออีก ${taxDueDay} วันถึงกำหนดยื่น ภ.พ.30 เดือนนี้ — ให้สรุปยอดภาษีขาย-ซื้อให้เลยไหม`,
                   command: "สรุปยอดภาษีขายและภาษีซื้อเดือนนี้ พร้อมยอดที่ต้องชำระใน ภ.พ.30" }
               : null
-      } />
+      } />}
 
-      <SampleDataCard shopId={shop.id} hasSample={(sampleCount ?? 0) > 0} isEmpty={(docCount ?? 0) === 0} />
+      {canManage(role) && <SampleDataCard shopId={shop.id} hasSample={(sampleCount ?? 0) > 0} isEmpty={(docCount ?? 0) === 0} />}
 
       {(docCount ?? 0) > 0 && (
         <TodayPanel
@@ -236,7 +237,7 @@ export default async function Overview() {
       {/* AI CFO — ต่อจากตัวเลขดิบ: บอกว่า "แล้วต้องทำอะไร" (คำนวณด้วยโค้ด ไม่กิน token) */}
       {seeMoney && (docCount ?? 0) > 0 && cfo && <CfoCard brief={cfo} />}
 
-      <SetupChecklist shop={shop} />
+      {canManage(role) && <SetupChecklist shop={shop} />}
 
       {/* ⚠️ กราฟขึ้นเฉพาะตอนมีข้อมูลพอจะเห็น "แนวโน้ม" จริง (>= 4 วันที่มีเงินเคลื่อนไหว)
           เจ้าของเจอเอง: มีข้อมูลจริง 2 วัน แต่กราฟลากเส้นโค้งสวยเต็มการ์ด
@@ -299,7 +300,7 @@ export default async function Overview() {
                       <Badge tone={docStatusTone(d.status as DocStatus)}>{docStatusLabel(d.doc_type as DocType, d.status as DocStatus)}</Badge>
                     </span>
                     <span className="mt-0.5 block truncate text-xs text-neutral-500">
-                      {DOC_TYPE_TH[d.doc_type as DocType]} · {d.contact_name ?? "-"}
+                      {DOC_TYPE_TH[d.doc_type as DocType]} · {d.contact_name ?? "ไม่ระบุลูกค้า"}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">
@@ -318,10 +319,10 @@ export default async function Overview() {
                   <RowLink key={d.id} href={d.doc_type === "expense" ? `/dashboard/expenses/${d.id}` : `/dashboard/sales/${d.id}`}>
                     <Td>
                       <Link href={d.doc_type === "expense" ? `/dashboard/expenses/${d.id}` : `/dashboard/sales/${d.id}`}
-                        className="font-medium text-emerald-700 hover:underline">{d.doc_number}</Link>
+                        className="whitespace-nowrap font-medium text-emerald-700 hover:underline">{d.doc_number}</Link>
                     </Td>
-                    <Td label="ประเภท">{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
-                    <Td label="คู่ค้า">{d.contact_name ?? "-"}</Td>
+                    <Td label="ประเภท" className="whitespace-nowrap">{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
+                    <Td label="คู่ค้า">{d.contact_name ?? "ไม่ระบุลูกค้า"}</Td>
                     {/* การ์ดนี้กว้างครึ่งจอแล้ว (จัดคู่กับงานที่ต้องทำ) — ยอดเงิน/วันที่ห้ามหักบรรทัด
                         ภาพจริง 30 ส.ค. 2569: "32,100.00 ฿" หักเป็นสองบรรทัด อ่านเหมือนเลขคนละตัว */}
                     <Td label="ยอด" className="whitespace-nowrap text-right tabular-nums">{baht(d.total)}</Td>
@@ -338,7 +339,7 @@ export default async function Overview() {
       </Card>
       </div>
 
-      <DocTemplates />
+      {canWork(role) && <DocTemplates />}
 
       {/* แถบความเชื่อมั่นท้ายหน้า — พูดเฉพาะสิ่งที่ระบบทำจริง ไม่อวดเลขลอย ๆ อย่าง "ปลอดภัย 100%" */}
       <p className="pb-2 text-center text-[11px] text-neutral-400">

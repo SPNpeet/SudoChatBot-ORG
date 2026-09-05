@@ -17,7 +17,7 @@ function summarize(w: AiWorkflow): string {
   if (w.kind === "low_stock") return `เหลือไม่เกิน ${c.threshold ?? 3} ชิ้น`;
   const items = (c.items as { name: string; qty: number; unit_price: number }[] | undefined) ?? [];
   const total = items.reduce((a, it) => a + it.qty * it.unit_price, 0);
-  return `ทุกวันที่ ${c.day_of_month ?? 1} · ${String(c.contact_name || "ไม่ระบุลูกค้า")} · ${items.length} รายการ ≈ ${total.toLocaleString("th-TH")} บาท`;
+  return `ทุกวันที่ ${c.day_of_month ?? 1} · ${String(c.contact_name || "ไม่ระบุลูกค้า")} · ${items.length} รายการ ≈ ${total.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ฿`;
 }
 
 const timeTH = (iso: string | null) => iso ? new Date(iso).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" }) : "ยังไม่เคยรัน";
@@ -153,7 +153,7 @@ export default function WorkflowList({ shopId, items, runs, contacts, canManage 
                 {w.source === "ai" ? <Bot className="h-4 w-4" /> : <Workflow className="h-4 w-4" />}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-neutral-900">{w.name}</p>
+                <p className="truncate text-sm font-semibold text-neutral-900">{w.name}</p>
                 <p className="text-xs text-neutral-500">{WORKFLOW_KIND_TH[w.kind]?.name} · {summarize(w)}</p>
                 <p className="mt-0.5 flex items-center gap-1 text-[11px] text-neutral-400">
                   {w.last_status === "error" ? <TriangleAlert className="h-3 w-3 text-red-500" /> : <Clock className="h-3 w-3" />}
@@ -183,7 +183,7 @@ export default function WorkflowList({ shopId, items, runs, contacts, canManage 
             {runs.map((r) => (
               <li key={r.id} className="flex items-start gap-2 py-2 text-xs">
                 {r.status === "error" ? <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" /> : <CircleCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />}
-                <span className="min-w-0 flex-1 text-neutral-700">{items.find((w) => w.id === r.workflow_id)?.name ?? "งานที่ลบแล้ว"} — {r.summary ?? r.dedupe_key}</span>
+                <span className="min-w-0 flex-1 text-neutral-700">{items.find((w) => w.id === r.workflow_id)?.name ?? "งานที่ลบแล้ว"} — {r.summary ?? "ทำงานแล้ว"}</span>
                 <span className="shrink-0 whitespace-nowrap text-neutral-400">{timeTH(r.ran_at)}</span>
               </li>
             ))}

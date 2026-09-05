@@ -74,7 +74,9 @@ const jsonLd = {
       operatingSystem: "Web",
       url: SITE,
       description: "ระบบบัญชีและออกเอกสารครบวงจรสำหรับธุรกิจไทย พร้อมผู้ช่วย AI: ใบแจ้งหนี้ ใบกำกับภาษี ตรวจสลิป สมุดรายวันอัตโนมัติ รายงานภาษีพร้อมยื่น",
-      offers: { "@type": "Offer", price: "0", priceCurrency: "THB", description: "เริ่มฟรี ไม่ต้องใช้บัตรเครดิต" },
+      // ราคาเต็มทุกแพ็กอยู่ใน Product schema ของ /pricing (ดึงจากตาราง plans) — ที่นี่บอกแค่ "เริ่มฟรี" และชี้ไปหน้านั้น
+      offers: { "@type": "Offer", price: "0", priceCurrency: "THB", description: "เริ่มฟรี ไม่ต้องใช้บัตรเครดิต", url: `${SITE}/pricing` },
+      image: `${SITE}/opengraph-image`,
       inLanguage: "th",
     },
     {
@@ -90,7 +92,10 @@ const jsonLd = {
       "@type": "Organization",
       name: "SudoChatBot",
       url: SITE,
-      sameAs: [],
+      logo: `${SITE}/icon-512.png`,
+      email: "support@sudochatbot.online",
+      contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: "support@sudochatbot.online", availableLanguage: ["th", "en"] },
+      // ห้ามใส่ sameAs ว่าง — เครื่องมือตรวจ schema นับเป็น property ที่ผิดรูป ใส่เมื่อมีเพจโซเชียลจริงเท่านั้น
     },
   ],
 };

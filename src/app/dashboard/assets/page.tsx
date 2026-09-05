@@ -22,16 +22,20 @@ type AssetRow = AssetForDep & {
   holder: string | null;
 };
 import AssetPhoto from "./asset-photo";
-import { baht, dateOnlyTH } from "@/lib/utils";
+import { dateTH, baht, dateOnlyTH } from "@/lib/utils";
 import { Boxes } from "lucide-react";
 import AssetForms from "./asset-forms";
 import { monthlyDepreciation, depreciationEndDate, type AssetForDep } from "@/lib/depreciation";
+import { canManage, canWork, canSeeMoney } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
 export default async function AssetsPage() {
   const { supabase, shop, role } = await getCurrentShop();
-  const canEdit = role === "owner" || role === "admin";
+  const canEdit = canManage(role);
+  // ตรวจนับทำได้ถึงพนักงาน (assertMember ใน verifyAsset) · ผู้ชมเห็นแต่ผลตรวจ
+  const canVerify = canWork(role);
+  const seeMoney = canSeeMoney(role);
 
   const [{ data: assetsRaw }, { data: runsRaw }, { data: closesRaw }] = await Promise.all([
     supabase.from("fixed_assets")
@@ -68,23 +72,23 @@ export default async function AssetsPage() {
         title="ทรัพย์สิน + งานปิดงวด"
         lead={assets.length === 0
           ? "ยังไม่มีทรัพย์สินในทะเบียน — ของที่ใช้ได้เกิน 1 ปี ต้องทยอยตัดค่าเสื่อม ไม่ใช่ลงเป็นค่าใช้จ่ายทีเดียว"
-          : <>{assets.length} ชิ้นในทะเบียน · มูลค่าคงเหลือตามบัญชี <b>{baht(bookValue)}</b></>}
+          : <>{assets.length} ชิ้นในทะเบียน{seeMoney && <> · มูลค่าคงเหลือตามบัญชี <b>{baht(bookValue)}</b></>}</>}
         help="ทรัพย์สินที่ใช้ได้หลายปี (คอมพิวเตอร์ รถ เครื่องจักร เฟอร์นิเจอร์) ลงเป็นค่าใช้จ่ายทีเดียวไม่ได้ ต้องทยอยตัดเป็นค่าเสื่อมราคาตามอายุการใช้งาน ถ้าไม่ทำ กำไรจะสูงเกินจริงและเสียภาษีเกินทุกปี"
       />
 
-      {assets.length > 0 && (
+      {assets.length > 0 && seeMoney && (
         <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-3">
           <Card><CardContent className="pt-5">
             <p className="text-xs text-neutral-400">ราคาทุนรวม</p>
-            <p className="text-xl font-bold tabular-nums">{baht(totalCost)}</p>
+            <p className="whitespace-nowrap text-lg font-bold tabular-nums sm:text-xl">{baht(totalCost)}</p>
           </CardContent></Card>
           <Card><CardContent className="pt-5">
             <p className="text-xs text-neutral-400">ค่าเสื่อมสะสมที่ลงแล้ว</p>
-            <p className="text-xl font-bold tabular-nums text-amber-700">{baht(totalTaken)}</p>
+            <p className="whitespace-nowrap text-lg font-bold tabular-nums text-amber-700 sm:text-xl">{baht(totalTaken)}</p>
           </CardContent></Card>
           <Card><CardContent className="pt-5">
             <p className="text-xs text-neutral-400">มูลค่าคงเหลือตามบัญชี</p>
-            <p className="text-xl font-bold tabular-nums">{baht(bookValue)}</p>
+            <p className="whitespace-nowrap text-lg font-bold tabular-nums sm:text-xl">{baht(bookValue)}</p>
           </CardContent></Card>
         </div>
       )}
@@ -133,8 +137,8 @@ export default async function AssetsPage() {
                     </div>
                     <div className="mt-1.5 flex items-center justify-between gap-2">
                       <span className="text-[11px] text-neutral-400">ได้มา {dateOnlyTH(a.acquired_on)} · อายุ {Number(a.life_years)} ปี</span>
-                      <VerifyAsset shopId={shop.id} assetId={a.id}
-                        verifiedOn={a.verified_on ?? null} verifiedNote={a.verified_note ?? null} />
+                      {canVerify && <VerifyAsset shopId={shop.id} assetId={a.id}
+                        verifiedOn={a.verified_on ?? null} verifiedNote={a.verified_note ?? null} />}
                     </div>
                   </div>
                 );
@@ -186,8 +190,8 @@ export default async function AssetsPage() {
                         <Td label="คงเหลือ" className="text-right tabular-nums font-medium">{baht(nbv)}</Td>
                         <Td label="หมดอายุ" className="text-neutral-500">{dateOnlyTH(end.toISOString().slice(0, 10))}</Td>
                         <Td label="ตรวจนับล่าสุด">
-                          <VerifyAsset shopId={shop.id} assetId={a.id}
-                            verifiedOn={a.verified_on ?? null} verifiedNote={a.verified_note ?? null} />
+                          {canVerify && <VerifyAsset shopId={shop.id} assetId={a.id}
+                            verifiedOn={a.verified_on ?? null} verifiedNote={a.verified_note ?? null} />}
                         </Td>
                       </tr>
                     );
@@ -213,7 +217,7 @@ export default async function AssetsPage() {
                     <Td label="กำไร(ขาดทุน)สุทธิ" className={`text-right tabular-nums font-medium ${Number(c.net_profit) < 0 ? "text-red-600" : "text-emerald-700"}`}>
                       {baht(Number(c.net_profit))}
                     </Td>
-                    <Td label="ปิดเมื่อ" className="text-neutral-500">{new Date(c.closed_at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}</Td>
+                    <Td label="ปิดเมื่อ" className="text-neutral-500">{dateTH(c.closed_at)}</Td>
                   </tr>
                 ))}
               </tbody>

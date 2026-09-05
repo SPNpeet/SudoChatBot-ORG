@@ -71,7 +71,7 @@ export default async function AdminShopsPage({ searchParams }: { searchParams: P
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold">จัดการผู้ใช้ระบบ</h1>
-        <p className="text-sm text-neutral-400">ทั้งหมด {total} กิจการ — เปลี่ยนแพ็ก/ระงับ/ตั้งเพดานโควตา AI รายกิจการได้ที่นี่</p>
+        <p className="text-sm text-neutral-400">ทั้งหมด {total} กิจการ — เปลี่ยนแพ็กเกจ · ระงับ · ตั้งเพดาน AI ต่อวันรายกิจการได้ที่นี่</p>
       </div>
 
       {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">โหลดรายชื่อร้านไม่สำเร็จ: {error.message}</p>}
@@ -87,7 +87,7 @@ export default async function AdminShopsPage({ searchParams }: { searchParams: P
             <p className="py-14 text-center text-sm text-neutral-400">ไม่พบร้านค้า</p>
           ) : (
             <Table>
-              <thead><tr><Th>กิจการ</Th><Th>เจ้าของ</Th><Th>แพ็ก</Th><Th>โควตา AI/วัน</Th><Th>ใช้ AI แล้ว</Th><Th>สถานะ</Th><Th>สมัครเมื่อ</Th></tr></thead>
+              <thead><tr><Th>กิจการ</Th><Th>เจ้าของ</Th><Th>แพ็ก</Th><Th>เพดาน AI/วัน</Th><Th>ใช้ AI แล้ว</Th><Th>สถานะ</Th><Th>สมัครเมื่อ</Th></tr></thead>
               <tbody>
                 {rows.map((r) => (
                   <ShopRow key={r.id} id={r.id} name={r.name} ownerEmail={r.owner_email} plan={r.plan} status={r.status} createdAt={r.created_at}

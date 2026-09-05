@@ -2,6 +2,7 @@
 import { useRef, useState, useTransition } from "react";
 import { Badge, Button, Input, Select } from "@/components/ui";
 import { addMember, removeMember } from "../actions";
+import { roleLabel } from "@/lib/roles";
 
 interface MemberRow { id: string; role: string; display_name: string | null; email: string | null }
 
@@ -44,7 +45,7 @@ export default function TeamForm({ shopId, members, canEdit }: { shopId: string;
             </div>
             <div className="flex items-center gap-3">
               <Badge tone={m.role === "owner" ? "green" : "neutral"}>
-                {m.role === "owner" ? "เจ้าของ" : m.role === "admin" ? "ผู้ดูแล" : m.role === "agent" ? "พนักงาน" : "ดูอย่างเดียว"}
+                {roleLabel(m.role)}
               </Badge>
               {canEdit && m.role !== "owner" && <KickButton memberId={m.id} shopId={shopId} />}
             </div>
@@ -58,7 +59,7 @@ export default function TeamForm({ shopId, members, canEdit }: { shopId: string;
             <Select name="role" defaultValue="agent" className="flex-1 sm:w-40 sm:flex-none">
               <option value="admin">ผู้ดูแล</option>
               <option value="agent">พนักงาน</option>
-              <option value="viewer">ดูอย่างเดียว</option>
+              <option value="viewer">ผู้ชม (ดูอย่างเดียว)</option>
             </Select>
             <Button className="h-10 shrink-0" disabled={pending}>{pending ? "..." : "เพิ่ม"}</Button>
           </div>

@@ -15,6 +15,8 @@ import { authOrigin } from "@/lib/app-origin";
 import { trackUsage } from "./track-action";
 
 export interface DocActionsProps {
+  // ยกเลิกเอกสารทำได้เฉพาะเจ้าของ/ผู้ดูแล (voidDoc assert ไว้) — พนักงานต้องไม่เห็นปุ่มที่กดแล้วพัง
+  canVoid?: boolean;
   doc: {
     id: string; shopId: string; docType: DocType; docNumber: string;
     status: DocStatus; outstanding: number; shareKey: string | null; whtAmount: number;
@@ -22,7 +24,7 @@ export interface DocActionsProps {
   };
 }
 
-export default function DocActions({ doc }: DocActionsProps) {
+export default function DocActions({ doc, canVoid = true }: DocActionsProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [payOpen, setPayOpen] = useState(false);
@@ -125,7 +127,7 @@ export default function DocActions({ doc }: DocActionsProps) {
           <FileMinus className="h-4 w-4" /> ใบลดหนี้/เพิ่มหนี้
         </Button>
       )}
-      {doc.status !== "void" && (
+      {doc.status !== "void" && canVoid && (
         <Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50" onClick={() => setVoidOpen(true)}>
           <Ban className="h-4 w-4" /> ยกเลิกเอกสาร
         </Button>

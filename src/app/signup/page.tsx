@@ -137,10 +137,10 @@ export default function SignupPage() {
                 และบันทึกหลักฐานลง consent_logs พร้อมเวลา */}
             <label className="flex items-start gap-2.5 rounded-xl bg-neutral-50 px-3 py-2.5 text-xs leading-relaxed text-neutral-600">
               <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600" />
+                className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-600" />
               <span>
-                ฉันได้อ่านและยอมรับ<Link href="/terms" target="_blank" className="px-0.5 font-semibold underline">เงื่อนไขการใช้งาน</Link>
-                และ<Link href="/privacy" target="_blank" className="px-0.5 font-semibold underline">นโยบายความเป็นส่วนตัว</Link>
+                ฉันได้อ่านและยอมรับ<Link href="/terms" target="_blank" className="px-0.5 py-3 font-semibold underline">ข้อกำหนดการใช้งาน</Link>
+                และ<Link href="/privacy" target="_blank" className="px-0.5 py-3 font-semibold underline">นโยบายความเป็นส่วนตัว</Link>
               </span>
             </label>
             <button type="submit" disabled={loading || mismatch || !agree}

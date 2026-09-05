@@ -2,6 +2,8 @@ export const metadata = {
   title: "ติดต่อเรา",
   description: "ช่องทางติดต่อทีม SudoChatBot — อีเมลซัพพอร์ต การแจ้งปัญหาการใช้งาน และการขอใช้สิทธิ์เกี่ยวกับข้อมูลส่วนบุคคล",
   alternates: { canonical: "https://sudochatbot.online/contact" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "https://sudochatbot.online/contact", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 export default function ContactPage() {

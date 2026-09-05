@@ -77,7 +77,12 @@ export default function QuickCreate() {
   // หน้าพิมพ์/PDF คือ "ตัวเอกสาร" ที่ผู้ใช้กำลังตรวจก่อนส่งให้คนอื่น
   // ปุ่มลอยไปทับมุมเอกสารทั้งบนจอและในภาพที่คนแคปส่งต่อ (คนตรวจภายนอกจับได้)
   // หน้านี้ต้องเป็น preview เต็มจอเท่านั้น (แก้ 28 ส.ค. 2569)
-  if (path?.startsWith("/dashboard/print")) return null;
+  // หน้าที่เนื้อหาเป็นตัวเลขชิดขวา (รายงาน/การเงิน/สมุดรายวัน/ทรัพย์สิน) ปุ่มทับตัวเลขตั้งแต่ยังไม่เลื่อน
+  // (วัดจริง 5 ก.ย. 2569: ทับ 10,800.00 บนรายงาน · ทับ +800.00 ฿ บนการเงิน) และหน้าพวกนี้ไม่ใช่ที่ที่คนมาสร้างเอกสาร
+  // หน้าตั้งค่า/แพ็กเกจ/ผู้ดูแลก็ไม่ใช่ — ปุ่มลอยเหลือเฉพาะหน้างานเอกสารจริง
+  const HIDE_ON = ["/dashboard/print", "/dashboard/reports", "/dashboard/money", "/dashboard/journal", "/dashboard/assets",
+    "/dashboard/billing", "/dashboard/settings", "/dashboard/admin", "/dashboard/account", "/dashboard/help"];
+  if (HIDE_ON.some((p) => path?.startsWith(p))) return null;
 
   return (
     <>

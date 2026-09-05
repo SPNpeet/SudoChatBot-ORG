@@ -53,7 +53,7 @@ export default function PaymentSettingsForm({ shopId, p, hasSlipKey = false }: {
           </Select>
         </div>
       </div>
-      <p className="text-xs text-neutral-400">QR พร้อมเพย์จะขึ้นบนใบแจ้งหนี้และลิงก์เอกสารที่ส่งให้ลูกค้า — ลูกค้าสแกนจ่ายเข้าบัญชีคุณตรง 100%</p>
+      <p className="text-xs text-neutral-400">QR พร้อมเพย์จะขึ้นบนใบแจ้งหนี้และลิงก์เอกสารที่ส่งให้ลูกค้า — ลูกค้าสแกนจ่ายเข้าบัญชีคุณโดยตรง ระบบไม่ได้ถือเงินแทน</p>
 
       <div>
         <Label className="flex items-center gap-1.5">
@@ -66,8 +66,8 @@ export default function PaymentSettingsForm({ shopId, p, hasSlipKey = false }: {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select name="slip_provider" value={provider} onChange={(e) => setProvider(e.target.value)}>
             <option value="manual">ตรวจเอง (กดยืนยันเองในหน้าเอกสาร)</option>
-            <option value="easyslip">EasySlip — อัตโนมัติ 100%</option>
-            <option value="slipok">SlipOK — อัตโนมัติ 100%</option>
+            <option value="easyslip">EasySlip — ตรวจอัตโนมัติ</option>
+            <option value="slipok">SlipOK — ตรวจอัตโนมัติ</option>
           </Select>
           <div>
             <Input name="slip_api_key" type="password" autoComplete="off"

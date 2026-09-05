@@ -24,6 +24,8 @@ export const metadata: Metadata = {
   title: "ราคา — โปรแกรมบัญชีออนไลน์ เริ่มฟรี ไม่ต้องใช้บัตร",
   description: "ราคาโปรแกรมบัญชีออนไลน์ SudoChatBot ทุกแพ็กใช้พนักงานไม่จำกัด มีแพ็กฟรีให้เริ่มก่อน จ่ายรายปีได้ราคา 10 เดือนใช้ 12 เดือน",
   alternates: { canonical: "/pricing" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "/pricing", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 // คำถามเรื่องราคาเก็บไว้ที่เดียว — ใช้ทั้งแสดงบนหน้าและสร้าง FAQPage schema

@@ -2,6 +2,8 @@ export const metadata = {
   title: "นโยบายการคืนเงิน",
   description: "เงื่อนไขการคืนเงินค่าแพ็กเกจ SudoChatBot — ทดลองฟรีก่อนจ่าย ยกเลิกได้ทุกเมื่อ และกรณีที่คืนเงินให้",
   alternates: { canonical: "https://sudochatbot.online/refund" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "https://sudochatbot.online/refund", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 export default function RefundPage() {

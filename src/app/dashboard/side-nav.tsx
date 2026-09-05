@@ -16,6 +16,7 @@ import {
   ShieldCheck, type LucideIcon, Boxes,
 } from "lucide-react";
 import { useNav } from "./nav-shell";
+import { navHiddenFor } from "@/lib/roles";
 
 export interface NavItem { href: string; label: string; icon: LucideIcon }
 
@@ -40,16 +41,16 @@ const NAV_SECTIONS: NavSection[] = [
     { href: "/dashboard/sales", label: "เอกสารขาย", icon: FileText },
     { href: "/dashboard/expenses", label: "ค่าใช้จ่าย", icon: Receipt },
     { href: "/dashboard/contacts", label: "ผู้ติดต่อ", icon: Users },
-    { href: "/dashboard/products", label: "สินค้า/บริการ", icon: Package },
+    { href: "/dashboard/products", label: "สินค้าและบริการ", icon: Package },
   ]},
   { title: "เงินและบัญชี", items: [
-    { href: "/dashboard/money", label: "การเงิน/กระทบยอด", icon: Banknote },
+    { href: "/dashboard/money", label: "การเงินและกระทบยอด", icon: Banknote },
     { href: "/dashboard/journal", label: "สมุดรายวัน", icon: BookOpenText },
-    { href: "/dashboard/assets", label: "ทรัพย์สิน + ปิดงวด", icon: Boxes },
-    { href: "/dashboard/reports", label: "รายงาน + ภาษี", icon: PieChart },
+    { href: "/dashboard/assets", label: "ทรัพย์สินและปิดงวด", icon: Boxes },
+    { href: "/dashboard/reports", label: "รายงานและภาษี", icon: PieChart },
   ]},
   { title: "ระบบ", items: [
-    { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
+    { href: "/dashboard/billing", label: "แพ็กเกจและเครดิต", icon: Wallet },
     { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
     { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },
   ]},
@@ -65,9 +66,10 @@ export function isActive(path: string, href: string) {
   return href === "/dashboard" ? path === href : path.startsWith(href);
 }
 
-export default function SideNav({ isAdmin, children, foot }: {
-  isAdmin: boolean; children?: React.ReactNode; foot?: React.ReactNode;
+export default function SideNav({ isAdmin, role = "owner", children, foot }: {
+  isAdmin: boolean; role?: string; children?: React.ReactNode; foot?: React.ReactNode;
 }) {
+  const hidden = navHiddenFor(role);
   const path = usePathname();
   const { collapsed, toggle, ready } = useNav();
 
@@ -123,13 +125,15 @@ export default function SideNav({ isAdmin, children, foot }: {
         {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <><PanelLeftClose className="h-4 w-4" />พับเมนู</>}
       </button>
 
-      <nav className={cn("flex-1 space-y-0.5 overflow-y-auto overflow-x-visible", collapsed ? "px-2" : "px-3")}>
+      {/* min-h-0 จำเป็น — วัดจริง 5 ก.ย. 2569 จอ 1440x900: "ตั้งค่า" กับ "คู่มือใช้งาน" หายไปเฉย ๆ ไม่มี scrollbar
+          เพราะ flex child ค่าเริ่มต้น min-height:auto ไม่ยอมหดต่ำกว่าเนื้อหา overflow-y-auto จึงไม่เคยทำงาน */}
+      <nav className={cn("min-h-0 flex-1 space-y-0.5 overflow-y-auto overflow-x-visible", collapsed ? "px-2" : "px-3")}>
         {NAV_SECTIONS.map((sec, si) => (
           <div key={si}>
             {sec.title && (collapsed
               ? <div className="my-2 border-t border-neutral-100" />
               : <p className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-wider text-neutral-400">{sec.title}</p>)}
-            <div className="space-y-0.5">{sec.items.map((i) => row(i))}</div>
+            <div className="space-y-0.5">{sec.items.filter((i) => !hidden.includes(i.href)).map((i) => row(i))}</div>
           </div>
         ))}
         {isAdmin && (

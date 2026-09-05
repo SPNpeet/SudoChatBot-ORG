@@ -151,7 +151,7 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
         <input ref={fileRef} type="file" accept=".csv,.xls,.xlsx,.pdf,application/pdf" className="hidden"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button variant="outline" className="flex-1" disabled={reading} onClick={() => fileRef.current?.click()}>
+          <Button variant="outline" className="min-h-11 flex-1 sm:min-h-10" disabled={reading} onClick={() => fileRef.current?.click()}>
             {reading
               ? <><Loader2 className="h-4 w-4 animate-spin" /> กำลังอ่านไฟล์…</>
               : <><FileSpreadsheet className="h-4 w-4" /> เลือกไฟล์รายการเดินบัญชี (PDF, Excel, CSV)</>}
@@ -162,7 +162,7 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
           </button>
         </div>
         <p className="text-xs leading-relaxed text-neutral-400">
-          <b className="text-neutral-500">ปลอดภัย 100%:</b> ระบบแค่อ่านมาให้ดูก่อน — ไม่มีอะไรลงบัญชีจนกว่าคุณจะกดบันทึกทีละแถว ·
+          <b className="text-neutral-500">ปลอดภัย:</b> ระบบแค่อ่านมาให้ดูก่อน — ไม่มีอะไรลงบัญชีจนกว่าคุณจะกดบันทึกทีละแถว ·
           โหลดไฟล์จากแอปธนาคารได้เลย ระบบเดาคอลัมน์วันที่/รายการ/เงินเข้าให้เอง
         </p>
 
@@ -245,7 +245,7 @@ export default function StatementImport({ shopId, invoices }: { shopId: string; 
                     </div>
                   )}
                 </div>
-                {row.matched && !row.done && <p className="mt-0.5 text-xs text-emerald-600">จับคู่อัตโนมัติ: {row.matched.docNumber} ({row.matched.contact ?? "-"})</p>}
+                {row.matched && !row.done && <p className="mt-0.5 text-xs text-emerald-600">จับคู่อัตโนมัติ: {row.matched.docNumber} {row.matched.contact ? `(${row.matched.contact})` : ""}</p>}
                 {row.error && <p className="mt-0.5 text-xs text-red-500">{row.error}</p>}
               </div>
             ))}

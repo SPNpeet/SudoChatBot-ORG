@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError as friendly } from "@/lib/friendly-error";
 // ============================================================
 //  Billing — ซื้อ/ต่ออายุแพ็กเกจ, เติมเครดิต (ผ่าน Stripe เท่านั้น)
 //
@@ -50,7 +51,7 @@ async function createStripeCheckout(
     shop_id: shopId, amount, method: "stripe", gateway: "stripe", status: "pending",
     ...(plan ? { plan_code: plan.code, plan_period: plan.period } : {}),
   }).select("id").single();
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
 
   try {
     const { APP_ORIGIN } = await import("@/lib/app-origin");

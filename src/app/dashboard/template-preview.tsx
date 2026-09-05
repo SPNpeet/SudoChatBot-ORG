@@ -59,7 +59,7 @@ export default function TemplatePreview({ docType, href, label }: { docType: Doc
     <>
       <button type="button" onClick={() => setOpen(true)}
         aria-label={`ดูตัวอย่าง${label}`}
-        className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50">
+        className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-xs font-medium text-emerald-700 hover:bg-emerald-50 sm:min-h-9">
         <Eye className="h-3.5 w-3.5" /> ดูตัวอย่าง
       </button>
       {open && (

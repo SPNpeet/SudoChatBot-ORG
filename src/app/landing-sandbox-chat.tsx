@@ -135,7 +135,7 @@ export default function LandingSandboxChat({ copy }: { copy?: HomeCopy["guestCha
             <input value={input} maxLength={MAX_LEN} onChange={(e) => setInput(e.target.value)}
               placeholder={copy?.placeholder ?? "พิมพ์คำถามสั้นๆ..."} disabled={busy}
               className="h-11 w-full rounded-xl border border-neutral-300 bg-white px-3 pr-11 text-base outline-none focus:border-emerald-500 sm:text-sm" />
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-300">{input.length}/{MAX_LEN}</span>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-500">{input.length}/{MAX_LEN}</span>
           </div>
           {/* ปุ่มไอคอนล้วนต้องมีชื่อ ไม่งั้นโปรแกรมอ่านหน้าจอจะอ่านได้แค่คำว่า "ปุ่ม" */}
           <button aria-label={copy?.send ?? "ส่งคำถาม"} disabled={busy || !input.trim()}

@@ -2,7 +2,7 @@
 // ปุ่มอนุมัติ/ปฏิเสธค่าใช้จ่ายที่พนักงานส่งมา — เฉพาะ owner/admin
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import { approveExpense, rejectExpense } from "../finance/actions";
 
 export default function ApprovalActions({ shopId, docId }: { shopId: string; docId: string }) {
@@ -32,7 +32,7 @@ export default function ApprovalActions({ shopId, docId }: { shopId: string; doc
 
   return (
     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-      <p className="text-sm font-semibold text-amber-800">⏳ รายการนี้รอการอนุมัติ</p>
+      <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-800"><Clock className="h-4 w-4 shrink-0" /> รายการนี้รอการอนุมัติ</p>
       <p className="mt-0.5 text-xs text-amber-700">พนักงานเป็นคนบันทึก — อนุมัติแล้วระบบจะตั้งหนี้ลงสมุดรายวันให้ทันที (ทำจ่ายทีหลังได้)</p>
       {!rejecting ? (
         <div className="mt-3 flex flex-wrap gap-2">

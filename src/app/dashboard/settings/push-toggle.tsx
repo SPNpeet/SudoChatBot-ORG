@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Bell, BellOff, CheckCircle2, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui";
+import { friendlyError } from "@/lib/friendly-error";
 
 type State = "checking" | "unsupported" | "denied" | "off" | "on";
 
@@ -56,7 +57,7 @@ export default function PushToggle({ shopId }: { shopId: string }) {
       setState("on");
       setMsg("เปิดแล้ว — เครื่องนี้จะได้รับแจ้งเตือนสำคัญจากระบบ");
     } catch (e) {
-      setMsg(`เปิดไม่สำเร็จ: ${(e as Error).message.slice(0, 80)}`);
+      setMsg(friendlyError(e, "เปิดไม่สำเร็จ — เบราว์เซอร์นี้อาจไม่รองรับ หรือปิดการแจ้งเตือนของเว็บนี้ไว้"));
     } finally { setBusy(false); }
   }
 

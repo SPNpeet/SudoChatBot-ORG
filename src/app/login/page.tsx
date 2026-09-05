@@ -11,6 +11,7 @@ import { Logo } from "@/components/logo";
 import AuthSide from "@/components/auth-side";
 import { Eye, EyeOff } from "lucide-react";
 import OAuthButtons from "@/components/oauth-buttons";
+import { friendlyError } from "@/lib/friendly-error";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -42,7 +43,7 @@ export default function LoginPage() {
         m.includes("Invalid login") ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง — ถ้ายังไม่เคยสมัคร กดสมัครสมาชิกฟรีด้านล่าง"
           : m.includes("Email not confirmed") ? "ยังไม่ได้ยืนยันอีเมล — ตรวจกล่องอีเมลของคุณ"
             : m.includes("rate limit") ? "ลองถี่เกินไป — รอสักครู่แล้วลองใหม่"
-              : m,
+              : friendlyError(m, "เข้าสู่ระบบไม่สำเร็จ — ลองอีกครั้ง ถ้ายังไม่ได้ให้ใช้ลืมรหัสผ่าน"),
       );
     } finally { setLoading(false); }
   }

@@ -6,6 +6,8 @@ export const metadata = {
   title: "การลบข้อมูลผู้ใช้",
   description: "วิธีขอลบบัญชีและข้อมูลทั้งหมดออกจาก SudoChatBot ใช้เวลาเท่าไหร่ และข้อมูลไหนที่กฎหมายบังคับให้เก็บต่อ",
   alternates: { canonical: "https://sudochatbot.online/data-deletion" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "https://sudochatbot.online/data-deletion", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 // ============================================================
@@ -41,14 +43,14 @@ export default function DataDeletionPage() {
         หรือกรมพัฒนาธุรกิจการค้าเรียกตรวจย้อนหลัง ผู้ที่ต้องรับผิดคือกิจการของคุณ
       </p>
       <p>
-        <strong>ก่อนส่งคำขอลบ กรุณาเข้าไปที่หน้า &quot;รายงาน + ภาษี&quot; แล้วกดส่งออกเป็นไฟล์ Excel
+        <strong>ก่อนส่งคำขอลบ กรุณาเข้าไปที่หน้า &quot;รายงานและภาษี&quot; แล้วกดส่งออกเป็นไฟล์ Excel
         เก็บไว้ให้ครบทุกงวดก่อน</strong> เมื่อลบแล้วเรากู้คืนให้ไม่ได้
       </p>
 
       <h2>วิธีขอลบข้อมูล</h2>
       <ul>
         <li>
-          <strong>ทางอีเมล (แนะนำ):</strong> ส่งคำขอมาที่ <strong>supanut6420@gmail.com</strong>{" "}
+          <strong>ทางอีเมล (แนะนำ):</strong> ส่งคำขอมาที่ <strong>support@sudochatbot.online</strong>{" "}
           หัวข้อ &quot;ขอลบข้อมูล SudoChatBot&quot; พร้อมอีเมลที่ใช้สมัคร
           และระบุว่าต้องการลบ <strong>เฉพาะบัญชีผู้ใช้ของคุณ</strong> หรือ <strong>ทั้งกิจการ</strong>
         </li>
@@ -79,7 +81,7 @@ export default function DataDeletionPage() {
         <li>ความเห็น/ข้อเสนอแนะที่คุณเคยส่งเข้ามา</li>
         <li>
           <strong>เอกสารของกิจการยังอยู่</strong> เพราะเป็นข้อมูลของกิจการ ไม่ใช่ของคุณคนเดียว —
-          แต่ชื่อคุณในประวัติการแก้ไขเอกสาร (Audit Log) จะยังคงอยู่
+          แต่ชื่อคุณในประวัติการแก้ไขเอกสาร (บันทึกตรวจสอบย้อนหลัง) จะยังคงอยู่
           เพราะเป็นหลักฐานทางบัญชีที่กฎหมายให้เก็บและแก้ย้อนหลังไม่ได้
         </li>
       </ul>

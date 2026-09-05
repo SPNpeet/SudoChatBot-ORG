@@ -2,12 +2,16 @@ import { getCurrentShop } from "@/lib/shop";
 import DocForm from "../../finance/doc-form";
 import { DOC_TYPE_TH } from "@/lib/finance";
 import type { Contact, DocType } from "@/lib/types/finance";
+import { canWork } from "@/lib/roles";
+import RoleWall from "../../role-wall";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export default async function NewSalesDocPage({ searchParams }: { searchParams: Promise<{ type?: string; contact?: string }> }) {
-  const { supabase, shop } = await getCurrentShop();
+  const { supabase, shop, role } = await getCurrentShop();
+  if (!canWork(role)) return <RoleWall title="บทบาทผู้ชมออกเอกสารไม่ได้"
+    detail="บัญชีนี้ได้รับสิทธิ์ดูข้อมูลอย่างเดียว — ถ้าต้องออกเอกสารหรือบันทึกรายการ ให้เจ้าของเปลี่ยนบทบาทเป็นพนักงานที่ ตั้งค่า > ทีม" />;
   const { type, contact } = await searchParams;
   const docType: DocType = type === "quotation" || type === "receipt" ? type : "invoice";
 
@@ -19,7 +23,7 @@ export default async function NewSalesDocPage({ searchParams }: { searchParams: 
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-bold">ออกเอกสารขาย</h1>
+        <h1 className="text-[22px] font-bold tracking-tight">ออกเอกสารขาย</h1>
         <p className="text-sm text-neutral-400">
           {docType === "receipt"
             ? "ขายสด — รับเงินทันที ระบบบันทึกเงินเข้า ตัดสต๊อก และลงบัญชีให้ครบ"

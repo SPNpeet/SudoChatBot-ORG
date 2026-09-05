@@ -58,7 +58,8 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-[22px] font-bold leading-tight tracking-tight">
             <Calculator className="h-5 w-5 shrink-0 text-emerald-600" />
-            <span className="truncate">{assistantName ?? "ผู้ช่วยบัญชี AI"}</span>
+            {/* leading-normal: truncate = overflow hidden · อักษรไทย 22px สูง 32px แต่ leading-tight ให้แค่ 27.5px วรรณยุกต์ถูกเฉือน (วัดจริง 5 ก.ย. 2569) */}
+            <span className="truncate leading-normal">{assistantName ?? "ผู้ช่วยบัญชี AI"}</span>
             {["owner", "admin"].includes(role) && <AssistantNameEditor shopId={shop.id} current={assistantName} />}
           </h1>
           <p className="mt-0.5 truncate text-sm text-neutral-500">พิมพ์สั่งเป็นภาษาคน หรือส่งรูปบิลมาให้ลงบัญชีให้</p>

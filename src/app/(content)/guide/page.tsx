@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: "บทความบัญชี-ภาษีไทย ที่เจ้าของกิจการถามบ่อย",
   description: "หัก ณ ที่จ่ายกี่เปอร์เซ็นต์ ภ.ง.ด.3 กับ 53 ต่างกันยังไง ใบกำกับภาษีต้องมีอะไร ภ.พ.30 ยื่นเมื่อไหร่ — ตอบตามกฎหมายไทย อ่านจบใช้ได้จริง",
   alternates: { canonical: "/guide" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "/guide", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 export default function GuideIndex() {

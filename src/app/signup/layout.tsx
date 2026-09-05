@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     title: "สมัครใช้ SudoChatBot ฟรี — ระบบบัญชี + ผู้ช่วย AI",
     description: "ออกเอกสาร เก็บเงิน ลงบัญชี สรุปภาษี ครบในระบบเดียว เริ่มฟรีไม่ต้องใช้บัตรเครดิต",
     url: "https://sudochatbot.online/signup",
+    type: "website", siteName: "SudoChatBot", locale: "th_TH", images: ["/opengraph-image"],
   },
 };
 

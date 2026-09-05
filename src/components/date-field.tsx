@@ -104,7 +104,8 @@ export default function DateField({
                และนี่คือช่อง "วันที่เอกสาร" ของใบกำกับภาษี = อ่านผิดแล้วยื่นภาษีผิดงวด
                ตัวช่องยังเป็น input[type=date] เดิมทุกอย่าง (คลิกเปิดปฏิทิน showPicker iOS)
                แค่ตัวอักษรโปร่งใสเมื่อมีค่า แล้ววาดข้อความไทยทับด้วย pointer-events-none */
-            value && "text-transparent",
+            // โปร่งใส "เสมอ" — เดิมโปร่งใสเฉพาะตอนมีค่า ทำให้ตอนว่างเห็น "เmm/dd/yyyy" ทับกัน (วัดจริง 5 ก.ย. 2569)
+            "text-transparent",
             farFuture ? "border-red-400 focus:border-red-500"
               : "border-neutral-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/15",
           )}
@@ -119,7 +120,7 @@ export default function DateField({
 
         {/* ไอคอนของเราเอง วางทับตัวเนทีฟที่ซ่อนไว้ ให้พื้นที่กดใหญ่ขึ้น */}
         <button type="button" aria-label="เปิดปฏิทิน" onClick={openPicker} tabIndex={-1}
-          className="absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600">
+          className="absolute right-0 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-xl text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600">
           <CalendarDays className="h-4 w-4" />
         </button>
       </div>
@@ -173,7 +174,8 @@ export function ThaiDateInline({ value, onChange, ariaLabel, className, max, min
         ref={ref} type="date" value={value} max={max} min={min} aria-label={ariaLabel}
         onChange={(e) => onChange(e.target.value)}
         onClick={() => { try { ref.current?.showPicker?.(); } catch { /* เบราว์เซอร์เก่าใช้ไอคอนเนทีฟ */ } }}
-        className={cn("appearance-none [&::-webkit-calendar-picker-indicator]:opacity-0", value && "text-transparent", className)}
+        // text-transparent ต้องอยู่หลัง className เสมอ — เดิม className มี text-neutral-600 ชนะ แล้ว "09/05/2026" โผล่ใต้ "5 ก.ย. 69" (วัดจริง 5 ก.ย. 2569)
+        className={cn("appearance-none [&::-webkit-calendar-picker-indicator]:opacity-0", className, "text-transparent")}
       />
       <span aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-end pr-2 text-sm text-neutral-900">
         {value ? readThaiDateShort(value) : "เลือกวันที่"}

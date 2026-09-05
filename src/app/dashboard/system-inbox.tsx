@@ -170,7 +170,7 @@ export default function SystemInbox({ shopId, notices, variant = "icon", place =
                         <p className="text-[13px] font-medium leading-snug text-neutral-700">{h.title}</p>
                         {h.body && <p className="mt-1 text-xs leading-relaxed text-neutral-500">{h.body}</p>}
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-3">
-                          {h.at && <span className="text-xs text-neutral-400">{new Date(h.at).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "2-digit" })}</span>}
+                          {h.at && <span className="text-xs text-neutral-400">{new Date(h.at).toLocaleDateString("th-TH", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Bangkok" })}</span>}
                           <button onClick={() => act(() => restoreNotice(shopId, h.key))} disabled={pending}
                             className="inline-flex min-h-[44px] items-center gap-1 text-xs text-neutral-500 hover:text-neutral-900 disabled:opacity-50">
                             <Undo2 className="h-3.5 w-3.5" /> เอากลับมาแสดง

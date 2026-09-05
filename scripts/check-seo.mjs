@@ -23,6 +23,10 @@ const PAGES = [
   { path: "/try", index: true },
   { path: "/signup", index: true },
   { path: "/login", index: false },       // หน้าล็อกอินไม่มีเนื้อหาให้ค้นหา
+  // เพิ่ม 5 ก.ย. 2569 — สามหน้านี้เคยไม่มี robots เลย (สืบทอด index จาก root)
+  { path: "/forgot-password", index: false },
+  { path: "/reset-password", index: false },
+  { path: "/liff", index: false },
   { path: "/privacy", index: true },
   { path: "/terms", index: true },
   { path: "/data-deletion", index: true },
@@ -89,6 +93,12 @@ for (const p of PAGES) {
   // --- แชร์ลิงก์แล้วต้องมีการ์ดพรีวิว ---
   if (!/property="og:title"/.test(html)) problems.push("ไม่มี og:title (แชร์ลิงก์แล้วไม่มีการ์ดพรีวิว)");
   if (!/property="og:image"/.test(html)) problems.push("ไม่มี og:image");
+  // เพิ่ม 5 ก.ย. 2569 — เคยหลุด: root openGraph ตั้ง url หน้าแรก แล้วทุกหน้าที่ไม่ได้ตั้งเองสืบทอดไป
+  // แชร์ลิงก์ /pricing บน LINE/Facebook แล้วการ์ดพาไปหน้าแรกแทน
+  const ogUrl = pick(html, /<meta property="og:url" content="([^"]*)"/);
+  if (ogUrl && canonical && ogUrl.replace(/\/$/, "") !== canonical.replace(/\/$/, "")) {
+    problems.push(`og:url ชี้ไป ${ogUrl} ไม่ตรง canonical — แชร์ลิงก์แล้วพรีวิวพาไปหน้าอื่น`);
+  }
 
   // --- ห้ามซ้ำกันข้ามหน้า ---
   if (title) {

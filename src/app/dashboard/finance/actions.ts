@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError } from "@/lib/friendly-error";
 // ============================================================
 //  Server Actions ระบบบัญชี — เอกสารขาย/ซื้อ · รับ-จ่ายเงิน · ตรวจสลิป ·
 //  จับคู่อัตโนมัติ · ตัดสต๊อก · ลงสมุดรายวัน (GL) ทุกธุรกรรม
@@ -20,11 +21,8 @@ export type ActionResult = { ok: true } | { ok: false; error: string };
 export type DocResult = { ok: true; docId: string; docNumber: string; approvalPending?: boolean }
   | { ok: false; error: string; duplicate?: { doc_number: string; issue_date: string } };
 
-function friendly(e: unknown, fallback: string): string {
-  const m = (e as Error).message ?? String(e);
-  if (m.includes("forbidden")) return "คุณไม่มีสิทธิ์ทำรายการนี้";
-  return m || fallback;
-}
+// friendly() ย้ายไป src/lib/friendly-error.ts (ตัวเดียวทั้งระบบ — ดูเหตุผลที่นั่น)
+const friendly = friendlyError;
 
 async function audit(svc: ReturnType<typeof createServiceClient>, shopId: string, userId: string, action: string, resourceType: string, resourceId: string | null, details?: Record<string, unknown>) {
   await svc.from("audit_logs").insert({
@@ -60,10 +58,10 @@ export async function upsertContact(shopId: string, formData: FormData): Promise
     if (!row.name) return { ok: false, error: "ต้องมีชื่อผู้ติดต่อ" };
     if (id) {
       const { error } = await svc.from("contacts").update(row).eq("id", id).eq("shop_id", shopId);
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     } else {
       const { error } = await svc.from("contacts").insert(row);
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     }
     await audit(svc, shopId, user.id, id ? "contact_updated" : "contact_created", "contact", id || null, { name: row.name });
     revalidatePath("/dashboard/contacts");
@@ -99,7 +97,7 @@ export async function uploadFinFile(shopId: string, formData: FormData): Promise
     const svc = createServiceClient();
     const path = `${shopId}/finance/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-ก-๙]/g, "_")}`;
     const { error } = await svc.storage.from("slips").upload(path, file, { contentType: file.type });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     return { ok: true, path };
   } catch (e) {
     return { ok: false, error: friendly(e, "อัปโหลดไฟล์ไม่สำเร็จ") };
@@ -340,7 +338,7 @@ export async function saveDoc(shopId: string, input: SaveDocInput): Promise<DocR
       if (old.status !== "draft") return { ok: false, error: "เอกสารที่ออกแล้วแก้ตัวเลขไม่ได้ — กด 'ยกเลิกเอกสาร' แล้วออกใหม่ (ระบบกลับรายการบัญชี/คืนสต๊อกให้เอง)" };
       docNumber = old.doc_number;
       const { error } = await svc.from("fin_docs").update(baseRow).eq("id", docId).eq("shop_id", shopId);
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
       await svc.from("fin_doc_items").delete().eq("doc_id", docId);
     } else {
       const { data: num, error: numErr } = await svc.rpc("next_fin_doc_number", { p_shop_id: shopId, p_doc_type: input.doc_type });
@@ -988,7 +986,7 @@ export async function addExpenseCategory(shopId: string, name: string, accountCo
     const { error } = await svc.from("expense_categories").insert({
       shop_id: shopId, name: n, sort: 50, account_code: /^5\d{3}$/.test(accountCode) ? accountCode : "5990",
     });
-    if (error) return { ok: false, error: error.message.includes("duplicate") ? "มีหมวดชื่อนี้อยู่แล้ว" : error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง").includes("duplicate") ? "มีหมวดชื่อนี้อยู่แล้ว" : error.message };
     revalidatePath("/dashboard/expenses");
     return { ok: true };
   } catch (e) {

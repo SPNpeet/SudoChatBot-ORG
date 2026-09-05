@@ -15,6 +15,7 @@ import { branchCode, whtIncomeDesc, rdFormFor, formatTaxId, branchLabel } from "
 import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs,
   vatSign, recognitionsAsDocs, type VatRecognitionRow } from "@/lib/vat-docs";
 import type { FinDoc } from "@/lib/types/finance";
+import { canSeeMoney } from "@/lib/roles";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -99,9 +100,11 @@ function excelDate(v: unknown): Date | null {
 }
 
 export async function GET(req: Request) {
-  let shop, supabase;
-  try { ({ shop, supabase } = await getCurrentShop()); }
+  let shop, supabase, role;
+  try { ({ shop, supabase, role } = await getCurrentShop()); }
   catch { return NextResponse.json({ ok: false, error: "ต้องเข้าสู่ระบบก่อน" }, { status: 401 }); }
+  // ไฟล์นี้คือตัวเลขทั้งงวดของกิจการ — บทบาทพนักงานไม่เห็นรายงาน จึงต้องไม่โหลดได้จากลิงก์ตรง
+  if (!canSeeMoney(role)) return NextResponse.json({ ok: false, error: "ชุดส่งนักบัญชีโหลดได้เฉพาะเจ้าของ ผู้ดูแล หรือผู้ชม" }, { status: 403 });
 
   const p = parsePeriod(new URL(req.url).searchParams.get("period"));
 

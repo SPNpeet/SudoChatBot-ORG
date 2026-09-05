@@ -10,13 +10,14 @@ import Link from "next/link";
 import { Users } from "lucide-react";
 import ContactForm from "./contact-form";
 import type { Contact } from "@/lib/types/finance";
+import { canManage } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
 const FILTERS = [
   { id: "all", label: "ทั้งหมด" },
   { id: "customer", label: "ลูกค้า" },
-  { id: "vendor", label: "ผู้ขาย/ซัพพลายเออร์" },
+  { id: "vendor", label: "ผู้ขาย" },
 ] as const;
 
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
@@ -114,7 +115,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                       {o.ar > 0 && <span className="font-medium text-amber-600">ค้างรับ {baht(o.ar)}</span>}
                       {o.ap > 0 && <span className="font-medium text-red-600">ค้างจ่าย {baht(o.ap)}</span>}
                     </div>
-                  ) : <p className="pt-1 text-xs text-neutral-300">ไม่มียอดค้าง</p>}
+                  ) : <p className="pt-1 text-xs text-neutral-500">ไม่มียอดค้าง</p>}
                   <Link href={`/dashboard/contacts/${c.id}`}
                     aria-label={`ดูประวัติเอกสารและออกเอกสารใหม่ให้ผู้ติดต่อ ${c.name}`}
                     className="-mx-2 inline-flex min-h-11 items-center px-2 text-xs font-medium text-emerald-700 hover:underline">
@@ -122,7 +123,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
                   </Link>
                   {canEdit && (
                     <div className="pt-1.5">
-                      <ContactForm shopId={shop.id} contact={c} />
+                      <ContactForm shopId={shop.id} contact={c} canArchive={canManage(role)} />
                     </div>
                   )}
                 </CardContent>

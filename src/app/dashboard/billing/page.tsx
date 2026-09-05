@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, Badge, PageHeader } from "@/c
 import { baht, dateTH } from "@/lib/utils";
 import BillingClient from "./billing-client";
 import Link from "next/link";
+import { canSeeMoney } from "@/lib/roles";
+import RoleWall from "../role-wall";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,8 @@ interface Plan { code: string; name: string; price_monthly: number; included_rep
 
 export default async function BillingPage() {
   const { supabase, shop, role } = await getCurrentShop();
+  if (!canSeeMoney(role)) return <RoleWall title="แพ็กเกจและเครดิตจัดการโดยเจ้าของกิจการ"
+    detail="บทบาทพนักงานใช้เครดิต AI ของกิจการได้ตามปกติ แต่การเปลี่ยนแพ็กเกจ เติมเครดิต และประวัติการชำระเงินเป็นของเจ้าของหรือผู้ดูแล — ถ้าเครดิตใกล้หมด แจ้งเจ้าของได้เลย" />;
   const svc = createServiceClient();
 
   const [{ data: summary }, { data: plans }, { data: txns }, { data: topups }, { data: pf }, { data: quotaRaw }, { data: creditLog }] = await Promise.all([
@@ -78,13 +82,13 @@ export default async function BillingPage() {
 
       {dailyCap !== null && quotaUsed >= dailyCap && (
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <span>ใช้เครดิต AI วันนี้ครบแล้ว ({dailyCap.toLocaleString()} เครดิต/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มโควตา (คีย์เอกสารเองได้ไม่จำกัด)</span>
+          <span>ใช้เครดิต AI วันนี้ครบแล้ว ({dailyCap.toLocaleString()} เครดิต/วัน) — พรุ่งนี้ใช้ต่อได้ หรืออัปเกรดแพ็กเกจเพื่อเพิ่มเพดานต่อวัน (คีย์เอกสารเองได้ไม่จำกัด)</span>
         </div>
       )}
       {monthlyFull && balance <= 0 && (
         <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {/* ห้ามบอกว่า "พรุ่งนี้ใช้ต่อได้" ในกรณีนี้ — โควตารายเดือนรีเซ็ตต้นเดือนถัดไปเท่านั้น */}
-          <span>ใช้เครดิต AI ของแพ็กเกจเดือนนี้ครบแล้ว ({monthlyCap.toLocaleString()} เครดิต/เดือน) และไม่มีเครดิตคงเหลือ — งาน AI (อ่านบิล/ผู้ช่วย) จะหยุดจนกว่าจะเติมเครดิตหรืออัปเกรด · โควตารีเซ็ตต้นเดือนหน้า · คีย์เอกสารเองยังใช้ได้ปกติ</span>
+          <span>ใช้เครดิต AI ของแพ็กเกจเดือนนี้ครบแล้ว ({monthlyCap.toLocaleString()} เครดิต/เดือน) และไม่มีเครดิตคงเหลือ — งาน AI (อ่านบิล/ผู้ช่วย) จะหยุดจนกว่าจะเติมเครดิตหรืออัปเกรด · เครดิตของแพ็กเกจรีเซ็ตต้นเดือนหน้า · คีย์เอกสารเองยังใช้ได้ปกติ</span>
         </div>
       )}
 
@@ -93,20 +97,20 @@ export default async function BillingPage() {
         <Card>
           <CardContent className="pt-5">
             <p className="text-xs text-neutral-400">เครดิตคงเหลือ</p>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-emerald-600">{baht(balance)}</p>
+            <p className="mt-1 whitespace-nowrap text-xl font-bold tabular-nums tracking-tight sm:text-2xl text-emerald-600">{baht(balance)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-5">
             <p className="text-xs text-neutral-400">แพ็กเกจปัจจุบัน</p>
-            <p className="mt-1 text-2xl font-bold tracking-tight">{plan?.name ?? "-"}</p>
+            <p className="mt-1 whitespace-nowrap text-xl font-bold tabular-nums tracking-tight sm:text-2xl">{plan?.name ?? "-"}</p>
             <p className="text-xs text-neutral-400">{plan?.price_monthly ? `${Number(plan.price_monthly).toLocaleString("th-TH")} บาท/เดือน` : "ฟรี"}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-5">
             <p className="text-xs text-neutral-400">{dailyCap ? "เครดิต AI วันนี้ (รีเซ็ตทุกวัน)" : "เครดิต AI เดือนนี้ (รีเซ็ตต้นเดือน)"}</p>
-            <p className="mt-1 text-2xl font-bold tracking-tight">{quotaUsed.toLocaleString()}<span className="text-sm font-normal text-neutral-400">/{quotaMax.toLocaleString()}</span></p>
+            <p className="mt-1 whitespace-nowrap text-xl font-bold tabular-nums tracking-tight sm:text-2xl">{quotaUsed.toLocaleString()}<span className="text-sm font-normal text-neutral-400">/{quotaMax.toLocaleString()}</span></p>
             <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-neutral-100">
               <div className={`h-full rounded-full ${quotaPct >= 100 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(quotaPct, 100)}%` }} />
             </div>

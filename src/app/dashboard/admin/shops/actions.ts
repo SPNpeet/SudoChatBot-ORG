@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError } from "@/lib/friendly-error";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
@@ -22,7 +23,7 @@ export async function setShopStatus(shopId: string, status: string): Promise<Act
     await assertPlatformAdmin();
     const supabase = await createClient();
     const { data, error } = await supabase.rpc("admin_set_shop_status", { p_shop_id: shopId, p_status: status });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendlyError(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     const r = data as { ok: boolean; message?: string } | null;
     if (r && r.ok === false) return { ok: false, error: r.message ?? "ทำรายการไม่สำเร็จ" };
     revalidatePath("/dashboard/admin/shops");
@@ -39,7 +40,7 @@ export async function setShopQuotaOverride(shopId: string, value: number | null)
     const svc = createServiceClient();
     const v = value != null && value > 0 ? Math.min(1_000_000, Math.floor(value)) : null;
     const { error } = await svc.from("shops").update({ ai_quota_override: v }).eq("id", shopId);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendlyError(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     await svc.from("audit_logs").insert({
       shop_id: shopId, actor_type: "user", action: "ai_quota_override_set",
       resource_type: "shops", resource_id: shopId, details: { override: v },
@@ -56,7 +57,7 @@ export async function setShopPlan(shopId: string, plan: string): Promise<ActionR
     await assertPlatformAdmin();
     const supabase = await createClient();
     const { data, error } = await supabase.rpc("admin_set_shop_plan", { p_shop_id: shopId, p_plan: plan });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendlyError(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     const r = data as { ok: boolean; message?: string } | null;
     if (r && r.ok === false) return { ok: false, error: r.message ?? "ทำรายการไม่สำเร็จ" };
     revalidatePath("/dashboard/admin/shops");

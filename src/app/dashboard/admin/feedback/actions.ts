@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError as friendly } from "@/lib/friendly-error";
 import { createClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
@@ -16,7 +17,7 @@ export async function markFeedback(feedbackId: string, status: "resolved" | "dis
     await assertPlatformAdmin();
     const supabase = await createClient();
     const { data, error } = await supabase.rpc("admin_mark_feedback", { p_feedback_id: feedbackId, p_status: status });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     const r = data as { ok: boolean; message?: string } | null;
     if (r && r.ok === false) return { ok: false, error: r.message ?? "ทำรายการไม่สำเร็จ" };
     revalidatePath("/dashboard/admin/feedback");

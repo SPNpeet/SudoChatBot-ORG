@@ -51,7 +51,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
             </Link>
             {/* ⚠️ ลิงก์ท้ายหน้าต้องกดติดด้วยนิ้ว — วัดจริง 5 ก.ย. 2569 ได้สูงแค่ 19px
                 หน้ากฎหมายคือหน้าที่คนกดตอนกำลังตัดสินใจว่าจะเชื่อระบบไหม กดพลาด = เลิกอ่าน */}
-            <p className="mt-4 text-xs text-neutral-400">SudoChatBot · ติดต่อ: supanut6420@gmail.com</p>
+            <p className="mt-4 text-xs text-neutral-400">SudoChatBot · ติดต่อ: support@sudochatbot.online</p>
             <div className="-mx-2 mt-1 flex flex-wrap items-center text-xs text-neutral-400">
               {NAV.map((n) => (
                 <Link key={n.href} href={n.href}

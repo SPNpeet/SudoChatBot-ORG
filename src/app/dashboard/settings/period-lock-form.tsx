@@ -1,4 +1,5 @@
 "use client";
+import { dateTH } from "@/lib/utils";
 // ============================================================
 //  ปิดงวดที่ยื่นภาษีไปแล้ว
 //
@@ -65,7 +66,7 @@ export default function PeriodLockForm({ shopId, lock, isOwner }: {
             ปิดงวดถึงวันที่ {lock.locked_through} แล้ว
           </p>
           <p className="mt-1 text-[12px] text-emerald-700">
-            ปิดเมื่อ {new Date(lock.locked_at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}
+            ปิดเมื่อ {dateTH(lock.locked_at)}
             {lock.note ? ` · ${lock.note}` : ""}
           </p>
         </div>
@@ -91,7 +92,7 @@ export default function PeriodLockForm({ shopId, lock, isOwner }: {
 
         <div className="flex flex-wrap items-center gap-2">
           <Button type="submit" disabled={pending}>
-            <Lock className="h-4 w-4" />{pending ? "กำลังบันทึก..." : lock ? "อัปเดตวันปิดงวด" : "ปิดงวด"}
+            <Lock className="h-4 w-4" />{pending ? "กำลังบันทึก…" : lock ? "อัปเดตวันปิดงวด" : "ปิดงวดถึงวันนี้"}
           </Button>
 
           {lock && isOwner && !confirmOpen && (

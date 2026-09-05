@@ -45,8 +45,10 @@ function dueLabel(due: string, today: string): { text: string; tone: Task["tone"
   if (d === 0) return { text: "วันนี้", tone: "red" };
   if (d === 1) return { text: "พรุ่งนี้", tone: "amber" };
   if (d <= 7) return { text: `อีก ${d} วัน`, tone: "amber" };
+  // "15/9" อ่านเป็น 9/15 ได้และไม่มีปี — ใช้เดือนย่อไทยแบบเดียวกับที่อื่นในหน้า
   const [, m, dd] = due.split("-");
-  return { text: `${Number(dd)}/${Number(m)}`, tone: "neutral" };
+  const TH_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+  return { text: `${Number(dd)} ${TH_SHORT[Number(m) - 1] ?? m}`, tone: "neutral" };
 }
 
 /**

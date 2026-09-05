@@ -62,7 +62,7 @@ export default function LiffBoot({ liffId, target }: { liffId: string; target: s
       ) : (
         <>
           <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
-          <p className="text-sm text-neutral-500">กำลังเปิด...</p>
+          <h1 className="text-sm font-medium text-neutral-500">กำลังเปิดระบบบัญชีจาก LINE…</h1>
         </>
       )}
     </div>

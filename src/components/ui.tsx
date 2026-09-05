@@ -28,13 +28,18 @@ export function InfoHint({ children, className, align = "left" }: {
 }) {
   return (
     <span className={cn("group relative inline-flex", className)}>
+      {/* วงกลม ? ยังเล็กเท่าเดิมให้เนียนกับป้าย แต่พื้นที่กดขยายเป็น 44px ด้วย margin ลบ */}
       <button type="button" tabIndex={0} aria-label="ดูคำอธิบาย"
         className={cn(
-          "grid h-5 w-5 place-items-center rounded-full border border-neutral-300 text-xs leading-none text-neutral-400",
-          "transition-colors hover:border-neutral-500 hover:text-neutral-700", FOCUS,
-        )}>?</button>
+          "-mx-3 -my-3 grid h-11 w-11 place-items-center rounded-full text-xs leading-none text-neutral-400",
+          "transition-colors hover:text-neutral-700 [&>span]:hover:border-neutral-500", FOCUS,
+        )}>
+        <span className="grid h-5 w-5 place-items-center rounded-full border border-neutral-300">?</span>
+      </button>
+      {/* มือถือ: ยึดกับขอบจอแทนป้าย — เดิม w-80 ยื่นออกขวาจนทั้งหน้าเลื่อนแนวนอนได้ (วัดจริง settings?s=payment 5 ก.ย. 2569) */}
       <span className={cn(
-        "pointer-events-none absolute top-[calc(100%+0.375rem)] z-50 w-[min(20rem,80vw)] rounded-xl bg-neutral-900 px-3 py-2 text-xs leading-relaxed text-white opacity-0 shadow-xl transition-opacity",
+        "pointer-events-none absolute top-[calc(100%+0.375rem)] z-50 w-[min(20rem,calc(100vw-2rem))] rounded-xl bg-neutral-900 px-3 py-2 text-xs leading-relaxed text-white opacity-0 shadow-xl transition-opacity",
+        "max-sm:fixed max-sm:inset-x-4 max-sm:bottom-24 max-sm:top-auto max-sm:w-auto",
         "group-hover:opacity-100 group-focus-within:opacity-100",
         align === "right" ? "right-0" : "left-0",
       )}>{children}</span>
@@ -90,7 +95,7 @@ export function BackLink({ href, label, className }: { href: string; label: stri
   return (
     <Link href={href}
       className={cn(
-        "group -ml-1.5 inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-medium text-neutral-500",
+        "group -ml-1.5 inline-flex min-h-11 items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-medium text-neutral-500",
         "transition-colors hover:bg-neutral-100 hover:text-neutral-900", FOCUS, className,
       )}>
       <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
@@ -239,7 +244,7 @@ export function buttonClass(variant: BtnProps["variant"] = "primary", size: BtnP
   return cn(
     "inline-flex select-none items-center justify-center gap-1.5 rounded-xl font-medium transition-all duration-100",
     "active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50", FOCUS,
-    size === "sm" ? "h-8 px-3 text-xs" : size === "lg" ? "h-12 px-6 text-[15px]" : "h-10 px-4 text-sm",
+    size === "sm" ? "h-8 px-3 text-xs" : size === "lg" ? "h-12 px-6 text-[15px]" : "h-11 px-4 text-sm sm:h-10",
     variant === "primary" && "bg-neutral-900 text-white shadow-sm hover:bg-neutral-700",
     variant === "brand" && "bg-emerald-600 text-white shadow-sm hover:bg-emerald-500",
     variant === "outline" && "border border-neutral-300 bg-white text-neutral-800 hover:border-neutral-400 hover:bg-neutral-50",
@@ -255,7 +260,7 @@ export function Button({ className, variant = "primary", size = "md", ...props }
       className={cn(
         "inline-flex select-none items-center justify-center gap-1.5 rounded-xl font-medium transition-all duration-100",
         "active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50", FOCUS,
-        size === "sm" ? "h-8 px-3 text-xs" : size === "lg" ? "h-12 px-6 text-[15px]" : "h-10 px-4 text-sm",
+        size === "sm" ? "h-8 px-3 text-xs" : size === "lg" ? "h-12 px-6 text-[15px]" : "h-11 px-4 text-sm sm:h-10",
         variant === "primary" && "bg-neutral-900 text-white shadow-sm hover:bg-neutral-700",
         variant === "brand" && "bg-emerald-600 text-white shadow-sm hover:bg-emerald-500",
         variant === "outline" && "border border-neutral-300 bg-white text-neutral-800 hover:border-neutral-400 hover:bg-neutral-50",
@@ -295,7 +300,8 @@ const FIELD = cn(
 );
 
 export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input className={cn(FIELD, "h-11 px-3.5 sm:h-10", className)} {...props} />;
+  // min-h จำเป็น: ใน flex-col ที่ลูกมี flex-1 ค่า height ถูก flex-basis ทับจนเหลือ 29px (วัดจริง 5 ก.ย. 2569 ฟอร์มเชิญทีม/ความจำ)
+  return <input className={cn(FIELD, "h-11 min-h-11 px-3.5 sm:h-10 sm:min-h-10", className)} {...props} />;
 }
 
 export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
@@ -303,7 +309,7 @@ export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<H
 }
 
 export function Select({ className, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select className={cn(FIELD, "h-11 px-3 sm:h-10", className)} {...props} />;
+  return <select className={cn(FIELD, "h-11 min-h-11 px-3 sm:h-10 sm:min-h-10", className)} {...props} />;
 }
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
@@ -332,7 +338,8 @@ export function Badge({ className, tone = "neutral", ...props }: React.HTMLAttri
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
+        // whitespace-nowrap: ป้ายสถานะห้ามตกบรรทัดเป็น "ชำระ/แล้ว" (วัดจริงหน้าภาพรวมมือถือ 5 ก.ย. 2569)
+        "inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
         tone === "neutral" && "bg-neutral-50 text-neutral-600 ring-neutral-200",
         tone === "green" && "bg-emerald-50 text-emerald-700 ring-emerald-200",
         tone === "amber" && "bg-amber-50 text-amber-700 ring-amber-200",

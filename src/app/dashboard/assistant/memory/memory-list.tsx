@@ -39,7 +39,7 @@ export default function MemoryList({ shopId, items }: { shopId: string; items: B
         <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
           <input id="mem-new" value={text} onChange={(e) => setText(e.target.value)} maxLength={MEMORY_MAX_LEN}
             placeholder="เช่น ลูกค้า ร้าน A ให้เครดิต 30 วัน · ค่าเช่าออฟฟิศ 15,000 จ่ายทุกวันที่ 1"
-            className="h-11 min-w-0 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
+            className="h-11 min-h-11 min-w-0 flex-1 rounded-xl border border-neutral-300 px-3 text-base outline-none focus:border-emerald-500 sm:text-sm" />
           <select value={kind} onChange={(e) => setKind(e.target.value as MemoryKind)} aria-label="ประเภทความจำ"
             className="h-11 rounded-xl border border-neutral-300 bg-white px-3 text-sm outline-none focus:border-emerald-500">
             {(Object.keys(MEMORY_KIND_TH) as MemoryKind[]).map((k) => <option key={k} value={k}>{MEMORY_KIND_TH[k]}</option>)}

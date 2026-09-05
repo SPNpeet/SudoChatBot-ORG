@@ -15,7 +15,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     title: page.title,
     description: page.description,
     alternates: { canonical: `/guide/${page.slug}` },
-    openGraph: { title: page.title, description: page.description, url: `/guide/${page.slug}`, type: "article" },
+    openGraph: { title: page.title, description: page.description, url: `/guide/${page.slug}`, type: "article",
+      images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", modifiedTime: page.updated },
   };
 }
 

@@ -12,7 +12,7 @@ const TABS = [
   { href: "/dashboard/admin/shops", label: "ผู้ใช้ระบบ" },
   { href: "/dashboard/admin/feedback", label: "ความเห็นผู้ใช้" },
   { href: "/dashboard/admin/tax-kb", label: "คลังความรู้ภาษี" },
-  { href: "/dashboard/admin/logs", label: "Audit Log" },
+  { href: "/dashboard/admin/logs", label: "ประวัติการทำรายการ" },
 ];
 
 export default function AdminTabs() {

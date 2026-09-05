@@ -10,11 +10,16 @@ import { PageHeader } from "@/components/ui";
 import { Brain } from "lucide-react";
 import { MEMORY_MAX_PER_SHOP, type BusinessMemory } from "@/lib/business-memory";
 import MemoryList from "./memory-list";
+import { canWork } from "@/lib/roles";
+import RoleWall from "../../role-wall";
 
 export const dynamic = "force-dynamic";
 
 export default async function MemoryPage() {
-  const { supabase, shop } = await getCurrentShop();
+  const { supabase, shop, role } = await getCurrentShop();
+  // memory-actions รับเฉพาะ owner/admin/agent — ผู้ชมเปิดมาแล้วกดอะไรก็พัง จึงกันตั้งแต่หน้า
+  if (!canWork(role)) return <RoleWall title="สิ่งที่ผู้ช่วยจำเปิดให้ผู้ที่ใช้ผู้ช่วยได้"
+    detail="บทบาทผู้ชมดูข้อมูลได้อย่างเดียวและไม่ได้ใช้ผู้ช่วยบัญชี AI — ถ้าต้องใช้ ให้เจ้าของเปลี่ยนบทบาทที่ ตั้งค่า > ทีม" />;
   const { data } = await supabase.from("business_memories").select("*")
     .eq("shop_id", shop.id).order("active", { ascending: false }).order("updated_at", { ascending: false });
   const list = (data ?? []) as BusinessMemory[];

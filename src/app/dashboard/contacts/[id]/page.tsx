@@ -15,6 +15,7 @@ import { notFound } from "next/navigation";
 import RowLink from "@/components/row-link";
 import ContactForm from "../contact-form";
 import { FileText, Plus, Receipt } from "lucide-react";
+import { canManage } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -59,22 +60,22 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
           </p>
           {contact.address && <p className="mt-0.5 text-xs text-neutral-400">{contact.address}</p>}
         </div>
-        {canEdit && <ContactForm shopId={shop.id} contact={contact} />}
+        {canEdit && <ContactForm shopId={shop.id} contact={contact} canArchive={canManage(role)} />}
       </div>
 
       {/* ตัวเลขที่ต้องเห็นก่อนคุยกับรายนี้ — ค้างเท่าไร เคยซื้อขายกันเท่าไร */}
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
         <div className="rounded-xl border border-neutral-200 bg-white p-3">
           <p className="text-xs text-neutral-400">ค้างรับจากรายนี้</p>
-          <p className={cn("mt-0.5 text-base font-bold tabular-nums", ar > 0 ? "text-amber-600" : "text-neutral-900")}>{baht(ar)}</p>
+          <p className={cn("mt-0.5 whitespace-nowrap text-base font-bold tabular-nums", ar > 0 ? "text-amber-600" : "text-neutral-900")}>{baht(ar)}</p>
         </div>
         <div className="rounded-xl border border-neutral-200 bg-white p-3">
           <p className="text-xs text-neutral-400">เราค้างจ่ายรายนี้</p>
-          <p className={cn("mt-0.5 text-base font-bold tabular-nums", ap > 0 ? "text-red-600" : "text-neutral-900")}>{baht(ap)}</p>
+          <p className={cn("mt-0.5 whitespace-nowrap text-base font-bold tabular-nums", ap > 0 ? "text-red-600" : "text-neutral-900")}>{baht(ap)}</p>
         </div>
         <div className="rounded-xl border border-neutral-200 bg-white p-3">
           <p className="text-xs text-neutral-400">ยอดซื้อขายสะสม</p>
-          <p className="mt-0.5 text-base font-bold tabular-nums text-neutral-900">{baht(totalBilled)}</p>
+          <p className="mt-0.5 whitespace-nowrap text-base font-bold tabular-nums text-neutral-900">{baht(totalBilled)}</p>
         </div>
       </div>
 

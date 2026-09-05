@@ -6,6 +6,8 @@ export const metadata = {
   title: "ข้อกำหนดการใช้งาน",
   description: "เงื่อนไขการใช้บริการ SudoChatBot — สิทธิ์ในข้อมูลของคุณ ขอบเขตความรับผิด การยกเลิก และหน้าที่ของผู้ใช้",
   alternates: { canonical: "https://sudochatbot.online/terms" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "https://sudochatbot.online/terms", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 // ============================================================
@@ -68,8 +70,8 @@ export default function TermsPage() {
 
       <h2>4. ค่าบริการ</h2>
       <p>
-        แพ็กเกจเป็นไปตามที่แสดงในหน้า &quot;แพ็กเกจ/เครดิต&quot; ชำระตามรอบที่เลือก ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด
-        โควตางาน AI และโควตาตรวจสลิปเป็นไปตามแพ็กเกจ เมื่อใช้ครบระบบจะหยุดเฉพาะงาน AI —
+        แพ็กเกจเป็นไปตามที่แสดงในหน้า &quot;แพ็กเกจและเครดิต&quot; ชำระตามรอบที่เลือก ไม่มีสัญญาผูกมัด ยกเลิกได้ตลอด
+        เครดิต AI และจำนวนสลิปที่ตรวจอัตโนมัติเป็นไปตามแพ็กเกจ เมื่อใช้ครบระบบจะหยุดเฉพาะงาน AI —
         <strong>การคีย์เอกสารและใช้งานบัญชีด้วยตนเองไม่จำกัดทุกแพ็กเกจ</strong>
       </p>
       <p>
@@ -127,7 +129,7 @@ export default function TermsPage() {
       </p>
 
       <h2>12. ติดต่อ</h2>
-      <p>อีเมล: supanut6420@gmail.com</p>
+      <p>อีเมล: support@sudochatbot.online</p>
     </>
   );
 }

@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError as friendly } from "@/lib/friendly-error";
 // ============================================================
 //  จัดการคลังความรู้ภาษี — เฉพาะผู้ดูแลแพลตฟอร์ม
 //
@@ -111,7 +112,7 @@ export async function deleteTaxKnowledge(id: string): Promise<Result> {
   try { await assertPlatformAdmin(); } catch { return { ok: false, error: DENIED }; }
   const svc = createServiceClient();
   const { error } = await svc.from("tax_knowledge").delete().eq("id", id);
-  if (error) return { ok: false, error: error.message.slice(0, 200) };
+  if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง").slice(0, 200) };
   revalidatePath(PATH);
   return { ok: true, message: "ลบแล้ว" };
 }

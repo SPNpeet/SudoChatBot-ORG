@@ -64,8 +64,9 @@ function Field({ className, wide, ...p }: React.InputHTMLAttributes<HTMLInputEle
         // ⚠️ เป้ากดบนมือถือ vs หน้าตาเอกสารจริง — วัดบนมือถือ 6 ส.ค. 2569 ได้ 24px (เกณฑ์ 44px)
         // ขยายความสูงตรง ๆ จะพังภาพ "กระดาษเอกสาร" ที่เป็นจุดขายของหน้านี้
         // จึงเพิ่มเฉพาะพื้นที่แตะบนจอเล็ก แล้วคืนค่าเดิมบนจอใหญ่และตอนสั่งพิมพ์
-        "min-w-0 rounded-[3px] border-0 bg-transparent px-1 py-2 outline-none sm:py-0.5 print:py-0.5",
-        "transition-colors placeholder:text-neutral-300",
+        "min-h-11 min-w-0 rounded-[3px] border-0 bg-transparent px-1 py-2 outline-none sm:min-h-0 sm:py-0.5 print:min-h-0 print:py-0.5",
+        // placeholder เดิม neutral-300 คอนทราสต์ 1.48:1 — ฟอร์มที่ต้องกรอกทุกช่องแต่อ่านไม่ออกว่าช่องไหนคืออะไร
+        "transition-colors placeholder:text-neutral-400",
         // เส้นใต้จาง ๆ คือสัญญาณเดียวที่บอกว่า "ตรงนี้พิมพ์ได้" — ถ้าไม่มีคนจะไม่กล้าแตะ
         "hover:bg-emerald-50/70 focus:bg-emerald-50 focus:ring-1 focus:ring-emerald-300",
         "print:bg-transparent print:ring-0",
@@ -182,7 +183,7 @@ export default function TryDocEditor() {
           หน้าที่เป็นสินทรัพย์ SEO ดีที่สุดของเว็บ (ใช้ฟรีไม่ต้องสมัคร) ไม่มีหัวเรื่องให้จัดอันดับ
           วางไว้ตรงนี้เพราะเป็นข้อความแรกเหนือตัวเอกสาร และไม่รบกวนตอนสั่งพิมพ์ (print:hidden) */}
       <div className="mx-auto max-w-[210mm] px-3 pt-3 text-center print:hidden">
-        <h1 className="text-sm font-semibold text-neutral-700">
+        <h1 className="text-[22px] font-bold tracking-tight text-neutral-900">
           ลองออกใบเสนอราคา ใบแจ้งหนี้ และใบเสร็จ ฟรี ไม่ต้องสมัคร
         </h1>
         <p className="mt-0.5 text-xs text-neutral-500">

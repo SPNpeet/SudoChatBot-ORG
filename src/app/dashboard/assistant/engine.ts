@@ -531,6 +531,9 @@ async function findDocByNumber(ctx: AssistantCtx, docNumber: string) {
  * (กติกาข้อ 3: ถ้าต้องการให้ห้าม ให้เขียนด่านในโค้ด อย่าเขียนขอในคำสั่งของโมเดล)
  */
 const OWNER_ONLY_TOOLS = new Set(["update_shop_info", "update_payment_settings", "upsert_product"]);
+// ยกเลิกเอกสาร/อนุมัติค่าใช้จ่าย: server action รับเฉพาะเจ้าของ/ผู้ดูแลอยู่แล้ว
+// แต่ถ้าปล่อยให้โมเดลลองเรียกแล้วชน forbidden ผู้ใช้จะได้ข้อความ error ดิบแทนคำอธิบาย
+const MANAGE_ONLY_TOOLS = new Set(["void_doc", "approve_expense"]);
 
 // export เพื่อให้ scripts/assistant-readonly-e2e.mjs รัน tool ฝั่ง "อ่านอย่างเดียว"
 // กับข้อมูลจริงได้ — พิสูจน์ว่าลิงก์/ไฟล์ที่ผู้ช่วยส่งให้ผู้ใช้ใช้ได้จริง ไม่ใช่แค่คอมไพล์ผ่าน
@@ -550,6 +553,9 @@ export async function executeTool(ctx: AssistantCtx, name: string, input: Record
   const s = ctx.svc;
   if (OWNER_ONLY_TOOLS.has(name) && ctx.role !== "owner" && ctx.role !== "admin") {
     return JSON.stringify({ error: "เฉพาะเจ้าของกิจการหรือผู้ดูแลเท่านั้นที่แก้ข้อมูลกิจการ บัญชีรับเงิน หรือสินค้าได้ — แจ้งเจ้าของให้แก้ที่หน้าตั้งค่าแทน" });
+  }
+  if (MANAGE_ONLY_TOOLS.has(name) && ctx.role !== "owner" && ctx.role !== "admin") {
+    return JSON.stringify({ error: "การยกเลิกเอกสารและการอนุมัติค่าใช้จ่ายทำได้เฉพาะเจ้าของหรือผู้ดูแล — บอกผู้ใช้ให้แจ้งเจ้าของทำแทน" });
   }
   try {
     switch (name) {

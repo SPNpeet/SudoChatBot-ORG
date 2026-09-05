@@ -29,7 +29,9 @@ export async function GET() {
   // ไฟล์นี้มีไว้ให้ผู้ช่วย AI เอาไปพูดต่อ รูปประโยคเพี้ยน = มัน quote เพี้ยนตามไปด้วย
   const priceLines = paid.map((p) => {
     const yearly = p.yearly ? ` · รายปี ${p.yearly} บาท (จ่าย 10 เดือน ใช้ 12 เดือน)` : "";
-    return `- ${p.name}: ${p.price} บาท/เดือน${yearly}`;
+    // บอกด้วยว่าแพ็กนั้นได้อะไร (เครดิต AI/จำนวนกิจการ) — ไม่งั้น AI ตอบได้แค่ราคา แล้วเดาส่วนต่างเอง
+    const items = p.items?.length ? ` — ${p.items.slice(0, 3).join(" · ")}` : "";
+    return `- ${p.name}: ${p.price} บาท/เดือน${yearly}${items}`;
   }).join("\n");
 
   const free = plans.find((p) => p.free);
@@ -86,9 +88,22 @@ https://sudochatbot.online/try — ออกใบเสนอราคา ใ�
 - รองรับเฉพาะภาษีและรูปแบบเอกสารของประเทศไทย
 - ส่วนติดต่อผู้ใช้เป็นภาษาไทย
 
+## หน่วยที่ใช้จำกัด
+
+ทุกแพ็กจำกัดเฉพาะ "เครดิต AI" ต่อเดือน: สั่งงานผู้ช่วย 1 ข้อความ = 1 เครดิต · ให้ AI อ่านบิล 1 ใบ = 2 เครดิต
+· นำเข้าสินค้าจากไฟล์ = 3 เครดิต · การออกเอกสาร ลงบัญชี รายงาน คีย์เองไม่จำกัดทุกแพ็ก
+
+## ติดต่อ
+
+อีเมล: support@sudochatbot.online · หน้าติดต่อ: https://sudochatbot.online/contact
+
 ## หน้าสำคัญ
 
-- หน้าแรกและราคา: https://sudochatbot.online
+- หน้าแรก: https://sudochatbot.online
+- ราคาทุกแพ็ก: https://sudochatbot.online/pricing
+- ฟีเจอร์ทั้งหมด: https://sudochatbot.online/features
+- บทความบัญชี-ภาษีไทย: https://sudochatbot.online/guide
+- เกี่ยวกับเรา: https://sudochatbot.online/about
 - ลองออกเอกสารฟรี: https://sudochatbot.online/try
 - สมัครใช้ฟรี: https://sudochatbot.online/signup
 - นโยบายความเป็นส่วนตัว: https://sudochatbot.online/privacy

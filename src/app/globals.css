@@ -201,3 +201,13 @@ details[open] .chev-closed { display: none; }
 }
 .tabstrip::-webkit-scrollbar { display: none; }
 .tabstrip > * { flex: none; }
+/* มือถือ: แท็บถูกหั่นกลางตัวอักษรที่ขอบขวาโดยไม่มีอะไรบอกว่าเลื่อนได้ (วัดจริง 5 ก.ย. 2569 หน้ารายงาน/ตั้งค่า)
+   เงาจางที่ขอบ = สัญญาณว่ายังมีต่อ · padding ท้ายทำให้แท็บสุดท้ายพ้นเงาเมื่อเลื่อนจนสุด
+   ถ้าแท็บพอดีจอ เงาจะทับแค่พื้นว่าง ไม่โดนแท็บ */
+@media (max-width: 639px) {
+  .tabstrip {
+    padding-right: 40px;
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  }
+}

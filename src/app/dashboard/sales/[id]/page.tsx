@@ -12,6 +12,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { vatPercentLabelOf } from "@/lib/tax-th";
 import DocActions from "../../finance/doc-actions";
+import { canManage } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -127,7 +128,7 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
             </p>
           )}
         </div>
-        {canEdit && <DocActions doc={{
+        {canEdit && <DocActions canVoid={canManage(role)} doc={{
           id: doc.id, shopId: shop.id, docType: doc.doc_type as DocType, docNumber: doc.doc_number,
           status: doc.status as DocStatus, outstanding, shareKey: doc.share_key ?? null, whtAmount: Number(doc.wht_amount),
         vatMode: doc.vat_mode, total: Number(doc.total),
@@ -189,7 +190,7 @@ export default async function SalesDocPage({ params }: { params: Promise<{ id: s
         </CardContent>
       </Card>
 
-      {doc.notes && <p className="rounded-xl bg-neutral-50 px-4 py-2.5 text-sm text-neutral-500">{doc.notes}</p>}
+      {doc.notes && <p className="whitespace-pre-wrap break-words rounded-xl bg-neutral-50 px-4 py-2.5 text-sm text-neutral-500">{doc.notes}</p>}
 
       {(related ?? []).length > 0 && (
         <p className="text-sm text-neutral-500">

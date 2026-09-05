@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cn, baht } from "@/lib/utils";
+import { navHiddenFor, canWork } from "@/lib/roles";
 import {
   Search, CornerDownLeft, LayoutDashboard, Calculator, FileText, Receipt, Banknote,
   Users, Package, BookOpenText, PieChart, Wallet, Settings, CircleHelp, Loader2, Plus, UserRound,
@@ -24,12 +25,12 @@ const PAGES: Row[] = [
   { id: "p2", label: "ผู้ช่วยบัญชี AI", href: "/dashboard/assistant", icon: Calculator, group: "ไปที่หน้า" },
   { id: "p3", label: "เอกสารขาย", href: "/dashboard/sales", icon: FileText, group: "ไปที่หน้า" },
   { id: "p4", label: "ค่าใช้จ่าย", href: "/dashboard/expenses", icon: Receipt, group: "ไปที่หน้า" },
-  { id: "p5", label: "การเงิน / กระทบยอด", href: "/dashboard/money", icon: Banknote, group: "ไปที่หน้า" },
+  { id: "p5", label: "การเงินและกระทบยอด", href: "/dashboard/money", icon: Banknote, group: "ไปที่หน้า" },
   { id: "p6", label: "ผู้ติดต่อ", href: "/dashboard/contacts", icon: Users, group: "ไปที่หน้า" },
-  { id: "p7", label: "สินค้า/บริการ", href: "/dashboard/products", icon: Package, group: "ไปที่หน้า" },
+  { id: "p7", label: "สินค้าและบริการ", href: "/dashboard/products", icon: Package, group: "ไปที่หน้า" },
   { id: "p8", label: "สมุดรายวัน", href: "/dashboard/journal", icon: BookOpenText, group: "ไปที่หน้า" },
-  { id: "p9", label: "รายงาน + ภาษี", href: "/dashboard/reports", icon: PieChart, group: "ไปที่หน้า" },
-  { id: "p10", label: "แพ็กเกจ/เครดิต", href: "/dashboard/billing", icon: Wallet, group: "ไปที่หน้า" },
+  { id: "p9", label: "รายงานและภาษี", href: "/dashboard/reports", icon: PieChart, group: "ไปที่หน้า" },
+  { id: "p10", label: "แพ็กเกจและเครดิต", href: "/dashboard/billing", icon: Wallet, group: "ไปที่หน้า" },
   { id: "p11", label: "ตั้งค่า", href: "/dashboard/settings", icon: Settings, group: "ไปที่หน้า" },
   { id: "p12", label: "คู่มือใช้งาน", href: "/dashboard/help", icon: CircleHelp, group: "ไปที่หน้า" },
   { id: "p13", label: "บัญชีของฉัน", sub: "ชื่อผู้ใช้ · อีเมล · รหัสผ่าน", href: "/dashboard/account", icon: UserRound, group: "ไปที่หน้า" },
@@ -42,7 +43,7 @@ const ACTIONS: Row[] = [
   { id: "a4", label: "เพิ่มผู้ติดต่อใหม่", href: "/dashboard/contacts", icon: Plus, group: "สร้างใหม่" },
 ];
 
-export default function CommandPalette({ shopId }: { shopId: string }) {
+export default function CommandPalette({ shopId, role = "owner" }: { shopId: string; role?: string }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [remote, setRemote] = useState<Row[]>([]);
@@ -87,7 +88,7 @@ export default function CommandPalette({ shopId }: { shopId: string }) {
         for (const d of docs.data ?? []) {
           out.push({
             id: `d${d.id}`, label: d.doc_number,
-            sub: `${d.contact_name ?? "ไม่ระบุ"} · ${baht(Number(d.total))}`,
+            sub: `${d.contact_name ?? "ไม่ระบุลูกค้า"} · ${baht(Number(d.total))}`,
             href: d.doc_type === "expense" ? `/dashboard/expenses/${d.id}` : `/dashboard/sales/${d.id}`,
             icon: d.doc_type === "expense" ? Receipt : FileText, group: "เอกสาร",
           });
@@ -107,7 +108,10 @@ export default function CommandPalette({ shopId }: { shopId: string }) {
 
   const results = useMemo(() => {
     const term = q.trim().toLowerCase();
-    const local = [...ACTIONS, ...PAGES].filter((r) => !term || r.label.toLowerCase().includes(term));
+    // ผู้ชมไม่มีกลุ่ม "สร้างใหม่" · พนักงานไม่เห็นหน้าที่ถูกซ่อนในเมนู — ทางลัดต้องพาไปที่ที่ไปได้จริง
+    const hidden = navHiddenFor(role);
+    const local = [...(canWork(role) ? ACTIONS : []), ...PAGES.filter((r) => !hidden.includes(r.href))]
+      .filter((r) => !term || r.label.toLowerCase().includes(term));
     return [...remote, ...local].slice(0, 14);
   }, [q, remote]);
 

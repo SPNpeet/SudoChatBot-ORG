@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError as friendly } from "@/lib/friendly-error";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
@@ -25,7 +26,7 @@ export async function listPendingTopups(offset: number): Promise<ListTopupsResul
     const { data, error } = await svc.from("topups").select("id,amount,status,created_at,slip_path,plan_code,plan_period,shops(name)")
       .in("status", ["pending", "verifying"]).order("created_at", { ascending: false })
       .range(offset, offset + TOPUPS_PAGE_SIZE);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     const all = data ?? [];
     const rows: PendingTopup[] = all.slice(0, TOPUPS_PAGE_SIZE).map((t) => ({
       id: t.id,
@@ -48,7 +49,7 @@ export async function confirmTopup(topupId: string, approve: boolean): Promise<A
     await assertPlatformAdmin();
     const supabase = await createClient();
     const { data, error } = await supabase.rpc("admin_confirm_topup", { p_topup_id: topupId, p_approve: approve });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     const result = data as { ok: boolean; message?: string } | null;
     if (result && result.ok === false) return { ok: false, error: result.message ?? "ทำรายการไม่สำเร็จ" };
     if (approve) {

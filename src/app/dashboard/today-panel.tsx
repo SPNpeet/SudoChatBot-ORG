@@ -30,7 +30,7 @@ export default function TodayPanel({ overdue, pendingApproval, unmatchedSlips, t
   if (arOverdue.length) tasks.push({
     key: "ar", icon: HandCoins, tone: "amber",
     title: `ตามเงิน ${arOverdue.length} ราย · ${baht(arSum)}`,
-    sub: `เกินกำหนดแล้ว — รายเก่าสุด ${arOverdue[0].contact_name ?? "ไม่ระบุ"} ครบกำหนด ${dateOnlyTH(arOverdue[0].due_date)}`,
+    sub: `เกินกำหนดแล้ว — รายเก่าสุด ${arOverdue[0].contact_name ?? "ไม่ระบุลูกค้า"} ครบกำหนด ${dateOnlyTH(arOverdue[0].due_date)}`,
     href: "/dashboard/sales?t=unpaid", cta: "ดูรายการ",
   });
   if (apOverdue.length) tasks.push({

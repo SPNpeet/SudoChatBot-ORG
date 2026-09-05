@@ -330,7 +330,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
             <button key={t} type="button" role="tab" aria-selected={docType === t}
               onClick={() => setDocType(t)}
               className={cn(
-                "min-h-10 flex-1 rounded-lg px-2 text-sm font-medium transition-colors",
+                "min-h-11 flex-1 rounded-lg px-2 text-sm font-medium transition-colors sm:min-h-10",
                 docType === t ? "border border-neutral-200 bg-white text-emerald-700 shadow-sm" : "text-neutral-500 hover:text-neutral-700",
               )}>
               {DOC_TYPE_TH[t]}
@@ -404,7 +404,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
         <CardContent className="space-y-4 pt-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label>{isExpense ? "ผู้ขาย/ซัพพลายเออร์" : "ลูกค้า"}</Label>
+              <Label>{isExpense ? "ผู้ขาย" : "ลูกค้า"}</Label>
               <Select value={contactId} onChange={(e) => setContactId(e.target.value)}>
                 <option value="">{isExpense ? "ผู้ขายรายใหม่ — พิมพ์ชื่อในช่องด้านล่าง" : "ลูกค้าใหม่ — พิมพ์ชื่อในช่องด้านล่าง"}</option>
                 {contacts.filter((c) => c.kind === contactKind || c.kind === "both").map((c) => (
@@ -512,7 +512,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
                       }} />
                     <button type="button" aria-label="ลบบรรทัดนี้"
                       onClick={() => setRows((rs) => rs.length > 1 ? rs.filter((_, j) => j !== i) : rs)}
-                      className="grid h-9 w-8 place-items-center text-neutral-400 hover:text-red-500"><Trash2 className="h-4 w-4 shrink-0" /></button>
+                      className="grid h-11 w-10 place-items-center text-neutral-400 hover:text-red-500 sm:h-9 sm:w-8"><Trash2 className="h-4 w-4 shrink-0" /></button>
                   </div>
                 </div>
               ))}
@@ -535,7 +535,7 @@ export default function DocForm({ shopId, seller, docType: initialDocType, conta
             )}
 
             <button type="button" onClick={() => setRows((rs) => [...rs, emptyRow()])}
-              className="mt-2 inline-flex items-center gap-1 text-sm text-emerald-700 hover:text-emerald-800">
+              className="-ml-1 mt-1 inline-flex min-h-11 items-center gap-1 rounded-lg px-1 text-sm text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800">
               <Plus className="h-4 w-4" /> เพิ่มบรรทัด
             </button>
           </div>

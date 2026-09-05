@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   description: "เข้าสู่ระบบ SudoChatBot เพื่อจัดการเอกสาร บัญชี และภาษีของกิจการคุณ",
   robots: { index: false, follow: true },
   alternates: { canonical: "https://sudochatbot.online/login" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "https://sudochatbot.online/login", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 export default function LoginLayout({ children }: { children: React.ReactNode }) {

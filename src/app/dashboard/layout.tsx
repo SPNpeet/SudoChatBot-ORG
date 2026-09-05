@@ -70,7 +70,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* Sidebar — เดสก์ท็อป (พับได้ SideNav คุมความกว้างเอง) */}
       {/* ส่งได้เฉพาะข้อมูลที่ serialize ได้ (boolean / object ธรรมดา / server action / JSX)
           รายการเมนูพร้อมไอคอนอยู่ใน side-nav.tsx ฝั่ง client แล้ว ห้ามย้ายกลับมาที่นี่ */}
-      <SideNav isAdmin={!!isAdmin}
+      <SideNav isAdmin={!!isAdmin} role={role}
         foot={<SidebarFoot quota={quota as AiQuota | null} planCode={shop.plan} me={me} signOut={signOut} />}>
         <SidebarHead companies={companies} currentId={shop.id} shopId={shop.id} notices={notices} />
       </SideNav>
@@ -106,13 +106,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* ปุ่มลอยทั้งหมด — ต้องไม่ติดไปกับกระดาษ (globals.css ซ่อน [data-noprint] ตอนพิมพ์) */}
       <div data-noprint>
         {/* ค้นหาทุกอย่างด้วย Ctrl+K — ทางลัดที่ทำให้คนใช้คล่องขึ้นเร็วที่สุด */}
-        <CommandPalette shopId={shop.id} />
+        <CommandPalette shopId={shop.id} role={role} />
 
         {/* Bottom nav — มือถือ */}
-        <MobileNav isAdmin={!!isAdmin} />
+        <MobileNav isAdmin={!!isAdmin} role={role} />
 
         {/* ปุ่ม + สร้างงานที่ทำบ่อย จากทุกหน้า */}
-        <QuickCreate />
+        {/* ผู้ชมสร้างเอกสารไม่ได้ — ปุ่ม + ที่พาไปเจอกำแพงคือปุ่มหลอก */}
+        {role !== "viewer" && <QuickCreate />}
 
         {/* ปุ่มแนะนำ/ติชม — เสียงผู้ใช้ตรงถึงเจ้าของแพลตฟอร์ม */}
         <FeedbackWidget shopId={shop.id} />

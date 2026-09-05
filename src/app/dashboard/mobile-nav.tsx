@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LayoutDashboard, FileText, Receipt, Menu, Calculator } from "lucide-react";
 import { useState } from "react";
+import { navHiddenFor } from "@/lib/roles";
 import {
   Settings, ShieldCheck, Wallet, CircleHelp, Package, Users, Banknote, BookOpenText, PieChart,
 } from "lucide-react";
@@ -15,18 +16,19 @@ const main = [
   { href: "/dashboard/expenses", label: "ค่าใช้จ่าย", icon: Receipt },
 ];
 const more = [
-  { href: "/dashboard/money", label: "การเงิน/กระทบยอด", icon: Banknote },
+  { href: "/dashboard/money", label: "การเงินและกระทบยอด", icon: Banknote },
   { href: "/dashboard/contacts", label: "ผู้ติดต่อ", icon: Users },
-  { href: "/dashboard/products", label: "สินค้า/บริการ", icon: Package },
+  { href: "/dashboard/products", label: "สินค้าและบริการ", icon: Package },
   { href: "/dashboard/journal", label: "สมุดรายวัน", icon: BookOpenText },
-  { href: "/dashboard/reports", label: "รายงาน + ภาษี", icon: PieChart },
-  { href: "/dashboard/billing", label: "แพ็กเกจ/เครดิต", icon: Wallet },
+  { href: "/dashboard/reports", label: "รายงานและภาษี", icon: PieChart },
+  { href: "/dashboard/billing", label: "แพ็กเกจและเครดิต", icon: Wallet },
   { href: "/dashboard/settings", label: "ตั้งค่า", icon: Settings },
   { href: "/dashboard/help", label: "คู่มือใช้งาน", icon: CircleHelp },
 ];
 
-export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
+export default function MobileNav({ isAdmin, role = "owner" }: { isAdmin: boolean; role?: string }) {
   const path = usePathname();
+  const hidden = navHiddenFor(role);
   const [open, setOpen] = useState(false);
   const active = (h: string) => h === "/dashboard" ? path === h : path.startsWith(h);
   // อยู่หน้าที่ซ่อนอยู่ใน "เพิ่มเติม" ก็ต้องเห็นว่าแท็บนั้น active ไม่ใช่ลอยไม่มีที่ยืน
@@ -44,7 +46,7 @@ export default function MobileNav({ isAdmin }: { isAdmin: boolean }) {
           <div className="absolute bottom-16 left-3 right-3 max-h-[65vh] overflow-y-auto overscroll-contain rounded-2xl border border-neutral-200 bg-white p-2" onClick={(e) => e.stopPropagation()}>
             {/* โซน admin แยกไปมี layout + แถบนำทางของตัวเองแล้ว — ที่นี่เหลือทางเข้าเดียว
                 (คำสั่งเจ้าของ 30 ส.ค. 2569 ให้ระบบ admin แยกเป็นของมันเฉพาะ) */}
-            {[...more, ...(isAdmin ? [
+            {[...more.filter((m) => !hidden.includes(m.href)), ...(isAdmin ? [
               { href: "/dashboard/admin", label: "ศูนย์ผู้ดูแลแพลตฟอร์ม", icon: ShieldCheck },
             ] : [])].map((m) => (
               <Link key={m.href} href={m.href} onClick={() => setOpen(false)}

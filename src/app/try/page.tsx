@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description:
     "พิมพ์ลงบนตัวเอกสารได้เลย เห็นหน้าตาจริงทันที คำนวณ VAT 7% และตัวอักษรจำนวนเงินให้อัตโนมัติ สั่งพิมพ์หรือบันทึก PDF ได้ฟรี ไม่ต้องสมัครสมาชิก",
   alternates: { canonical: "https://sudochatbot.online/try" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "https://sudochatbot.online/try", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 export default function TryPage() {

@@ -161,7 +161,7 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
       // ตั้งชื่อให้รูปที่วางมาแบบไม่มีชื่อ เพื่อให้เห็นบนการ์ดไฟล์ว่าคือรูปที่วางเมื่อไหร่
       if (source !== "pick" && (!f.name || f.name === "image.png" || f.name === "blob")) {
         const ext = f.type === "application/pdf" ? "pdf" : f.type.split("/")[1] ?? "png";
-        const stamp = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        const stamp = new Date().toLocaleTimeString("th-TH", { timeZone: "Asia/Bangkok",  hour: "2-digit", minute: "2-digit", second: "2-digit" });
         good.push(new File([f], `รูปที่วาง ${stamp}.${ext}`, { type: f.type }));
         continue;
       }
@@ -359,7 +359,7 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
           router.refresh();   // มีการแก้ข้อมูล -> หน้าอื่นเห็นค่าล่าสุด
         }
       } else if (r.quotaExceeded) {
-        setQuotaWall(r.error ?? "โควตางาน AI เต็มแล้ว");
+        setQuotaWall(r.error ?? "เครดิต AI เดือนนี้เต็มแล้ว");
       } else {
         retryRef.current = history;
         setError(r.error ?? "เกิดข้อผิดพลาด ลองใหม่อีกครั้ง");
@@ -745,7 +745,7 @@ export default function AssistantChat({ shopId, initialMessage }: { shopId: stri
           <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 text-center">
             <Zap className="mx-auto h-7 w-7 text-emerald-500" />
             <p className="mt-1 text-sm font-semibold text-neutral-800">{quotaWall}</p>
-            <p className="mt-1 text-xs text-neutral-400">งานเอกสาร/บัญชีคีย์เองได้ไม่จำกัดตามปกติ — โควตานี้เฉพาะงาน AI</p>
+            <p className="mt-1 text-xs text-neutral-400">งานเอกสารและบัญชีคีย์เองได้ไม่จำกัดตามปกติ — เครดิตใช้เฉพาะงาน AI</p>
             <a href="/dashboard/billing"
               className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">
               อัปเกรด / ต่ออายุแพ็กเกจ →

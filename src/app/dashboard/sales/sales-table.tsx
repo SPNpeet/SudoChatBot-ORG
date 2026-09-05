@@ -177,7 +177,7 @@ export default function SalesTable({ rows }: { rows: SalesRow[] }) {
                 {d.doc_number}
               </Link></Td>
               <Td label="ประเภท">{DOC_TYPE_TH[d.doc_type as DocType]}</Td>
-              <Td label="ลูกค้า">{d.contact_name ?? "-"}</Td>
+              <Td label="ลูกค้า">{d.contact_name ?? "ไม่ระบุลูกค้า"}</Td>
               <Td label="วันที่" className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
               <Td label="ยอด" className="text-right">{baht(d.total)}</Td>
               <Td label="ค้างรับ" className="text-right">{d.outstanding > 0 ? <span className="font-medium text-amber-600">{baht(d.outstanding)}</span> : "-"}</Td>

@@ -11,6 +11,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Logo } from "@/components/logo";
 import { Eye, EyeOff, TriangleAlert } from "lucide-react";
+import { friendlyError } from "@/lib/friendly-error";
 
 export default function ResetPasswordPage() {
   const [checking, setChecking] = useState(true);
@@ -48,7 +49,7 @@ export default function ResetPasswordPage() {
         /should be different|same as the old/i.test(m) ? "รหัสใหม่ต้องไม่ซ้ำกับรหัสเดิม"
           : /weak|pwned|compromised/i.test(m) ? "รหัสนี้เคยหลุดจากเว็บอื่นมาก่อน เลือกรหัสอื่นที่ไม่เคยใช้ที่ไหน"
             : /session|expired|Auth session missing/i.test(m) ? "ลิงก์หมดอายุแล้ว — ขอลิงก์ใหม่อีกครั้ง"
-              : m,
+              : friendlyError(m, "ตั้งรหัสผ่านไม่สำเร็จ — ลองอีกครั้ง หรือขอลิงก์ใหม่"),
       );
     } finally { setLoading(false); }
   }

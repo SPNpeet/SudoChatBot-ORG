@@ -15,6 +15,7 @@ import { BookOpenText, CheckCircle2, AlertTriangle, ExternalLink, Lightbulb } fr
 import Link from "next/link";
 import JournalMonthPicker from "./month-picker";
 import ManualJournalForm from "./manual-form";
+import { canSeeMoney } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
@@ -100,7 +101,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
           <h1 className="text-[22px] font-bold leading-tight tracking-tight text-neutral-900">สมุดรายวัน</h1>
           <p className="mt-1 text-sm text-neutral-600">
             {rows.length > 0
-              ? <>เดือนนี้ <b className="text-neutral-900">{rows.length}</b> รายการ มูลค่ารวม <b className="text-neutral-900">{bahtDoc(monthTotal)}</b></>
+              ? <>เดือนนี้ <b className="text-neutral-900">{rows.length}</b> รายการ{canSeeMoney(role) && <> มูลค่ารวม <b className="text-neutral-900">{bahtDoc(monthTotal)}</b></>}</>
               : "บันทึกบัญชีของทุกธุรกรรม เรียงตามวันที่"}
           </p>
         </div>
@@ -162,7 +163,7 @@ export default async function JournalPage({ searchParams }: { searchParams: Prom
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <span className="font-mono text-[13px] font-semibold text-neutral-800">{e.entry_number}</span>
                     <Badge tone={e.source_type === "manual" ? "blue" : e.source_type === "reversal" ? "red" : "neutral"}>
-                      {SOURCE_TH[e.source_type] ?? e.source_type}
+                      {SOURCE_TH[e.source_type] ?? "รายการอื่น"}
                     </Badge>
                     <span className="text-xs text-neutral-400">{dateOnlyTH(e.entry_date)}</span>
                   </div>

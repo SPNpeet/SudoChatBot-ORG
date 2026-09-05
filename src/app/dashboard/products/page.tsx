@@ -53,7 +53,7 @@ export default async function ProductsPage() {
       <Card>
         <CardContent className="px-0 pb-0 pt-0">
           {products.length === 0 ? (
-            <EmptyState icon={Package} title="ยังไม่มีสินค้า/บริการ"
+            <EmptyState icon={Package} title="ยังไม่มีสินค้าและบริการ"
               hint="ไม่บังคับต้องมี — แต่ถ้าใส่ไว้ ออกเอกสารครั้งต่อไปเลือกได้เลยไม่ต้องพิมพ์ราคาซ้ำ"
               steps={[
                 "ใส่ชื่อรายการกับราคาขาย เช่น \"ค่าออกแบบโลโก้ 5,000\"",
@@ -80,7 +80,7 @@ export default async function ProductsPage() {
                     </div>
                     <div className="mt-0.5 truncate text-xs text-neutral-500">
                       {p.sku ? `${p.sku} · ` : ""}{p.track_stock
-                        ? <span className={p.stock <= 3 ? "font-semibold text-red-600" : ""}>เหลือ {p.stock}</span>
+                        ? <span className={p.stock <= 3 ? "font-semibold text-red-600" : ""}>เหลือ {Number(p.stock).toLocaleString("th-TH")}</span>
                         : "ไม่นับสต๊อก"}
                     </div>
                   </div>

@@ -19,7 +19,8 @@ import { useDismiss } from "@/components/use-dismiss";
  */
 const KIND_TH: Record<string, string> = { customer: "ลูกค้า", vendor: "ผู้ขาย", both: "ลูกค้า+ผู้ขาย" };
 
-export default function ContactForm({ shopId, contact }: { shopId: string; contact?: Contact }) {
+// canArchive: archiveContact ฝั่ง server รับเฉพาะเจ้าของ/ผู้ดูแล — พนักงานแก้ข้อมูลได้แต่ซ่อนปุ่มเก็บเข้าคลัง
+export default function ContactForm({ shopId, contact, canArchive = true }: { shopId: string; contact?: Contact; canArchive?: boolean }) {
   const [open, setOpen] = useState(false);
   useDismiss(open, () => setOpen(false));
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +91,7 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
                   <Label>ประเภท</Label>
                   <Select name="kind" defaultValue={contact?.kind ?? "customer"}>
                     <option value="customer">ลูกค้า</option>
-                    <option value="vendor">ผู้ขาย/ซัพพลายเออร์</option>
+                    <option value="vendor">ผู้ขาย</option>
                     <option value="both">เป็นทั้งสองอย่าง</option>
                   </Select>
                 </div>
@@ -145,7 +146,7 @@ export default function ContactForm({ shopId, contact }: { shopId: string; conta
               </div>
               {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
               <div className="flex items-center justify-between gap-2 pt-1">
-                {contact ? (
+                {contact && canArchive ? (
                   <button type="button" onClick={archive} disabled={pending}
                     className="text-xs text-red-500 hover:text-red-700">เก็บเข้าคลัง (ซ่อน)</button>
                 ) : <span />}

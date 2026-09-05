@@ -260,7 +260,7 @@ export default async function Landing() {
                 // ถ้าไม่ติดป้ายกำกับไว้ ผู้ใช้จะเห็นข้อความสามย่อหน้าเรียงกันโดยไม่รู้ว่าอันไหนคืออะไร
                 // ป้ายจึงต้องโผล่เฉพาะจอเล็ก (sm:hidden) ไม่ใช่ซ้ำกับหัวตารางบนจอกว้าง
                 <div key={f.n} className="grid gap-3 border-b border-neutral-100 px-5 py-4 last:border-0 sm:grid-cols-[auto_1.1fr_1fr_1fr] sm:gap-4">
-                  <span className="text-sm font-bold tabular-nums text-neutral-300 sm:w-7">{f.n}</span>
+                  <span className="text-sm font-bold tabular-nums text-emerald-600/70 sm:w-7">{f.n}</span>
                   <div>
                     <p className="mb-1 text-xs font-semibold text-neutral-400 sm:hidden">{c?.flowHead.say ?? "คุณพิมพ์"}</p>
                     <p className="text-[13px] font-medium leading-relaxed text-neutral-900">&ldquo;{f.say}&rdquo;</p>
@@ -352,7 +352,7 @@ export default async function Landing() {
           </p>
           <PricingCards plans={plans} t={c?.pricing} pc={c?.plans} />
           <p className="mt-6 text-center text-xs leading-relaxed text-neutral-400">
-            {c?.pricing.footnote ?? "คีย์เอกสารเองไม่จำกัดทุกแพ็ก แม้โควตา AI หมด · ที่จำกัดคืองาน AI (ผู้ช่วย + อ่านบิล) เท่านั้น · ราคายังไม่รวม VAT"}
+            {c?.pricing.footnote ?? "คีย์เอกสารเองไม่จำกัดทุกแพ็กเกจ แม้เครดิต AI หมด · ที่จำกัดคืองาน AI (ผู้ช่วยและอ่านบิล) เท่านั้น · ราคายังไม่รวม VAT"}
           </p>
         </div>
       </section>

@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError as friendly } from "@/lib/friendly-error";
 // ============================================================
 //  ข้อมูลตัวอย่าง 1 คลิก — แก้ "กำแพงศูนย์" ตอนเปิดแดชบอร์ดครั้งแรก
 //  ผู้ใช้ใหม่เห็นระบบทำงานเต็มรูป (เอกสาร → สมุดรายวัน → ยอดค้าง → รายงาน)
@@ -83,7 +84,7 @@ export async function seedSampleData(shopId: string): Promise<SampleResult> {
     revalidatePath("/dashboard", "layout");
     return { ok: true, docs: made.length };
   } catch (e) {
-    return { ok: false, error: (e as Error).message.slice(0, 200) };
+    return { ok: false, error: friendly(e, "ทำรายการไม่สำเร็จ ลองอีกครั้ง").slice(0, 200) };
   }
 }
 
@@ -116,6 +117,6 @@ export async function clearSampleData(shopId: string): Promise<{ ok: boolean; er
     revalidatePath("/dashboard", "layout");
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: (e as Error).message.slice(0, 200) };
+    return { ok: false, error: friendly(e, "ทำรายการไม่สำเร็จ ลองอีกครั้ง").slice(0, 200) };
   }
 }

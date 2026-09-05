@@ -72,7 +72,7 @@ function thaiDate(iso: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
+  return d.toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Bangkok" });
 }
 
 /** ช่องกรอกที่ "อยู่บนใบ" — ไม่มีกรอบจนกว่าจะโฟกัส เพื่อให้ใบยังดูเหมือนเอกสารจริง */

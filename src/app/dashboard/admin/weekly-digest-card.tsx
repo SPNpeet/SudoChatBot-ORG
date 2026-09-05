@@ -61,7 +61,7 @@ export default async function WeeklyDigestCard() {
             <span>
               ส่งครั้งล่าสุด: สัปดาห์ <b>{lastWeek ?? "—"}</b>
               <span className="mt-0.5 block text-xs text-emerald-700">
-                {new Date(last.created_at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}
+                {new Date(last.created_at).toLocaleString("th-TH", { timeZone: "Asia/Bangkok",  dateStyle: "medium", timeStyle: "short" })}
               </span>
             </span>
           </p>

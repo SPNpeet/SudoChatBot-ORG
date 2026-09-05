@@ -15,6 +15,8 @@ import { vatPercentLabelOf } from "@/lib/tax-th";
 import { CheckCircle2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+// ลิงก์เอกสารของลูกค้าแต่ละราย — ห้ามให้เสิร์ชเอนจินเก็บ (มีชื่อ ยอดเงิน เลขผู้เสียภาษี)
+export const metadata = { robots: { index: false, follow: false } };
 
 export default async function PublicDocPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
@@ -53,6 +55,11 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
   return (
     <main className="min-h-screen bg-neutral-100 px-4 py-6">
       <div className="mx-auto max-w-lg space-y-4">
+        {doc.status === "void" && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            เอกสารฉบับนี้ถูกยกเลิกแล้ว — ใช้อ้างอิงหรือชำระเงินตามใบนี้ไม่ได้ กรุณาติดต่อผู้ออกเอกสาร
+          </div>
+        )}
         <div className="rounded-2xl bg-white p-5 shadow-sm">
           <div className="flex items-start justify-between gap-4 border-b border-neutral-100 pb-3">
             <div>
@@ -81,7 +88,7 @@ export default async function PublicDocPage({ params }: { params: Promise<{ key:
             <tbody>
               {(doc.fin_doc_items ?? []).map((it, i) => (
                 <tr key={i} className="border-t border-neutral-100">
-                  <td className="py-1.5 pr-2">{it.name} <span className="text-neutral-400">×{Number(it.qty).toLocaleString()}</span></td>
+                  <td className="py-1.5 pr-2">{it.name} <span className="text-neutral-400">×{Number(it.qty).toLocaleString("th-TH")}{it.unit ? ` ${it.unit}` : ""}</span></td>
                   <td className="py-1.5 text-right">{bahtDoc(it.amount)}</td>
                 </tr>
               ))}

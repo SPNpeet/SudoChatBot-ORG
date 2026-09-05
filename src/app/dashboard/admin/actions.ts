@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError as friendly } from "@/lib/friendly-error";
 // ============================================================
 //  Admin AI Center — Server Actions (platform admin เท่านั้น)
 //  key เก็บใน Vault ผ่าน RPC, ทุกการเปลี่ยนแปลงลง audit_logs
@@ -95,11 +96,11 @@ export async function savePlatformAiGuard(capUsd: number | null, kill: boolean):
     const { supabase } = await assertPlatformAdmin();
     const cap = capUsd != null && capUsd > 0 ? Math.min(100000, capUsd) : null;
     const { error } = await supabase.rpc("set_platform_ai_guard", { p_cap_usd: cap, p_kill: kill });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     revalidatePath("/dashboard/admin");
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: (e as Error).message.includes("forbidden") ? "เฉพาะผู้ดูแลแพลตฟอร์ม" : "บันทึกไม่สำเร็จ" };
+    return { ok: false, error: friendly(e, "ทำรายการไม่สำเร็จ ลองอีกครั้ง").includes("forbidden") ? "เฉพาะผู้ดูแลแพลตฟอร์ม" : "บันทึกไม่สำเร็จ" };
   }
 }
 
@@ -129,12 +130,12 @@ export async function savePlatformLine(formData: FormData): Promise<{ ok: true }
     const tel = String(formData.get("phone") ?? "").replace(/[^0-9+]/g, "");
     patch.line_phone = tel ? tel.slice(0, 20) : null;
     const { error } = await svc.from("platform_billing_settings").upsert(patch, { onConflict: "id" });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     revalidatePath("/dashboard/admin");
     revalidatePath("/dashboard/settings");
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: (e as Error).message };
+    return { ok: false, error: friendly(e, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
   }
 }
 
@@ -162,7 +163,7 @@ export async function broadcastSystemAlert(formData: FormData): Promise<{ ok: tr
     revalidatePath("/dashboard", "layout");
     return { ok: true, push: sent.push, line: sent.line };
   } catch (e) {
-    return { ok: false, error: (e as Error).message };
+    return { ok: false, error: friendly(e, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
   }
 }
 
@@ -172,11 +173,11 @@ export async function closeSystemAlert(id: string): Promise<{ ok: true } | { ok:
     await assertPlatformAdmin();
     const svc = createServiceClient();
     const { error } = await svc.from("system_alerts").update({ active: false }).eq("id", id);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     revalidatePath("/dashboard", "layout");
     return { ok: true };
   } catch (e) {
-    return { ok: false, error: (e as Error).message };
+    return { ok: false, error: friendly(e, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
   }
 }
 

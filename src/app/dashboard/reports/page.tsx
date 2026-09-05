@@ -20,6 +20,8 @@ import { selectVatSalesDocs, selectVatPurchaseDocs, selectWhtPayableDocs, select
 import IntegrityCard from "../admin/integrity-card";
 import { track } from "@/lib/track";
 import { createServiceClient } from "@/lib/supabase/server";
+import { canSeeMoney } from "@/lib/roles";
+import RoleWall from "../role-wall";
 
 export const dynamic = "force-dynamic";
 
@@ -77,7 +79,9 @@ function thMonth(m: string) {
 }
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ t?: string; period?: string; m?: string }> }) {
-  const [{ supabase, shop }, admin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
+  const [{ supabase, shop, role }, admin] = await Promise.all([getCurrentShop(), isPlatformAdmin()]);
+  if (!canSeeMoney(role)) return <RoleWall title="รายงานและภาษีเปิดให้เจ้าของ ผู้ดูแล และผู้ชม"
+    detail="บทบาทพนักงานใช้สำหรับออกเอกสารและบันทึกค่าใช้จ่าย ตัวเลขรวมของกิจการและรายงานภาษีดูได้เฉพาะเจ้าของ ผู้ดูแล หรือผู้ชม — ถ้าจำเป็นต้องใช้ ให้เจ้าของเปลี่ยนบทบาทที่ ตั้งค่า > ทีม" />;
   // บันทึกว่ามีคนมาถึงหน้ารายงาน/ภาษี — เดิมวัดไม่ได้ว่าคนเดินมาไกลแค่ไหนหลังออกเอกสาร
   // ไม่ await เพราะหน้าไม่ควรรอ log และ track() กลืน error อยู่แล้ว
   void supabase.auth.getUser().then(({ data }) =>
@@ -91,7 +95,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   return (
     <div className="space-y-5">
       <PageHeader icon={PieChart} tone="teal"
-        title="รายงาน + ภาษี"
+        title="รายงานและภาษี"
         lead={<>กำลังดู{period.label}</>}
         help="ตัวเลขทุกช่องมาจากเอกสารจริงที่คุณบันทึกไว้ ไม่ต้องรอปิดงบ — ดูกำไร-ขาดทุน ใครค้างเรานานแค่ไหน และภาษีที่ต้องยื่นเดือนนี้ · โหลดเป็น Excel ส่งนักบัญชี หรือโหลดไฟล์ยื่นสรรพากรได้เลย"
         action={
@@ -213,7 +217,7 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
                 ))}
               </span>
             ) : (
-              <p className={cn("mt-2 text-xl font-bold tabular-nums tracking-tight", s.tone)}>{s.value}</p>
+              <p className={cn("mt-2 whitespace-nowrap text-lg font-bold tabular-nums tracking-tight sm:text-xl", s.tone)}>{s.value}</p>
             )}
           </Link>
         ))}
@@ -226,7 +230,7 @@ async function SummaryTab({ shopId, supabase, period }: { shopId: string; supaba
           <CardTitle>รายได้ vs ค่าใช้จ่าย รายเดือน (จากสมุดรายวันจริง)</CardTitle>
           {rows.length > 1 && (
             <p className="mt-1 text-xs font-normal text-neutral-400">
-              แสดง {rows.length} เดือน ({rows[0]} ถึง {rows[rows.length - 1]}) — กว้างกว่างวดที่เลือกเพื่อให้เห็นแนวโน้ม
+              แสดง {rows.length} เดือน ({thMonth(rows[0])} ถึง {thMonth(rows[rows.length - 1])}) — กว้างกว่างวดที่เลือกเพื่อให้เห็นแนวโน้ม
             </p>
           )}
         </CardHeader>
@@ -347,7 +351,7 @@ async function AgingTab({ shopId, supabase }: { shopId: string; supabase: SB }) 
                   return (
                     <tr key={d.id}>
                       <Td><Link href={kind === "invoice" ? `/dashboard/sales/${d.id}` : `/dashboard/expenses/${d.id}`} className="font-medium text-emerald-700 hover:underline">{d.doc_number}</Link></Td>
-                      <Td label="คู่ค้า">{d.contact_name ?? "-"}</Td>
+                      <Td label="คู่ค้า">{d.contact_name ?? "ไม่ระบุคู่ค้า"}</Td>
                       <Td label="ครบกำหนด" className="text-neutral-400">{dateOnlyTH(d.due_date ?? d.issue_date)}</Td>
                       <Td label="ค้าง" className="text-right font-medium">{bahtDoc(docOutstanding(d))}</Td>
                       <Td label="อายุหนี้"><Badge tone={b === "current" ? "neutral" : b === "d90up" ? "red" : "amber"}>{AGING_LABEL_TH[b]}</Badge></Td>
@@ -405,7 +409,7 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
     "ลำดับ": i + 1, "วันที่": d.issue_date, "ประเภท": DOC_TYPE_TH[d.doc_type],
     "เลขที่ใบกำกับ": d.doc_number,
     "ชื่อผู้ซื้อ/ผู้ขาย": d.contact_name ?? "", "เลขผู้เสียภาษี": d.contact_tax_id ?? "",
-    "มูลค่าสินค้า/บริการ": vatSign(d) * (Number(d.total) - Number(d.vat_amount)),
+    "มูลค่าสินค้าและบริการ": vatSign(d) * (Number(d.total) - Number(d.vat_amount)),
     "ภาษีมูลค่าเพิ่ม": vatSign(d) * Number(d.vat_amount),
   }));
   // ไฟล์โอนย้ายรายงานภาษีซื้อ-ขาย: ลำดับ|วันที่(พ.ศ.)|เลขที่ใบกำกับ|ชื่อคู่ค้า|เลขผู้เสียภาษี|สาขา|มูลค่า|VAT
@@ -495,7 +499,7 @@ async function VatTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                     <tr key={d.id}>
                       <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
                       <Td label="เลขที่" className="font-medium">{d.doc_number}</Td>
-                      <Td label="คู่ค้า">{d.contact_name ?? "-"}</Td>
+                      <Td label="คู่ค้า">{d.contact_name ?? "ไม่ระบุคู่ค้า"}</Td>
                       <Td label="เลขผู้เสียภาษี" className="text-neutral-400">{d.contact_tax_id ?? "-"}</Td>
                       <Td label="มูลค่า" className="text-right">{bahtDoc(Number(d.total) - Number(d.vat_amount))}</Td>
                       <Td label="VAT" className="text-right">{bahtDoc(d.vat_amount)}</Td>
@@ -609,7 +613,7 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
             {due.holidays_loaded
               ? "วันหยุดราชการปีนี้กรอกไว้ในระบบแล้ว"
               : "ยังไม่ได้กรอกวันหยุดราชการของปีนี้ ระบบจึงเลื่อนให้เฉพาะเสาร์-อาทิตย์ — ถ้ากำหนดตรงวันหยุดนักขัตฤกษ์ให้ตรวจปฏิทินสรรพากรเอง"}
-            {due.extension_until && ` · มาตรการขยายเวลายื่นออนไลน์มีผลถึง ${due.extension_until}`}
+            {due.extension_until && ` · มาตรการขยายเวลายื่นออนไลน์มีผลถึง ${dateOnlyTH(due.extension_until)}`}
           </p>
         </div>
       )}
@@ -691,7 +695,7 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                   {sec.list.map((d) => (
                     <tr key={d.id}>
                       <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
-                      <Td label="ผู้ถูกหัก">{d.contact_name ?? "-"}</Td>
+                      <Td label="ผู้ถูกหัก">{d.contact_name ?? "ไม่ระบุคู่ค้า"}</Td>
                       <Td label="เลขผู้เสียภาษี" className="text-neutral-400">{d.contact_tax_id ?? "-"}</Td>
                       <Td label="ฐานเงิน" className="text-right">{bahtDoc(Number(d.total) - Number(d.vat_amount))}</Td>
                       <Td label="อัตรา" className="text-right">{Number(d.wht_rate)}%</Td>
@@ -719,7 +723,7 @@ async function WhtTab({ shopId, supabase, period, shopName, shopTaxId, rdAllowed
                 {received.map((d) => (
                   <tr key={d.id}>
                     <Td className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
-                    <Td label="ลูกค้า">{d.contact_name ?? "-"}</Td>
+                    <Td label="ลูกค้า">{d.contact_name ?? "ไม่ระบุคู่ค้า"}</Td>
                     <Td label="เอกสาร" className="font-medium">{d.doc_number}</Td>
                     <Td label="ภาษีถูกหัก" className="text-right">{bahtDoc(d.wht_amount)}</Td>
                   </tr>

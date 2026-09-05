@@ -162,8 +162,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <>
               <div className="grid gap-2 text-[12px] leading-relaxed text-neutral-500 sm:grid-cols-3">
                 <p className="rounded-lg bg-neutral-50 px-3 py-2"><b className="text-neutral-700">เจ้าของ / ผู้ดูแล</b><br />ทำได้ทุกอย่าง รวมถึงตั้งค่าและอนุมัติ</p>
-                <p className="rounded-lg bg-neutral-50 px-3 py-2"><b className="text-neutral-700">พนักงาน</b><br />ออกเอกสาร บันทึกเงิน ใช้ผู้ช่วย AI</p>
-                <p className="rounded-lg bg-neutral-50 px-3 py-2"><b className="text-neutral-700">ผู้ชม</b><br />ดูรายงานอย่างเดียว แก้ไขไม่ได้</p>
+                <p className="rounded-lg bg-neutral-50 px-3 py-2"><b className="text-neutral-700">พนักงาน</b><br />ออกเอกสาร บันทึกค่าใช้จ่าย อัปโหลดสลิป ใช้ผู้ช่วย AI — ไม่เห็นยอดเงินรวม รายงาน และแพ็กเกจ</p>
+                <p className="rounded-lg bg-neutral-50 px-3 py-2"><b className="text-neutral-700">ผู้ชม</b><br />ดูข้อมูลและรายงานได้ทั้งหมด แต่แก้ไขหรือออกเอกสารไม่ได้ (เหมาะกับนักบัญชี)</p>
               </div>
               <TeamForm shopId={shop.id} members={memberRows} canEdit={canEdit} />
             </>

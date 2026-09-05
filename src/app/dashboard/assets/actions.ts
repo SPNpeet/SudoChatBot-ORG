@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError } from "@/lib/friendly-error";
 // ============================================================
 //  ทะเบียนทรัพย์สิน · ค่าเสื่อมราคา · ปิดบัญชีสิ้นปี
 //
@@ -139,7 +140,7 @@ export async function runDepreciation(shopId: string, month: string): Promise<Re
       shop_id: shopId, asset_id: r.asset.id, period_month: monthStart,
       amount: r.amount, entry_id: entryId,
     })));
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendlyError(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
 
     revalidatePath("/dashboard/assets");
     revalidatePath("/dashboard/journal");
@@ -253,7 +254,7 @@ export async function uploadAssetPhoto(
     const path = `${shopId}/asset/${crypto.randomUUID()}.${ext}`;
     const { error } = await svc.storage.from("asset-photos")
       .upload(path, file, { contentType: file.type, upsert: false });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendlyError(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     return { ok: true, path };
   } catch (e) {
     return { ok: false, error: friendly(e, "อัปโหลดรูปไม่สำเร็จ") };
@@ -284,7 +285,7 @@ export async function verifyAsset(
         verified_note: note.trim().slice(0, 300) || null,
       })
       .eq("id", assetId).eq("shop_id", shopId);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendlyError(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
 
     revalidatePath("/dashboard/assets");
     return { ok: true, message: "บันทึกการตรวจนับแล้ว" };

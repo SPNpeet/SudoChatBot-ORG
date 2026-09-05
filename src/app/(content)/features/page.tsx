@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: "ฟีเจอร์ทั้งหมด — ระบบบัญชีออนไลน์สำหรับ SME ไทย",
   description: "ออกใบกำกับภาษี ใบแจ้งหนี้ รายงาน ภ.พ.30 หัก ณ ที่จ่าย 50 ทวิ สมุดรายวัน งบทดลอง และผู้ช่วยบัญชี AI — ดูว่าระบบทำอะไรให้ได้บ้าง",
   alternates: { canonical: "/features" },
+  // og:url ต้องตรง canonical เสมอ — เดิมสืบทอด url หน้าแรกจาก root (ตรวจพบ 5 ก.ย. 2569 ทุกหน้า)
+  openGraph: { url: "/features", images: ["/opengraph-image"], siteName: "SudoChatBot", locale: "th_TH", type: "website" },
 };
 
 export default function FeaturesIndex() {

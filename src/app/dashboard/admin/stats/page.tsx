@@ -72,7 +72,7 @@ export default async function PlatformStatsPage() {
           <Link href="/dashboard/admin/billing" className="text-emerald-600 hover:underline">→ รายได้ + ยืนยันเติมเงิน</Link>
           <Link href="/dashboard/admin/shops" className="text-emerald-600 hover:underline">→ จัดการร้านค้า</Link>
           <Link href="/dashboard/admin/feedback" className="text-emerald-600 hover:underline">→ ความเห็นผู้ใช้</Link>
-          <Link href="/dashboard/admin/logs" className="text-emerald-600 hover:underline">→ Audit Log</Link>
+          <Link href="/dashboard/admin/logs" className="text-emerald-600 hover:underline">→ ประวัติการทำรายการ</Link>
         </div>
       </div>
 
@@ -95,7 +95,7 @@ export default async function PlatformStatsPage() {
       {/* ===== เงิน ===== */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat icon={Wallet} label="รายได้เติมเงิน (30 วัน)" value={baht(s.revenue.topups_paid_30d)} tone="green" sub={`สะสมทั้งหมด ${baht(s.revenue.topups_paid_total)}`} />
-        <Stat icon={Wallet} label="เก็บจากเกินโควตาเดือนนี้" value={baht(s.revenue.billed_this_month)} sub="หักจากเครดิตร้านอัตโนมัติ" />
+        <Stat icon={Wallet} label="เก็บจากเครดิตส่วนเกินเดือนนี้" value={baht(s.revenue.billed_this_month)} sub="หักจากเครดิตร้านอัตโนมัติ" />
         <Stat icon={Wallet} label="ต้นทุน AI เดือนนี้" value={`~${baht(s.usage.ai_cost_month_usd * USD_THB)}`} tone="amber" sub={`$${s.usage.ai_cost_month_usd} (ประมาณที่ ${USD_THB}฿/$)`} />
         <Stat icon={Wallet} label="เครดิตค้างในระบบ" value={baht(s.revenue.credit_outstanding)} sub="ยอดที่ร้านเติมแล้วยังไม่ใช้ (ภาระผูกพัน)" />
       </div>

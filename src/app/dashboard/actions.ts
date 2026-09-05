@@ -1,4 +1,5 @@
 "use server";
+import { friendlyError } from "@/lib/friendly-error";
 // ============================================================
 //  Server Actions กลาง — ทุกฟังก์ชันตรวจสิทธิ์สมาชิกก่อนแตะ service role เสมอ
 //  ทุก action คืน { ok } เสมอ — ห้าม throw ให้หลุดถึง client (Next.js
@@ -9,14 +10,12 @@ import { assertMember } from "@/lib/shop";
 import { revalidatePath } from "next/cache";
 import { branchLabel } from "@/lib/tax-th";
 import { getNoticeHistory, type HistoryItem } from "@/lib/notices";
+import { INVITABLE_ROLES } from "@/lib/roles";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-function friendly(e: unknown, fallback: string): string {
-  const m = (e as Error).message ?? String(e);
-  if (m.includes("forbidden")) return "คุณไม่มีสิทธิ์ทำรายการนี้ในธุรกิจนี้";
-  return m || fallback;
-}
+// friendly() ย้ายไป src/lib/friendly-error.ts (ตัวเดียวทั้งระบบ — ดูเหตุผลที่นั่น)
+const friendly = friendlyError;
 
 // ---------- ความเห็นผู้ใช้ถึงเจ้าของแพลตฟอร์ม ----------
 export async function submitFeedback(shopId: string, message: string, page: string): Promise<ActionResult> {
@@ -59,10 +58,10 @@ export async function upsertProduct(shopId: string, formData: FormData): Promise
 
     if (id) {
       const { error } = await supabase.from("products").update(row).eq("id", id).eq("shop_id", shopId);
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     } else {
       const { error } = await supabase.from("products").insert(row);
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     }
     revalidatePath("/dashboard/products");
     return { ok: true };
@@ -114,7 +113,7 @@ export async function savePaymentSettings(shopId: string, formData: FormData): P
       bank_name: String(formData.get("bank_name") ?? "").trim() || null,
       slip_provider: String(formData.get("slip_provider") ?? "manual"),
     });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
 
     const slipKey = String(formData.get("slip_api_key") ?? "").trim();
     if (slipKey) {
@@ -138,12 +137,13 @@ export async function addMember(shopId: string, formData: FormData): Promise<Act
     await assertMember(shopId, ["owner", "admin"]);
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const role = String(formData.get("role") ?? "agent");
+    if (!(INVITABLE_ROLES as readonly string[]).includes(role)) return { ok: false, error: "บทบาทไม่ถูกต้อง — เลือกได้เฉพาะ ผู้ดูแล พนักงาน หรือผู้ชม" };
     if (!email) return { ok: false, error: "กรอกอีเมล" };
     const svc = createServiceClient();
     const { data: profile } = await svc.from("profiles").select("id").ilike("email", email).maybeSingle();
     if (!profile) return { ok: false, error: "ไม่พบผู้ใช้อีเมลนี้ — ให้เขา Login เข้าระบบครั้งแรกก่อน" };
     const { error } = await svc.from("shop_members").insert({ shop_id: shopId, user_id: profile.id, role });
-    if (error && !error.message.includes("duplicate")) return { ok: false, error: error.message };
+    if (error && !error.message.includes("duplicate")) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     revalidatePath("/dashboard/settings");
     return { ok: true };
   } catch (e) {
@@ -184,7 +184,7 @@ export async function dismissNotice(shopId: string, noticeKey: string): Promise<
       const id = key.slice(4);
       const { error } = await supabase.from("notifications")
         .update({ read: true }).eq("id", id).eq("shop_id", shopId);
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     } else {
       const { data: me } = await supabase.auth.getUser();
       if (!me?.user) return { ok: false, error: "เซสชันหมดอายุ เข้าระบบใหม่อีกครั้ง" };
@@ -192,7 +192,7 @@ export async function dismissNotice(shopId: string, noticeKey: string): Promise<
       const { error } = await supabase.from("notice_dismissals")
         .upsert({ shop_id: shopId, user_id: me.user.id, notice_key: key },
           { onConflict: "shop_id,user_id,notice_key" });
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     }
 
     revalidatePath("/dashboard", "layout");
@@ -226,7 +226,7 @@ export async function deleteNotification(shopId: string, noticeKey: string): Pro
     const id = noticeKey.slice(4);
     const supabase = await createClient();
     const { error } = await supabase.from("notifications").delete().eq("id", id).eq("shop_id", shopId);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     revalidatePath("/dashboard", "layout");
     return { ok: true };
   } catch (e) {
@@ -242,13 +242,13 @@ export async function restoreNotice(shopId: string, noticeKey: string): Promise<
     if (noticeKey.startsWith("row:")) {
       const { error } = await supabase.from("notifications")
         .update({ read: false }).eq("id", noticeKey.slice(4)).eq("shop_id", shopId);
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     } else {
       const { data: me } = await supabase.auth.getUser();
       if (!me?.user) return { ok: false, error: "เซสชันหมดอายุ เข้าระบบใหม่อีกครั้ง" };
       const { error } = await supabase.from("notice_dismissals").delete()
         .eq("shop_id", shopId).eq("user_id", me.user.id).eq("notice_key", noticeKey.slice(0, 200));
-      if (error) return { ok: false, error: error.message };
+      if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     }
     revalidatePath("/dashboard", "layout");
     return { ok: true };
@@ -264,7 +264,7 @@ export async function clearReadNotifications(shopId: string): Promise<ActionResu
     const supabase = await createClient();
     const { error } = await supabase.from("notifications")
       .delete().eq("shop_id", shopId).eq("read", true);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     revalidatePath("/dashboard", "layout");
     return { ok: true };
   } catch (e) {
@@ -297,7 +297,7 @@ export async function saveTaxInfo(shopId: string, formData: FormData): Promise<A
       // ผู้ใช้จะพิมพ์ "1" หรือ "สาขา 1" มาก็ได้ ไม่ต้องรู้รูปแบบราชการ
       branch: branchLabel(String(formData.get("branch") ?? "")),
     }).eq("id", shopId);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     revalidatePath("/dashboard/settings");
     revalidatePath("/dashboard/print", "layout");
     return { ok: true };
@@ -337,7 +337,7 @@ export async function saveSignature(shopId: string, dataUrl: string): Promise<Ac
     const { data: shop } = await svc.from("shops").select("settings").eq("id", shopId).maybeSingle();
     const settings = { ...((shop?.settings ?? {}) as Record<string, unknown>), signature_url: url };
     const { error } = await svc.from("shops").update({ settings }).eq("id", shopId);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
 
     await svc.from("audit_logs").insert({
       shop_id: shopId, action: "signature_updated", actor_type: "user",
@@ -360,7 +360,7 @@ export async function clearSignature(shopId: string): Promise<ActionResult> {
     const settings = { ...((shop?.settings ?? {}) as Record<string, unknown>) };
     delete settings.signature_url;
     const { error } = await svc.from("shops").update({ settings }).eq("id", shopId);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     await svc.from("audit_logs").insert({
       shop_id: shopId, action: "signature_cleared", actor_type: "user",
       resource_type: "shop", resource_id: shopId, details: {},
@@ -397,7 +397,7 @@ export async function setPeriodLock(shopId: string, formData: FormData): Promise
       locked_at: new Date().toISOString(),
       note: String(formData.get("note") ?? "").trim().slice(0, 300) || null,
     }, { onConflict: "shop_id" });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
 
     await svc.from("audit_logs").insert({
       actor_type: "user", actor_id: user.id, action: "period_locked",
@@ -418,7 +418,7 @@ export async function clearPeriodLock(shopId: string): Promise<ActionResult> {
     const svc = createServiceClient();
     const { data: cur } = await svc.from("fin_period_locks").select("locked_through").eq("shop_id", shopId).maybeSingle();
     const { error } = await svc.from("fin_period_locks").delete().eq("shop_id", shopId);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
 
     await svc.from("audit_logs").insert({
       actor_type: "user", actor_id: user.id, action: "period_unlocked",
@@ -499,7 +499,7 @@ export async function saveNotifySettings(shopId: string, formData: FormData): Pr
     if (token) patch.line_channel_token = token.slice(0, 500);
     if (token === "__clear__") patch.line_channel_token = null;
     const { error } = await svc.from("shop_notify_settings").upsert(patch, { onConflict: "shop_id" });
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     revalidatePath("/dashboard/settings");
     return { ok: true };
   } catch (e) {
@@ -530,7 +530,7 @@ export async function unlinkLine(shopId: string): Promise<ActionResult> {
     const { error } = await svc.from("shop_notify_settings")
       .update({ line_to_id: null, line_channel_token: null, line_display_name: null, linked_at: null, updated_at: new Date().toISOString() })
       .eq("shop_id", shopId);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     revalidatePath("/dashboard/settings");
     return { ok: true };
   } catch (e) {
@@ -592,7 +592,7 @@ export async function saveAssistantName(
     const { data: shop } = await svc.from("shops").select("settings").eq("id", shopId).single();
     const settings = { ...((shop?.settings ?? {}) as Record<string, unknown>), assistant_name: clean || null };
     const { error } = await svc.from("shops").update({ settings }).eq("id", shopId);
-    if (error) return { ok: false, error: error.message };
+    if (error) return { ok: false, error: friendly(error, "ทำรายการไม่สำเร็จ ลองอีกครั้ง") };
     try {
       await svc.from("audit_logs").insert({
         shop_id: shopId, actor_type: "user", actor_id: user.id,

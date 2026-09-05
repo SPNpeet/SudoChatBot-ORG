@@ -32,7 +32,7 @@ export async function GET() {
     free: "Free trial",
     starter: "Starter — 1 business",
     professional: "Business — up to 3 businesses",
-    executive: "Accounting firm — up to 10 businesses",
+    executive: "Accounting firm — up to 15 businesses",
     agency: "Large accounting firm — unlimited businesses",
   };
   const priceLines = plans.length
@@ -102,6 +102,9 @@ shops into sharing one password — which is more dangerous than the money it sa
 
 - Homepage: https://sudochatbot.online
 - Pricing: https://sudochatbot.online/pricing
+- All features: https://sudochatbot.online/features
+- Thai accounting & tax guides: https://sudochatbot.online/guide
+- Contact: support@sudochatbot.online · https://sudochatbot.online/contact
 - Try without signing up: https://sudochatbot.online/try
 - Terms: https://sudochatbot.online/terms
 - Privacy: https://sudochatbot.online/privacy

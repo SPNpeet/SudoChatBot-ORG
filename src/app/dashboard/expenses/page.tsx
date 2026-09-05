@@ -141,7 +141,7 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
                       className={cn("font-medium text-emerald-700 hover:underline", d.status === "void" && "text-neutral-400 line-through")}>
                       {d.doc_number}
                     </Link></Td>
-                    <Td label="ผู้ขาย">{d.contact_name ?? "-"}</Td>
+                    <Td label="ผู้ขาย">{d.contact_name ?? "ไม่ระบุผู้ขาย"}</Td>
                     <Td label="หมวด" className="text-neutral-500">{d.expense_categories?.name ?? "-"}</Td>
                     <Td label="วันที่" className="text-neutral-400">{dateOnlyTH(d.issue_date)}</Td>
                     <Td label="ยอด" className="text-right">{baht(d.total)}</Td>

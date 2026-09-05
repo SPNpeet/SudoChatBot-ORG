@@ -43,7 +43,7 @@ export default function AiQuotaBar({ quota, planCode }: { quota: AiQuota | null;
         </span>
         {tone !== "ok" && (
           <span className={cn("text-[10px] font-bold", tone === "full" ? "text-red-600" : "text-amber-600")}>
-            {tone === "full" ? "โควตา AI เต็ม" : "ใกล้เต็ม"}
+            {tone === "full" ? "เครดิต AI เต็ม" : "ใกล้เต็ม"}
           </span>
         )}
       </div>
