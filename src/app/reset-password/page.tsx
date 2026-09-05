@@ -63,7 +63,11 @@ export default function ResetPasswordPage() {
           <Logo className="justify-center" />
 
           {checking ? (
-            <p className="mt-6 text-center text-sm text-neutral-400">กำลังตรวจลิงก์...</p>
+            <>
+              {/* h1 ต้องมีตั้งแต่เฟรมแรก — HTML ที่เสิร์ฟจริงคือสถานะนี้ (ด่าน check:seo จับได้ 5 ก.ย. 2569 ว่าไม่มี h1) */}
+              <h1 className="mt-4 text-center text-lg font-bold tracking-tight">ตั้งรหัสผ่านใหม่</h1>
+              <p className="mt-2 text-center text-sm text-neutral-400">กำลังตรวจลิงก์…</p>
+            </>
           ) : !hasSession ? (
             <>
               <div className="mt-5 grid h-12 w-12 place-items-center rounded-xl bg-amber-50 mx-auto">
